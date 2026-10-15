@@ -16,7 +16,7 @@ let catalogGeneration = 0;
 // Maps app-server `model/list` entries to Hikari's catalog shape.
 function catalogFromCodexModelList(entries = []) {
   const models = (Array.isArray(entries) ? entries : []).map((entry) => {
-    const id = normalizeCodexCliModel(entry?.id || entry?.model);
+    const id = normalizeCodexCliModel(entry?.model || entry?.id);
     if (!id) {
       return null;
     }

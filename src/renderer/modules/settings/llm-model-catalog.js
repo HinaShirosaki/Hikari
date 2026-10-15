@@ -9,6 +9,8 @@ export function normalizeCodexCatalog(rawCatalog) {
   return {
     defaultModel: String(source.defaultModel || '').trim(),
     defaultReasoningEffort: String(source.defaultReasoningEffort || '').trim().toLowerCase(),
+    availableModelIds: (Array.isArray(source.availableModelIds) ? source.availableModelIds : Array.isArray(source.models) ? source.models : [])
+      .map(entry => String(typeof entry === 'string' ? entry : entry?.id || '').trim()).filter(Boolean),
     models: (Array.isArray(source.models) ? source.models : []).map((entry) => ({
       id: String(entry?.id || '').trim(),
       label: String(entry?.label || entry?.id || '').trim(),
@@ -29,6 +31,9 @@ export function normalizeCodexLoginStatus(rawStatus) {
     expired: source.expired === true,
     canRefresh: source.canRefresh === true,
     sourcePath: String(source.sourcePath || '').trim(),
+    email: String(source.email || '').trim(),
+    planType: String(source.planType || '').trim(),
+    accountKey: String(source.accountKey || '').trim(),
     cliAvailable: typeof source.cliAvailable === 'boolean' ? source.cliAvailable : null,
     cliVersion: String(source.cliVersion || '').trim(),
     cliUpdateStatus: String(source.cliUpdateStatus || '').trim(),
@@ -64,10 +69,11 @@ export function createLlmModelCatalog() {
     return (codexCatalog?.models || []).map((entry) => ({ value: entry.id, label: entry.label || entry.id }));
   }
 
-  // A saved choice is kept as-is, even one Codex hides or has retired; the main
-  // process falls back to Codex's default when Codex no longer offers it.
+  // Clear stale choices after a successful account catalog refresh. Before a
+  // catalog is available, retain the preference until it can be checked.
   function normalizeModel(_provider, model = '') {
-    return String(model || '').trim();
+    const selected = String(model || '').trim();
+    return codexCatalog?.models?.length && selected && !codexCatalog.availableModelIds.includes(selected) ? '' : selected;
   }
 
   function normalizeReasoning(provider, model = '', reasoningEffort = '') {

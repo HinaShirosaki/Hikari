@@ -184,17 +184,16 @@ process.stdin.on('data', (chunk) => {
         provider.setCodexCliModel('');
       });
     });
-    test('codex cli provider preserves a chosen model even when codex does not list it', () => {
+    test('codex cli provider replaces an unavailable preference with the connected account default', () => {
       return withCodexHome({}, async () => {
         const provider = loadProvider();
         await useCodexCatalog(provider);
-        // A missing catalog entry must not silently replace the requested model.
+        // A stale preference must not select a model from a different account.
         assert.equal(provider.setCodexCliModel('gpt-4.1-mini'), 'gpt-4.1-mini');
         provider.setCodexCliReasoningEffort('xhigh');
         const retired = provider.buildCodexCliExecArgs({ outputFile: '/tmp/codex-last-message.txt' });
-        assert.equal(retired[retired.indexOf('-m') + 1], 'gpt-4.1-mini');
-        // Codex validates the effort when the model is absent from its catalog.
-        assert.equal(retired[retired.indexOf('-c') + 1], 'model_reasoning_effort=xhigh');
+        assert.equal(retired[retired.indexOf('-m') + 1], 'gpt-5.4');
+        assert.equal(retired[retired.indexOf('-c') + 1], 'model_reasoning_effort=medium');
 
         const args = provider.buildCodexCliExecArgs({
           outputFile: '/tmp/codex-last-message.txt',

@@ -5,6 +5,7 @@ import {
 import { isOrfFeature } from './orf-analysis.js';
 import { bindSequenceViewerDetailEvents } from './detail-events.js';
 import { createSequenceViewerAminoAcidEditingController } from './detail-amino-acid-editing.js';
+import { createSequenceCursorMenuController } from './detail-cursor-menu.js';
 import { createSequenceViewerFeatureEditingController } from './detail-feature-editing.js';
 import { createSequenceHoverTooltipController } from './detail-hover.js';
 import { resolveSequenceBoundaryFromEvent as resolveSequenceBoundaryFromEventShared } from './detail-layout.js';
@@ -55,6 +56,7 @@ export function createSequenceViewerDetailController(config = {}) {
   const onReferenceRecordChanged = config?.onReferenceRecordChanged || (() => {});
   const onApplySequenceEdit = config?.onApplySequenceEdit || (async () => {});
   const onApplyAminoAcidEdit = config?.onApplyAminoAcidEdit || (async () => {});
+  const onSetSequenceOrigin = config?.onSetSequenceOrigin || (async () => {});
   const hasCloningDesignSource = config?.hasCloningDesignSource || (() => false);
   const onRequestPrimerOrder = config?.onRequestPrimerOrder || (() => {});
 
@@ -66,6 +68,7 @@ export function createSequenceViewerDetailController(config = {}) {
   let aminoAcidEditingController = null;
   let featureEditingController = null;
   let sequenceEditingController = null;
+  let cursorMenuController = null;
   let activeFeatureActionContext = null;
 
   const {
@@ -104,6 +107,7 @@ export function createSequenceViewerDetailController(config = {}) {
 
   function hideFeatureContextMenu() {
     activeFeatureActionContext = null;
+    cursorMenuController?.clearContext();
     aminoAcidEditingController?.clearContext({ hideMenu: false });
     featureEditingController?.hideFeatureContextMenu();
   }
@@ -130,6 +134,7 @@ export function createSequenceViewerDetailController(config = {}) {
   }
 
   function renderFeatureContextMenu(context, event) {
+    cursorMenuController?.clearContext();
     activeFeatureActionContext = context;
     aminoAcidEditingController?.clearContext({ hideMenu: false });
     featureEditingController?.renderFeatureContextMenu(context, event);
@@ -144,6 +149,7 @@ export function createSequenceViewerDetailController(config = {}) {
   }
 
   function renderAminoAcidContextMenu(context, event) {
+    cursorMenuController?.clearContext();
     activeFeatureActionContext = null;
     featureEditingController?.hideFeatureContextMenu();
     aminoAcidEditingController?.renderContextMenu(context, event);
@@ -184,7 +190,7 @@ export function createSequenceViewerDetailController(config = {}) {
     getVisibleFeaturesForRecord,
     getSequenceSelectionSegments,
     getAlignmentHighlightSegments,
-    hideSequenceHoverTooltip,
+    hideSequenceHoverTooltip: () => hoverController.hideNow(),
     buildSelectionDetailHtml
   });
 
@@ -405,6 +411,15 @@ export function createSequenceViewerDetailController(config = {}) {
     }
   });
 
+  cursorMenuController = createSequenceCursorMenuController({
+    elements,
+    getSelectedRecord,
+    hideFeatureContextMenu,
+    openSequenceEditDialog: (mode, context) => sequenceEditingController?.openSequenceEditDialog(mode, context),
+    onSetSequenceOrigin,
+    setStatus
+  });
+
   function bindEvents() {
     bindSequenceViewerDetailEvents({
       elements,
@@ -434,6 +449,8 @@ export function createSequenceViewerDetailController(config = {}) {
       renderFeatureContextMenu,
       resolveAminoAcidActionContext,
       renderAminoAcidContextMenu,
+      renderCursorContextMenu: cursorMenuController.renderContextMenu,
+      applyCursorAction: cursorMenuController.applyAction,
       applyAminoAcidReplacement,
       openFeatureEditor,
       openPrimerDesignOverlay,

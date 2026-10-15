@@ -58,7 +58,7 @@ function createManualProgress({
     }
     const laneBandStep = getLaneBandInteractionStep();
     const manualStep = laneBandStep || getManualStep();
-    return manualStep === 'dividers' ? '' : manualStep;
+    return manualStep === 'dividers' || manualStep === 'ladder-mw' ? '' : manualStep;
   }
 
   function getLaneBandInteractionStep(overrides = normalizeManualOverrides(runtime.manualOverrides)) {
@@ -93,6 +93,7 @@ function createManualProgress({
   }
 
   function renderManualProgress() {
+    deps.syncLadderMwEditor?.();
     const overrides = normalizeManualOverrides(runtime.manualOverrides);
     const activeStep = getManualStep(overrides);
     const laneBandMode = isPerLaneBandMode(overrides.laneSegmentation);

@@ -24,7 +24,7 @@
             <div class="sequence-viewer-detail-sidebar-pinned left-rail-template__pinned">
               <section class="sequence-viewer-rail-actions-section left-rail-template__section">
                 <div class="form-actions sequence-viewer-rail-nav-actions">
-                  <button id="sequence-viewer-detail-new-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="New sequence" title="New sequence">
+                  <button id="sequence-viewer-detail-new-btn" type="button" class="primary-btn sequence-viewer-icon-btn" aria-label="New sequence" title="New sequence">
                     <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                       <path d="M12 5v14"></path>
                       <path d="M5 12h14"></path>
@@ -58,6 +58,14 @@
                   </div>
                   <button id="sequence-viewer-detail-primer-library-open" class="ghost-btn sequence-viewer-primer-library-open-btn" type="button" aria-label="Open Primer Library" title="Primer Library" aria-haspopup="dialog">Primers</button>
                 </div>
+                <input
+                  id="sequence-viewer-detail-library-search-input"
+                  class="sequence-viewer-library-search"
+                  type="search"
+                  placeholder="Search sequences"
+                  autocomplete="off"
+                  aria-label="Search sequence library"
+                />
               </section>
             </div>
             <div class="sequence-viewer-detail-sidebar-scroll left-rail-template__scroll">

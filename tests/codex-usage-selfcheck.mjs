@@ -4,6 +4,7 @@ import { EventEmitter } from 'node:events';
 import { PassThrough } from 'node:stream';
 import { createCodexAccountSettings } from '../src/renderer/modules/settings/codex-account.js';
 import { createCodexUsageSettings } from '../src/renderer/modules/settings/codex-usage.js';
+import { createLlmModelCatalog } from '../src/renderer/modules/settings/llm-model-catalog.js';
 
 const require = createRequire(import.meta.url);
 const { readCodexRateLimits, requestCodexCliUsage, usageFromCodexRateLimits } = require('../src/main/lib/codex-cli-provider/usage.js');
@@ -15,7 +16,8 @@ const weekly = { usedPercent: 67, windowDurationMins: 10080, resetsAt: 190040000
 const limits = { rateLimits: { primary: fiveHour, secondary: weekly } };
 assert.deepEqual(usageFromCodexRateLimits(limits), {
   fiveHour: { usedPercent: 25.5, resetsAt: fiveHour.resetsAt },
-  weekly: { usedPercent: 67, resetsAt: weekly.resetsAt }
+  weekly: { usedPercent: 67, resetsAt: weekly.resetsAt },
+  windows: [fiveHour, weekly], planType: ''
 });
 assert.equal(usageFromCodexRateLimits({ ...limits, rateLimitsByLimitId: {
   codex: { primary: weekly, secondary: { ...fiveHour, usedPercent: 0 } },
@@ -23,12 +25,21 @@ assert.equal(usageFromCodexRateLimits({ ...limits, rateLimitsByLimitId: {
 } }).fiveHour.usedPercent, 0, 'prefer the Codex bucket and identify windows by duration');
 for (const empty of [null, {}, { rateLimitsByLimitId: { codex_other: limits.rateLimits } },
   { rateLimits: { limitId: 'codex_other', primary: fiveHour } },
-  { rateLimits: { primary: { ...fiveHour, usedPercent: null }, secondary: { ...weekly, usedPercent: NaN } } },
-  { rateLimits: { primary: { ...fiveHour, windowDurationMins: 60 } } }]) {
-  assert.deepEqual(usageFromCodexRateLimits(empty), { fiveHour: null, weekly: null });
+  { rateLimits: { primary: { ...fiveHour, usedPercent: null }, secondary: { ...weekly, usedPercent: NaN } } }]) {
+  assert.deepEqual(usageFromCodexRateLimits(empty), { fiveHour: null, weekly: null, windows: [], planType: '' });
 }
+const monthlyWindow = { usedPercent: 0, windowDurationMins: 43200, resetsAt: 1900400000 };
+const freeUsage = usageFromCodexRateLimits({ rateLimits: { limitId: 'codex', planType: 'free', primary: monthlyWindow } });
+assert.deepEqual(freeUsage, { fiveHour: null, weekly: null, windows: [monthlyWindow], planType: 'free' }, 'retain the real Free-account quota instead of discarding it');
 assert.equal(usageFromCodexRateLimits({ rateLimits: { primary: { ...fiveHour, usedPercent: -5 } } }).fiveHour.usedPercent, 0);
 assert.equal(usageFromCodexRateLimits({ rateLimits: { secondary: { ...weekly, usedPercent: 110 } } }).weekly.usedPercent, 100);
+const models = createLlmModelCatalog();
+assert.equal(models.normalizeModel('codex', 'gpt-6.1-sol'), 'gpt-6.1-sol', 'keep a preference until the account catalog arrives');
+models.setCodexCatalog({ defaultModel: 'gpt-6-luna', models: [{ id: 'gpt-6-luna' }, { id: 'gpt-5.6-terra' }, { id: 'gpt-5.6-luna' }],
+  availableModelIds: ['gpt-6-luna', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-reserve'] });
+assert.equal(models.normalizeModel('codex', 'gpt-6.1-sol'), '', 'discard the previous account model once Free account access is known');
+assert.equal(models.normalizeModel('codex', 'gpt-reserve'), 'gpt-reserve', 'hidden available choices remain valid');
+assert.equal(models.getModelOptions('codex').length, 3);
 
 function transportFixture(reply) {
   const child = new EventEmitter();
@@ -92,10 +103,10 @@ assert.deepEqual(await handlers.get(LLM.CODEX_USAGE)(), { ok: false, error: 'rea
 
 function elements() {
   const rows = Object.fromEntries(['fiveHour', 'weekly'].map(name => [name, {
-    value: { textContent: '' }, reset: { textContent: '' },
-    progress: { hidden: true, removeAttribute() { this.value = undefined; } },
+    value: { textContent: '' }, reset: { textContent: '' }, label: { textContent: '' },
+    progress: { hidden: true, setAttribute(name, value) { this[name] = value; }, removeAttribute() { this.value = undefined; } },
     querySelector(selector) {
-      return { '[data-codex-usage-value]': this.value, '[data-codex-usage-reset]': this.reset, progress: this.progress }[selector];
+      return { '[data-codex-usage-value]': this.value, '[data-codex-usage-reset]': this.reset, '[data-codex-usage-label]': this.label, progress: this.progress }[selector];
     }
   }]));
   return { rows, settingCodexUsage: {
@@ -130,13 +141,24 @@ await controller.refresh();
 assert.match(ui.settingCodexUsageStatus.textContent, /Failed/);
 window.hikariApi.getCodexLlmUsage = async () => ({ ok: true, fiveHour: null, weekly: null });
 await controller.refresh();
-assert.match(ui.settingCodexUsageStatus.textContent, /did not report/);
+assert.match(ui.settingCodexUsageStatus.textContent, /no usage windows/);
 assert.equal(ui.rows.weekly.progress.hidden, true);
 window.hikariApi.getCodexLlmUsage = async () => ({ ok: true, fiveHour: { usedPercent: 0 }, weekly: null });
 await controller.refresh();
 assert.equal(ui.rows.fiveHour.value.textContent, '0% used');
 assert.equal(ui.rows.fiveHour.progress.hidden, false);
 assert.equal(ui.rows.fiveHour.reset.textContent, '');
+window.hikariApi.getCodexLlmUsage = async () => ({ ok: true, ...freeUsage });
+await controller.refresh();
+assert.equal(ui.rows.fiveHour.label.textContent, '30-day usage');
+assert.equal(ui.rows.fiveHour.value.textContent, '0% used');
+assert.equal(ui.rows.fiveHour.progress['aria-label'], '30-day usage');
+assert.equal(ui.rows.weekly.hidden, true);
+assert.match(ui.settingCodexUsageStatus.textContent, /free plan/);
+window.hikariApi.getCodexLlmUsage = async () => usage;
+await controller.refresh();
+assert.equal(ui.rows.fiveHour.label.textContent, '5-hour usage');
+assert.equal(ui.rows.weekly.hidden, false);
 
 const accountUi = elements();
 window.hikariApi.getCodexLlmStatus = async () => ({ ok: true, loggedIn: true, source: 'stored' });

@@ -8,7 +8,7 @@ import { createManualWorkflowController } from './manual/manual-workflow.js';
 import { createHistoryController } from './history.js';
 import { createRecordsManager } from './records-manager.js';
 import { createRenderingController, selectViewerBaseImageData } from './rendering/index.js';
-import { DEFAULT_LADDER_PRESET_ID, LADDER_PRESETS, getLadderPresetBands } from './constants.js';
+import { DEFAULT_LADDER_PRESET_ID, LADDER_PRESETS } from './constants.js';
 import { createEmptyManualOverrides } from './shared.js';
 import { bindFileDropTarget } from '../lib/file-drop.js';
 import { serializeDraftSnapshot, snapshotFormControls } from '../lib/unsaved-draft.js';
@@ -159,7 +159,6 @@ export function initGelAnalysis({
     safeText,
     deps: {
       documentObject: rootDocument,
-      openLaneTableWindow: () => floatingWindows?.open('table'),
       getFigureImageData: () => {
         const preprocessed = runtime.viewerMode === 'processed'
           ? imageController.getPreprocessedImageForCurrentSettings?.()
@@ -309,22 +308,14 @@ export function initGelAnalysis({
     }).join('');
     elements.gelLadderPresetSelect.value = DEFAULT_LADDER_PRESET_ID;
   }
-  // ponytail: the MW suggestions are rebuilt on focus rather than tracked from
-  // every place the preset can change (reset, record load, user pick).
-  elements.gelLadderBandMwInput?.addEventListener('focus', () => {
-    if (!elements.gelLadderBandMwOptions) {
-      return;
-    }
-    elements.gelLadderBandMwOptions.innerHTML = getLadderPresetBands(elements.gelLadderPresetSelect?.value)
-      .map((size) => `<option value="${size}"></option>`)
-      .join('');
-  });
   elements.gelToolLadderLaneBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('ladder'));
   elements.gelToolLaneVerticesBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('lane-vertices'));
   elements.gelToolBandTopBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('band-top'));
   elements.gelToolBandBottomBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('band-bottom'));
   elements.gelLaneBandModeBtn?.addEventListener('click', manualWorkflow.onLaneBandModeToggle);
   elements.gelAddTableBtn?.addEventListener('click', laneTable.onAddTableClick);
+  elements.gelOpenLaneTableBtn?.addEventListener('click', laneTable.onTogglePanel);
+  elements.gelCloseLaneTableBtn?.addEventListener('click', laneTable.onClosePanel);
   elements.gelExportImageBtn?.addEventListener('click', (event) => laneTable.onGenerateFigureClick(event.currentTarget));
   elements.gelExportPptxBtn?.addEventListener('click', (event) => laneTable.onGeneratePowerPointClick(event.currentTarget));
   elements.gelLaneTableShell?.addEventListener('click', laneTable.onShellClick);
@@ -433,6 +424,7 @@ export function initGelAnalysis({
   }
 
   function destroy() {
+    manualWorkflow.destroy();
     floatingWindows.destroy();
     viewerResizeObserver?.disconnect();
     unbindFileDrop?.();

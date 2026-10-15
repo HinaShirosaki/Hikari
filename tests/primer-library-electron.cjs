@@ -44,15 +44,23 @@ async function main() {
         sequence:'ATGGCACGTTTAGGCCATAC'+'CGATCCGACATGCTAGCATGCGACTGGCACTAGCTAGCATGCGACATGCGATCG'+randomDna,
         features:[{id:'forward',name:'Construct F',type:'primer_bind',strand:1,primerSequence:'GGTCTCGATGGCACGTTTAGGCCATAC',segments:[{start:0,end:20}]},
           {id:'reverse',name:'Imported R',type:'primer_bind',strand:-1,segments:[{start:25,end:45}]}]};
-      viewer.loadFromExternal(record);
-      document.getElementById('sequence-viewer-textarea').value=buildRecordGenbankText(record);
-      document.getElementById('sequence-viewer-form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+      window.primerFixture=record;
+      window.loadPrimerFixture=(next)=>{
+        viewer.loadFromExternal(next);
+        document.getElementById('sequence-viewer-textarea').value=buildRecordGenbankText(next);
+        document.getElementById('sequence-viewer-form').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+      };
+      Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async value=>{window.copiedHover=value}}});
+      loadPrimerFixture(record);
       window.qaReady=true;
     </script></body></html>`);
   const win = new BrowserWindow({ width: 1280, height: 850, show: false, webPreferences: { sandbox: true, contextIsolation: true } });
   const errors = [];
   win.webContents.on('console-message', event => { if (event.level >= 3) errors.push(event.message); });
-  const exec = code => win.webContents.executeJavaScript(code, true);
+  const exec = async code => {
+    try { return await win.webContents.executeJavaScript(code, true); }
+    catch (error) { throw new Error(`${error.message}\nScript: ${code}\n${errors.join('\n')}`); }
+  };
   const click = id => exec(`document.getElementById(${JSON.stringify(id)}).click()`);
   const ready = async () => {
     for (let i = 0; i < 120 && !await exec('Boolean(window.qaReady)'); i++) await new Promise(resolve => setTimeout(resolve, 30));
@@ -67,8 +75,52 @@ async function main() {
     await exec('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
     await fs.promises.writeFile(path.join(output, name), (await win.webContents.capturePage()).toPNG());
   };
+  const assertHoverLayout = async selector => {
+    const geometry = await exec(`(()=>{
+      const e=document.querySelector(${JSON.stringify(selector)});
+      if (!e) return {diagnostic:'Hover card did not open'};
+      const r=e.getBoundingClientRect();
+      if (!e.querySelector('.sequence-viewer-primer-hover-title')) return {diagnostic:e.outerHTML};
+      const title=e.querySelector('.sequence-viewer-primer-hover-title').getBoundingClientRect();
+      const actions=e.querySelector('.sequence-viewer-primer-hover-head .sequence-viewer-primer-hover-buttons').getBoundingClientRect();
+      return {hidden:e.hidden,left:r.left,right:r.right,bottom:r.bottom,width:innerWidth,height:innerHeight,
+        overflow:e.scrollWidth>e.clientWidth,titleRight:title.right,actionsLeft:actions.left};
+    })()`);
+    assert.equal(geometry.diagnostic, undefined);
+    assert.equal(geometry.hidden, false);
+    assert.ok(geometry.left >= 0 && geometry.right <= geometry.width && geometry.bottom <= geometry.height);
+    assert.equal(geometry.overflow, false);
+    assert.ok(geometry.titleRight <= geometry.actionsLeft);
+  };
   try {
     await win.loadFile(fixture); await ready();
+    win.show();
+    win.focus();
+    for (const night of [true, false]) {
+      await exec(`document.body.classList.toggle('theme-night',${night})`);
+      await hover(0);
+      await assertHoverLayout('[data-sequence-hover-tooltip="feature"]');
+      await screenshot(night ? 'hover-save-night.png' : 'hover-save.png');
+    }
+    await exec(`loadPrimerFixture({...primerFixture,features:[{...primerFixture.features[0],name:'Junction_'.repeat(12)+'F',primerSequence:'ACGT'.repeat(45)}]})`);
+    await exec(`document.querySelector('#sequence-viewer-sequence-host [data-feature-index="0"]').dispatchEvent(new MouseEvent('mouseover',{bubbles:true,clientX:innerWidth-12,clientY:innerHeight-12}))`);
+    await assertHoverLayout('[data-sequence-hover-tooltip="feature"]');
+    await screenshot('hover-long-primer.png');
+    await exec('loadPrimerFixture(primerFixture)');
+    assert.equal(await exec(`document.querySelector('[data-sequence-hover-tooltip="feature"]').hidden`), true);
+    await click('sequence-viewer-vector-builder-btn');
+    await exec(`document.querySelector('#sequence-viewer-vector-builder-map [data-feature-index="0"]').focus()`);
+    await assertHoverLayout('[data-sequence-hover-tooltip="map"]');
+    assert.equal(await exec(`document.querySelectorAll('[data-sequence-hover-tooltip]:not([hidden])').length`), 1);
+    await exec(`document.querySelector('[data-sequence-hover-tooltip="map"] [data-sequence-primer-copy-kind="name"]').focus()`);
+    assert.equal(await exec(`document.querySelector('[data-sequence-hover-tooltip="map"]').hidden`), false);
+    await exec(`document.querySelector('[data-sequence-hover-tooltip="map"] [data-sequence-primer-copy-kind="name"]').click()`);
+    assert.equal(await exec('window.copiedHover'), 'Construct F');
+    await exec(`document.querySelector('[data-sequence-hover-tooltip="map"] [data-sequence-primer-copy-kind="sequence"]').click()`);
+    assert.equal(await exec('window.copiedHover'), 'GGTCTCGATGGCACGTTTAGGCCATAC');
+    assert.equal(await exec(`document.querySelector('[data-sequence-hover-tooltip="map"]').hidden`), false);
+    await screenshot('hover-map.png');
+    await click('sequence-viewer-vector-builder-back-btn');
     await hover(0);
     await screenshot('hover-save.png');
     await exec(`document.querySelector('[data-sequence-hover-tooltip="feature"] [data-sequence-primer-library-save]').click()`);
@@ -143,7 +195,7 @@ async function main() {
     assert.equal((await rows()).length, 0);
     assert.equal(await exec(`document.getElementById('sequence-viewer-primer-library-export').disabled`), true);
     assert.deepEqual(errors, []);
-    console.log('Primer Library Electron QA passed: hover/full tail/reverse strand, duplicates, selection and IDT clipboard, rename/search, reload, home overlay, cloning save-all, removal, and responsive/day/night layouts.');
+    console.log('Primer Library Electron QA passed: primer hover day/night/long-name/long-oligo/edge layouts, map keyboard/copy actions, full tails/reverse strand, duplicates, selection and IDT clipboard, rename/search, reload, cloning save-all, removal, and responsive library layouts.');
   } finally {
     win.destroy();
     await fs.promises.rm(temp, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });

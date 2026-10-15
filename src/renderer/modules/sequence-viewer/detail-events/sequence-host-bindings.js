@@ -21,7 +21,8 @@ function bindSequenceHostEvents(context = {}) {
     resolveFeatureActionContext,
     renderFeatureContextMenu,
     resolveAminoAcidActionContext,
-    renderAminoAcidContextMenu
+    renderAminoAcidContextMenu,
+    renderCursorContextMenu
   } = context;
 
 
@@ -103,6 +104,7 @@ function bindSequenceHostEvents(context = {}) {
   });
 
   elements.sequenceHost?.addEventListener('mousemove', (event) => {
+    if (elements.featureContextMenu && !elements.featureContextMenu.hidden) return;
     const record = getSelectedRecord();
     let rerenderNeeded = false;
 
@@ -181,7 +183,7 @@ function bindSequenceHostEvents(context = {}) {
 
   elements.sequenceHost?.addEventListener('mouseleave', () => {
     hideSequenceHoverTooltip();
-    if (state.isSelectingSequence) {
+    if (state.isSelectingSequence || (elements.featureContextMenu && !elements.featureContextMenu.hidden)) {
       return;
     }
     if (Number.isFinite(state.sequenceCursorBase)) {
@@ -229,6 +231,16 @@ function bindSequenceHostEvents(context = {}) {
       return;
     }
     const context = resolveFeatureActionContext(record, event);
+    if (!context?.selectionRange && !event.target?.closest?.('[data-feature-index]')) {
+      const boundary = resolveSequenceBoundaryFromEvent(event, record);
+      if (Number.isFinite(boundary)) {
+        event.preventDefault?.();
+        state.sequenceCursorBase = boundary;
+        updateSequenceCursor();
+        renderCursorContextMenu({ record, boundary }, event);
+        return;
+      }
+    }
     if (!context?.selectionRange && !context?.featureContext) {
       hideFeatureContextMenu();
       return;

@@ -746,30 +746,96 @@
   cursor: grabbing;
 }
 
-/* Cropper's stock 5px edges/handles are hard to hit, and at the default full-image
- * selection the top/left/right ones sit flush with the panel edge. Scaling grows the
- * hit area around the same centre line, and shrinking the shell while cropping moves
- * the whole cropper inside the stage so those handles are not against its border.
- * Padding would not work: Cropper sizes its container from the shell's offsetHeight,
- * which includes padding. */
+/* Keep the full-image crop's resize targets clear of the stage edges. */
 .gel-viewer-stage.is-fitted:has(#gel-cropper-image.is-active) .gel-canvas-shell {
   height: calc(var(--gel-fit-height) - 2 * var(--gel-crop-handle-margin));
   margin: var(--gel-crop-handle-margin);
 }
 
+.gel-viewer-stage .cropper-view-box {
+  outline: 1px solid var(--gel-crop-edge);
+  box-shadow: inset 0 0 0 1px var(--gel-crop-shadow);
+}
+
+.gel-viewer-stage .cropper-face { background: transparent; }
+.gel-viewer-stage .cropper-modal { opacity: 0.3; }
+.gel-viewer-stage .cropper-dashed,
+.gel-viewer-stage .cropper-center { display: none; }
+
+/* Invisible resize targets stay generous; only the outline and small marks show. */
+.gel-viewer-stage .cropper-line {
+  background: transparent;
+  opacity: 1;
+}
+
 .gel-viewer-stage .cropper-line.line-n,
 .gel-viewer-stage .cropper-line.line-s {
-  transform: scaleY(3.2);
+  height: 16px;
+  transform: none;
 }
+
+.gel-viewer-stage .cropper-line.line-n { top: -8px; }
+.gel-viewer-stage .cropper-line.line-s { bottom: -8px; }
 
 .gel-viewer-stage .cropper-line.line-w,
 .gel-viewer-stage .cropper-line.line-e {
-  transform: scaleX(3.2);
+  width: 16px;
+  transform: none;
 }
 
+.gel-viewer-stage .cropper-line.line-w { left: -8px; }
+.gel-viewer-stage .cropper-line.line-e { right: -8px; }
+
 .gel-viewer-stage .cropper-point {
-  transform: scale(2.4);
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  opacity: 1;
+  transform: none;
 }
+
+.gel-viewer-stage .cropper-point.point-n,
+.gel-viewer-stage .cropper-point.point-ne,
+.gel-viewer-stage .cropper-point.point-nw { top: -11px; }
+.gel-viewer-stage .cropper-point.point-s,
+.gel-viewer-stage .cropper-point.point-se,
+.gel-viewer-stage .cropper-point.point-sw { bottom: -11px; }
+.gel-viewer-stage .cropper-point.point-e,
+.gel-viewer-stage .cropper-point.point-ne,
+.gel-viewer-stage .cropper-point.point-se { right: -11px; }
+.gel-viewer-stage .cropper-point.point-w,
+.gel-viewer-stage .cropper-point.point-nw,
+.gel-viewer-stage .cropper-point.point-sw { left: -11px; }
+.gel-viewer-stage .cropper-point.point-n,
+.gel-viewer-stage .cropper-point.point-s { margin-left: -11px; }
+.gel-viewer-stage .cropper-point.point-e,
+.gel-viewer-stage .cropper-point.point-w { margin-top: -11px; }
+
+.gel-viewer-stage .cropper-point::before {
+  content: '';
+  position: absolute;
+  inset: auto;
+  width: 12px;
+  height: 12px;
+  border: 0 solid var(--gel-crop-edge);
+  background: transparent;
+  opacity: 1;
+  filter: drop-shadow(0 0 1px var(--gel-crop-shadow));
+  pointer-events: none;
+}
+
+.gel-viewer-stage .cropper-point.point-nw::before { top: 10px; left: 10px; border-width: 2px 0 0 2px; }
+.gel-viewer-stage .cropper-point.point-ne::before { top: 10px; right: 10px; border-width: 2px 2px 0 0; }
+.gel-viewer-stage .cropper-point.point-sw::before { bottom: 10px; left: 10px; border-width: 0 0 2px 2px; }
+.gel-viewer-stage .cropper-point.point-se::before { bottom: 10px; right: 10px; border-width: 0 2px 2px 0; }
+.gel-viewer-stage .cropper-point.point-n::before,
+.gel-viewer-stage .cropper-point.point-s::before { left: 5px; width: 12px; height: 2px; background: var(--gel-crop-edge); }
+.gel-viewer-stage .cropper-point.point-n::before { top: 10px; }
+.gel-viewer-stage .cropper-point.point-s::before { bottom: 10px; }
+.gel-viewer-stage .cropper-point.point-w::before,
+.gel-viewer-stage .cropper-point.point-e::before { top: 5px; width: 2px; height: 12px; background: var(--gel-crop-edge); }
+.gel-viewer-stage .cropper-point.point-w::before { left: 10px; }
+.gel-viewer-stage .cropper-point.point-e::before { right: 10px; }
 
 .gel-tool-panel {
   min-width: 0;

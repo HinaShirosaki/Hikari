@@ -11,7 +11,7 @@ export function createFloatingWindows({ documentObject, onOpen = {}, onClose = {
   main.append(layer);
   const triggers = {
     tools: 'gel-open-tools-btn', profile: 'gel-open-profile-btn',
-    table: 'gel-open-lane-table-btn', peak: 'gel-open-peak-editor-btn',
+    peak: 'gel-open-peak-editor-btn',
     intensity: 'gel-open-cell-table-btn'
   };
   const windows = new Map();
@@ -120,10 +120,14 @@ export function createFloatingWindows({ documentObject, onOpen = {}, onClose = {
     if (destroyed) return;
     const bounds = main.getBoundingClientRect();
     const viewport = stage.getBoundingClientRect();
+    const tablePanel = documentObject.getElementById('gel-lane-table-panel');
+    const imageBounds = documentObject.getElementById('gel-image-row')?.getBoundingClientRect();
+    const height = tablePanel && !tablePanel.hidden && imageBounds
+      ? Math.max(0, imageBounds.bottom - viewport.top) : viewport.height;
     layer.style.left = `${Math.max(0, viewport.left - bounds.left)}px`;
     layer.style.top = `${Math.max(0, viewport.top - bounds.top)}px`;
     layer.style.width = `${Math.max(0, viewport.width)}px`;
-    layer.style.height = `${Math.max(0, viewport.height)}px`;
+    layer.style.height = `${Math.max(0, height)}px`;
     windows.forEach((entry) => { sync(entry); clamp(entry); });
   }
 
@@ -160,6 +164,8 @@ export function createFloatingWindows({ documentObject, onOpen = {}, onClose = {
   const resizeObserver = view?.ResizeObserver ? new view.ResizeObserver(layout) : null;
   resizeObserver?.observe(stage);
   resizeObserver?.observe(main);
+  const imageRow = documentObject.getElementById('gel-image-row');
+  if (imageRow) resizeObserver?.observe(imageRow);
   windows.forEach(({ node }) => resizeObserver?.observe(node));
   listen(view, 'resize', layout);
   layout();

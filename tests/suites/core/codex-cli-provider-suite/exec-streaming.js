@@ -89,6 +89,7 @@ module.exports = function registerCodexCliProviderSuiteExecStreaming(context = {
         "const fs = require('node:fs');",
         'const args = process.argv.slice(2);',
         "if (args.includes('--version')) { console.log('codex-cli 0.160.0'); process.exit(0); }",
+        `if (args.includes('app-server')) { require(${JSON.stringify(path.join(__dirname, 'tests/support/codex-app-server-fixture.js'))})(); } else {`,
         'let stdin = "";',
         "process.stdin.on('data', (chunk) => { stdin += String(chunk || ''); });",
         "process.stdin.on('end', () => {",
@@ -103,7 +104,8 @@ module.exports = function registerCodexCliProviderSuiteExecStreaming(context = {
         "  const exitCode = Number(process.env.HIKARI_FAKE_CODEX_EXIT_CODE || 0);",
         "  if (exitCode) { process.exit(exitCode); }",
         "  if (outputFile) { fs.writeFileSync(outputFile, 'OK from fake codex'); }",
-        '});'
+        '});',
+        '}'
       ].join('\n'), 'utf8');
       fs.chmodSync(fakePath, 0o755);
       return {
@@ -120,6 +122,7 @@ module.exports = function registerCodexCliProviderSuiteExecStreaming(context = {
         "const fs = require('node:fs');",
         'const args = process.argv.slice(2);',
         "if (args.includes('--version')) { console.log('codex-cli 0.160.0'); process.exit(0); }",
+        `if (args.includes('app-server')) { require(${JSON.stringify(path.join(__dirname, 'tests/support/codex-app-server-fixture.js'))})(); } else {`,
         'let stdin = "";',
         "process.stdin.on('data', (chunk) => { stdin += String(chunk || ''); });",
         "process.stdin.on('end', () => {",
@@ -135,7 +138,8 @@ module.exports = function registerCodexCliProviderSuiteExecStreaming(context = {
         "    if (outputFile) { fs.writeFileSync(outputFile, 'OK from fake codex'); }",
         '    process.exit(0);',
         '  }, 350);',
-        '});'
+        '});',
+        '}'
       ].join('\n'), 'utf8');
       fs.chmodSync(fakePath, 0o755);
       return {

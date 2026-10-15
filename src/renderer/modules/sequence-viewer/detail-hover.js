@@ -11,6 +11,8 @@ import { showTransientNotice } from '../../lib/notify.js';
 import { renderCdsProteinHoverSection } from './rendering/protein-summary.js';
 
 function buildFeatureHoverTooltipHtml(feature, sequenceLength, recordSequence) {
+  const primerCard = renderPrimerHoverSection(feature, recordSequence, { allowLibrarySave: true });
+  if (primerCard) return primerCard;
   const strand = feature?.strand === -1 ? '-' : '+';
   const location = buildFeatureLocationText(feature, sequenceLength);
   const identity = Number.isFinite(feature?.identity) ? `${feature.identity.toFixed(2)}%` : '';
@@ -28,7 +30,6 @@ function buildFeatureHoverTooltipHtml(feature, sequenceLength, recordSequence) {
     <p>${escapeHtml(feature?.type || '-')} | Strand ${strand}</p>
     <p>${escapeHtml(location)}</p>
     <p>${escapeHtml(meta)}</p>
-    ${renderPrimerHoverSection(feature, recordSequence, { allowLibrarySave: true })}
     ${renderCdsProteinHoverSection(feature, recordSequence)}
   `;
 }
@@ -87,7 +88,11 @@ export function createSequenceHoverTooltipController(rootDocument) {
     }
 
     interactivity.cancelHide();
+    rootDocument?.querySelectorAll?.('[data-sequence-hover-tooltip]').forEach(node => {
+      if (node !== tooltip) node.hidden = true;
+    });
     tooltip.innerHTML = buildFeatureHoverTooltipHtml(feature, sequenceLength, recordSequence);
+    tooltip.classList?.toggle('has-primer-card', tooltip.innerHTML.includes('sequence-viewer-primer-hover-card'));
     interactivity.setInteractive(tooltip.innerHTML.includes('sequence-viewer-primer-copy-btn'));
     tooltip.hidden = false;
 

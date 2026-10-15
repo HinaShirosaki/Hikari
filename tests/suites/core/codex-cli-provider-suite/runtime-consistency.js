@@ -43,7 +43,7 @@ if (!args.includes('app-server')) {
     for (let i; (i = buffer.indexOf('\\n')) >= 0;) {
       const request = JSON.parse(buffer.slice(0, i)); buffer = buffer.slice(i + 1);
       if (request.id === undefined) continue;
-      const result = request.method === 'model/list' ? { data: [{id:'gpt-6.1-sol', displayName:'${version}', isDefault:true, supportedReasoningEfforts:[{reasoningEffort:'low'}], defaultReasoningEffort:'low'}] } : {};
+      const result = request.method === 'model/list' ? { data: [{id:process.env.HIKARI_FAKE_AVAILABLE_MODEL || 'gpt-6.1-sol', displayName:'${version}', isDefault:true, supportedReasoningEfforts:[{reasoningEffort:'low'}], defaultReasoningEffort:'low'}] } : {};
       console.log(JSON.stringify({id:request.id,result}));
     }
   });
@@ -102,10 +102,11 @@ if (!args.includes('app-server')) {
     } finally { f.clean(); }
   });
 
-  test('Requests report their actual CLI and preserve an explicit model absent from a catalog', async () => {
+  test('Requests refresh the account catalog and override an unavailable saved model before exec', async () => {
     const f = fixture();
     const saved = { ...process.env };
     try {
+      f.env.HIKARI_FAKE_AVAILABLE_MODEL = 'gpt-6-luna';
       Object.assign(process.env, f.env);
       if (!f.env.HIKARI_CODEX_CLI) delete process.env.HIKARI_CODEX_CLI;
       delete process.env.HIKARI_CODEX_BIN;
@@ -115,7 +116,10 @@ if (!args.includes('app-server')) {
       const result = await provider.requestCodexCliText({ cwd: f.tmp, prompt: 'fixture', model: 'gpt-6.1-sol', returnMetadata: true });
       const output = JSON.parse(result.text);
       assert.equal(output.version, '0.160.0');
-      assert.equal(output.args[output.args.indexOf('-m') + 1], 'gpt-6.1-sol');
+      assert.equal(output.args[output.args.indexOf('-m') + 1], 'gpt-6-luna');
+      const defaultResult = await provider.requestCodexCliText({ cwd: f.tmp, prompt: 'fixture', returnMetadata: true });
+      const defaultOutput = JSON.parse(defaultResult.text);
+      assert.equal(defaultOutput.args[defaultOutput.args.indexOf('-m') + 1], 'gpt-6-luna', 'empty preferences override stale inherited config with the account default');
       assert.equal(result.metadata.cliPath, fs.realpathSync(f.current));
       assert.equal(result.metadata.cliVersion, '0.160.0');
       assert.equal(result.metadata.codexHome, fs.realpathSync(f.home));

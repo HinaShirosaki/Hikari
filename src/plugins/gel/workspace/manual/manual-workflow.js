@@ -5,6 +5,7 @@ import { createManualCanvasInteraction } from './canvas-interaction.js';
 import { createManualStepNavigation } from './step-navigation.js';
 import { createManualLaneShapes } from './lane-shapes.js';
 import { createManualLadderBands } from './ladder-bands.js';
+import { createLadderMwEditor } from './ladder-mw-editor.js';
 import { createManualProgress } from './manual-progress.js';
 import {
   clamp,
@@ -20,7 +21,19 @@ import {
 
 export function createManualWorkflowController({ runtime, elements, deps }) {
   const detectLanes = createLaneDetector();
+  const ladderMwEditor = createLadderMwEditor({
+    runtime,
+    elements,
+    onSet: (rowY, mw) => {
+      upsertLadderBandMw(rowY, mw);
+      renderOverrideStatus();
+      deps.renderCanvas();
+      deps.onRunAnalysis();
+      deps.setStatus(`Set ladder calibration point: row=${rowY}, MW=${mw} kDa.`);
+    }
+  });
   function clearCanvasInteractionState({ clearTool = true } = {}) {
+    ladderMwEditor.close();
     if (clearTool) {
       runtime.selectedViewerTool = '';
     }
@@ -64,6 +77,10 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
         deps.setStatus('Adjust lane vertices selected. Drag one of the four corner handles for a lane.');
         return;
       }
+      if (runtime.selectedViewerTool === 'ladder-mw') {
+        deps.setStatus('Set MW on. Click a band in the ladder lane to enter its MW; drag a label to move it.');
+        return;
+      }
       deps.setStatus(`${label} selected. Click the gel image to apply it.`);
       return;
     }
@@ -79,7 +96,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
   } = createManualProgress({
     runtime,
     elements,
-    deps,
+    deps: { ...deps, syncLadderMwEditor: ladderMwEditor.sync },
     getSegmentationLanes: (...args) => getSegmentationLanes(...args)
   });
 
@@ -156,6 +173,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
 
   const {
     findLadderBandNearPoint,
+    isPointInLadderLane,
     moveLadderBand,
     onDetectLadderBands,
     upsertLadderBandMw
@@ -164,7 +182,6 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     elements,
     deps,
     getRectifiedLaneRowFromPoint: (...args) => getRectifiedLaneRowFromPoint(...args),
-    inferLaneIndexFromSegmentationPoint: (...args) => inferLaneIndexFromSegmentationPoint(...args),
     renderOverrideStatus: (...args) => renderOverrideStatus(...args)
   });
 
@@ -329,6 +346,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     appendBandOverride: (...args) => appendBandOverride(...args),
     clearCanvasTool: (...args) => clearCanvasTool(...args),
     findLadderBandNearPoint: (...args) => findLadderBandNearPoint(...args),
+    isPointInLadderLane: (...args) => isPointInLadderLane(...args),
     getCanvasInteractionStep: (...args) => getCanvasInteractionStep(...args),
     getLaneBandProgress: (...args) => getLaneBandProgress(...args),
     getRectifiedLaneRowFromPoint: (...args) => getRectifiedLaneRowFromPoint(...args),
@@ -337,7 +355,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     renderOverrideStatus: (...args) => renderOverrideStatus(...args),
     updateLaneSegmentation: (...args) => updateLaneSegmentation(...args),
     updateLaneVertexFromPoint: (...args) => updateLaneVertexFromPoint(...args),
-    upsertLadderBandMw: (...args) => upsertLadderBandMw(...args),
+    openLadderMwEditor: ladderMwEditor.open,
     upsertLaneBandWindow: (...args) => upsertLaneBandWindow(...args)
   });
 
@@ -415,6 +433,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
   }
 
   return {
+    destroy: ladderMwEditor.destroy,
     getManualStep,
     onAutoDetectLanes,
     onCanvasClick,

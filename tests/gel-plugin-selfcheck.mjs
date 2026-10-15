@@ -280,7 +280,7 @@ async function checkAdapterContract() {
   );
   assert.doesNotMatch(viewSource, /gel-override-actions/, 'manual-override reset is no longer duplicated in the scrolling form fields');
   assert.match(viewSource, /id="gel-ladder-preset"/, 'the ladder preset select is present for records-manager to read');
-  assert.match(viewSource, /id="gel-ladder-band-mw"[^>]+list="gel-ladder-band-mw-options"/, 'the ladder MW field offers the preset sizes');
+  assert.match(viewSource, /id="gel-ladder-band-mw"[^>]+aria-label="Ladder MW \(kDa\)"/, 'the inline MW field has an accessible label');
   assert.match(viewSource, /id="gel-status"[^>]+aria-live="polite"/, 'workspace status updates are announced');
   assert.doesNotMatch(htmlSource, /universal-left-rail-lists\.css|universal-menus\.css/, 'unrelated shell styles are not loaded');
   assert.doesNotMatch(coreCss, /assets\/fonts/, 'the plugin CSS has no missing external font dependency');

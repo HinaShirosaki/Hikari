@@ -254,6 +254,30 @@
                 <button id="sequence-viewer-protein-builder-add-protein-close-btn" type="button" class="app-dialog-close-btn" aria-label="Close Add Protein window" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
               </div>
               <label class="sequence-viewer-protein-builder-add-protein-field">
+                Source
+                <select id="sequence-viewer-protein-builder-add-protein-source">
+                  <option value="manual">Enter sequence</option>
+                  <option value="uniprot">Search UniProt</option>
+                </select>
+              </label>
+              <section id="sequence-viewer-protein-builder-uniprot-panel" class="sequence-viewer-protein-builder-uniprot-panel" aria-label="UniProt search" hidden>
+                <label class="sequence-viewer-protein-builder-add-protein-field" for="sequence-viewer-protein-builder-uniprot-query">UniProt query</label>
+                <div class="sequence-viewer-protein-builder-uniprot-query-row">
+                  <input id="sequence-viewer-protein-builder-uniprot-query" type="search" maxlength="2000" placeholder="Gene, protein name, or accession" />
+                  <button id="sequence-viewer-protein-builder-uniprot-search-btn" type="button" class="ghost-btn">Search</button>
+                </div>
+                <p id="sequence-viewer-protein-builder-uniprot-status" class="small-note" role="status" aria-live="polite"></p>
+                <div id="sequence-viewer-protein-builder-uniprot-results" class="sequence-viewer-protein-builder-uniprot-results" aria-label="UniProt results"></div>
+                <button id="sequence-viewer-protein-builder-uniprot-more-btn" type="button" class="ghost-btn" hidden>More results</button>
+                <div id="sequence-viewer-protein-builder-uniprot-detail" class="sequence-viewer-protein-builder-uniprot-detail" hidden>
+                  <p id="sequence-viewer-protein-builder-uniprot-summary" class="small-note"></p>
+                  <label class="sequence-viewer-protein-builder-add-protein-field">
+                    Sequence, domain, or region
+                    <select id="sequence-viewer-protein-builder-uniprot-region"></select>
+                  </label>
+                </div>
+              </section>
+              <label class="sequence-viewer-protein-builder-add-protein-field">
                 Protein name
                 <input id="sequence-viewer-protein-builder-add-protein-name" type="text" placeholder="e.g. Fluorescent protein" />
               </label>
@@ -268,6 +292,7 @@
                 Sequence
                 <textarea id="sequence-viewer-protein-builder-add-protein-sequence" rows="6" spellcheck="false" placeholder="Enter an amino-acid sequence"></textarea>
               </label>
+              <p id="sequence-viewer-protein-builder-add-protein-validation" class="small-note" role="status" aria-live="polite" hidden></p>
               <div class="form-actions sequence-viewer-protein-builder-add-protein-actions">
                 <button id="sequence-viewer-protein-builder-add-protein-confirm-btn" type="submit" class="primary-btn" disabled>Add to Chain</button>
                 <button id="sequence-viewer-protein-builder-add-protein-cancel-btn" type="button" class="ghost-btn">Cancel</button>

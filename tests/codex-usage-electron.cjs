@@ -39,7 +39,8 @@ async function main() {
       window.fixtureUsage = { ok: true, fiveHour: { usedPercent: 25.5, resetsAt: 1900000000 }, weekly: { usedPercent: 67, resetsAt: 1900400000 } };
       window.usageReads = 0;
       window.hikariApi = {
-        getCodexLlmStatus: async () => ({ ok: true, loggedIn: true, source: 'stored', cliAvailable: true }),
+        getCodexLlmStatus: async () => ({ ok: true, loggedIn: true, source: 'stored', cliAvailable: true,
+          email: 'account@example.test', planType: 'free', accountKey: 'free-account' }),
         getCodexLlmUsage: async () => { window.usageReads += 1; return window.fixtureUsage; },
         clearCodexLlmLogin: async () => ({ ok: true, status: { ok: true, loggedIn: false, source: 'none' } })
       };
@@ -48,6 +49,7 @@ async function main() {
       dom.refreshCodexUsageBtn.addEventListener('click', () => { void window.fixtureAccount.refreshCodexUsage(); });
       await window.fixtureAccount.refreshCodexLoginStatus();
       await window.fixtureAccount.refreshCodexUsage();
+      if (!document.getElementById('setting-codex-status').textContent.includes('account@example.test · free')) throw new Error('Settings must identify the connected account and plan');
     })()`);
     for (const theme of ['theme-day', 'theme-night']) {
       for (const width of [1024, 720, 480, 320]) {
@@ -79,19 +81,29 @@ async function main() {
       const model = document.getElementById('setting-model');
       model.innerHTML = '<option value="draft">Unsaved model</option>';
       const before = window.usageReads;
-      window.fixtureUsage = { ok: true, fiveHour: { usedPercent: 0, resetsAt: null }, weekly: null };
+      window.fixtureUsage = { ok: true, planType: 'free', windows: [{ usedPercent: 0, resetsAt: null, windowDurationMins: 43200 }] };
       refresh.click();
       await window.fixtureAccount.refreshCodexUsage();
       const refreshed = window.usageReads > before && section.querySelector('[data-codex-usage-value]').textContent === '0% used';
       const draftPreserved = model.value === 'draft';
+      const monthly = section.querySelector('[data-codex-usage-label]').textContent === '30-day usage'
+        && section.querySelector('[data-codex-usage-window="weekly"]').hidden
+        && document.getElementById('setting-codex-usage-status').textContent.includes('free plan');
+      window.fixtureUsage = { ok: true, planType: 'plus', windows: [
+        { usedPercent: 10, resetsAt: 1900000000, windowDurationMins: 300 },
+        { usedPercent: 20, resetsAt: 1900400000, windowDurationMins: 10080 }
+      ] };
+      await window.fixtureAccount.refreshCodexUsage();
+      const plus = section.querySelector('[data-codex-usage-label]').textContent === '5-hour usage'
+        && !section.querySelector('[data-codex-usage-window="weekly"]').hidden;
       window.fixtureUsage = { ok: false, error: 'Usage unavailable' };
       await window.fixtureAccount.refreshCodexUsage();
       const errorCleared = [...section.querySelectorAll('progress')].every(progress => getComputedStyle(progress).display === 'none');
       await window.fixtureAccount.onClearCodexLogin();
-      return { refreshed, draftPreserved, errorCleared, signedOut: refresh.disabled,
+      return { refreshed, draftPreserved, monthly, plus, errorCleared, signedOut: refresh.disabled,
         signedOutMessage: document.getElementById('setting-codex-usage-status').textContent };
     })()`);
-    assert.deepEqual(interactions, { refreshed: true, draftPreserved: true, errorCleared: true,
+    assert.deepEqual(interactions, { refreshed: true, draftPreserved: true, monthly: true, plus: true, errorCleared: true,
       signedOut: true, signedOutMessage: 'Sign in to view account usage.' });
     console.log('PASS Codex usage Electron: day/night at 1024/720/480/320px, refresh, zero usage, missing window, errors, drafts, sign-out.');
   } finally {

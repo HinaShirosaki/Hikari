@@ -1870,9 +1870,11 @@ test('[EDGE] gel-analysis Set MW tool labels and drags ladder bands outside the 
     gelOverrideStatus: new MockElement('gel-override-status'),
     gelManualNextBtn: new MockElement('gel-manual-next-btn'),
     gelToolLadderMwBtn: new MockElement('gel-tool-ladder-mw-btn'),
+    gelLadderMwEditor: new MockElement('gel-ladder-mw-editor'),
     gelLadderBandMwInput: new MockElement('gel-ladder-band-mw')
   };
-  elements.gelLadderBandMwInput.value = '75';
+  elements.gelLadderMwEditor.hidden = true;
+  elements.gelLadderMwEditor.getBoundingClientRect = () => ({ width: 200, height: 110 });
   let analysisRuns = 0;
   const statuses = [];
   const controller = manualModule.createManualWorkflowController({
@@ -1892,8 +1894,25 @@ test('[EDGE] gel-analysis Set MW tool labels and drags ladder bands outside the 
   assert.equal(controller.getManualStep(), 'quantify');
   controller.onViewerToolSelected('ladder-mw');
   assert.equal(runtime.selectedViewerTool, 'ladder-mw');
+  assert.equal(elements.gelToolLadderMwBtn.getAttribute('aria-pressed'), 'true');
+  assert.equal(gelCanvas.classList.contains('is-setting-ladder-mw'), true);
+
+  controller.onCanvasClick({ clientX: 75, clientY: 30 });
+  assert.equal(elements.gelLadderMwEditor.hidden, true, 'other lanes must not open MW entry');
 
   controller.onCanvasClick({ clientX: 25, clientY: 30, preventDefault() {} });
+  assert.equal(elements.gelLadderMwEditor.hidden, false);
+  assert.equal(elements.gelLadderBandMwInput.value, '');
+  assert.equal(runtime.manualOverrides.ladderBands.length, 1, 'opening the editor must not change calibration');
+  elements.gelLadderBandMwInput.value = '0';
+  elements.gelLadderMwEditor.dispatch('submit');
+  assert.equal(elements.gelLadderMwEditor.hidden, false);
+  assert.equal(analysisRuns, 0);
+  assert.match(elements.gelLadderBandMwInput.validationMessage, /greater than 0/);
+  elements.gelLadderBandMwInput.value = '75';
+  elements.gelLadderBandMwInput.dispatch('input');
+  elements.gelLadderMwEditor.dispatch('submit');
+  assert.equal(elements.gelLadderMwEditor.hidden, true);
   assert.equal(JSON.stringify(runtime.manualOverrides.ladderBands), JSON.stringify([
     { pixelY: 12, mw: 50 },
     { pixelY: 30, mw: 75 }
@@ -1903,6 +1922,8 @@ test('[EDGE] gel-analysis Set MW tool labels and drags ladder bands outside the 
 
   // Reusing a MW updates its calibration point instead of duplicating the band.
   controller.onCanvasClick({ clientX: 25, clientY: 45, preventDefault() {} });
+  elements.gelLadderBandMwInput.value = '75';
+  elements.gelLadderMwEditor.dispatch('submit');
   assert.equal(JSON.stringify(runtime.manualOverrides.ladderBands), JSON.stringify([
     { pixelY: 12, mw: 50 },
     { pixelY: 45, mw: 75 }
@@ -1912,10 +1933,10 @@ test('[EDGE] gel-analysis Set MW tool labels and drags ladder bands outside the 
   // Pressing on an existing band drags it instead of adding another one.
   controller.onCanvasMouseDown({ clientX: 25, clientY: 46, preventDefault() {} });
   assert.equal(runtime.ladderBandDrag.mw, 75);
-  controller.onCanvasMouseMove({ clientX: 25, clientY: 44, preventDefault() {} });
+  controller.onCanvasMouseMove({ clientX: 25, clientY: 52, preventDefault() {} });
   assert.equal(JSON.stringify(runtime.manualOverrides.ladderBands), JSON.stringify([
     { pixelY: 12, mw: 50 },
-    { pixelY: 44, mw: 75 }
+    { pixelY: 52, mw: 75 }
   ]));
   controller.onCanvasMouseUp({ clientX: 25, clientY: 60, preventDefault() {} });
   assert.equal(runtime.ladderBandDrag, null);
@@ -1929,6 +1950,43 @@ test('[EDGE] gel-analysis Set MW tool labels and drags ladder bands outside the 
   controller.onCanvasClick({ clientX: 25, clientY: 60, preventDefault() {} });
   assert.equal(runtime.manualOverrides.ladderBands.length, 2);
   assert.equal(analysisRuns, 3);
+
+  // A stationary click on an existing label edits its MW without moving its row.
+  controller.onCanvasMouseDown({ clientX: 25, clientY: 61 });
+  controller.onCanvasMouseMove({ clientX: 25, clientY: 62 });
+  controller.onCanvasMouseUp({ clientX: 25, clientY: 62 });
+  controller.onCanvasClick({ clientX: 25, clientY: 62 });
+  assert.equal(elements.gelLadderBandMwInput.value, '75');
+  assert.equal(analysisRuns, 3);
+  elements.gelLadderBandMwInput.value = '80.5';
+  elements.gelLadderMwEditor.dispatch('submit');
+  assert.equal(JSON.stringify(runtime.manualOverrides.ladderBands), JSON.stringify([
+    { pixelY: 12, mw: 50 }, { pixelY: 60, mw: 80.5 }
+  ]));
+  assert.equal(analysisRuns, 4);
+
+  controller.onCanvasClick({ clientX: 25, clientY: 80 });
+  controller.onViewerToolSelected('ladder-mw');
+  assert.equal(elements.gelLadderMwEditor.hidden, true);
+  assert.equal(analysisRuns, 4, 'dismissing the input must not change calibration');
+  controller.onViewerToolSelected('ladder-mw');
+  controller.onCanvasClick({ clientX: 25, clientY: 80 });
+  controller.onViewerToolSelected('ladder-mw');
+  assert.equal(elements.gelLadderMwEditor.hidden, true);
+  assert.equal(elements.gelToolLadderMwBtn.getAttribute('aria-pressed'), 'false');
+  assert.equal(gelCanvas.classList.contains('is-setting-ladder-mw'), false);
+  runtime.manualOverrides.ladderBandsDone = false;
+  controller.onCanvasClick({ clientX: 25, clientY: 80 });
+  assert.equal(elements.gelLadderMwEditor.hidden, true, 'guided ladder step must respect the off switch');
+
+  controller.onViewerToolSelected('ladder-mw');
+  controller.onCanvasClick({ clientX: 25, clientY: 80 });
+  runtime.manualOverrides = { ...runtime.manualOverrides, ladderBands: [] };
+  controller.renderManualProgress();
+  assert.equal(elements.gelLadderMwEditor.hidden, true, 'undo or record changes must dismiss stale entry');
+  elements.gelLadderMwEditor.dispatch('submit');
+  assert.equal(analysisRuns, 4);
+  controller.destroy();
 });
 
 test('[EDGE] gel-analysis normalizes and scans tilted lane vertices', () => {
