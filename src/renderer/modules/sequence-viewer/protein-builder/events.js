@@ -88,6 +88,7 @@ export function installProteinBuilderEvents(ctx) {
     elements.proteinBuilderAddProteinBtn?.addEventListener('click', () => {
       ctx.openAddProteinDialog();
     });
+    ctx.bindUniProtEvents();
 
     elements.proteinBuilderAddProteinForm?.addEventListener('input', () => {
       ctx.renderAddProteinDialog();

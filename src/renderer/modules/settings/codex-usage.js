@@ -3,14 +3,25 @@ function createCodexUsageSettings({ settingCodexUsage, settingCodexUsageStatus,
   let revision = 0;
   let pending = null;
 
-  function renderWindow(name, window) {
+  function windowLabel(minutes) {
+    if (minutes === 10080) return 'Weekly usage';
+    if (minutes % 1440 === 0) return `${minutes / 1440}-day usage`;
+    if (minutes % 60 === 0) return `${minutes / 60}-hour usage`;
+    return `${minutes}-minute usage`;
+  }
+
+  function renderWindow(name, window, { label = name === 'fiveHour' ? '5-hour usage' : 'Weekly usage', hidden = false } = {}) {
     const row = settingCodexUsage?.querySelector(`[data-codex-usage-window="${name}"]`);
     if (!row) return;
+    row.hidden = hidden;
+    const caption = row.querySelector('[data-codex-usage-label]');
+    if (caption) caption.textContent = label;
     const available = typeof window?.usedPercent === 'number' && Number.isFinite(window.usedPercent);
     const percent = available ? Math.max(0, Math.min(100, window.usedPercent)) : null;
     row.querySelector('[data-codex-usage-value]').textContent = available
       ? `${Number(percent.toFixed(1))}% used` : 'Unavailable';
     const progress = row.querySelector('progress');
+    progress.setAttribute('aria-label', label);
     progress.hidden = !available;
     if (available) progress.value = percent;
     else progress.removeAttribute('value');
@@ -53,11 +64,18 @@ function createCodexUsageSettings({ settingCodexUsage, settingCodexUsageStatus,
           clear(result?.error || 'Account usage is unavailable. Try refreshing.');
           return;
         }
-        renderWindow('fiveHour', result.fiveHour);
-        renderWindow('weekly', result.weekly);
-        if (settingCodexUsageStatus) settingCodexUsageStatus.textContent = result.fiveHour || result.weekly
-          ? 'Shared across Codex apps using this account.'
-          : 'Codex did not report five-hour or weekly limits for this account.';
+        const windows = Array.isArray(result.windows) ? result.windows : [];
+        if (windows.length) {
+          renderWindow('fiveHour', windows[0], { label: windowLabel(windows[0].windowDurationMins) });
+          renderWindow('weekly', windows[1], windows[1]
+            ? { label: windowLabel(windows[1].windowDurationMins) } : { hidden: true });
+        } else {
+          renderWindow('fiveHour', result.fiveHour);
+          renderWindow('weekly', result.weekly);
+        }
+        if (settingCodexUsageStatus) settingCodexUsageStatus.textContent = windows.length || result.fiveHour || result.weekly
+          ? `${result.planType ? `${result.planType} plan. ` : ''}Shared across Codex apps using this account.`
+          : 'Codex returned no usage windows for the connected account. Refresh or sign in again.';
       } catch {
         if (requestRevision === revision) clear('Failed to load account usage. Try refreshing.');
       } finally {

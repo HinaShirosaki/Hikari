@@ -545,6 +545,23 @@
   font-size: 0.6rem;
 }
 
+.sequence-viewer-aa-chip-split {
+  min-width: 0;
+  padding-inline: 0;
+}
+
+.sequence-viewer-aa-chip-continues-left {
+  border-left-style: dashed;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.sequence-viewer-aa-chip-continues-right {
+  border-right-style: dashed;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
 
 .sequence-viewer-aa-label {
   font-size: 0.64rem;

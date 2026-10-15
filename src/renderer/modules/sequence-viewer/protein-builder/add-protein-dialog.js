@@ -2,6 +2,7 @@ import { translateDnaSequence } from '../calculations/sequence.js';
 import { cleanText } from '../shared.js';
 import { sanitizeProteinAssemblySequence } from './assembly-model.js';
 import { createCustomRow } from './row-factory.js';
+import { installProteinBuilderUniProtPicker } from './uniprot-picker.js';
 
 const STANDARD_PROTEIN_RESIDUES = new Set('ACDEFGHIKLMNPQRSTVWY*');
 
@@ -32,10 +33,13 @@ export function parseAddProteinInput(raw, type = 'protein') {
 
 export function installProteinBuilderAddProteinDialog(ctx) {
   const { elements, state } = ctx;
+  installProteinBuilderUniProtPicker(ctx);
 
   ctx.renderAddProteinDialog = function renderAddProteinDialog(options = {}) {
     const isDna = elements.proteinBuilderAddProteinType?.value === 'dna';
-    const input = parseAddProteinInput(elements.proteinBuilderAddProteinSequence?.value, isDna ? 'dna' : 'protein');
+    const input = ctx.isUniProtSource()
+      ? { ...ctx.getUniProtInput(), sourceDnaSequence: '' }
+      : parseAddProteinInput(elements.proteinBuilderAddProteinSequence?.value, isDna ? 'dna' : 'protein');
     const aaLength = countAminoAcids(input.sequence);
     if (elements.proteinBuilderAddProteinSequence) {
       elements.proteinBuilderAddProteinSequence.placeholder = isDna ? 'Enter a DNA coding sequence (5′ to 3′)' : 'Enter an amino-acid sequence';
@@ -47,6 +51,10 @@ export function installProteinBuilderAddProteinDialog(ctx) {
     if (elements.proteinBuilderAddProteinConfirmBtn) {
       elements.proteinBuilderAddProteinConfirmBtn.disabled = !aaLength || Boolean(input.error);
     }
+    if (elements.proteinBuilderAddProteinValidation) {
+      elements.proteinBuilderAddProteinValidation.textContent = input.error || (aaLength ? `${aaLength.toLocaleString()} aa selected.` : '');
+      elements.proteinBuilderAddProteinValidation.hidden = !elements.proteinBuilderAddProteinValidation.textContent;
+    }
     return { ...input, aaLength };
   };
 
@@ -54,6 +62,7 @@ export function installProteinBuilderAddProteinDialog(ctx) {
   // without one it adds a new block.
   ctx.openAddProteinDialog = function openAddProteinDialog(rowId = '') {
     const row = rowId ? state.rows.find((item) => item.id === rowId && item.kind === 'custom') : null;
+    ctx.resetUniProtPicker();
     ctx.editingProteinRowId = row?.id || '';
     if (elements.proteinBuilderAddProteinTitle) elements.proteinBuilderAddProteinTitle.textContent = row ? 'Edit Protein' : 'Add Protein';
     if (elements.proteinBuilderAddProteinConfirmBtn) elements.proteinBuilderAddProteinConfirmBtn.textContent = row ? 'Save' : 'Add to Chain';
@@ -69,6 +78,7 @@ export function installProteinBuilderAddProteinDialog(ctx) {
   };
 
   ctx.closeAddProteinDialog = function closeAddProteinDialog() {
+    ctx.cancelUniProtRequests();
     ctx.renderAddProteinDialog({ open: false });
     elements.proteinBuilderAddProteinBtn?.focus?.();
   };
@@ -80,8 +90,14 @@ export function installProteinBuilderAddProteinDialog(ctx) {
     }
     const label = cleanText(elements.proteinBuilderAddProteinName?.value, 160).trim() || 'Custom Protein';
     const editingRow = ctx.editingProteinRowId && state.rows.find((item) => item.id === ctx.editingProteinRowId);
+    const provenance = input.uniprot ? { uniprot: input.uniprot, note: input.note } : null;
     if (editingRow) {
+      if (!provenance && editingRow.uniprot && (input.sequence !== editingRow.sequence || input.sourceDnaSequence)) {
+        delete editingRow.uniprot;
+        editingRow.note = 'User-defined protein sequence.';
+      }
       Object.assign(editingRow, { label, sequence: input.sequence, sourceDnaSequence: input.sourceDnaSequence });
+      if (provenance) Object.assign(editingRow, provenance);
       ctx.invalidateDnaConstruct();
       ctx.closeAddProteinDialog();
       ctx.render();
@@ -89,6 +105,7 @@ export function installProteinBuilderAddProteinDialog(ctx) {
       return true;
     }
     const row = createCustomRow(state.nextRowId++, label, input.sequence);
+    if (provenance) Object.assign(row, provenance);
     if (input.sourceDnaSequence) row.sourceDnaSequence = input.sourceDnaSequence;
     ctx.appendRow(row);
     ctx.invalidateDnaConstruct();

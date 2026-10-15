@@ -28,7 +28,10 @@ export function renderViewerToolbar(elements, selectedViewerTool, laneBandMode =
     elements.gelFinishDividersBtn.hidden = !dividersSelected;
   }
   elements.gelToolLadderLaneBtn?.classList.toggle('is-active', selectedViewerTool === 'ladder');
-  elements.gelToolLadderMwBtn?.classList.toggle('is-active', selectedViewerTool === 'ladder-mw');
+  const ladderMwSelected = selectedViewerTool === 'ladder-mw';
+  elements.gelToolLadderMwBtn?.classList.toggle('is-active', ladderMwSelected);
+  elements.gelToolLadderMwBtn?.setAttribute?.('aria-pressed', String(ladderMwSelected));
+  elements.gelCanvas?.classList.toggle('is-setting-ladder-mw', ladderMwSelected);
   elements.gelToolLaneVerticesBtn?.classList.toggle('is-active', selectedViewerTool === 'lane-vertices');
   elements.gelToolBandTopBtn?.classList.toggle('is-active', selectedViewerTool === 'band-top');
   elements.gelToolBandBottomBtn?.classList.toggle('is-active', selectedViewerTool === 'band-bottom');

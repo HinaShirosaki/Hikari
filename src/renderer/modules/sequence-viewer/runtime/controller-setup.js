@@ -77,6 +77,7 @@ export function setupSequenceViewerControllers(ctx) {
     onRequestRecognizeBackbone: actions.recognizeCurrentBackboneInsert,
     onApplySequenceEdit: actions.applySequenceEdit,
     onApplyAminoAcidEdit: actions.applyAminoAcidEdit,
+    onSetSequenceOrigin: actions.setSequenceOrigin,
     onRequestAlignment: () => controllers.alignment?.openSequencingAlignmentWorkspace?.(),
     onRequestCloningDesign: () => controllers.cloningDesign?.open?.(),
     hasCloningDesignSource: actions.hasCurrentCloningDesignSource,

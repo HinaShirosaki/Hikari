@@ -32,6 +32,8 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const renderFeatureContextMenu = config?.renderFeatureContextMenu || (() => {});
   const resolveAminoAcidActionContext = config?.resolveAminoAcidActionContext || (() => null);
   const renderAminoAcidContextMenu = config?.renderAminoAcidContextMenu || (() => {});
+  const renderCursorContextMenu = config?.renderCursorContextMenu || (() => {});
+  const applyCursorAction = config?.applyCursorAction || (async () => {});
   const applyAminoAcidReplacement = config?.applyAminoAcidReplacement || (async () => {});
   const openFeatureEditor = config?.openFeatureEditor || (() => {});
   const openPrimerDesignOverlay = config?.openPrimerDesignOverlay || (() => {});
@@ -82,6 +84,8 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     renderFeatureContextMenu,
     resolveAminoAcidActionContext,
     renderAminoAcidContextMenu,
+    renderCursorContextMenu,
+    applyCursorAction,
     applyAminoAcidReplacement,
     openFeatureEditor,
     openPrimerDesignOverlay,

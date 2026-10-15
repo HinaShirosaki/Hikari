@@ -16,6 +16,7 @@ function bindDetailDialogEvents(context = {}, { closeToolbarMenus = () => {} } =
     renderSelectedFeatureDetail,
     setStatus,
     applyAminoAcidReplacement,
+    applyCursorAction,
     openFeatureEditor,
     openPrimerDesignOverlay,
     orderDesignedPrimers,
@@ -29,6 +30,11 @@ function bindDetailDialogEvents(context = {}, { closeToolbarMenus = () => {} } =
 
 
   elements.featureContextMenu?.addEventListener('click', (event) => {
+    const cursorTrigger = event?.target?.closest?.('[data-sequence-cursor-action]');
+    if (cursorTrigger) {
+      if (!cursorTrigger.disabled) void applyCursorAction(cursorTrigger.dataset.sequenceCursorAction);
+      return;
+    }
     const targetAminoAcid = cleanText(
       event?.target?.closest?.('[data-sequence-aa-replacement]')?.dataset?.sequenceAaReplacement,
       4

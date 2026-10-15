@@ -43,10 +43,9 @@ export function attachMapHoverLabel(config = {}) {
           return;
         }
         showTransientNotice(
-          result.copied ? 'Copied primer sequence.' : 'Clipboard access is unavailable.',
+          result.copied ? `Copied primer ${result.kind === 'name' ? 'name' : 'sequence'}.` : 'Clipboard access is unavailable.',
           { type: result.copied ? 'success' : 'error' }
         );
-        hideNow();
       })();
     });
     return node;
@@ -75,12 +74,17 @@ export function attachMapHoverLabel(config = {}) {
       return;
     }
     interactivity?.cancelHide();
+    rootDocument?.querySelectorAll?.('[data-sequence-hover-tooltip]').forEach(node => {
+      if (node !== element) node.hidden = true;
+    });
+    const hasPrimerCard = detailHtml.includes('sequence-viewer-primer-hover-card');
     if (detailHtml) {
-      element.innerHTML = `<span class="vector-map__tooltip-title">${escapeHtml(text)}</span>${detailHtml}`;
+      element.innerHTML = hasPrimerCard ? detailHtml : `<span class="vector-map__tooltip-title">${escapeHtml(text)}</span>${detailHtml}`;
     } else {
       element.textContent = text;
     }
     element.classList?.toggle('has-protein-properties', detailHtml.includes('sequence-viewer-protein-hover'));
+    element.classList?.toggle('has-primer-card', hasPrimerCard);
     interactivity?.setInteractive(detailHtml.includes('sequence-viewer-primer-copy-btn'));
     element.hidden = false;
 
@@ -128,7 +132,9 @@ export function attachMapHoverLabel(config = {}) {
 
     host.addEventListener('mousemove', showFeatureReadout);
     host.addEventListener('focusin', showFeatureReadout);
-    host.addEventListener('focusout', hideNow);
+    host.addEventListener('focusout', (event) => {
+      if (!node?.contains?.(event.relatedTarget)) hideNow();
+    });
 
     host.addEventListener('mouseleave', hide);
     // Zooming and panning move the map out from under the pointer.

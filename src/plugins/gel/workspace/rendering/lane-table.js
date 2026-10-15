@@ -119,6 +119,7 @@ function hasDividerLayout(overrides) {
 
 export function createLaneTableController({ runtime, elements, safeText, deps = {} }) {
   let figureExportPromise = null;
+  let panelOpen = null;
 
   function resolveLadderLane(layout = resolveLaneLayout(runtime)) {
     const normalized = normalizeManualOverrides(runtime.manualOverrides);
@@ -174,19 +175,18 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
       return;
     }
     const labelWidth = stage.classList.contains('has-lane-table') ? LABEL_COLUMN_WIDTH_PX : 0;
-    const usableWidth = (stage.clientWidth || 0) - labelWidth;
-    const rowTop = row.getBoundingClientRect?.()?.top;
-    const stageTop = stage.getBoundingClientRect?.()?.top;
-    const contentTop = !elements.gelLaneTableWindow && Number.isFinite(rowTop) && Number.isFinite(stageTop)
-      ? rowTop - stageTop : 0;
-    const usableHeight = stageHeight - contentTop;
+    const panel = elements.gelLaneTablePanel;
+    const tableWidth = panel && !panel.hidden ? elements.gelLaneTableShell?.clientWidth : 0;
+    const usableWidth = Math.min(stage.clientWidth || 0, tableWidth || stage.clientWidth || 0) - labelWidth;
+    const panelHeight = panel && !panel.hidden ? panel.getBoundingClientRect().height + 12 : 0;
+    const usableHeight = stageHeight - panelHeight;
     if (!image?.width || !image?.height || usableWidth <= 0 || usableHeight <= 0) {
       stage.classList.remove('is-fitted');
       return;
     }
     const canvasWidth = Math.min(usableWidth, (usableHeight * image.width) / image.height);
     stage.style.setProperty('--gel-fit-width', `${Math.floor(canvasWidth + labelWidth)}px`);
-    const fittedHeight = elements.gelLaneTableWindow ? canvasWidth * image.height / image.width : usableHeight;
+    const fittedHeight = canvasWidth * image.height / image.width;
     stage.style.setProperty('--gel-fit-height', `${Math.floor(fittedHeight)}px`);
     stage.classList.add('is-fitted');
   }
@@ -228,15 +228,18 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
     const visibleLayout = resolveVisibleLayout(layout, includeLadder, ladderLane);
     const visibleColumns = visibleLayout.columns;
 
-    elements.gelAddTableBtn.hidden = false;
+    const panelVisible = !runtime.cropperActive && (panelOpen ?? hasTable);
+    if (elements.gelLaneTablePanel) elements.gelLaneTablePanel.hidden = !panelVisible;
+    elements.gelOpenLaneTableBtn?.setAttribute('aria-expanded', String(panelVisible));
+    elements.gelOpenLaneTableBtn?.classList.toggle('is-active', panelVisible);
+    elements.gelAddTableBtn.hidden = hasTable;
     elements.gelAddTableBtn.disabled = !canAddTable || hasTable;
     elements.gelViewerStage.style.setProperty('--gel-lane-label-width', `${LABEL_COLUMN_WIDTH_PX}px`);
-    const inlineTable = hasTable && !elements.gelLaneTableWindow;
+    const inlineTable = hasTable && (!elements.gelLaneTablePanel || panelVisible);
     elements.gelViewerStage.classList.toggle('has-lane-table', inlineTable);
     elements.gelLaneTableSpacer.hidden = !inlineTable;
     elements.gelLaneTableShell.hidden = !hasTable;
     if (elements.gelLaneTableEmpty) elements.gelLaneTableEmpty.hidden = hasTable;
-    if (elements.gelLaneTableWindow) elements.gelAddTableBtn.hidden = hasTable;
 
     if (!hasTable || !layout) {
       elements.gelLaneTableShell.innerHTML = '';
@@ -350,8 +353,8 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
       }
       return [createBlankRow(layout.laneCount)];
     });
+    panelOpen = true;
     render();
-    deps.openLaneTableWindow?.();
     deps.setStatus?.('Added a lane table. Use Add row to expand it.');
     requestAnimationFrame(() => {
       focusLastRowLabel();
@@ -552,7 +555,20 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
     });
   }
 
+  function onTogglePanel() {
+    panelOpen = Boolean(elements.gelLaneTablePanel?.hidden);
+    render();
+  }
+
+  function onClosePanel() {
+    panelOpen = false;
+    render();
+    elements.gelOpenLaneTableBtn?.focus({ preventScroll: true });
+  }
+
   return {
+    onTogglePanel,
+    onClosePanel,
     onAddTableClick,
     onGenerateFigureClick,
     onGeneratePowerPointClick,

@@ -10,6 +10,7 @@ const {
 } = require('../../agent/codex-agent/runtime-files.js');
 const {
   CODEX_CONFIG_FILE,
+  CODEX_SIGNED_OUT_FILE,
   CODEX_RUNTIME_HOME_DIRS,
   CODEX_RUNTIME_HOME_FILES
 } = require('./constants');
@@ -128,7 +129,8 @@ async function ensureCodexCliRuntimeHome(cwd = '', options = {}) {
     return runtimeHome;
   }
 
-  await Promise.all(CODEX_RUNTIME_HOME_FILES
+  const signedOut = await pathExists(path.join(runtimeHome, CODEX_SIGNED_OUT_FILE));
+  await Promise.all(CODEX_RUNTIME_HOME_FILES.filter(fileName => fileName !== 'auth.json' || !signedOut)
     .map((fileName) => (
     seedRuntimeFile(
       path.join(resolvedSource, fileName),

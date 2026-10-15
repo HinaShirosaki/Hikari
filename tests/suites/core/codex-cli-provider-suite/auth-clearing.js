@@ -33,7 +33,7 @@ module.exports = function registerCodexCliProviderSuiteAuthClearing(context = {}
       ]
     };
 
-    test('codex cli provider clears stored auth from both the shared and runtime homes', async () => {
+    test('Hikari sign-out preserves the desktop account and prevents importing it again', async () => {
       const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-clear-auth-'));
       const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-clear-runtime-'));
       const previousCodexHome = process.env.CODEX_HOME;
@@ -48,10 +48,12 @@ module.exports = function registerCodexCliProviderSuiteAuthClearing(context = {}
         const provider = loadProvider();
         const result = await provider.clearCodexCliStoredLogin({ cwd: workspaceDir });
         assert.equal(result.ok, true);
-        assert.equal(fs.existsSync(path.join(tmpDir, 'auth.json')), false);
+        assert.equal(fs.existsSync(path.join(tmpDir, 'auth.json')), true);
         assert.equal(fs.existsSync(path.join(workspaceDir, 'Config', 'codex-cli-home', 'auth.json')), false);
-        assert.equal(result.clearedPaths.includes(path.join(tmpDir, 'auth.json')), true);
+        assert.equal(result.clearedPaths.includes(path.join(tmpDir, 'auth.json')), false);
         assert.equal(result.clearedPaths.includes(path.join(workspaceDir, 'Config', 'codex-cli-home', 'auth.json')), true);
+        await provider.ensureCodexCliRuntimeHome(workspaceDir, { env: { CODEX_HOME: tmpDir } });
+        assert.equal(fs.existsSync(path.join(workspaceDir, 'Config', 'codex-cli-home', 'auth.json')), false, 'status refresh must not sign back in with the desktop account');
       } finally {
         if (typeof previousCodexHome === 'string') {
           process.env.CODEX_HOME = previousCodexHome;

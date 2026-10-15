@@ -47,6 +47,8 @@ data/Config/codex-cli-home/tmp/
 .env
 .env.*
 data/Config/codex-cli-home/auth.json
+# Codex runtime home when the working directory is the repo root
+/Config/
 
 # Local scratch / personal / test material (not part of the app)
 /Book3.xlsx

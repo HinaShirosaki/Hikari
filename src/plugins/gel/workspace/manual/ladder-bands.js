@@ -1,7 +1,7 @@
 import { buildLanesFromManualSegmentation, detectLadderBandRows } from '../analysis/analysis-core.js';
 import { buildQuantificationSignal } from '../analysis/image-processing.js';
 import { getLadderPresetBands } from '../constants.js';
-import { clamp, normalizeManualOverrides } from '../shared.js';
+import { clamp, laneContainsPoint, normalizeManualOverrides } from '../shared.js';
 import { LADDER_BAND_GRAB_PX } from './lane-constants.js';
 
 // The ladder lane's bands: detecting them from the signal, and grabbing or moving
@@ -12,7 +12,6 @@ function createManualLadderBands({
   elements,
   deps,
   getRectifiedLaneRowFromPoint,
-  inferLaneIndexFromSegmentationPoint,
   renderOverrideStatus
 } = {}) {
   function upsertLadderBandMw(pixelY, mw) {
@@ -90,11 +89,13 @@ function createManualLadderBands({
     deps.onRunAnalysis();
   }
 
+  function isPointInLadderLane(point, overrides = normalizeManualOverrides(runtime.manualOverrides)) {
+    const lane = getLadderLaneShape(overrides);
+    return Boolean(lane && laneContainsPoint(lane, point.x, point.y, runtime.currentImage.width));
+  }
+
   function findLadderBandNearPoint(point, overrides) {
-    if (!Number.isFinite(overrides.ladderLane)) {
-      return null;
-    }
-    if (inferLaneIndexFromSegmentationPoint(point) !== overrides.ladderLane) {
+    if (!isPointInLadderLane(point, overrides)) {
       return null;
     }
     const rowY = getRectifiedLaneRowFromPoint(point, overrides.ladderLane);
@@ -103,7 +104,7 @@ function createManualLadderBands({
       if (distance > LADDER_BAND_GRAB_PX || (best && best.distance <= distance)) {
         return best;
       }
-      return { mw: band.mw, distance };
+      return { mw: band.mw, pixelY: band.pixelY, distance };
     }, null);
   }
 
@@ -121,6 +122,7 @@ function createManualLadderBands({
 
   return {
     findLadderBandNearPoint,
+    isPointInLadderLane,
     moveLadderBand,
     onDetectLadderBands,
     upsertLadderBandMw

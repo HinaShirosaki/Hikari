@@ -21,11 +21,12 @@ function createManualCanvasInteraction({
   getLaneBandProgress,
   getRectifiedLaneRowFromPoint,
   inferLaneIndexFromSegmentationPoint,
+  isPointInLadderLane,
   moveLadderBand,
   renderOverrideStatus,
   updateLaneSegmentation,
   updateLaneVertexFromPoint,
-  upsertLadderBandMw,
+  openLadderMwEditor,
   upsertLaneBandWindow
 } = {}) {
   function getCanvasPoint(event) {
@@ -42,7 +43,7 @@ function createManualCanvasInteraction({
   }
 
   function onCanvasMouseDown(event) {
-    if (!runtime.currentImage || runtime.cropperActive) {
+    if (!runtime.currentImage || runtime.cropperActive || (event.button !== undefined && event.button !== 0)) {
       return;
     }
     const step = getCanvasInteractionStep();
@@ -50,9 +51,7 @@ function createManualCanvasInteraction({
       const point = getCanvasPoint(event);
       const grabbed = point && findLadderBandNearPoint(point, normalizeManualOverrides(runtime.manualOverrides));
       if (grabbed) {
-        runtime.ladderBandDrag = { mw: grabbed.mw };
-        runtime.suppressNextLadderBandClick = true;
-        deps.setStatus(`Drag the ${grabbed.mw} kDa band to its row.`);
+        runtime.ladderBandDrag = { mw: grabbed.mw, clientX: event.clientX, clientY: event.clientY, moved: false };
         event.preventDefault?.();
       }
       return;
@@ -84,8 +83,14 @@ function createManualCanvasInteraction({
       return;
     }
     if (runtime.ladderBandDrag) {
+      const drag = runtime.ladderBandDrag;
+      if (!drag.moved && Math.hypot(event.clientX - drag.clientX, event.clientY - drag.clientY) < 4) {
+        return;
+      }
       const dragPoint = getCanvasPoint(event);
       if (dragPoint) {
+        drag.moved = true;
+        runtime.suppressNextLadderBandClick = true;
         moveLadderBand(runtime.ladderBandDrag.mw, dragPoint);
         renderOverrideStatus();
         deps.renderCanvas();
@@ -111,6 +116,10 @@ function createManualCanvasInteraction({
       return;
     }
     if (runtime.ladderBandDrag) {
+      if (!runtime.ladderBandDrag.moved) {
+        runtime.ladderBandDrag = null;
+        return;
+      }
       const point = getCanvasPoint(event);
       const { mw } = runtime.ladderBandDrag;
       const rowY = point ? moveLadderBand(mw, point) : null;
@@ -221,22 +230,13 @@ function createManualCanvasInteraction({
         return;
       }
       const normalized = normalizeManualOverrides(runtime.manualOverrides);
-      const laneIndex = inferLaneIndexFromSegmentationPoint(point);
-      if (!laneIndex || laneIndex !== normalized.ladderLane) {
+      if (!isPointInLadderLane(point, normalized)) {
         deps.setStatus(`Click inside the ladder lane (${normalized.ladderLane || '-'}) to set ladder MW.`);
         return;
       }
-      const mw = Number(elements.gelLadderBandMwInput?.value);
-      if (!Number.isFinite(mw) || mw <= 0) {
-        deps.setStatus('Enter Ladder Band MW (kDa) before clicking the band.');
-        return;
-      }
-      const rowY = getRectifiedLaneRowFromPoint(point, laneIndex);
-      upsertLadderBandMw(rowY, mw);
-      renderOverrideStatus();
-      deps.renderCanvas();
-      deps.setStatus(`Set ladder calibration point: row=${rowY}, MW=${mw} kDa.`);
-      deps.onRunAnalysis();
+      const existing = findLadderBandNearPoint(point, normalized);
+      const rowY = existing?.pixelY ?? getRectifiedLaneRowFromPoint(point, normalized.ladderLane);
+      openLadderMwEditor({ rowY, mw: existing?.mw, clientX: event.clientX, clientY: event.clientY });
       return;
     }
     if (step === 'band-top') {
