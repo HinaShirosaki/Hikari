@@ -353,29 +353,11 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     elements.gelOpenCellTableBtn?.focus?.();
   }
 
-  function onCellTableOverlayClick(event) {
-    if (event?.target === elements.gelCellTableOverlay) {
-      onCellTableClose();
-    }
-  }
-
-  function onCellTableKeyDown(event) {
-    if (event?.key !== 'Escape') {
-      return;
-    }
-    if (runtime.cellTableDialogOpen) {
-      event.preventDefault?.();
-      onCellTableClose();
-    }
-  }
-
   return {
     onCanvasHoverLeave,
     onCellTableCopy,
     onCellTableClose,
-    onCellTableKeyDown,
     onCellTableOpen,
-    onCellTableOverlayClick,
     onCanvasHoverMove,
     onLaneProfileChartMouseLeave,
     onLaneProfileChartMouseMove,

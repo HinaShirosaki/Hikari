@@ -88,14 +88,6 @@ notebook suggestions and drafts, selection insights, spreadsheet fill,
 sequence CDS properties and MCP, sample suggestions, the assay chart, and the
 plugin runtime.
 
-`cloud-drive-electron.cjs` exercises Google Drive and Dropbox controls through
-real preload/storage/cloud IPC with in-memory providers and a temporary profile.
-It checks sign-in cancellation, workspace linking, upload/download, conflicts,
-offline retry, disconnection, and responsive layout. `cloud-drive-selfcheck.js`
-adds provider HTTP, credential, OAuth callback, and two-device sync checks. These
-fixtures do not sign in to live accounts; see `docs/main-platform/data/cloud-drives.md`
-for OAuth application configuration and the limits of this verification.
-
 CI (`.github/workflows/ci.yml`, macOS) runs `npm test`, then
 `tests/hikari-mcp-launch-selfcheck.js` against Electron's embedded Node (the
 packaged `--hikari-mcp-stdio` path), then `storage-setup-electron.cjs`.

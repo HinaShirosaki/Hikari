@@ -44,15 +44,9 @@ async function clearCodexCliStoredLogin({ cwd = process.cwd() } = {}) {
   // Sign-out belongs to Hikari; never remove the desktop/terminal account.
   await fs.mkdir(runtimeHome, { recursive: true });
   await fs.writeFile(path.join(runtimeHome, CODEX_SIGNED_OUT_FILE), '', { mode: 0o600 });
-  const targetPaths = [path.resolve(runtimeHome, 'auth.json')];
+  const authPath = path.resolve(runtimeHome, 'auth.json');
   require('./catalog').invalidateCodexCliCatalog();
-
-  const clearedPaths = [];
-  for (const targetPath of targetPaths) {
-    if (await removeFileIfExists(targetPath)) {
-      clearedPaths.push(targetPath);
-    }
-  }
+  const clearedPaths = await removeFileIfExists(authPath) ? [authPath] : [];
 
   return {
     ok: true,

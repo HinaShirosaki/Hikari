@@ -238,9 +238,9 @@ test('MCP notebook_list enumerates migrated project and workflow titles without 
   await updateTitle(pageFiles.n1, 'New saved list title');
   const before = await inventory(root);
   const ids = [];
-  let cursor;
+  let offset = 0;
   do {
-    const result = await call('notebook_list', { limit: 1, ...(cursor ? { cursor } : {}) });
+    const result = await call('notebook_list', { limit: 1, offset });
     assert.equal(result.ok, true, result.error);
     assert.equal(result.source, 'markdown');
     assert.equal(result.access.complete, true);
@@ -254,13 +254,13 @@ test('MCP notebook_list enumerates migrated project and workflow titles without 
       assert.equal(item.ui_target.entry_id, item.id);
       if (item.id === 'n1') assert.equal(item.title, 'New saved list title');
     }
-    cursor = result.pagination.next_cursor;
-  } while (cursor);
+    offset = result.pagination.next_offset;
+  } while (offset !== null);
   assert.deepEqual(ids.sort(), ['n1', 'n2', 'n3']);
   const scoped = await call('notebook_list', { project_name: 'Migration project', notebook_state: 'planned',
     date_field: 'updated', date_from: '2026-10-08', date_to: '2026-10-08' });
   assert.deepEqual(scoped.items.map(item => item.id), ['n2']);
-  assert.equal(scoped.pagination.next_cursor, null);
+  assert.equal(scoped.pagination.next_offset, null);
   const noMatch = await call('notebook_list', { date_from: '2026-11-01' });
   assert.equal(noMatch.status, 'no_match');
   assert.deepEqual(noMatch.items, []);
@@ -272,9 +272,8 @@ test('MCP notebook_list enumerates migrated project and workflow titles without 
   const first = await call('notebook_list', { limit: 1 });
   await updateTitle(pageFiles.n2, 'Changed between pages');
   const changed = await inventory(root);
-  const stale = await call('notebook_list', { limit: 1, cursor: first.pagination.next_cursor });
-  assert.equal(stale.status, 'stale_cursor');
-  assert.equal(stale.ok, false);
+  const next = await call('notebook_list', { limit: 1, offset: first.pagination.next_offset });
+  assert.equal(next.ok, true, next.error);
   assert.deepEqual(await inventory(root), changed);
 }));
 

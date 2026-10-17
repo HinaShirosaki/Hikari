@@ -308,7 +308,7 @@ Read-only title enumeration, independent of the lookup candidate limit. `{}` lis
 
 Each item contains its `id`, `title`, notebook type/state, project/protocol identity, all three timestamps, and `ui_target`, without page content, result text, tables, file paths, or images. Results sort by the selected date newest first, with entry ID as the tie-breaker and undated pages last. `updated_at` falls back to creation time when the record has no update timestamp.
 
-`limit` defaults to 100 (maximum 200). `pagination` contains `total`, `offset`, `limit`, `has_more`, and `next_cursor`. Repeat with the same filters and the returned cursor until `next_cursor` is null. Cursor consistency covers returned metadata and storage access; changed records or filters return `stale_cursor`, requiring a restart. Totals refer to available matching pages; a complete inventory also requires `access.complete: true`. Unreadable storage or a bounded live index without persisted storage yields incomplete coverage. To read a listed page, call `notebook_lookup` with its ID as `query` and `detail: "full"`.
+`limit` defaults to 100 (maximum 200). `pagination` contains `total`, `offset`, `limit`, `has_more`, and `next_offset`. Repeat with the same filters and `offset: next_offset` until `next_offset` is null. Totals refer to available matching pages; a complete inventory also requires `access.complete: true`. Unreadable storage or a bounded live index without persisted storage yields incomplete coverage. To read a listed page, call `notebook_lookup` with its ID as `query` and `detail: "full"`.
 
 ### `literature_search`
 

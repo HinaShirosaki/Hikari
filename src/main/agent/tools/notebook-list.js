@@ -1,6 +1,5 @@
 'use strict';
 
-const { createHash } = require('node:crypto');
 const { asArray, ensureObject } = require('../../lib/normalize.js');
 const { buildNotebookLookupCoverage } = require('./notebook-lookup-coverage.js');
 
@@ -29,8 +28,8 @@ function compactNotebookItem(item) {
   ].map((key) => [key, item[key]]));
 }
 
-function invalidInput(error, status = 'invalid_input') {
-  return { ok: false, status, error, items: [] };
+function invalidInput(error) {
+  return { ok: false, status: 'invalid_input', error, items: [] };
 }
 
 function createNotebookListExecutor({ buildLookupContext, normalizeNotebookItem, filterNotebookItems }) {
@@ -54,19 +53,10 @@ function createNotebookListExecutor({ buildLookupContext, normalizeNotebookItem,
     const to = parseNotebookDate(scope.date_to, true);
     if (Number.isNaN(from) || Number.isNaN(to)) return invalidInput('Dates must be valid YYYY-MM-DD dates or ISO timestamps with an explicit timezone.');
     if (from !== null && to !== null && from > to) return invalidInput('date_from must be on or before date_to.');
-
-    let cursor = null;
-    if (input.cursor !== undefined) {
-      const encoded = text(input.cursor);
-      try {
-        if (!encoded || encoded.length > 256 || !/^[A-Za-z0-9_-]+$/.test(encoded)) throw new Error();
-        cursor = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'));
-        if (cursor.v !== 1 || !Number.isSafeInteger(cursor.offset) || cursor.offset < 1
-          || !/^[a-f0-9]{64}$/.test(cursor.fingerprint)) throw new Error();
-      } catch {
-        return invalidInput('Invalid cursor. Start a new list without cursor.', 'invalid_cursor');
-      }
-    }
+    // ponytail: plain offset paging; pages edited mid-listing can shift. Add a
+    // result fingerprint if agents start listing while the user edits.
+    const offset = input.offset === undefined ? 0 : Number(input.offset);
+    if (!Number.isSafeInteger(offset) || offset < 0) return invalidInput('offset must be a non-negative integer.');
 
     const snapshot = ensureObject(input.snapshot);
     const context = await buildLookupContext({
@@ -92,16 +82,16 @@ function createNotebookListExecutor({ buildLookupContext, normalizeNotebookItem,
     const items = scopedItems.filter((item) => {
       if (from === null && to === null) return true;
       const time = parseNotebookDate(item[dateKey]);
-      return time !== null && Number.isFinite(time) && (from === null || time >= from) && (to === null || time <= to);
+      return Number.isFinite(time) && (from === null || time >= from) && (to === null || time <= to);
     }).sort((left, right) => {
       const leftTime = parseNotebookDate(left[dateKey]);
       const rightTime = parseNotebookDate(right[dateKey]);
-      const timeOrder = (Number.isFinite(rightTime) && rightTime !== null ? rightTime : -Infinity)
-        - (Number.isFinite(leftTime) && leftTime !== null ? leftTime : -Infinity);
+      const timeOrder = (Number.isFinite(rightTime) ? rightTime : -Infinity)
+        - (Number.isFinite(leftTime) ? leftTime : -Infinity);
       return timeOrder || (left.id < right.id ? -1 : left.id > right.id ? 1 : 0);
     });
     const coverage = buildNotebookLookupCoverage(context, snapshot, items.length);
-    const bridge = ensureObject(snapshot.notebook_lookup_bridge || snapshot.notebookLookupBridge);
+    const bridge = ensureObject(snapshot.notebook_lookup_bridge);
     const applied = asArray(context.migration?.applied);
     if (bridge.complete === false && !context.loadedDataFile
       && !applied.some((source) => ['notebook_sidecar', 'project_root_storage', 'workflow_root_storage'].includes(source))) {
@@ -110,12 +100,6 @@ function createNotebookListExecutor({ buildLookupContext, normalizeNotebookItem,
       coverage.access.warning_codes.push('notebook_index_incomplete');
       coverage.access.warnings.push('Only a bounded live notebook index was available; older pages may be missing.');
     }
-    const fingerprint = createHash('sha256').update(JSON.stringify({ scope, items, access: coverage.access, missingDates })).digest('hex');
-    if (cursor && cursor.fingerprint !== fingerprint) {
-      return invalidInput('Notebook data, access, or filters changed. Restart without cursor to obtain a consistent list.', 'stale_cursor');
-    }
-    const offset = cursor?.offset || 0;
-    if (offset > items.length) return invalidInput('Cursor offset is outside this list. Restart without cursor.', 'invalid_cursor');
     const page = items.slice(offset, offset + limit);
     const hasMore = offset + page.length < items.length;
     return {
@@ -130,7 +114,7 @@ function createNotebookListExecutor({ buildLookupContext, normalizeNotebookItem,
       access: coverage.access,
       pagination: {
         limit, total: items.length, offset, has_more: hasMore,
-        next_cursor: hasMore ? Buffer.from(JSON.stringify({ v: 1, offset: offset + page.length, fingerprint })).toString('base64url') : null
+        next_offset: hasMore ? offset + page.length : null
       },
       items: page
     };

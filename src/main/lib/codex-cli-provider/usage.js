@@ -18,13 +18,12 @@ function usageFromCodexRateLimits(result = {}) {
   const legacy = result?.rateLimits;
   const limits = result?.rateLimitsByLimitId?.codex
     || (!legacy?.limitId || legacy.limitId === 'codex' ? legacy : null);
-  const windows = [limits?.primary, limits?.secondary];
   return {
-    fiveHour: normalizeUsageWindow(windows.find(window => window?.windowDurationMins === 300)),
-    weekly: normalizeUsageWindow(windows.find(window => window?.windowDurationMins === 10080)),
-    windows: windows.filter(window => normalizeUsageWindow(window)
-      && Number.isFinite(window.windowDurationMins) && window.windowDurationMins > 0)
-      .map(window => ({ ...normalizeUsageWindow(window), windowDurationMins: window.windowDurationMins })),
+    windows: [limits?.primary, limits?.secondary].flatMap((window) => {
+      const usage = normalizeUsageWindow(window);
+      return usage && Number.isFinite(window.windowDurationMins) && window.windowDurationMins > 0
+        ? [{ ...usage, windowDurationMins: window.windowDurationMins }] : [];
+    }),
     planType: typeof limits?.planType === 'string' ? limits.planType.slice(0, 80) : ''
   };
 }

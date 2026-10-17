@@ -36,7 +36,7 @@ async function main() {
       const { getSettingsElements } = await import(${JSON.stringify(url('src/renderer/modules/settings/dom.js'))});
       const dom = getSettingsElements(document);
       for (const panel of dom.settingsPanels) panel.hidden = panel.dataset.settingsPanel !== 'llm';
-      window.fixtureUsage = { ok: true, fiveHour: { usedPercent: 25.5, resetsAt: 1900000000 }, weekly: { usedPercent: 67, resetsAt: 1900400000 } };
+      window.fixtureUsage = { ok: true, windows: [{ usedPercent: 25.5, resetsAt: 1900000000, windowDurationMins: 300 }, { usedPercent: 67, resetsAt: 1900400000, windowDurationMins: 10080 }] };
       window.usageReads = 0;
       window.hikariApi = {
         getCodexLlmStatus: async () => ({ ok: true, loggedIn: true, source: 'stored', cliAvailable: true,

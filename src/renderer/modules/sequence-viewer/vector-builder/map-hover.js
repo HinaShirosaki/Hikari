@@ -84,7 +84,6 @@ export function attachMapHoverLabel(config = {}) {
       element.textContent = text;
     }
     element.classList?.toggle('has-protein-properties', detailHtml.includes('sequence-viewer-protein-hover'));
-    element.classList?.toggle('has-primer-card', hasPrimerCard);
     interactivity?.setInteractive(detailHtml.includes('sequence-viewer-primer-copy-btn'));
     element.hidden = false;
 

@@ -445,8 +445,8 @@
         </section>
       </div>
 
-      <div id="sequence-viewer-primer-library-overlay" class="sequence-viewer-primer-library-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
-        <section class="sequence-viewer-primer-library-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-primer-library-title">
+      <dialog id="sequence-viewer-primer-library-overlay" class="sequence-viewer-primer-library-overlay app-dialog-overlay app-dialog-overlay--center" aria-labelledby="sequence-viewer-primer-library-title">
+        <section class="sequence-viewer-primer-library-dialog app-dialog-surface">
           <div class="result-card-head app-dialog-head">
             <h4 id="sequence-viewer-primer-library-title">Primer Library</h4>
             <button id="sequence-viewer-primer-library-close" type="button" class="app-dialog-close-btn" aria-label="Close Primer Library" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
@@ -469,10 +469,10 @@
             <button id="sequence-viewer-primer-library-export" type="button" class="primary-btn" disabled>Export Selected to IDT</button>
           </div>
         </section>
-      </div>
+      </dialog>
 
-      <div id="sequence-viewer-primer-order-overlay" class="sequence-viewer-primer-order-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
-        <section class="sequence-viewer-primer-order-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-primer-order-title">
+      <dialog id="sequence-viewer-primer-order-overlay" class="sequence-viewer-primer-order-overlay app-dialog-overlay app-dialog-overlay--center" aria-labelledby="sequence-viewer-primer-order-title">
+        <section class="sequence-viewer-primer-order-dialog app-dialog-surface">
           <div class="result-card-head app-dialog-head">
             <h4 id="sequence-viewer-primer-order-title">Order Primers</h4>
             <button id="sequence-viewer-primer-order-close" type="button" class="app-dialog-close-btn" aria-label="Close order primers dialog" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
@@ -497,7 +497,7 @@
             <button id="sequence-viewer-primer-order-copy-csv" type="button" class="ghost-btn">Copy CSV</button>
           </div>
         </section>
-      </div>
+      </dialog>
 
       <div id="sequence-viewer-vector-builder-workspace" class="sequence-viewer-vector-builder-workspace" hidden>
         <div class="sequence-viewer-vector-builder-toolbar">

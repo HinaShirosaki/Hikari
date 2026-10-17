@@ -1,7 +1,6 @@
 import { escapeHtml } from '../../lib/html.js';
 import { showTransientNotice } from '../../lib/notify.js';
 import { asArray } from '../../lib/normalize.js';
-import { createPrimerDialogFocus } from './primer-dialog-focus.js';
 import {
   DEFAULT_PRIMER_ORDER_PURIFICATION,
   DEFAULT_PRIMER_ORDER_SCALE,
@@ -20,7 +19,6 @@ export function createPrimerOrderController(config = {}) {
   const setStatus = config?.setStatus || (() => {});
   const rootDocument = config?.rootDocument || globalThis.document;
   if (elements.primerOrderOverlay && rootDocument?.body) rootDocument.body.appendChild(elements.primerOrderOverlay);
-  const focus = createPrimerDialogFocus({ rootDocument, overlay: elements.primerOrderOverlay, onClose: hide });
 
   let primers = [];
   let scale = DEFAULT_PRIMER_ORDER_SCALE;
@@ -50,10 +48,7 @@ export function createPrimerOrderController(config = {}) {
   }
 
   function hide() {
-    if (elements.primerOrderOverlay) {
-      elements.primerOrderOverlay.hidden = true;
-    }
-    focus.restore();
+    elements.primerOrderOverlay?.close();
   }
 
   function open(nextPrimers) {
@@ -62,13 +57,12 @@ export function createPrimerOrderController(config = {}) {
       setStatus('Design primers before building an order form.', true);
       return false;
     }
-    focus.open();
     rootDocument?.querySelectorAll?.('[data-sequence-hover-tooltip]').forEach(node => { node.hidden = true; });
     fillSelect(elements.primerOrderScaleSelect, PRIMER_ORDER_SCALES, scale);
     fillSelect(elements.primerOrderPurificationSelect, PRIMER_ORDER_PURIFICATIONS, purification);
     render();
-    if (elements.primerOrderOverlay) {
-      elements.primerOrderOverlay.hidden = false;
+    if (elements.primerOrderOverlay && !elements.primerOrderOverlay.open) {
+      elements.primerOrderOverlay.showModal();
     }
     elements.primerOrderCopyIdtBtn?.focus?.();
     return true;
@@ -101,7 +95,6 @@ export function createPrimerOrderController(config = {}) {
   }
 
   function bindEvents() {
-    focus.bind();
     elements.primerOrderCloseBtn?.addEventListener('click', hide);
     elements.primerOrderOverlay?.addEventListener('click', (event) => {
       if (event?.target === elements.primerOrderOverlay) {

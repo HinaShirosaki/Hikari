@@ -13,14 +13,9 @@ const menuIds = ['add-menu', 'align-menu'];
 export function createWorkspaceTools({ hikari, document, onHosted = () => {} }) {
   const $ = id => document.getElementById(id), win = document.defaultView;
   let supported = false, hosted = false, signature = '', scheduled = false, inFlight = false;
-  // Hosts predating icon capabilities accept fit but reject crop, which would
-  // otherwise reject the entire shared toolbar. Keep the Crop action intact.
-  // Older hosts already provide a divided-layout glyph. Reserve the stacked
-  // Layers glyph for the actual Layers panel, including on those hosts.
-  let cropIcon = 'fit', alignIcon = 'scratch';
   const tools = () => definitions.map(([id, icon, group]) => {
     const node = $(id), control = menuIds.includes(id) ? node.querySelector('summary') : node;
-    const tool = { id, icon: icon === 'crop' ? cropIcon : icon === 'align' ? alignIcon : icon, group, label: id === 'zoom-level' ? node.textContent : control.title || control.getAttribute('aria-label') };
+    const tool = { id, icon, group, label: id === 'zoom-level' ? node.textContent : control.title || control.getAttribute('aria-label') };
     if (id === 'zoom-level') { delete tool.icon; tool.kind = 'output'; }
     else {
       tool.disabled = Boolean(control.disabled);
@@ -88,8 +83,6 @@ export function createWorkspaceTools({ hikari, document, onHosted = () => {} }) 
     sync: schedule, focus, isHosted: () => hosted,
     connect(info) {
       if (!info?.layout?.workspaceTools?.available || info.permissions && !info.permissions.includes('layout')) return;
-      cropIcon = Array.isArray(info.layout.workspaceTools.icons) && info.layout.workspaceTools.icons.includes('crop') ? 'crop' : 'fit';
-      alignIcon = Array.isArray(info.layout.workspaceTools.icons) && info.layout.workspaceTools.icons.includes('align') ? 'align' : 'scratch';
       supported = true; schedule();
     }
   };

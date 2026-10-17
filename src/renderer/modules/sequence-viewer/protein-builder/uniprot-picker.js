@@ -99,6 +99,15 @@ export function installProteinBuilderUniProtPicker(ctx) {
     syncControls();
   };
 
+  function applySourceUi(uniprot) {
+    if (e.proteinBuilderUniProtPanel) e.proteinBuilderUniProtPanel.hidden = !uniprot;
+    if (e.proteinBuilderAddProteinType) e.proteinBuilderAddProteinType.disabled = uniprot;
+    const typeField = e.proteinBuilderAddProteinType?.closest?.('label');
+    if (typeField) typeField.hidden = uniprot;
+    e.proteinBuilderAddProteinForm?.classList?.toggle('is-uniprot', uniprot);
+    if (e.proteinBuilderAddProteinSequence) e.proteinBuilderAddProteinSequence.readOnly = uniprot;
+  }
+
   ctx.resetUniProtPicker = function resetUniProtPicker() {
     ctx.cancelUniProtRequests();
     items = [];
@@ -106,13 +115,8 @@ export function installProteinBuilderUniProtPicker(ctx) {
     query = '';
     manualDraft = null;
     if (e.proteinBuilderAddProteinSource) e.proteinBuilderAddProteinSource.value = 'manual';
-    if (e.proteinBuilderUniProtPanel) e.proteinBuilderUniProtPanel.hidden = true;
     if (e.proteinBuilderUniProtQuery) e.proteinBuilderUniProtQuery.value = '';
-    if (e.proteinBuilderAddProteinType) e.proteinBuilderAddProteinType.disabled = false;
-    const typeField = e.proteinBuilderAddProteinType?.closest?.('label');
-    if (typeField) typeField.hidden = false;
-    e.proteinBuilderAddProteinForm?.classList?.remove('is-uniprot');
-    if (e.proteinBuilderAddProteinSequence) e.proteinBuilderAddProteinSequence.readOnly = false;
+    applySourceUi(false);
     clearEntry();
     renderResults();
     setStatus();
@@ -122,12 +126,7 @@ export function installProteinBuilderUniProtPicker(ctx) {
   ctx.setAddProteinSource = function setAddProteinSource() {
     const uniprot = ctx.isUniProtSource();
     ctx.cancelUniProtRequests();
-    if (e.proteinBuilderUniProtPanel) e.proteinBuilderUniProtPanel.hidden = !uniprot;
-    if (e.proteinBuilderAddProteinType) e.proteinBuilderAddProteinType.disabled = uniprot;
-    const typeField = e.proteinBuilderAddProteinType?.closest?.('label');
-    if (typeField) typeField.hidden = uniprot;
-    e.proteinBuilderAddProteinForm?.classList?.toggle('is-uniprot', uniprot);
-    if (e.proteinBuilderAddProteinSequence) e.proteinBuilderAddProteinSequence.readOnly = uniprot;
+    applySourceUi(uniprot);
     if (uniprot) {
       manualDraft = {
         name: e.proteinBuilderAddProteinName?.value || '',
@@ -151,8 +150,8 @@ export function installProteinBuilderUniProtPicker(ctx) {
   ctx.searchUniProt = async function searchUniProt(append = false) {
     const requestedQuery = String(e.proteinBuilderUniProtQuery?.value || '').trim();
     if (!ctx.isUniProtSource() || busy) return;
-    if (!requestedQuery || requestedQuery.length > 2000) {
-      setStatus('Enter a UniProt query of 1–2,000 characters.');
+    if (!requestedQuery) {
+      setStatus('Enter a UniProt query.');
       return;
     }
     const bridge = ctx.getBridge?.();

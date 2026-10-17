@@ -92,7 +92,6 @@ export function createSequenceHoverTooltipController(rootDocument) {
       if (node !== tooltip) node.hidden = true;
     });
     tooltip.innerHTML = buildFeatureHoverTooltipHtml(feature, sequenceLength, recordSequence);
-    tooltip.classList?.toggle('has-primer-card', tooltip.innerHTML.includes('sequence-viewer-primer-hover-card'));
     interactivity.setInteractive(tooltip.innerHTML.includes('sequence-viewer-primer-copy-btn'));
     tooltip.hidden = false;
 

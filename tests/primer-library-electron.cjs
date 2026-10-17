@@ -132,16 +132,19 @@ async function main() {
     assert.equal((await rows()).length, 2);
     assert.equal((await rows())[1].sequence, 'AGTCGCATGCTAGCATGTCG');
     await click('sequence-viewer-detail-primer-library-open');
-    assert.equal(await exec(`document.getElementById('sequence-viewer-primer-library-overlay').hidden`), false);
+    assert.equal(await exec(`document.getElementById('sequence-viewer-primer-library-overlay').open`), true);
     assert.equal(await exec(`document.getElementById('sequence-viewer-primer-library-export').disabled`), true);
     await exec(`document.querySelector('[data-primer-library-select]').click()`);
     await click('sequence-viewer-primer-library-export');
     assert.equal(await exec(`document.getElementById('sequence-viewer-primer-order-preview').value`), 'Construct F\tGGTCTCGATGGCACGTTTAGGCCATAC\t25nm\tSTD');
     await click('sequence-viewer-primer-order-copy-idt');
     assert.equal(await exec('window.copied'), 'Construct F\tGGTCTCGATGGCACGTTTAGGCCATAC\t25nm\tSTD');
-    await exec(`document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))`);
-    assert.equal(await exec(`document.getElementById('sequence-viewer-primer-order-overlay').hidden`), true);
-    assert.equal(await exec(`document.getElementById('sequence-viewer-primer-library-overlay').hidden`), false);
+    // Native <dialog> Escape needs a trusted key event; it closes only the top dialog.
+    win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
+    win.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' });
+    await new Promise(resolve => setTimeout(resolve, 100));
+    assert.equal(await exec(`document.getElementById('sequence-viewer-primer-order-overlay').open`), false);
+    assert.equal(await exec(`document.getElementById('sequence-viewer-primer-library-overlay').open`), true);
     await exec(`(()=>{const e=document.querySelector('[data-primer-library-name]');e.value='Order F';e.dispatchEvent(new Event('change',{bubbles:true}))})()`);
     assert.equal((await rows())[0].name, 'Order F');
     await screenshot('library-selected.png');
@@ -157,7 +160,7 @@ async function main() {
     assert.equal((await rows())[0].name, 'Order F');
     await exec(`show('sequence-viewer-view');viewer.render({activeViewId:'sequence-viewer-view'})`);
     await click('sequence-viewer-primer-library-open');
-    assert.equal(await exec(`document.getElementById('sequence-viewer-primer-library-overlay').hidden`), false);
+    assert.equal(await exec(`document.getElementById('sequence-viewer-primer-library-overlay').open`), true);
     await click('sequence-viewer-primer-library-select-all');
     await click('sequence-viewer-primer-library-export');
     assert.equal(await exec(`document.getElementById('sequence-viewer-primer-order-overlay').getBoundingClientRect().width > 0`), true);

@@ -1,5 +1,5 @@
 import { buildLanesFromManualSegmentation } from '../analysis/analysis-core.js';
-import { createLaneDetector } from '../analysis/auto-lanes.js';
+import { detectLanes } from '../analysis/auto-lanes.js';
 import { getViewerToolLabel, renderViewerToolbar } from './manual-ui.js';
 import { createManualCanvasInteraction } from './canvas-interaction.js';
 import { createManualStepNavigation } from './step-navigation.js';
@@ -20,7 +20,6 @@ import {
 
 
 export function createManualWorkflowController({ runtime, elements, deps }) {
-  const detectLanes = createLaneDetector();
   const ladderMwEditor = createLadderMwEditor({
     runtime,
     elements,
@@ -378,7 +377,6 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       gray: runtime.currentImage.gray,
       width: runtime.currentImage.width,
       height: runtime.currentImage.height,
-      imageRevision: runtime.imageRevision,
       yStart: Number.isFinite(segmentation.bandTop) ? segmentation.bandTop : null,
       yEnd: Number.isFinite(segmentation.bandBottom) ? segmentation.bandBottom : null,
       gelLeft: segmentation.gelLeft,

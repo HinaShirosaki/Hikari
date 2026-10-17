@@ -89,7 +89,6 @@
 .sequence-viewer-primer-library-table code { word-break: break-all; line-height: 1.5; }
 .sequence-viewer-primer-library-table .sequence-viewer-primer-library-empty { padding: var(--space-24); text-align: center; color: var(--theme-text-muted); }
 .sequence-viewer-primer-library-actions { justify-content: space-between; }
-.sequence-viewer-primer-order-overlay { z-index: 2560; }
 .sequence-viewer-primer-hover-actions { flex-wrap: wrap; }
 
 @media (max-width: 600px) {

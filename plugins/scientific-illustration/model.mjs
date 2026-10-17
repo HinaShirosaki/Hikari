@@ -81,9 +81,7 @@ export function normalizeCanvas(raw) {
 export function normalizeDocument(raw, validateSvg) {
   record(raw, 'Document');
   if (raw.version !== 1 || !Array.isArray(raw.objects) || raw.objects.length > 200) throw new Error('Unsupported document or too many objects (maximum 200).');
-  // Read legacy scenes without dropping their components. New mutations still
-  // pass through normalizeObject, which only accepts the main canvas.
-  const objects = raw.objects.map(obj => normalizeObject(obj.canvas === 'scratch' ? { ...obj, canvas: 'main' } : obj, validateSvg));
+  const objects = raw.objects.map(obj => normalizeObject(obj, validateSvg));
   if (new Set(objects.map(obj => obj.id)).size !== objects.length) throw new Error('Object IDs must be unique.');
   if (raw.groups !== undefined && (!Array.isArray(raw.groups) || raw.groups.length > 100)) throw new Error('Use at most 100 groups.');
   const used = new Set(objects.map(object => object.id)), members = new Set();
@@ -91,7 +89,7 @@ export function normalizeDocument(raw, validateSvg) {
     record(group, 'Group'); fields(group, ['id', 'name', 'canvas', 'ids']);
     if (!validId(group.id) || used.has(group.id)) throw new Error('Group IDs must be unique and use 1–100 letters, numbers, underscores or hyphens.');
     used.add(group.id);
-    const canvas = choice(group.canvas === 'scratch' ? 'main' : group.canvas, CANVASES, 'Group canvas');
+    const canvas = choice(group.canvas, CANVASES, 'Group canvas');
     if (!Array.isArray(group.ids) || group.ids.length < 2 || new Set(group.ids).size !== group.ids.length) throw new Error('Groups need at least two distinct component IDs.');
     for (const id of group.ids) {
       if (!raw.objects.some(object => object.id === id && (object.canvas ?? 'main') === group.canvas) || members.has(id)) throw new Error('Each group member must exist on the same canvas and belong to only one group.');

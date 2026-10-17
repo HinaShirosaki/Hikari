@@ -10,7 +10,7 @@ const {
 
 const NOTEBOOK_LIST_MCP_TOOL = Object.freeze({
   name: 'notebook_list',
-  description: 'List notebook page titles and compact metadata, with optional project, protocol, state, title substring, and date-range filters. No filters lists all pages. Follow pagination.next_cursor with unchanged filters until null; access.complete reports storage coverage. Dates use created, updated (default), or executed timestamps; YYYY-MM-DD bounds include the entire UTC day. Results sort newest first, then by entry id. A stale_cursor requires restarting the list.',
+  description: 'List notebook page titles and compact metadata, with optional project, protocol, state, title substring, and date-range filters. No filters lists all pages. Follow pagination.next_offset with unchanged filters until null; access.complete reports storage coverage. Dates use created, updated (default), or executed timestamps; YYYY-MM-DD bounds include the entire UTC day. Results sort newest first, then by entry id.',
   annotations: buildReadOnlyToolAnnotations('Notebook list'),
   inputSchema: {
     type: 'object',
@@ -27,7 +27,7 @@ const NOTEBOOK_LIST_MCP_TOOL = Object.freeze({
       date_from: { type: 'string', minLength: 1, maxLength: 40, description: 'Inclusive YYYY-MM-DD (UTC) or ISO timestamp with timezone.' },
       date_to: { type: 'string', minLength: 1, maxLength: 40, description: 'Inclusive YYYY-MM-DD (whole UTC day) or ISO timestamp with timezone.' },
       limit: { type: 'integer', minimum: 1, maximum: 200, default: 100 },
-      cursor: { type: 'string', minLength: 1, maxLength: 256, description: 'pagination.next_cursor from the previous response; keep all filters unchanged.' }
+      offset: { type: 'integer', minimum: 0, default: 0, description: 'pagination.next_offset from the previous response; keep all filters unchanged.' }
     }
   }
 });
@@ -47,7 +47,7 @@ async function callNotebookList(input = {}, context = {}, deps = {}) {
   if (payload.pagination) response.pagination = payload.pagination;
   if (response.ok && response.pagination) {
     response.summary = `Returned ${response.items.length} of ${response.pagination.total} matching notebook pages.`;
-    if (response.pagination.has_more) response.summary += ' Continue with pagination.next_cursor and the same filters.';
+    if (response.pagination.has_more) response.summary += ' Continue with pagination.next_offset and the same filters.';
     if (response.access?.complete === false) response.summary += ' Storage coverage is incomplete; totals cover available pages only.';
   }
   return response;

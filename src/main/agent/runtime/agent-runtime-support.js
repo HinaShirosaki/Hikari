@@ -121,7 +121,7 @@ function createAgentRuntimeSupport(deps = {}) {
 
   function normalizeAgentSnapshot(rawSnapshot) {
     const snapshot = rawSnapshot && typeof rawSnapshot === 'object' ? rawSnapshot : {};
-    const notebookBridge = snapshot.notebook_lookup_bridge || snapshot.notebookLookupBridge;
+    const notebookBridge = snapshot.notebook_lookup_bridge;
     const bridgeEntries = asArray(notebookBridge?.entries);
     const experimentData = snapshot.experimentData && typeof snapshot.experimentData === 'object'
       ? snapshot.experimentData

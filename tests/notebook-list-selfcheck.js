@@ -30,10 +30,10 @@ test('notebook_list retrieves every page beyond lookup caps, with stable tie ord
   })).reverse();
   const runtime = createAgentNotebookLookupRuntime({ cleanText, agentAppApi: createAgentSubAppApi({ cleanText }) });
   const snapshot = { notebookEntries: entries };
-  let cursor;
+  let offset = 0;
   const all = [];
   do {
-    const result = await runtime.executeList({ snapshot, limit: 200, ...(cursor ? { cursor } : {}) });
+    const result = await runtime.executeList({ snapshot, limit: 200, offset });
     assert.equal(result.ok, true, result.error);
     assert.equal(result.pagination.total, 623);
     assert.equal(result.counts.candidates, 623);
@@ -41,8 +41,8 @@ test('notebook_list retrieves every page beyond lookup caps, with stable tie ord
     assert.ok(result.items.length <= 200);
     assert.doesNotMatch(JSON.stringify(result.items), /private|secret|raw\.csv/);
     all.push(...ids(result));
-    cursor = result.pagination.next_cursor;
-  } while (cursor);
+    offset = result.pagination.next_offset;
+  } while (offset !== null);
   assert.deepEqual(all, entries.map(item => item.id).sort());
   assert.equal(new Set(all).size, entries.length);
   assert.equal((await runtime.executeList({ snapshot })).items.length, 100);
@@ -130,34 +130,24 @@ test('invalid inputs are rejected before storage access', async () => {
     { date_from: '2026-02-30' }, { date_to: '2025-02-29' }, { date_from: 'October 14' },
     { date_from: '2026-10-14T12:00:00' }, { date_to: '2026-10-14T24:00:00Z' },
     { date_from: '2026-10-15', date_to: '2026-10-14' }, { date_field: 'unknown' },
-    { notebook_state: 'unknown' }, { limit: 0 }, { limit: 201 }, { limit: 1.5 }, { cursor: 'nonsense' },
-    { cursor: Buffer.from('{}').toString('base64url') }
+    { notebook_state: 'unknown' }, { limit: 0 }, { limit: 201 }, { limit: 1.5 }, { offset: -1 },
+    { offset: 1.5 }, { offset: 'nonsense' }
   ]) {
     const result = await runtime.executeList(input);
     assert.equal(result.ok, false, JSON.stringify(input));
-    assert.ok(['invalid_input', 'invalid_cursor'].includes(result.status));
+    assert.equal(result.status, 'invalid_input');
   }
   assert.equal((await run([], { date_from: '2024-02-29' })).ok, true);
 });
 
-test('pagination tolerates page-size changes but requires restart on metadata, filters or access changes', async () => {
+test('pagination tolerates page-size changes', async () => {
   const entries = [entry('a'), entry('b'), entry('c'), entry('d')];
   const first = await run(entries, { limit: 1 });
-  const cursor = first.pagination.next_cursor;
-  const next = await run(entries, { limit: 200, cursor });
+  assert.equal(first.pagination.next_offset, 1);
+  const next = await run(entries, { limit: 200, offset: first.pagination.next_offset });
   assert.deepEqual(ids(next), ['b', 'c', 'd']);
-  assert.equal(next.pagination.next_cursor, null);
-  for (const [data, input, deps] of [
-    [entries, { cursor, project_id: 'p1' }, {}],
-    [[{ ...entries[0], experimentName: 'Renamed' }, ...entries.slice(1)], { cursor }, {}],
-    [[...entries, entry('new')], { cursor }, {}],
-    [entries.slice(1), { cursor }, {}],
-    [entries, { cursor }, { buildLookupContext: async () => ({ hydratedSnapshot: { notebookEntries: entries }, warnings: ['EPERM'] }) }]
-  ]) {
-    const result = await run(data, input, deps);
-    assert.equal(result.status, 'stale_cursor');
-    assert.equal(result.ok, false);
-  }
+  assert.equal(next.pagination.next_offset, null);
+  assert.deepEqual(ids(await run(entries, { offset: 9 })), []);
 });
 
 test('hydration enumerates persisted older pages and merges current live metadata by stable id', async () => {

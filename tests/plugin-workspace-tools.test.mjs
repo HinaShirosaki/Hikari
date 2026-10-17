@@ -69,24 +69,6 @@ function illustrationToolbarFixture(icons) {
 }
 const flushToolbar = () => new Promise(resolve => setImmediate(resolve));
 
-test('older packaged hosts keep the merged toolbar and Crop action without a crop icon capability', async () => {
-  for (const icons of [undefined, workspaceToolIcons.filter(icon => !['crop', 'align'].includes(icon))]) {
-    const fixture = illustrationToolbarFixture(icons);
-    fixture.toolbar.connect(fixture.info); await flushToolbar();
-    assert.equal(fixture.toolbar.isHosted(), true, 'A rejected glyph must not detach the entire toolbar');
-    assert.ok(fixture.classes.has('has-host-tools'));
-    const tools = fixture.calls.at(-1).params.tools, crop = tools.find(tool => tool.id === 'crop-raster');
-    assert.equal(tools.filter(tool => tool.kind !== 'output').length, 12);
-    assert.equal(tools.find(tool => tool.id === 'align-menu').icon, 'scratch');
-    assert.deepEqual(tools.filter(tool => tool.icon === 'layers').map(tool => tool.id), ['layers-tab']);
-    assert.equal(crop.icon, 'fit'); assert.equal(crop.label, 'Crop selected image'); assert.equal(crop.disabled, true);
-    fixture.nodes['crop-raster'].disabled = false; fixture.toolbar.sync(); await flushToolbar();
-    assert.equal(fixture.calls.at(-1).params.tools.find(tool => tool.id === 'crop-raster').disabled, false);
-    fixture.events['app.workspaceTool']({ id: 'crop-raster' });
-    assert.equal(fixture.nodes['crop-raster'].clicks, 1, 'The compatibility glyph still dispatches the inline Crop action');
-  }
-});
-
 test('current hosts use the dedicated Crop icon and context refresh keeps the hosted toolbar', async () => {
   const fixture = illustrationToolbarFixture(workspaceToolIcons);
   fixture.toolbar.connect(fixture.info); await flushToolbar();
@@ -97,9 +79,5 @@ test('current hosts use the dedicated Crop icon and context refresh keeps the ho
   const count = fixture.calls.length;
   fixture.toolbar.connect(fixture.info); await flushToolbar();
   assert.equal(fixture.calls.length, count, 'Unchanged context does not re-register controls');
-  fixture.toolbar.connect({ ...fixture.info, layout: { workspaceTools: { available: true } } }); await flushToolbar();
-  assert.equal(fixture.calls.at(-1).params.tools.find(tool => tool.id === 'crop-raster').icon, 'fit');
-  assert.equal(fixture.calls.at(-1).params.tools.find(tool => tool.id === 'align-menu').icon, 'scratch');
-  assert.deepEqual(fixture.calls.at(-1).params.tools.filter(tool => tool.icon === 'layers').map(tool => tool.id), ['layers-tab']);
   assert.equal(fixture.toolbar.isHosted(), true);
 });

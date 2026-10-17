@@ -1527,10 +1527,8 @@ test('[EDGE] gel-analysis band intensity dialog shows and copies only the intens
   assert.equal(elements.gelCellTableOverlay.hidden, false);
   assert.equal(elements.gelOpenCellTableBtn.getAttribute('aria-expanded'), 'true');
 
-  // Escape closes the open band-intensity dialog.
-  let prevented = false;
-  controller.onCellTableKeyDown({ key: 'Escape', preventDefault() { prevented = true; } });
-  assert.equal(prevented, true);
+  // Closing the floating window (its × or Escape) closes the report.
+  controller.onCellTableClose();
   assert.equal(runtime.cellTableDialogOpen, false);
   assert.equal(elements.gelCellTableOverlay.hidden, true);
 
@@ -1589,7 +1587,7 @@ test('[EDGE] gel-analysis copies all current labels and formatted intensities an
   assert.equal((elements.gelCellTableHost.innerHTML.match(/class="gel-cell-row"/g) || []).length, 3);
   runtime.currentReport.lanes[1].targetBand.correctedIntensity = 14.25;
   const pending = controller.onCellTableCopy();
-  assert.equal(elements.gelCellTableCopyBtn.disabled, true);
+  // A second click while the first copy is pending is ignored.
   await controller.onCellTableCopy();
   assert.deepEqual(copies, ['Lane\tLabel\tBand intensity\n1\tControl <A>\t1200\n2\tSample B repeat\t14.25\n3\tBlank\t-']);
   finishCopy();

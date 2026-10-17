@@ -171,7 +171,7 @@ function renderCanvas(canvas, documentState = state) {
 }
 document.fonts.addEventListener('loadingdone', () => {
   clearTextBounds();
-  if (state && !drag && !areaDrag) for (const canvas of ['main']) renderCanvas(canvas);
+  if (state && !drag && !areaDrag) renderCanvas('main');
 });
 for (const [id, factor] of [['zoom-out', 1 / 1.25], ['zoom-in', 1.25]]) {
   $(id).addEventListener('click', () => {
@@ -206,11 +206,8 @@ const canvasObserver = new ResizeObserver(entries => {
     pendingCanvasFits.forEach(stage => viewport.layout(stage)); pendingCanvasFits.clear();
   });
 });
-for (const canvas of ['main']) canvasObserver.observe($(`${canvas}-canvas`));
-for (const canvas of ['main']) {
-  const stage = $(`${canvas}-canvas`);
-  stage.addEventListener('scroll', () => syncSelectionSize(stage), { passive: true });
-}
+canvasObserver.observe($('main-canvas'));
+$('main-canvas').addEventListener('scroll', () => syncSelectionSize($('main-canvas')), { passive: true });
 
 async function edit(operations, revision = state?.revision) {
   if (!revision) return status('The illustration is still opening.');
@@ -234,7 +231,7 @@ function render(next, id = illustrationId) {
   state = next;
   syncChatContext(illustrationId, state.title);
   setSelection(selectedIds.filter(selected => state.objects.some(object => object.id === selected && object.canvas === activeCanvas)));
-  for (const key of ['main']) renderCanvas(key);
+  renderCanvas('main');
   $('figure-title').value = state.title;
   $('complexity').value = state.complexity;
   $('complexity').title = COMPLEXITY_PROFILES[state.complexity].summary;
@@ -297,48 +294,46 @@ function renderLayers() {
   const focusedId = focusedRow?.dataset.layerId, focusedAction = document.activeElement?.dataset.layerAction;
   $('layers').replaceChildren();
   $('layer-count').textContent = state.objects.length || '';
-  for (const canvas of ['main']) {
-    const canvasObjects = state.objects.filter(object => object.canvas === canvas).reverse(), listedGroups = new Set();
-    const objects = canvasObjects.flatMap(object => {
-      const group = state.groups.find(group => group.ids.includes(object.id));
-      if (!group) return [object];
-      if (listedGroups.has(group.id)) return [];
-      listedGroups.add(group.id);
-      return canvasObjects.filter(member => group.ids.includes(member.id));
-    });
-    const drawnGroups = new Set();
-    for (const object of objects) {
+  const canvasObjects = [...state.objects].reverse(), listedGroups = new Set();
+  const objects = canvasObjects.flatMap(object => {
     const group = state.groups.find(group => group.ids.includes(object.id));
-    if (group && !drawnGroups.has(group.id)) {
-      drawnGroups.add(group.id);
-      const row = document.createElement('div'); row.className = `layer grouped-layer${group.ids.every(id => selectedIds.includes(id)) ? ' is-selected' : ''}`;
-      row.setAttribute('role', 'listitem'); row.dataset.layerId = group.id;
-      const button = document.createElement('button'); button.type = 'button'; button.className = 'layer-select'; button.dataset.layerAction = 'select';
-      button.setAttribute('aria-label', `Select group ${group.name}`); button.setAttribute('aria-pressed', String(group.ids.every(id => selectedIds.includes(id))));
-      const preview = document.createElement('span'); preview.className = 'layer-preview'; preview.setAttribute('aria-hidden', 'true'); preview.append(icon('layers'));
-      const name = document.createElement('span'); name.className = 'layer-name'; name.textContent = group.name;
-      const count = document.createElement('small'); count.className = 'group-count'; count.textContent = group.ids.length;
-      button.append(preview, name, count); button.addEventListener('click', event => select(group.ids, { additive: event.shiftKey }));
-      row.append(button); $('layers').append(row);
-    }
-    const row = document.createElement('div'); row.className = `layer${selectedIds.includes(object.id) ? ' is-selected' : ''}${object.visible ? '' : ' is-hidden'}${group ? ' group-child' : ''}`; row.setAttribute('role', 'listitem'); row.dataset.layerId = object.id;
+    if (!group) return [object];
+    if (listedGroups.has(group.id)) return [];
+    listedGroups.add(group.id);
+    return canvasObjects.filter(member => group.ids.includes(member.id));
+  });
+  const drawnGroups = new Set();
+  for (const object of objects) {
+  const group = state.groups.find(group => group.ids.includes(object.id));
+  if (group && !drawnGroups.has(group.id)) {
+    drawnGroups.add(group.id);
+    const row = document.createElement('div'); row.className = `layer grouped-layer${group.ids.every(id => selectedIds.includes(id)) ? ' is-selected' : ''}`;
+    row.setAttribute('role', 'listitem'); row.dataset.layerId = group.id;
     const button = document.createElement('button'); button.type = 'button'; button.className = 'layer-select'; button.dataset.layerAction = 'select';
-    button.setAttribute('aria-label', `Select ${object.name}`); button.title = object.name;
-    const preview = document.createElement('span'); preview.className = `layer-preview ${object.type}`; preview.setAttribute('aria-hidden', 'true');
-    if (object.type === 'text') preview.textContent = 'T';
-    else {
-      const thumbnail = element('svg', { viewBox: `0 0 ${object.width} ${object.height}`, 'aria-hidden': 'true' });
-      thumbnail.append(objectGroup({ ...object, x: 0, y: 0, rotation: 0, opacity: 1 })); preview.append(thumbnail);
-    }
-    const name = document.createElement('span'); name.className = 'layer-name'; name.textContent = object.name;
-    button.append(preview, name);
-    button.setAttribute('aria-pressed', String(selectedIds.includes(object.id))); button.addEventListener('click', event => select(object.id, { additive: event.shiftKey }));
-    const visibility = document.createElement('button'); visibility.type = 'button'; visibility.className = 'layer-visibility icon-button'; visibility.dataset.layerAction = 'visibility';
-    visibility.title = `${object.visible ? 'Hide' : 'Show'} ${object.name}`; visibility.setAttribute('aria-label', visibility.title); visibility.setAttribute('aria-pressed', String(object.visible));
-    visibility.append(icon(object.visible ? 'eye' : 'hidden'));
-    visibility.addEventListener('click', () => void edit([{ op: 'update', id: object.id, patch: { visible: !object.visible } }]));
-    row.append(button, visibility); $('layers').append(row);
-    }
+    button.setAttribute('aria-label', `Select group ${group.name}`); button.setAttribute('aria-pressed', String(group.ids.every(id => selectedIds.includes(id))));
+    const preview = document.createElement('span'); preview.className = 'layer-preview'; preview.setAttribute('aria-hidden', 'true'); preview.append(icon('layers'));
+    const name = document.createElement('span'); name.className = 'layer-name'; name.textContent = group.name;
+    const count = document.createElement('small'); count.className = 'group-count'; count.textContent = group.ids.length;
+    button.append(preview, name, count); button.addEventListener('click', event => select(group.ids, { additive: event.shiftKey }));
+    row.append(button); $('layers').append(row);
+  }
+  const row = document.createElement('div'); row.className = `layer${selectedIds.includes(object.id) ? ' is-selected' : ''}${object.visible ? '' : ' is-hidden'}${group ? ' group-child' : ''}`; row.setAttribute('role', 'listitem'); row.dataset.layerId = object.id;
+  const button = document.createElement('button'); button.type = 'button'; button.className = 'layer-select'; button.dataset.layerAction = 'select';
+  button.setAttribute('aria-label', `Select ${object.name}`); button.title = object.name;
+  const preview = document.createElement('span'); preview.className = `layer-preview ${object.type}`; preview.setAttribute('aria-hidden', 'true');
+  if (object.type === 'text') preview.textContent = 'T';
+  else {
+    const thumbnail = element('svg', { viewBox: `0 0 ${object.width} ${object.height}`, 'aria-hidden': 'true' });
+    thumbnail.append(objectGroup({ ...object, x: 0, y: 0, rotation: 0, opacity: 1 })); preview.append(thumbnail);
+  }
+  const name = document.createElement('span'); name.className = 'layer-name'; name.textContent = object.name;
+  button.append(preview, name);
+  button.setAttribute('aria-pressed', String(selectedIds.includes(object.id))); button.addEventListener('click', event => select(object.id, { additive: event.shiftKey }));
+  const visibility = document.createElement('button'); visibility.type = 'button'; visibility.className = 'layer-visibility icon-button'; visibility.dataset.layerAction = 'visibility';
+  visibility.title = `${object.visible ? 'Hide' : 'Show'} ${object.name}`; visibility.setAttribute('aria-label', visibility.title); visibility.setAttribute('aria-pressed', String(object.visible));
+  visibility.append(icon(object.visible ? 'eye' : 'hidden'));
+  visibility.addEventListener('click', () => void edit([{ op: 'update', id: object.id, patch: { visible: !object.visible } }]));
+  row.append(button, visibility); $('layers').append(row);
   }
   if (!state.objects.length) {
     const empty = document.createElement('p'); empty.className = 'layers-empty'; empty.textContent = 'Your components and labels will appear here.'; $('layers').append(empty);
@@ -527,7 +522,7 @@ function updateSelectionRegion(event, final = false) {
 function setSelectionTool(mode) {
   cancelAreaSelection();
   $('selection-tool').value = mode;
-  for (const canvas of ['main']) $(`${canvas}-canvas`).dataset.selectionTool = mode;
+  $('main-canvas').dataset.selectionTool = mode;
   $('pointer-tool').setAttribute('aria-pressed', String(mode === 'pointer'));
   $('freehand-tool').setAttribute('aria-pressed', String(mode === 'freehand'));
   workspaceTools?.sync();
@@ -536,7 +531,8 @@ $('pointer-tool').addEventListener('click', () => setSelectionTool('pointer'));
 $('freehand-tool').addEventListener('click', () => setSelectionTool('freehand'));
 $('selection-tool').addEventListener('change', event => setSelectionTool(event.target.value));
 setSelectionTool('pointer');
-for (const key of ['main']) {
+{
+  const key = 'main';
   const stage = $(`${key}-canvas`);
   let lastClick = null;
   stage.addEventListener('wheel', event => {
@@ -864,7 +860,7 @@ function theme(info) {
   leftRail.applyContext(info?.layout?.leftRail || {});
   if (Array.isArray(info?.permissions) && !info.permissions.includes('layout')) leftRail.destroy();
 }
-workspaceTools = createWorkspaceTools({ hikari, document, onHosted: () => { if (state) for (const canvas of ['main']) renderCanvas(canvas); } });
+workspaceTools = createWorkspaceTools({ hikari, document, onHosted: () => { if (state) renderCanvas('main'); } });
 hikari.on('app.context', info => { theme(info); if (info.changed === 'storage') location.reload(); });
 void hikari.call('app.info').then(theme).catch(() => {});
 hikari.on('app.undo', () => void workspace.history('undo').catch(error => status(error.message)));

@@ -32,9 +32,7 @@ export function addPrimersToLibrary(existing, primers, { sourceName = '', create
   let invalid = 0;
   for (const [index, primer] of (Array.isArray(primers) ? primers : []).entries()) {
     let id = text(typeof createId === 'function' ? createId() : '');
-    if (!id || ids.has(id)) {
-      do { id = `primer_${globalThis.crypto?.randomUUID?.() || `${Date.now()}_${Math.random().toString(16).slice(2)}`}`; } while (ids.has(id));
-    }
+    if (!id || ids.has(id)) id = `primer_${crypto.randomUUID()}`;
     const entry = normalizePrimerLibraryEntry({
       ...primer, id, name: text(primer?.name) || `Primer ${index + 1}`,
       sourceName: primer?.sourceName || sourceName, createdAt: nowIso, updatedAt: nowIso

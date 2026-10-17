@@ -279,7 +279,7 @@ export function startHikariCore({
     windowObject,
     onStoragePathSaved: async (storagePath, options = {}) => {
       const result = await storageImportController.runStorageRootImport(storagePath, {
-        persistMergedState: options.cloudSync !== true,
+        persistMergedState: true,
         resetWorkspace: options.resetWorkspace === true
       });
       if (result.ok || result.refreshed) undoService.reset();

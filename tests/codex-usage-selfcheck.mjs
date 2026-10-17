@@ -14,25 +14,21 @@ const { LLM } = require('../src/shared/ipc/channels.js');
 const fiveHour = { usedPercent: 25.5, windowDurationMins: 300, resetsAt: 1900000000 };
 const weekly = { usedPercent: 67, windowDurationMins: 10080, resetsAt: 1900400000 };
 const limits = { rateLimits: { primary: fiveHour, secondary: weekly } };
-assert.deepEqual(usageFromCodexRateLimits(limits), {
-  fiveHour: { usedPercent: 25.5, resetsAt: fiveHour.resetsAt },
-  weekly: { usedPercent: 67, resetsAt: weekly.resetsAt },
-  windows: [fiveHour, weekly], planType: ''
-});
+assert.deepEqual(usageFromCodexRateLimits(limits), { windows: [fiveHour, weekly], planType: '' });
 assert.equal(usageFromCodexRateLimits({ ...limits, rateLimitsByLimitId: {
   codex: { primary: weekly, secondary: { ...fiveHour, usedPercent: 0 } },
   codex_other: { primary: { ...fiveHour, usedPercent: 90 } }
-} }).fiveHour.usedPercent, 0, 'prefer the Codex bucket and identify windows by duration');
+} }).windows.find(window => window.windowDurationMins === 300).usedPercent, 0, 'prefer the Codex bucket');
 for (const empty of [null, {}, { rateLimitsByLimitId: { codex_other: limits.rateLimits } },
   { rateLimits: { limitId: 'codex_other', primary: fiveHour } },
   { rateLimits: { primary: { ...fiveHour, usedPercent: null }, secondary: { ...weekly, usedPercent: NaN } } }]) {
-  assert.deepEqual(usageFromCodexRateLimits(empty), { fiveHour: null, weekly: null, windows: [], planType: '' });
+  assert.deepEqual(usageFromCodexRateLimits(empty), { windows: [], planType: '' });
 }
 const monthlyWindow = { usedPercent: 0, windowDurationMins: 43200, resetsAt: 1900400000 };
 const freeUsage = usageFromCodexRateLimits({ rateLimits: { limitId: 'codex', planType: 'free', primary: monthlyWindow } });
-assert.deepEqual(freeUsage, { fiveHour: null, weekly: null, windows: [monthlyWindow], planType: 'free' }, 'retain the real Free-account quota instead of discarding it');
-assert.equal(usageFromCodexRateLimits({ rateLimits: { primary: { ...fiveHour, usedPercent: -5 } } }).fiveHour.usedPercent, 0);
-assert.equal(usageFromCodexRateLimits({ rateLimits: { secondary: { ...weekly, usedPercent: 110 } } }).weekly.usedPercent, 100);
+assert.deepEqual(freeUsage, { windows: [monthlyWindow], planType: 'free' }, 'retain the real Free-account quota instead of discarding it');
+assert.equal(usageFromCodexRateLimits({ rateLimits: { primary: { ...fiveHour, usedPercent: -5 } } }).windows[0].usedPercent, 0);
+assert.equal(usageFromCodexRateLimits({ rateLimits: { secondary: { ...weekly, usedPercent: 110 } } }).windows[0].usedPercent, 100);
 const models = createLlmModelCatalog();
 assert.equal(models.normalizeModel('codex', 'gpt-6.1-sol'), 'gpt-6.1-sol', 'keep a preference until the account catalog arrives');
 models.setCodexCatalog({ defaultModel: 'gpt-6-luna', models: [{ id: 'gpt-6-luna' }, { id: 'gpt-5.6-terra' }, { id: 'gpt-5.6-luna' }],
@@ -72,7 +68,7 @@ const transport = transportFixture((child, request) => {
 });
 const usage = await requestCodexCliUsage({ runtime, spawnProcess: transport.spawnProcess });
 assert.equal(usage.ok, true);
-assert.equal(usage.weekly.usedPercent, 67);
+assert.equal(usage.windows[1].usedPercent, 67);
 assert.deepEqual(transport.launch.slice(0, 2), ['fixture-node', ['fixture-codex.js', 'app-server']]);
 assert.equal(transport.launch[2].env.CODEX_HOME, runtime.env.HIKARI_CODEX_HOME);
 assert.deepEqual(transport.requests.map(request => request.method), ['initialize', 'initialized', 'account/rateLimits/read']);
@@ -139,11 +135,11 @@ connected = true;
 window.hikariApi.getCodexLlmUsage = () => { throw new Error('bridge failure'); };
 await controller.refresh();
 assert.match(ui.settingCodexUsageStatus.textContent, /Failed/);
-window.hikariApi.getCodexLlmUsage = async () => ({ ok: true, fiveHour: null, weekly: null });
+window.hikariApi.getCodexLlmUsage = async () => ({ ok: true, windows: [] });
 await controller.refresh();
 assert.match(ui.settingCodexUsageStatus.textContent, /no usage windows/);
 assert.equal(ui.rows.weekly.progress.hidden, true);
-window.hikariApi.getCodexLlmUsage = async () => ({ ok: true, fiveHour: { usedPercent: 0 }, weekly: null });
+window.hikariApi.getCodexLlmUsage = async () => ({ ok: true, windows: [{ usedPercent: 0, resetsAt: null, windowDurationMins: 300 }] });
 await controller.refresh();
 assert.equal(ui.rows.fiveHour.value.textContent, '0% used');
 assert.equal(ui.rows.fiveHour.progress.hidden, false);

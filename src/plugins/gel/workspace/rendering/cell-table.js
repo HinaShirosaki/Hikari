@@ -11,16 +11,8 @@ export function formatIntensity(value) {
   return value.toFixed(2);
 }
 
-export function readSnrThreshold(input) {
-  if (!input) {
-    return 3;
-  }
-  const value = Number(input.value);
-  if (!Number.isFinite(value) || value < 0) {
-    return 3;
-  }
-  return value;
-}
+// A measured band window counts as a band at or above this signal-to-noise ratio.
+export const SNR_THRESHOLD = 3;
 
 export function createCellTableController({ runtime, elements, safeText, deps = {} }) {
   let copying = false;
@@ -45,12 +37,7 @@ export function createCellTableController({ runtime, elements, safeText, deps = 
     if (copying || !rows.length) {
       return;
     }
-    const documentObject = elements.gelCellTableHost?.ownerDocument;
-    const restoreButtonFocus = documentObject?.activeElement === elements.gelCellTableCopyBtn;
     copying = true;
-    if (elements.gelCellTableCopyBtn) {
-      elements.gelCellTableCopyBtn.disabled = true;
-    }
     const status = elements.gelCellTableCopyStatus;
     if (status) status.textContent = '';
     try {
@@ -63,13 +50,6 @@ export function createCellTableController({ runtime, elements, safeText, deps = 
       if (status) status.textContent = 'Could not copy. Select the table and copy it manually.';
     } finally {
       copying = false;
-      if (elements.gelCellTableCopyBtn) {
-        elements.gelCellTableCopyBtn.disabled = !getTableRows().length;
-        if (restoreButtonFocus && runtime.cellTableDialogOpen && !elements.gelCellTableCopyBtn.disabled
-          && documentObject?.activeElement === documentObject?.body) {
-          elements.gelCellTableCopyBtn.focus?.();
-        }
-      }
     }
   }
 
@@ -90,7 +70,7 @@ export function createCellTableController({ runtime, elements, safeText, deps = 
       elements.gelCellTableOverlay.hidden = !hasCells || !runtime.cellTableDialogOpen;
     }
     if (elements.gelCellTableCopyBtn) {
-      elements.gelCellTableCopyBtn.disabled = !hasCells || copying;
+      elements.gelCellTableCopyBtn.disabled = !hasCells;
     }
   }
 

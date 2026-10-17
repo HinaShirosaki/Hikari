@@ -74,7 +74,6 @@ export function snapshotAsset(document, args, validateSvg) {
   const ids = args.ids || group?.ids || [args.id];
   const objects = document.objects.filter(object => ids.includes(object.id));
   if (objects.length !== ids.length) throw new Error('Every selected component must exist.');
-  if (new Set(objects.map(object => object.canvas)).size !== 1) throw new Error('Save components from one canvas at a time.');
   const bounds = selectionBounds(objects);
   return normalizeAsset({ version: 1, name: args.name.trim(), objects: objects.map(object => ({ ...object,
     canvas: 'main', x: object.x - bounds.x, y: object.y - bounds.y })) }, validateSvg);

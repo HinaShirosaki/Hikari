@@ -42,12 +42,12 @@ export function createSequenceCursorMenuController(config = {}) {
       hideFeatureContextMenu();
       return;
     }
-    const { record, boundary } = context;
+    const { boundary } = context;
     hideFeatureContextMenu();
     if (action === 'insert') {
       openSequenceEditDialog('insert', { range: { start: boundary, end: boundary } });
-    } else if (action === 'set-origin' && normalizeTopology(record.topology) === 'circular'
-      && boundary > 0 && boundary < record.sequence.length) {
+    } else if (action === 'set-origin') {
+      // rotateCircularSequenceRecord rejects linear records and ignores the current start.
       try {
         await onSetSequenceOrigin(boundary);
       } catch (error) {

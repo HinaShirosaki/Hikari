@@ -5,9 +5,7 @@ export const CLIPBOARD_FORMAT = 'hikari.figura.components';
 export function normalizeClipboard(raw, validateSvg) {
   record(raw, 'Copied components'); fields(raw, ['format', 'version', 'objects', 'groups']);
   if (raw.format !== CLIPBOARD_FORMAT || raw.version !== 1 || !Array.isArray(raw.objects) || !raw.objects.length) throw new Error('Invalid copied components.');
-  if (new Set(raw.objects.map(object => object.canvas ?? 'main')).size !== 1) throw new Error('Copy components from one canvas at a time.');
   const scene = normalizeDocument({ ...createDocument(), objects: raw.objects, groups: raw.groups }, validateSvg);
-  if (new Set(scene.objects.map(object => object.canvas)).size !== 1) throw new Error('Copy components from one canvas at a time.');
   return { format: CLIPBOARD_FORMAT, version: 1, objects: scene.objects, groups: scene.groups };
 }
 

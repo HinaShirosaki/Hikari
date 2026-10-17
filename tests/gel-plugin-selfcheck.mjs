@@ -29,7 +29,7 @@ globalThis.ImageData ??= class ImageData {
 };
 
 const workspace = path.join(pluginDir, 'workspace');
-const { createLaneDetector, detectLanes, findLocalMaxima } = await import(new URL(`file://${workspace}/analysis/auto-lanes.js`));
+const { detectLanes, findLocalMaxima } = await import(new URL(`file://${workspace}/analysis/auto-lanes.js`));
 const {
   analyzeGelImage,
   buildLanesFromManualSegmentation,
@@ -482,13 +482,6 @@ function checkLaneDetectionRegressions() {
   assert.deepEqual(detectLanes({ ...competing, gelLeft: 0, gelRight: 159, expectedLaneCount: 2 }).peaks,
     [50, 110], 'global count-constrained selection must not let one stronger candidate block two supported lanes');
 
-  const cached = createLaneDetector();
-  const options = { ...gel, imageRevision: 1 };
-  assert.deepEqual(cached(options), detectLanes(options));
-  assert.deepEqual(cached({ ...options, expectedLaneCount: 4 }), detectLanes({ ...options, expectedLaneCount: 4 }));
-  assert.deepEqual(cached({ ...options, yStart: 90, yEnd: 109 }), detectLanes({ ...options, yStart: 90, yEnd: 109 }));
-  gel.gray.fill(0.5);
-  assert.deepEqual(cached({ ...options, imageRevision: 2 }).peaks, [], 'image revision invalidates pixel cache');
   assert.equal(detectLanes({ gray: new Float32Array(3), width, height }), null);
 }
 
