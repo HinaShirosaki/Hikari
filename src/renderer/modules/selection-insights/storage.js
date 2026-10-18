@@ -4,7 +4,8 @@ import {
   INSIGHT_SCHEMA_VERSION
 } from './constants.js';
 import { normalizeInsights } from './insight-model.js';
-import { cleanText, sanitizeFolderName } from './text-utils.js';
+import { cleanText } from './text-utils.js';
+import { notebookPageFolderPath, protocolFolderPath } from '../../../shared/storage-layout.mjs';
 
 export function resolveNotebookStorageFolder(storagePath, record) {
   const configuredStoragePath = cleanText(storagePath, 2400);
@@ -15,12 +16,7 @@ export function resolveNotebookStorageFolder(storagePath, record) {
   if (explicitStorageFolder) {
     return explicitStorageFolder;
   }
-  const projectFolder = sanitizeFolderName(record?.projectName || 'Untitled_Project', 'Untitled_Project');
-  const pageFolder = `${sanitizeFolderName(
-    record?.protocolName || record?.id || 'Notebook_Page',
-    'Notebook_Page'
-  )}__${sanitizeFolderName(record?.id, 'page')}`;
-  return `${configuredStoragePath}/Project/${projectFolder}/Notebook/${pageFolder}`;
+  return `${configuredStoragePath}/${notebookPageFolderPath(record)}`;
 }
 
 export function resolveProtocolStorageFolder(storagePath, record) {
@@ -28,8 +24,7 @@ export function resolveProtocolStorageFolder(storagePath, record) {
   if (!configuredStoragePath) {
     return '';
   }
-  const folderName = `${sanitizeFolderName(record?.name || 'Protocol', 'Protocol')}__${sanitizeFolderName(record?.id, 'protocol')}`;
-  return `${configuredStoragePath}/Protocol/${folderName}`;
+  return `${configuredStoragePath}/${protocolFolderPath(record)}`;
 }
 
 export function resolveInsightStorageFolder(context) {

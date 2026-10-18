@@ -1,22 +1,11 @@
-export function sanitizeFolderName(value) {
-  return String(value || '')
-    .trim()
-    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
-    .replace(/\s+/g, '_')
-    .replace(/^_+|_+$/g, '');
-}
+import { notebookPageFolderPath } from '../../shared/storage-layout.mjs';
 
-// On-disk layout: <root>/Project/<project>/Notebook/<protocol>__<entryId>.
-// The entry id suffix keeps two pages with the same protocol name apart.
 export function buildNotebookFolderPath({ storagePath, projectName, protocolName, entryId } = {}) {
   const rootPath = String(storagePath || '').trim();
   if (!rootPath) {
     return '';
   }
-  const safeProject = sanitizeFolderName(projectName) || 'Untitled_Project';
-  const safeProtocol = sanitizeFolderName(protocolName) || 'Notebook_Page';
-  const safeEntryId = sanitizeFolderName(entryId) || 'page';
-  return `${rootPath}/Project/${safeProject}/Notebook/${safeProtocol}__${safeEntryId}`;
+  return `${rootPath}/${notebookPageFolderPath({ projectName, protocolName, id: entryId })}`;
 }
 
 export function normalizeStoragePath(value) {

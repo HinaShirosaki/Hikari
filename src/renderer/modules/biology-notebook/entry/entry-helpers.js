@@ -1,8 +1,8 @@
-import { buildNotebookFolderPath, sanitizeFolderName } from '../../../lib/storage-paths.js';
+import { buildNotebookFolderPath } from '../../../lib/storage-paths.js';
 import { resolveProteinBuilderCloningNotebookProtocol } from '../../../services/notebook-record-compat.js';
 import { cloneProtocolSnapshot } from '../../../lib/protocol-snapshot.js';
 
-export { buildNotebookFolderPath, sanitizeFolderName };
+export { buildNotebookFolderPath };
 
 export const PLACEHOLDER_TOKEN_REGEX = /\{\{ph:([^}]+)\}\}/g;
 

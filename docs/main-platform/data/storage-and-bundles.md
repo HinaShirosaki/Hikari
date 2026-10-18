@@ -43,6 +43,8 @@ This folder defines the on-disk layout. Its work is split across focused modules
 
 `getBundlePaths(...)` is the shared path builder used throughout the folder. Given the snapshot path (or just the storage root), it resolves every root folder below: `Protocol/`, `Samples/`, `Plates/`, `Gels/`, `Papers/`, `KnowledgeBase/` and its `papers.md/`, `Dashboard/experiment-log.json`, and `hikari-chemicals.index.sqlite`. It still reports the old `<snapshot>.notebook-pages.json` path so a save can delete it and a load can read it once.
 
+Record folder names come from `src/shared/storage-layout.mjs`: the folder-name sanitizer and the `Project/`, notebook page, protocol, paper, plate and workflow folder builders. The renderer and main both import it, so the folder the renderer files a record under is the folder storage reads back.
+
 Every save updates these from the snapshot. Protocol and notebook Markdown stores both readable content and hidden typed YAML state. Other modules retain their existing JSON or SQLite storage:
 
 | Data | Stored as |

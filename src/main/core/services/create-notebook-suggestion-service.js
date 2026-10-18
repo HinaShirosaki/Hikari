@@ -2,7 +2,7 @@
 
 const { randomUUID } = require('node:crypto');
 const path = require('node:path');
-const { sanitizeProjectMemoryFolderName } = require('../../project-memory');
+const { projectFolderPath } = require('../../../shared/storage-layout.mjs');
 
 function createNotebookSuggestionService({ codexAgentRuntime, getDefaultDataFilePath, getWorkingDirectory, normalizeSnapshot = value => value } = {}) {
   const running = new Set();
@@ -21,7 +21,7 @@ function createNotebookSuggestionService({ codexAgentRuntime, getDefaultDataFile
       // An explicit working directory avoids the interactive runtime's whole-snapshot
       // workspace sync. Background evidence is a partial snapshot and must never replace storage.
       const cwd = storagePath
-        ? path.join(storagePath, 'Project', sanitizeProjectMemoryFolderName(project.name, 'Untitled_Project'))
+        ? path.join(storagePath, projectFolderPath(project.name))
         : (getWorkingDirectory?.() || process.cwd());
       const result = await codexAgentRuntime.run({
         cwd,

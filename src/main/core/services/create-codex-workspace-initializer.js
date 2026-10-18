@@ -10,9 +10,7 @@ const {
 const {
   ensureCodexCliRuntimeHome
 } = require('../../lib/codex-cli-provider/runtime-home.js');
-const {
-  sanitizeProjectMemoryFolderName
-} = require('../../project-memory');
+const { projectFolderPath } = require('../../../shared/storage-layout.mjs');
 
 function defaultCleanText(value, maxLength = 2000) {
   const text = String(value || '').trim();
@@ -103,7 +101,7 @@ function collectCodexWorkspacePaths({ cwd = '', snapshot = {}, storagePath = '',
       }
       addWorkspacePath(
         workspacePaths,
-        path.join(storagePath, 'Project', sanitizeProjectMemoryFolderName(projectName, 'Untitled_Project'))
+        path.join(storagePath, projectFolderPath(projectName))
       );
     });
   }

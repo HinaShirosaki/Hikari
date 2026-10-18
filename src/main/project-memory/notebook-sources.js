@@ -4,7 +4,8 @@ const crypto = require('node:crypto');
 const path = require('node:path');
 const { asArray, ensureObject } = require('../lib/normalize.js');
 const { isPathInside } = require('../lib/path-safety.js');
-const { cleanText, sanitizeFolderName } = require('./text-utils.js');
+const { cleanText } = require('./text-utils.js');
+const { notebookPageFolderPath } = require('../../shared/storage-layout.mjs');
 const { hasWorkflowContext, normalizeRelativePath, normalizeWhitespace } = require('./text-utils.js');
 
 function projectRecordMatchesSource(projectRecord, source = {}) {
@@ -122,12 +123,7 @@ function resolveNotebookPageFilePath(storageRootPath, entry = {}) {
   if (existingStorageFolder && isPathInside(storageRootPath, existingStorageFolder)) {
     return path.join(path.resolve(existingStorageFolder), fileName);
   }
-  const projectFolder = sanitizeFolderName(entry?.projectName || 'Untitled_Project', 'Untitled_Project');
-  const pageFolder = `${sanitizeFolderName(
-    entry?.protocolName || entry?.id || 'Notebook_Page',
-    'Notebook_Page'
-  )}__${sanitizeFolderName(entry?.id, 'page')}`;
-  return path.join(storageRootPath, 'Project', projectFolder, 'Notebook', pageFolder, fileName);
+  return path.join(storageRootPath, notebookPageFolderPath(entry), fileName);
 }
 
 function buildNotebookMemorySource(storageRootPath, projectRecord, entry = {}) {

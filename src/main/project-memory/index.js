@@ -9,7 +9,7 @@ const { buildNotebookResultCorpus, deriveKnowledgePaperId, hashNotebookResult } 
 const { buildProjectMemoryInput, generateAndCacheNotebookConclusion, renderProjectMemoryInput } = require('./project-inputs.js');
 const { collectProjectMemoryRecords } = require('./project-records.js');
 const { enqueueProjectGenerationWork, enqueueProjectMemoryWork, latestProjectMemoryInputs, waitForProjectMemoryQueue } = require('./queues.js');
-const { formatField, formatTimestamp, humanizeStatus, sanitizeProjectMemoryFolderName } = require('./text-utils.js');
+const { formatField, formatTimestamp, humanizeStatus } = require('./text-utils.js');
 
 async function writeProjectMemoryFile({
   storageRootPath,
@@ -116,6 +116,5 @@ module.exports = {
   mergeProjectMemoryMarkdown,
   validateNotebookConclusionResult,
   waitForProjectMemoryQueue,
-  writeProjectMemoryFile,
-  sanitizeProjectMemoryFolderName
+  writeProjectMemoryFile
 };

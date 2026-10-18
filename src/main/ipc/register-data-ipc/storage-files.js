@@ -2,6 +2,7 @@
 
 const path = require('node:path');
 const { ensurePathWithinRoot, pathExists } = require('../../lib/path-safety.js');
+const { sanitizeFolderName: sanitizeStorageName } = require('../../../shared/storage-layout.mjs');
 
 const { transformPaperPdfToMarkdown } = require('../../papers/parse/paper-markdown-import.js');
 const { PAPER_RECORD_FILE_SUFFIX } = require('../../storage/paper-discovery.js');
@@ -41,16 +42,6 @@ function createStorageFileHelpers({
       }
     }
     return fallback;
-  }
-
-  function sanitizeStorageName(value, fallback = 'item') {
-    const cleaned = String(value || '')
-      .trim()
-      .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
-      .replace(/\s+/g, '_')
-      .replace(/^_+|_+$/g, '')
-      .slice(0, 180);
-    return cleaned || fallback;
   }
 
   function sanitizeImportedFileName(fileName) {
