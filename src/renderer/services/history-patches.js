@@ -7,10 +7,14 @@ const recordArray = value => Array.isArray(value)
   && value.every(item => object(item) && typeof item.id === 'string' && item.id)
   && new Set(value.map(item => item.id)).size === value.length;
 
+// Save acknowledgments (markdownRevision) advance asynchronously, and an assay's
+// cached analysis preview (latestAnalysis) is re-rendered output. Neither is an
+// edit: they never become a step. Revisions survive restoration, while a cached
+// preview survives only when its containing record has not changed.
+const UNVERSIONED_KEYS = ['markdownRevision', 'latestAnalysis'];
+
 export function captureHistoryState(state) {
-  // Save acknowledgments advance this persistence token asynchronously. It is
-  // not an edit and must never be rolled back with the user's document content.
-  return JSON.parse(JSON.stringify(state, (key, value) => key === 'markdownRevision' ? undefined : value));
+  return JSON.parse(JSON.stringify(state, (key, value) => UNVERSIONED_KEYS.includes(key) ? undefined : value));
 }
 
 export function diffHistoryState(before, after, path = [], changes = []) {
@@ -62,14 +66,23 @@ function restoreValue(value, current) {
   if (!object(value)) return value;
   const restored = clone(value);
   for (const key of Object.keys(restored)) restored[key] = restoreValue(restored[key], current?.[key]);
-  if (object(current) && Object.hasOwn(current, 'markdownRevision')) {
-    restored.markdownRevision = clone(current.markdownRevision);
+  for (const key of UNVERSIONED_KEYS) {
+    if (object(current) && Object.hasOwn(current, key)) {
+      restored[key] = key === 'latestAnalysis' && !equal(value, captureHistoryState(current)) ? null : clone(current[key]);
+    }
   }
   return restored;
 }
 
 function write(state, change, value) {
-  const parent = read(state, change.path.slice(0, -1));
+  // A nested patch changes the containing record too. Drop its derived output
+  // before persistence can capture a preview made from the previous inputs.
+  let parent = state;
+  for (const segment of change.path.slice(0, -1)) {
+    if (object(parent) && Object.hasOwn(parent, 'latestAnalysis')) parent.latestAnalysis = null;
+    parent = child(parent, segment);
+  }
+  if (object(parent) && Object.hasOwn(parent, 'latestAnalysis')) parent.latestAnalysis = null;
   const segment = change.path.at(-1);
   if (typeof segment === 'object') {
     const index = parent.findIndex(item => item.id === segment.id);
@@ -91,11 +104,14 @@ export function historyChangesOverlap(first, second) {
   }));
 }
 
+// A path already at its target passes and is skipped. Render-time state (an
+// agent rail's scope container) can be swept into a module's step by the
+// first persist after it appears, and the restore re-render recreates it.
 export function canApplyHistoryChanges(state, changes, direction) {
   const snapshot = captureHistoryState(state);
-  const expected = direction === 'undo' ? 'after' : 'before';
+  const [expected, target] = direction === 'undo' ? ['after', 'before'] : ['before', 'after'];
   return changes.every(change => read(snapshot, change.path.slice(0, -1)) != null
-    && equal(read(snapshot, change.path), change[expected]));
+    && [change[expected], change[target]].some(value => equal(read(snapshot, change.path), value)));
 }
 
 export function applyHistoryChanges(state, changes, direction) {
@@ -103,11 +119,13 @@ export function applyHistoryChanges(state, changes, direction) {
   // All preconditions are checked before any write. A linked operation either
   // restores every changed record or leaves every record untouched.
   if (!canApplyHistoryChanges(state, changes, direction)) return false;
+  const snapshot = captureHistoryState(state);
+  const pending = changes.filter(change => !equal(read(snapshot, change.path), change[target]));
   // Remove records before re-inserting others at their saved positions. A
   // replacement batch can otherwise shift those positions during undo.
   const isRecordRemoval = change => typeof change.path.at(-1) === 'object' && change[target] === undefined;
-  for (const change of changes.filter(isRecordRemoval)) write(state, change, undefined);
-  for (const change of changes.filter(change => !isRecordRemoval(change))) write(state, change, change[target]);
+  for (const change of pending.filter(isRecordRemoval)) write(state, change, undefined);
+  for (const change of pending.filter(change => !isRecordRemoval(change))) write(state, change, change[target]);
   return true;
 }
 

@@ -54,6 +54,7 @@ export function createRendererModuleRuntime(config = {}) {
     showView,
     views,
     onStoragePathSaved,
+    onReloadRequested: config.onReloadRequested,
     rootDocument,
     windowObject,
     apiBridge,

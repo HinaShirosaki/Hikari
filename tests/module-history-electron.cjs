@@ -39,7 +39,7 @@ async function main() {
     window.hikariApi = {
       ensureStorageDirectory: async () => ({ ok: true }),
       importStorageRoot: async () => ({ ok: true, statePatch: {}, summary: {} }),
-      autoSaveDataFile: async () => ({ ok: true }),
+      autoSaveDataFile: async data => { window.qaLastSavedState = structuredClone(data); return { ok: true }; },
       reportError() {}
     };
     const { startHikariCore } = await import(base + 'src/renderer/core/start-hikari-core.js');
@@ -102,6 +102,20 @@ async function main() {
     check(!modules.assay.hasUnsavedChanges(), 'Restored assay form has a matching saved baseline');
     await click('redo');
     check(document.getElementById('assay-name').value === 'Renamed assay', 'Assay Redo refreshes the open form');
+    const assay = core.state.assays.find(record => record.id === assayId);
+    assay.resultValues = { A1: '1' };
+    modules.assay.history.persist(); modules.assay.restoreHistory(); await settle();
+    assay.resultValues.A1 = '2';
+    modules.assay.history.persist(); modules.assay.restoreHistory(); await settle();
+    assay.latestAnalysis = { rows: [['2']], summary: 'Mean: 2' };
+    modules.assay.history.persist();
+    await click('undo');
+    check(assay.resultValues.A1 === '1' && assay.latestAnalysis === null, 'Assay Undo invalidates the analysis computed from the later measurements');
+    for (let i = 0; i < 100 && window.qaLastSavedState?.assays.find(record => record.id === assayId)?.latestAnalysis !== null; i++) await settle();
+    check(window.qaLastSavedState.assays.find(record => record.id === assayId)?.latestAnalysis === null, 'Autosave receives the invalidated cache before history rendering');
+    assay.latestAnalysis = { rows: [['1']], summary: 'Mean: 1' };
+    modules.assay.history.persist(); await click('redo');
+    check(assay.resultValues.A1 === '2' && assay.latestAnalysis === null, 'Assay Redo also invalidates cached analysis');
     await view('setting-view');
     core.state.settings.storagePath = '/fixture/workspace-b'; modules.settings.history.persist();
     check(Object.values(modules).every(module => !module.history.getHistoryState().canUndo && !module.history.getHistoryState().canRedo),

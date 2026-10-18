@@ -18,7 +18,7 @@ import {
   SHARED_LEFT_RAIL_CHANGED_EVENT
 } from '../app/shared-left-rail.js';
 import { normalizeStateStoragePaths } from '../modules/app-state/storage-path-normalizer.js';
-import { syncMarkdownRecordState } from '../services/markdown-record-storage.js';
+import { flushMarkdownRecordState, hasPendingMarkdownSaves, syncMarkdownRecordState } from '../services/markdown-record-storage.js';
 import {
   applyAppearanceSnapshot,
   createNavigationShell
@@ -260,6 +260,16 @@ export function startHikariCore({
     windowObject
   });
 
+  const unsavedChangesService = createUnsavedChangesService({
+    moduleRegistry,
+    api: windowObject.hikariApi || null,
+    flushPendingSaves: () => flushMarkdownRecordState(windowObject.hikariApi, state),
+    hasPendingSaves: hasPendingMarkdownSaves,
+    externalSources: () => pluginBridge.getUnsavedSources(),
+    documentObject,
+    windowObject
+  });
+
   moduleRuntime = createRendererModuleRuntime({
     state,
     persist,
@@ -277,6 +287,7 @@ export function startHikariCore({
     getApiBridge: () => windowObject.hikariApi || null,
     rootDocument: documentObject,
     windowObject,
+    onReloadRequested: unsavedChangesService.requestReload,
     onStoragePathSaved: async (storagePath, options = {}) => {
       const result = await storageImportController.runStorageRootImport(storagePath, {
         persistMergedState: true,
@@ -286,14 +297,6 @@ export function startHikariCore({
       renderAll();
       return result;
     }
-  });
-
-  createUnsavedChangesService({
-    moduleRegistry,
-    api: windowObject.hikariApi || null,
-    externalSources: () => pluginBridge.getUnsavedSources(),
-    documentObject,
-    windowObject
   });
 
   navigationShell = createNavigationShell({

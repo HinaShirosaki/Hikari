@@ -3,6 +3,11 @@ import { showTransientNotice } from '../lib/notify.js';
 
 const queues = new WeakMap();
 const revisionKey = revision => JSON.stringify(revision);
+let savesInFlight = 0;
+
+// True from the moment a save is queued until storage answers, including the
+// hashing before its IPC starts. A reload in that window loses the edit.
+export const hasPendingMarkdownSaves = () => savesInFlight > 0;
 
 function trimHistory(queue, history, latest) {
   for (const key of history) {
@@ -11,9 +16,26 @@ function trimHistory(queue, history, latest) {
   }
 }
 
+// A final queued snapshot waits for earlier autosaves and retries failed ones.
+// Editor saves only commit to renderer state; navigation must wait for storage.
+export async function flushMarkdownRecordState(api, state) {
+  if (!api?.autoSaveDataFile || !String(state.settings?.storagePath || '').trim()) return;
+  const result = await syncMarkdownRecordState(api, state);
+  if (result?.ok !== true) throw new Error(result?.error || 'Unable to save changes to the storage folder.');
+  const skipped = result.sidecarPaths?.skippedRecords || [];
+  if (skipped.length) throw new Error(skipped.map(record => record.message || `Record ${record.id} was not saved.`).join('\n'));
+  return result;
+}
+
 // Capture records before hashing/IPC, and acknowledge only still-matching live
 // records. An old save must not advance the revision of a newer editor change.
 export async function syncMarkdownRecordState(api, state, filePath = '') {
+  savesInFlight++;
+  try { return await queueMarkdownRecordState(api, state, filePath); }
+  finally { savesInFlight--; }
+}
+
+async function queueMarkdownRecordState(api, state, filePath) {
   const snapshot = structuredClone(state);
   let roots = queues.get(state);
   if (!roots) { roots = new Map(); queues.set(state, roots); }
