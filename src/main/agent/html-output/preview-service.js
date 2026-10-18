@@ -50,7 +50,9 @@ function installHtmlPreviewService({ protocol, ipcMain, getMainWindow }) {
         owners.delete(owner);
       });
     }
-    const url = `${HTML_PREVIEW_SCHEME}://preview/${randomUUID()}`;
+    // A host per preview is a site per preview, so a runaway script stalls only its own process.
+    // ponytail: one renderer process per mounted preview; share a host if many-preview chats strain memory.
+    const url = `${HTML_PREVIEW_SCHEME}://${randomUUID()}/`;
     documents.set(url, { owner, html: artifact.html });
     // Live documents have already loaded their source; bound retained response bodies.
     while (documents.size > 128) documents.delete(documents.keys().next().value);

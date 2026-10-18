@@ -5,7 +5,7 @@ Pass only the arguments object to `html_output`:
 ```json
 {
   "title": "Threshold explorer",
-  "html": "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><style>body{font:1rem system-ui;margin:1rem}button{font:inherit}</style></head><body><h1>Count</h1><button type=\"button\" id=\"add\">Add one</button><p>Count: <output id=\"count\" aria-live=\"polite\">0</output></p><script>let n=0;document.querySelector('#add').addEventListener('click',()=>{document.querySelector('#count').textContent=++n;});</script></body></html>",
+  "html": "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"color-scheme\" content=\"light dark\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><style>body{font:1rem system-ui;margin:1rem}button{font:inherit}</style></head><body><h1>Count</h1><button type=\"button\" id=\"add\">Add one</button><p>Count: <output id=\"count\" aria-live=\"polite\">0</output></p><script>let n=0;document.querySelector('#add').addEventListener('click',()=>{document.querySelector('#count').textContent=++n;});</script></body></html>",
   "caption": "Click Add one to update the count.",
   "height": 24
 }

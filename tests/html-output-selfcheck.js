@@ -94,7 +94,7 @@ async function main() {
     const preview = prepare({ sender: owner, senderFrame: owner.mainFrame }, artifact);
     const document = respond({ url: preview.url, method: 'GET' });
     assert.equal(await document.text(), html); assert.equal(document.headers.get('content-security-policy'), HTML_PREVIEW_CSP);
-    assert.equal(respond({ url: 'hikari-html://preview/../../secret', method: 'GET' }).status, 404);
+    assert.equal(respond({ url: 'hikari-html://secret/../../preview', method: 'GET' }).status, 404);
     assert.equal(respond({ url: preview.url, method: 'POST' }).status, 404);
     guardHtmlPreviewNavigation(owner); let prevented = false;
     owner.emit('will-frame-navigate', { frame: { url: preview.url }, preventDefault() { prevented = true; } }); assert.equal(prevented, true);
