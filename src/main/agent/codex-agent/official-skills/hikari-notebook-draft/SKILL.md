@@ -1,6 +1,6 @@
 ---
 name: "hikari-notebook-draft"
-description: "Use Hikari MCP notebook_draft to prepare planned next-experiment notebook drafts for user confirmation."
+description: "Plan a new experiment or put a method into a new Hikari notebook page using notebook_draft, including informal requests to set up tomorrow's experiment. Prepare a planned page for user confirmation. Enriching an existing active page uses notebook_append."
 ---
 
 <!-- HIKARI_OFFICIAL_MCP_SKILL:notebook-draft -->
@@ -8,6 +8,7 @@ description: "Use Hikari MCP notebook_draft to prepare planned next-experiment n
 # Hikari Notebook Draft MCP
 
 Use this skill when the user asks for a planned notebook draft, next experiment plan, workflow follow-up, or future biology notebook page.
+An informal request to set up an experiment or put a method into the notebook can request this workflow without naming "draft". Use the active context to distinguish a new planned page from adding information to an existing page; the latter uses `notebook_append`.
 
 Direct tool:
 
@@ -34,7 +35,7 @@ Workflow:
 
 1. Resolve the project and experiment target from the selected project, user request, recent workflow state, protocol candidates, and loaded notebook history.
 2. Gather local Hikari context first when it matters: protocol candidates, workflow progress, previous notebook results, relevant records, and paper-derived evidence.
-3. Call `notebook_draft` with a single page request or a `drafts` array. A top-level `project_name` is the default project for batch items.
+3. Call `notebook_draft` with a single page request or a `drafts` array. A top-level `project_name` is the default project for batch items. For a combined protocol-and-notebook request, call `protocol_generation` first and give each page its own descriptive title.
 4. Read the tool result and use `status`, `proposal_summary`, `proposal`, `notebook`, `missing_placeholders`, and `follow_up_questions` as the source of truth. Batch results include `notebooks` and per-item `results`; report failed items honestly without discarding successful pages.
 5. Retry once with exact placeholder keys and the same `draft_id` when known or routine values can be supplied, then return the confirmation-ready drafts or the one genuinely blocking follow-up question.
 

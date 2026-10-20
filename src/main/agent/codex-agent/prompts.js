@@ -11,6 +11,8 @@ const {
   buildCodexSessionRecoveryBlock
 } = require('./session-recovery.js');
 const { normalizePreferredJournalNames } = require('../../lib/preferred-journals.js');
+const { getAvailableHikariMcpToolNames } = require('../mcp-contract/tool-availability.js');
+const { buildHikariToolRoutingInstructionLines } = require('../mcp-contract/tool-routing.js');
 
 function summarizeAttachments(cleanText, attachments = []) {
   return asArray(attachments)
@@ -139,6 +141,10 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
   const sessionRecoveryBlock = buildCodexSessionRecoveryBlock(input, { cleanText });
   const blocks = [
     '# Hikari Codex Chat Turn',
+    buildHikariToolRoutingInstructionLines({
+      enabledToolNames: getAvailableHikariMcpToolNames(input),
+      compact: Boolean(cleanText(input.codexSessionId || input.codex_session_id, 240))
+    }).join('\n'),
     projectId || projectName
       ? `Selected project:\n${JSON.stringify({ id: projectId, name: projectName }, null, 2)}`
       : 'Selected project: none',

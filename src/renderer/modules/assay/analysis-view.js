@@ -36,7 +36,6 @@ export function createAssayAnalysisView({
   TabulatorLib,
   getCurrentDefinition,
   syncCurrentResultsFromGrid,
-  getResultValueCount,
   buildResultGridSignature,
   buildResultGridColumns,
   buildResultGridData,
@@ -45,7 +44,8 @@ export function createAssayAnalysisView({
   onWorkspaceChanged,
   onAnalysisRendered,
   onChartStyleChanged,
-  onTransformChanged
+  onTransformChanged,
+  onAnalysisDataSourceChanged
 }) {
   const {
     assayAnalysisAsymmetricInput,
@@ -54,6 +54,7 @@ export function createAssayAnalysisView({
     assayAnalysisErrorBarsField,
     assayAnalysisControlsField,
     assayAnalysisGroupByInput,
+    assayAnalysisDataSourceInput,
     assayAnalysisHighControlInput,
     assayAnalysisKindInput,
     assayAnalysisLowControlInput,
@@ -121,6 +122,7 @@ export function createAssayAnalysisView({
   let lastModel = null;
   let lastRecordedSummary = '';
   let previewSaveTimer = null;
+  let analysisDataSource = 'raw';
 
   if (!runtime.chartStyle || typeof runtime.chartStyle !== 'object') {
     runtime.chartStyle = createDefaultChartStyle();
@@ -187,8 +189,41 @@ export function createAssayAnalysisView({
 
   function refreshDerivedPlate() {
     const result = refreshDerivedPlateGrid();
+    syncAnalysisDataSource();
     onWorkspaceChanged?.();
     return result;
+  }
+
+  function getAnalysisDataSource() {
+    return analysisDataSource === 'transformed' && isTransformActive(getTransformSpec())
+      ? 'transformed' : 'raw';
+  }
+
+  function syncAnalysisDataSource() {
+    analysisDataSource = getAnalysisDataSource();
+    if (assayAnalysisDataSourceInput) {
+      const transformed = assayAnalysisDataSourceInput.querySelector('option[value="transformed"]');
+      if (transformed) transformed.disabled = !isTransformActive(getTransformSpec());
+      assayAnalysisDataSourceInput.value = analysisDataSource;
+    }
+  }
+
+  function setAnalysisDataSource(source, notify = false) {
+    analysisDataSource = source === 'transformed' ? 'transformed' : 'raw';
+    syncAnalysisDataSource();
+    if (notify) onAnalysisDataSourceChanged?.(analysisDataSource);
+    return analysisDataSource;
+  }
+
+  function loadAnalysisDataSource(source) {
+    // Older records used Table2 whenever a transformed plate existed.
+    return setAnalysisDataSource(source === 'raw' || source === 'transformed'
+      ? source : (isTransformActive(getTransformSpec()) ? 'transformed' : 'raw'));
+  }
+
+  function onAnalysisDataSourceChange() {
+    setAnalysisDataSource(assayAnalysisDataSourceInput?.value, true);
+    renderAnalysis();
   }
 
   function getAnalysisSpec() {
@@ -264,6 +299,7 @@ export function createAssayAnalysisView({
     }
     onAnalysisRendered({
       method: lastSpec.analysis,
+      dataSource: getAnalysisDataSource(),
       spec: { ...lastSpec },
       methodLabel: describeAnalysisSpec(lastSpec),
       // Keep the complete analysis description in the saved/agent record even
@@ -306,7 +342,7 @@ export function createAssayAnalysisView({
     syncCurrentResultsFromGrid();
     refreshDerivedPlate();
     const spec = getAnalysisSpec();
-    const { observations, nonNumericCount } = collectNumericObservations();
+    const { observations, nonNumericCount } = collectNumericObservations(getAnalysisDataSource());
     if (!observations.length) {
       // Nothing to plot: say so where the table and chart would have been, not in
       // the rail beside the controls.
@@ -375,10 +411,7 @@ export function createAssayAnalysisView({
       return;
     }
     clearOutput();
-    syncCurrentResultsFromGrid();
-    if (getResultValueCount()) {
-      renderAnalysis();
-    }
+    renderAnalysis();
   }
 
   // Restores the cell formulas without reporting a change, so loading a saved assay
@@ -415,9 +448,11 @@ export function createAssayAnalysisView({
 
   function createTransformPlate() {
     syncCurrentResultsFromGrid();
+    const creating = !isTransformActive(getTransformSpec());
     // An empty plate is a saved workspace in its own right. Only user edits or
     // drag-to-fill should populate its cells.
     setTransformEnabled(true);
+    if (creating) setAnalysisDataSource('transformed', true);
     if (assayDerivedPlatePanel) {
       assayDerivedPlatePanel.hidden = false;
       assayDerivedPlatePanel.open = true;
@@ -432,17 +467,13 @@ export function createAssayAnalysisView({
     if (typeof onTransformChanged === 'function') {
       onTransformChanged(getTransformSpec());
     }
-    syncCurrentResultsFromGrid();
-    if (lastResult && getResultValueCount()) {
-      renderAnalysis();
-    } else {
-      refreshDerivedPlate();
-    }
+    renderAnalysis();
   }
 
   function clearTransform() {
     setTransformEnabled(false);
     setTransformFormulas({});
+    setAnalysisDataSource('raw', true);
     onTransformChange();
   }
 
@@ -456,14 +487,11 @@ export function createAssayAnalysisView({
     if (!assayAnalysisTable) {
       return;
     }
-    syncCurrentResultsFromGrid();
-    if (!getResultValueCount()) {
-      return;
-    }
     renderAnalysis();
   }
 
   syncAnalysisControls();
+  syncAnalysisDataSource();
 
   return {
     getPlotSnapshot: () => ({
@@ -483,22 +511,20 @@ export function createAssayAnalysisView({
     refreshRowVisibility,
     getWorkspaceState: () => ({
       transformActive: isTransformActive(getTransformSpec()),
+      dataSource: getAnalysisDataSource(),
       errors: Object.entries(getDerivedPlate()?.cells || {}).filter(([, cell]) => cell.error)
         .map(([well, cell]) => ({ well, message: cell.error })),
       methodLabel: describeAnalysisSpec(getAnalysisSpec()),
       ...getAnalysisContext()
     }),
-    setChartType(type) {
-      if (lastModel && !chartSurface.hasFittedCurve(lastModel) && ['bar', 'line'].includes(type)) {
-        chartStyleStore.setStyle({ chartType: type });
-        onWorkspaceChanged?.();
-      }
-    },
     redrawChart: () => { if (lastModel) renderAnalysisChart(lastModel); },
     clearOutput,
     renderAnalysis,
     onAnalysisMethodChange,
     onAnalysisConfigChange,
+    onAnalysisDataSourceChange,
+    getAnalysisDataSource,
+    loadAnalysisDataSource,
     syncAnalysisControls,
     getAnalysisSpec,
     getTransformSpec,

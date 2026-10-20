@@ -2,12 +2,14 @@
 // never share a layer. DOM validation of SVG happens in artwork.mjs.
 import { COMPLEXITY_LEVELS, DEFAULT_COMPLEXITY } from './complexity.mjs';
 import { imageGenerationPercent } from './image-generation.mjs';
+import { imageGenerationStyle, MAX_IMAGE_STYLE_LINE } from './image-style.mjs';
+import { normalizePlotly } from './plotly.mjs';
 import { normalizeSourceContext } from './source-context.mjs';
 import { selectionBounds, transformSelection } from './grouping.mjs';
 import { rotateComponents } from './rotation.mjs';
 export const CANVASES = ['main'];
 export const MAX_DOCUMENT_CHARS = 12000000;
-export const OBJECT_FIELDS = ['id', 'name', 'type', 'canvas', 'x', 'y', 'width', 'height', 'rotation', 'opacity', 'visible', 'svg', 'dataUrl', 'textFree', 'text', 'fontFamily', 'fontSize', 'fontWeight', 'color', 'align', 'anchor', 'italic', 'underline', 'fill', 'stroke', 'strokeWidth'];
+export const OBJECT_FIELDS = ['id', 'name', 'type', 'canvas', 'x', 'y', 'width', 'height', 'rotation', 'opacity', 'visible', 'svg', 'plotly', 'dataUrl', 'textFree', 'text', 'fontFamily', 'fontSize', 'fontWeight', 'color', 'align', 'anchor', 'italic', 'underline', 'fill', 'stroke', 'strokeWidth'];
 export const TEXT_FIELDS = ['text', 'fontFamily', 'fontSize', 'fontWeight', 'color', 'align', 'anchor', 'italic', 'underline'];
 const clone = value => JSON.parse(JSON.stringify(value));
 export const validId = value => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(value);
@@ -37,20 +39,21 @@ export function color(value, allowNone = false) {
   throw new Error('Use a hex color (#rrggbb or #rrggbbaa).');
 }
 export function createDocument() {
-  return { version: 1, revision: crypto.randomUUID(), title: 'Untitled figure', complexity: DEFAULT_COMPLEXITY, imageGenerationPercent: null,
+  return { version: 1, revision: crypto.randomUUID(), title: 'Untitled figure', complexity: DEFAULT_COMPLEXITY, imageGenerationPercent: null, imageGenerationStyle: imageGenerationStyle(), imageStyleLine: '',
     canvases: { main: { width: 1200, height: 800, background: '#ffffff' } },
     objects: [], groups: [], receipts: [] };
 }
 export function normalizeObject(raw, validateSvg = value => value) {
   record(raw, 'Object'); fields(raw, OBJECT_FIELDS);
-  const type = choice(raw.type, ['vector', 'raster', 'text'], 'type');
+  const type = choice(raw.type, ['vector', 'raster', 'text', 'plot'], 'type');
   if (!validId(raw.id)) throw new Error('Object id must be 1–100 letters, numbers, underscores or hyphens.');
   const result = { id: raw.id, name: string(raw.name ?? raw.id, 'name', 200), type,
     canvas: choice(raw.canvas ?? 'main', CANVASES, 'canvas'),
     x: number(raw.x ?? 0, 'x', -16000, 16000), y: number(raw.y ?? 0, 'y', -16000, 16000),
-    width: number(raw.width ?? 200, 'width', 1, 8000), height: number(raw.height ?? 100, 'height', 1, 8000),
+    width: number(raw.width ?? (type === 'plot' ? 800 : 200), 'width', 1, 8000), height: number(raw.height ?? (type === 'plot' ? 500 : 100), 'height', 1, 8000),
     rotation: number(raw.rotation ?? 0, 'rotation', -360, 360), opacity: number(raw.opacity ?? 1, 'opacity', 0, 1), visible: raw.visible ?? true };
   if (typeof result.visible !== 'boolean') throw new Error('visible must be boolean.');
+  if (type !== 'plot' && 'plotly' in raw) throw new Error('plotly is only supported on plot layers.');
   if (type === 'vector') {
     for (const key of ['dataUrl', 'textFree', ...TEXT_FIELDS]) if (key in raw) throw new Error(`${key} is not a vector property.`);
     result.svg = validateSvg(string(raw.svg, 'svg', 300000));
@@ -58,6 +61,11 @@ export function normalizeObject(raw, validateSvg = value => value) {
     if (raw.fill !== undefined) result.fill = color(raw.fill, true);
     if (raw.stroke !== undefined) result.stroke = color(raw.stroke, true);
     if (raw.strokeWidth !== undefined) result.strokeWidth = number(raw.strokeWidth, 'strokeWidth', 0, 50);
+  } else if (type === 'plot') {
+    for (const key of ['dataUrl', 'textFree', 'fill', 'stroke', 'strokeWidth', ...TEXT_FIELDS]) if (key in raw) throw new Error(`${key} is not a plot property. Edit chart styling and labels through plotly.layout.`);
+    result.plotly = normalizePlotly(raw.plotly);
+    result.svg = validateSvg(string(raw.svg, 'Plot SVG', 3000000), { plot: true });
+    if (!result.svg.trim()) throw new Error('Plots need their generated SVG snapshot.');
   } else if (type === 'raster') {
     for (const key of ['svg', 'fill', 'stroke', 'strokeWidth', ...TEXT_FIELDS]) if (key in raw) throw new Error(`${key} is not a raster property.`);
     const dataUrl = string(raw.dataUrl, 'dataUrl', 7000000);
@@ -100,6 +108,8 @@ export function normalizeDocument(raw, validateSvg) {
   const result = { version: 1, revision: string(raw.revision, 'revision', 100), title: string(raw.title, 'title', 200),
     complexity: choice(raw.complexity ?? DEFAULT_COMPLEXITY, COMPLEXITY_LEVELS, 'complexity'),
     imageGenerationPercent: imageGenerationPercent(raw.imageGenerationPercent),
+    imageGenerationStyle: imageGenerationStyle(raw.imageGenerationStyle),
+    imageStyleLine: string(raw.imageStyleLine ?? '', 'Image style line', MAX_IMAGE_STYLE_LINE),
     canvases: Object.fromEntries(CANVASES.map(key => [key, normalizeCanvas(raw.canvases?.[key])])), objects, groups, receipts: (raw.receipts || []).slice(-64) };
   if (raw.source !== undefined) result.source = normalizeSourceContext(raw.source);
   if (raw.pendingAssetGroups !== undefined) {
@@ -160,7 +170,7 @@ export function applyOperations(document, operations, validateSvg) {
   };
   for (const operation of operations) {
     record(operation, 'Operation');
-    fields(operation, ['op', 'object', 'id', 'patch', 'canvas', 'ids', 'copy', 'new_id', 'title', 'complexity', 'imageGenerationPercent', 'name', 'degrees', 'pivot']);
+    fields(operation, ['op', 'object', 'id', 'patch', 'canvas', 'ids', 'copy', 'new_id', 'title', 'complexity', 'imageGenerationPercent', 'imageGenerationStyle', 'imageStyleLine', 'name', 'degrees', 'pivot']);
     if (operation.op !== 'rotate' && (operation.degrees !== undefined || operation.pivot !== undefined)) throw new Error('Rotation fields require the rotate operation.');
     const group = next.groups.find(item => item.id === operation.id);
     if (operation.op === 'group') {
@@ -249,6 +259,14 @@ export function applyOperations(document, operations, validateSvg) {
       if (!Object.hasOwn(operation, 'imageGenerationPercent')) throw new Error('image_generation requires imageGenerationPercent (0–100 or null).');
       next.imageGenerationPercent = imageGenerationPercent(operation.imageGenerationPercent);
     }
+    else if (operation.op === 'image_generation_style') {
+      if (!Object.hasOwn(operation, 'imageGenerationStyle')) throw new Error('image_generation_style requires imageGenerationStyle.');
+      const style = imageGenerationStyle(operation.imageGenerationStyle), current = next.imageGenerationStyle;
+      // A new preset or notes make the agent's derived style line stale.
+      if (style.preset !== current.preset || style.prompt.trim() !== current.prompt.trim()) next.imageStyleLine = '';
+      next.imageGenerationStyle = style;
+    }
+    else if (operation.op === 'image_style_line') next.imageStyleLine = string(operation.imageStyleLine, 'Image style line', MAX_IMAGE_STYLE_LINE).trim();
     else throw new Error(`Unknown operation: ${operation.op}.`);
     pruneGroups();
   }

@@ -5,8 +5,10 @@ import { agentInstructions } from './agent/workflow.mjs';
 import { normalizeSourceContext } from './source-context.mjs';
 import { createInspectionTracker } from './inspection.mjs';
 import { prepareRaster, fitRasterBox } from './raster.mjs';
+import { EMPTY_PLOT_SVG, preparePlots } from './plotly.mjs';
 import { instantiateClipboard } from './clipboard.mjs';
 import { LIBRARY_PATH, LIBRARY_ACTIONS, normalizeLibrary, readLibrary, nextScenePath, validateLibraryRequest } from './library.mjs';
+import { migrateStoredDocument } from './stored-document.mjs';
 import { ASSETS_PATH, ASSET_ACTIONS, assetPath, createAssetLibrary, normalizeAssetLibrary, readAssetLibrary, validateAssetRequest,
   snapshotAsset, normalizeAsset, readAsset, instantiateAsset, assetPreviewDocument, assetContent, compoundGroups } from './reusable-assets.mjs';
 
@@ -67,11 +69,15 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
   // still throws: overwriting it would orphan every scene it indexes.
   async function readExistingJson(path) {
     let dataBase64;
-    try { ({ dataBase64 } = await hikari.call('files.read', { path })); } catch { return null; }
+    try { ({ dataBase64 } = await hikari.call('files.read', { path })); } catch (error) {
+      if (/\bENOENT\b|^Plugin file not found\.?$/.test(error.message)) return null;
+      throw error;
+    }
     return JSON.parse(decodeText(dataBase64));
   }
   async function loadScene(path) {
-    return normalizeDocument(await readJson(path), validateSvg);
+    const raw = await readJson(path), migrated = migrateStoredDocument(raw);
+    return { document: normalizeDocument(migrated, validateSvg), migrated: migrated !== raw };
   }
   async function loadAsset(id) {
     if (!assetLibrary.assets.some(asset => asset.id === id)) throw new Error('This reusable asset does not exist. Refresh Assets.');
@@ -176,7 +182,8 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
     const placementDocument = { ...documentState, canvases: { ...documentState.canvases } };
     for (const operation of args.operations) {
       if (operation.op !== 'insert_asset') {
-        operations.push(operation);
+        operations.push(operation.op === 'upsert' && operation.object?.type === 'plot' && !operation.object.svg
+          ? { ...operation, object: { ...operation.object, svg: EMPTY_PLOT_SVG } } : operation);
         if (operation.op === 'canvas' && CANVASES.includes(operation.canvas)) placementDocument.canvases[operation.canvas] = { ...placementDocument.canvases[operation.canvas], ...operation.patch };
         continue;
       }
@@ -184,6 +191,7 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
       operations.push(...instance.operations); insertedAssets.push(instance.inserted);
     }
     let next = applyOperations(documentState, operations, validateSvg);
+    await preparePlots(next, documentState, hikari, validateSvg);
     // Decode raster bytes before persistence: invalid/truncated images fail the
     // entire batch, and no inaccessible asset can break future readback.
     // Newly imported images fit their box to the image's aspect ratio (keeping
@@ -234,20 +242,22 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
     if (args.action !== 'create' && !original) return failure('not_found', 'This illustration does not exist.');
     if (args.action !== 'open' && library.illustrations.length >= 100) return failure('limit', 'The library holds at most 100 illustrations.');
     const id = args.action === 'open' ? original.id : crypto.randomUUID();
-    const next = args.action === 'create' ? createDocument() : await loadScene(original.path);
+    const loaded = args.action === 'create' ? null : await loadScene(original.path);
+    const next = loaded ? loaded.document : createDocument();
+    const migrating = args.action === 'open' && loaded.migrated;
     if (args.action !== 'open') {
       next.title = args.title?.trim() || (args.action === 'duplicate' ? `${next.title} copy`.slice(0, 200) : 'Untitled figure');
       next.revision = crypto.randomUUID(); next.receipts = [];
       if (args.action === 'create' && args.source !== undefined) next.source = normalizeSourceContext(args.source);
     }
-    const entry = { id, title: next.title, path: args.action === 'open' ? original.path : `illustrations/${id}/scene-a.json`, updatedAt: new Date().toISOString() };
+    const entry = { id, title: next.title, path: args.action === 'open' ? migrating ? nextScenePath(original) : original.path : `illustrations/${id}/scene-a.json`, updatedAt: new Date().toISOString() };
     const nextLibrary = { ...library, revision: crypto.randomUUID(), activeId: id,
-      illustrations: args.action === 'open' ? library.illustrations : [...library.illustrations, entry],
+      illustrations: args.action === 'open' ? library.illustrations.map(item => item.id === id && migrating ? entry : item) : [...library.illustrations, entry],
       receipts: [...library.receipts, { id: args.request_id, hash, illustrationId: id }].slice(-64) };
     if (Date.now() >= deadline) return failure('expired', 'The request expired before selection.');
     await hikari.call('app.setUnsaved', { unsaved: true });
     try {
-      if (args.action !== 'open') await writeJson(entry.path, next);
+      if (args.action !== 'open' || migrating) await writeJson(entry.path, next);
       await writeJson(LIBRARY_PATH, nextLibrary);
       library = nextLibrary; documentState = next; undoStack.length = 0; redoStack.length = 0;
       publish(); onStatus('');
@@ -316,7 +326,7 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
         }
         return { ok: true, status: 'read', illustration_id: library.activeId, ...readDocument(documentState, args.include_assets), ...readLibrary(library), ...readAssetLibrary(assetLibrary),
           inspection: inspections.status(library.activeId, documentState.revision, inspectionRunId), asset_reuse: { required: true, checked: run.checked },
-          agent_contract: { request_schema: CANVAS_TOOL_CONTRACT.inputSchema, instructions: agentInstructions(documentState.complexity, documentState.imageGenerationPercent) } };
+          agent_contract: { request_schema: CANVAS_TOOL_CONTRACT.inputSchema, instructions: agentInstructions(documentState.complexity, documentState.imageGenerationPercent, documentState.imageGenerationStyle, documentState.imageStyleLine) } };
       } catch (error) { onStatus(error.message); return failure('failed', error.message); }
     }).catch(error => failure('unavailable', error.message));
   }
@@ -337,14 +347,26 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
     if (indexed || foundLibrary) {
       if (indexed && stored.libraryPath !== LIBRARY_PATH) throw new Error('Invalid library path.');
       library = normalizeLibrary(foundLibrary || await readJson(LIBRARY_PATH));
-      documentState = await loadScene(library.illustrations.find(item => item.id === library.activeId).path);
+      const entry = library.illustrations.find(item => item.id === library.activeId);
+      const loaded = await loadScene(entry.path);
+      documentState = loaded.document;
+      if (loaded.migrated) {
+        const path = nextScenePath(entry);
+        const nextLibrary = { ...library, revision: crypto.randomUUID(), illustrations: library.illustrations.map(item => item.id === entry.id ? { ...item, path } : item) };
+        await writeJson(path, documentState);
+        await writeJson(LIBRARY_PATH, nextLibrary);
+        library = nextLibrary;
+      }
     } else {
       const id = crypto.randomUUID();
-      documentState = stored?.workspacePath ? await loadScene(stored.workspacePath) : createDocument();
-      const path = stored?.workspacePath || `illustrations/${id}/scene-a.json`;
+      const legacyPath = stored?.workspacePath || 'workspace.json';
+      const legacy = stored?.workspacePath ? await readJson(legacyPath) : await readExistingJson(legacyPath);
+      const migrated = migrateStoredDocument(legacy);
+      documentState = legacy ? normalizeDocument(migrated, validateSvg) : createDocument();
+      const path = legacy && migrated === legacy ? legacyPath : `illustrations/${id}/scene-a.json`;
       library = normalizeLibrary({ version: 1, revision: crypto.randomUUID(), activeId: id, receipts: [],
         illustrations: [{ id, title: documentState.title, path, updatedAt: new Date().toISOString() }] });
-      if (!stored?.workspacePath) await writeJson(path, documentState);
+      if (path !== legacyPath) await writeJson(path, documentState);
       await writeJson(LIBRARY_PATH, library);
     }
     const foundAssets = stored?.assetsPath ? null : await readExistingJson(ASSETS_PATH);

@@ -134,6 +134,9 @@ async function inspectPluginFolder({ fs, folderPath }) {
   if (!PLUGIN_ID_PATTERN.test(id)) {
     return { ok: false, error: `Plugin id "${id}" must be lower-case kebab-case (e.g. "imagej-bridge").` };
   }
+  if (id === 'figura') {
+    return { ok: false, error: 'The id "figura" is reserved for Figura storage. Use its installed id "scientific-illustration".' };
+  }
   const folderName = path.basename(cleanPath);
   if (folderName !== id) {
     return { ok: false, error: `Plugin folder must be named "${id}" to match the manifest id (found "${folderName}").` };

@@ -29,7 +29,7 @@ const PLOTLY_GRAPH_SUCCESS_STATUSES = Object.freeze([
 
 const PLOTLY_GRAPH_MCP_TOOL = Object.freeze({
   name: 'plotly_graph',
-  description: 'Create, update, read, and inspect scratch Plotly.js graph specifications using canonical data, layout, and optional config arguments.',
+  description: 'Use when the user asks for a custom chart, dose-response graph, heatmap, error bars, or changes to an existing chat figure. Create, update, read, and inspect scratch Plotly.js graph specifications using canonical data, layout, and optional config arguments. Use actual calculation/table data and inspect after create/update. Styling the active native Assay plot uses assay_plot.',
   annotations: buildWriteToolAnnotations('Plotly graph'),
   inputSchema: cloneJson(AGENT_TOOL_CALL_CATALOG['plotly-graph']?.input_schema, {
     type: 'object',

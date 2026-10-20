@@ -35,7 +35,7 @@ Internally those all funnel into:
 - `persistSnapshot(...)`
 - `loadSnapshot(...)`
 
-The key detail is that persistence is not “write one JSON file and stop.” A save also writes the record folders and the chemicals SQLite index through `syncBundleFromSnapshot(...)`. Production callers use the decorated version built in `core/main-services.js`, which also releases the official Codex skills into each project's `.agents/skills/` and requests project-memory conclusions.
+The key detail is that persistence is not “write one JSON file and stop.” A save also writes the record folders and the chemicals SQLite index through `syncBundleFromSnapshot(...)`. Production callers use the decorated version built in `core/main-services.js`, which also requests project-memory conclusions. Official Codex skills are released into the Codex runtime home before each agent request, not by storage saves.
 
 ## `storage/` is the persistence engine
 

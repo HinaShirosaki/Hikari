@@ -321,14 +321,18 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
       const mcpTools = createMcpToolDefinitions();
       const mcpToolNames = mcpTools.map((tool) => tool.name);
       const mcpInstructions = buildHikariAgentMcpInstructions();
-      assert.match(mcpInstructions, /reference preparation/i);
-      assert.match(mcpInstructions, /Do not stop at diluting an unverified stock/i);
-      assert.match(mcpInstructions, /Prefer one complete formulation/i);
-      assert.match(mcpInstructions, /at most three short subsections and six bullets/i);
-      assert.match(mcpInstructions, /failed-lookup transcripts/i);
-      assert.match(mcpInstructions, /one to three unique useful records/i);
-      assert.match(mcpInstructions, /without proposing an append/i);
-      assert.doesNotMatch(mcpInstructions, /PBS|ampicillin/i);
+      // Codex reads a tool's description on lookup; enrichment rules live with notebook_append.
+      const appendRules = mcpTools.find((tool) => tool.name === 'notebook_append').description;
+      assert.match(appendRules, /reference preparation/i);
+      assert.match(appendRules, /Do not stop at diluting an unverified stock/i);
+      assert.match(appendRules, /Prefer one complete formulation/i);
+      assert.match(appendRules, /at most three short subsections and six bullets/i);
+      assert.match(appendRules, /failed-lookup transcripts/i);
+      assert.match(appendRules, /one to three unique useful records/i);
+      assert.match(appendRules, /without proposing an append/i);
+      // Routing examples name common preparations without embedding a recipe.
+      const { HIKARI_MCP_TOOL_ROUTES } = require(path.join(__dirname, 'src', 'main', 'agent', 'mcp-contract', 'tool-routing.js'));
+      assert.match(HIKARI_MCP_TOOL_ROUTES.protocol_generation, /How to make 1L 10x PBS/);
       const directToolDir = path.join(
         __dirname,
         'src',
@@ -453,6 +457,10 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
         path.join(__dirname, 'docs', 'agent', 'mcp-contract', 'mcp-contract.json'),
         'utf8'
       ));
+      assert.equal(checkedContract.agent_mcp_instructions, mcpInstructions);
+      for (const name of ['protocol_generation', 'purchase_recommendation']) {
+        assert.deepEqual(checkedContract.mcp.tools.find((tool) => tool.name === name), mcpTools.find((tool) => tool.name === name));
+      }
       const checkedLiteratureSearch = checkedContract.mcp.tools.find((tool) => tool.name === 'literature_search');
       const checkedContainer = checkedContract.mcp.tools.find((tool) => tool.name === 'container');
       assert.deepEqual(checkedContract.mcp.tools.find((tool) => tool.name === 'memory'), mcpTools.find((tool) => tool.name === 'memory'));
@@ -465,15 +473,8 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
       assert.deepEqual(checkedContainer, containerDefinition);
       assert.deepEqual(checkedPlotlyGraph, plotlyGraphDefinition);
       assert.deepEqual(checkedContract.mcp.tools.find((tool) => tool.name === 'plugin_canvas'), mcpTools.find((tool) => tool.name === 'plugin_canvas'));
-      assert.match(checkedContract.agent_mcp_instructions, /`plugin_canvas`: read, edit, and render installed local plugins with agent:canvas permission\./);
-      assert.match(
-        checkedContract.agent_mcp_instructions,
-        /`container`: store, name, list, read, update,[^\n]+optional source provenance/
-      );
-      assert.match(
-        checkedContract.agent_mcp_instructions,
-        /`plotly_graph`:[^\n]+canonical `data`, `layout`, and optional `config`/
-      );
+      // Tool rules belong in each definition; the server instructions list no tools.
+      assert.doesNotMatch(checkedContract.agent_mcp_instructions, /^- `[a-z_]+`:/m);
       assert.equal(paperDownloadDefinition.annotations.readOnlyHint, false);
       assert.equal(checkedContract.mcp.tools.find((tool) => tool.name === 'paper_download').description,
         paperDownloadDefinition.description);

@@ -480,6 +480,48 @@ assert.equal(molarity({ B: '100', C: '5', D: '1' }).E.text, '50', '5 mg of MW 10
 assert.equal(molarity({ B: '100', D: '1', E: '50' }).C.text, '5', 'weight comes back from the other three');
 assert.equal(molarity({ C: '5', D: '1', E: '50' }).B.text, '100', 'MW comes back from the other three');
 
+// Calculated molarity quantities use four significant figures, including after a
+// unit change. Typed values and formula dependencies retain their full precision.
+assert.equal(molarity({ B: '58.44', C: '5', D: '1' }).E.text, '85.56', 'molarity results are rounded for display');
+assert.equal(molarity({ B: '58.44', C: '5', E: '50' }).D.text, '1.711', 'volume results use the same precision');
+assert.equal(molarity({ B: '58.44', D: '1', E: '1.234567' }).C.text, '0.07215', 'weight results use significant figures');
+assert.equal(molarity({ C: '5', D: '3', E: '50' }).B.text, '33.33', 'calculated MW is rounded too');
+assert.equal(molarity({ B: '58.440000', C: '5', D: '1' }).B.text, '58.440000', 'typed precision is preserved');
+assert.equal(molarity({ B: '100', C: '0', D: '1' }).E.text, '0', 'a zero result stays zero');
+
+const roundedMolarity = createMolarityNotebookResultTable(null, 1);
+const roundedRow = roundedMolarity.rows[0];
+roundedRow[roundedMolarity.columns[1].field] = '58.44';
+roundedRow[roundedMolarity.columns[2].field] = '5';
+roundedRow[roundedMolarity.columns[3].field] = '1';
+const roundedField = roundedMolarity.columns[4].field;
+assert.equal(
+  resolveNotebookResultTableValues(roundedMolarity).rows[0][roundedField],
+  '85.56',
+  'plain-text export uses the same rounded result as the worksheet'
+);
+const precisionReference = computeNotebookResultTables([
+  roundedMolarity,
+  tableOf([['=Table1:E1*58.44/1000']])
+]);
+assert.equal(precisionReference[1].byRowId.row_1.column_1.text, '5', 'downstream calculations use the unrounded value');
+assert.equal(text(tableOf([['=1000/3']]), 0, 0), '333.333333333', 'ordinary notebook formulas keep their precision');
+assert.equal(roundedRow[roundedField], '', 'display rounding never stores a calculated value');
+
+const micromolar = setNotebookResultTableColumnUnit(roundedMolarity, 4, 'uM');
+assert.equal(
+  computeNotebookResultTable(micromolar).byRowId[roundedRow.id][roundedField].text,
+  '8.556e+4',
+  'large values after unit conversion use four significant figures'
+);
+const tinyMolarity = setNotebookResultTableColumnUnit(roundedMolarity, 4, 'M');
+tinyMolarity.rows[0][tinyMolarity.columns[2].field] = '0.000005';
+assert.equal(
+  computeNotebookResultTable(tinyMolarity).byRowId[roundedRow.id][roundedField].text,
+  '8.556e-8',
+  'small concentrations stay nonzero with four significant figures'
+);
+
 // Two filled columns cannot give a number, so both unknowns show what is left of the
 // arithmetic -- the loop between them is "not determined yet", not a circular reference.
 const twoKnown = molarity({ B: '100', C: '5' });

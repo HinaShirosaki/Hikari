@@ -28,7 +28,7 @@ const { extractCodexJsonEventText } = require('./codex-cli-provider/event-text')
 const {
   ensureCodexCliAgentsFile,
   ensureCodexCliGlobalAgentsFile,
-  ensureCodexCliProjectSkillFolder
+  ensureCodexCliSkillFolder
 } = require('./codex-cli-provider/guidance');
 const {
   clearCodexCliStoredLogin,
@@ -55,7 +55,7 @@ module.exports = {
   clearCodexCliStoredLogin,
   ensureCodexCliAgentsFile,
   ensureCodexCliGlobalAgentsFile,
-  ensureCodexCliProjectSkillFolder,
+  ensureCodexCliSkillFolder,
   ensureCodexCliRuntimeHome,
   extractCodexJsonEventProgress,
   extractCodexJsonEventSessionId,

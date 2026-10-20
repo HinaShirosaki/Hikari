@@ -1,6 +1,7 @@
 'use strict';
 
 const { HIKARI_MCP_TOOL_NAMES } = require('./instructions.js');
+const { isToolAllowedForContext } = require('./notebook-suggestion-policy.js');
 
 const HIKARI_MCP_TOOL_NAME_SET = new Set(HIKARI_MCP_TOOL_NAMES);
 
@@ -49,7 +50,13 @@ function getEnabledHikariMcpToolNames(context = {}) {
   return HIKARI_MCP_TOOL_NAMES.filter((name) => !disabled.has(name));
 }
 
+function getAvailableHikariMcpToolNames(context = {}) {
+  return getEnabledHikariMcpToolNames(context)
+    .filter((name) => isToolAllowedForContext(name, context));
+}
+
 module.exports = {
+  getAvailableHikariMcpToolNames,
   getDisabledHikariMcpToolNames,
   getEnabledHikariMcpToolNames,
   isHikariMcpToolEnabled,

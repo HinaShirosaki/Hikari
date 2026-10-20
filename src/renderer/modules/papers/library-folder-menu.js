@@ -1,6 +1,7 @@
 import { buildFolderKey, getLibraryFolders } from './model.js';
 import { showTransientNotice } from '../../lib/notify.js';
 import { startInlineRename } from '../../lib/folder-tree.js';
+import { positionContextMenu } from '../../lib/context-menu.js';
 
 // The journal-club folder rail's context menu and drag-and-drop: create,
 // rename, delete a folder, and validate a paper drop onto one.
@@ -125,11 +126,7 @@ function createLibraryFolderMenu({
       elements.papersContextDeleteFolderBtn.hidden = !(folder && folder.type === 'journal-club');
     }
 
-    const clientX = Number(event?.clientX) || 0;
-    const clientY = Number(event?.clientY) || 0;
-    elements.papersLibraryContextMenu.style.left = `${clientX}px`;
-    elements.papersLibraryContextMenu.style.top = `${clientY}px`;
-    elements.papersLibraryContextMenu.hidden = false;
+    positionContextMenu(elements.papersLibraryContextMenu, event?.clientX, event?.clientY, windowRef);
   }
 
   function buildDefaultFolderName() {

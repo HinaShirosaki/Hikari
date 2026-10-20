@@ -110,7 +110,8 @@ async function verifyImportCrop({ tool, evaluate, check, win, pause, temp }) {
   check((await read()).objects[0].width === 320 && (await read()).objects[0].dataUrl === originalAsset.component.objects[0].dataUrl, 'Undo restores original pixels and geometry');
   await evaluate('illustrationWorkspace.history("redo")'); await settle();
   check((await read()).objects[0].dataUrl === croppedBytes, 'Redo restores the exact cropped image');
-  await evaluate('if(document.getElementById("layers-panel").hidden)document.getElementById("layers-tab").click();document.getElementById("save-selection-asset").click();document.getElementById("asset-name").value="Cell cropped";document.getElementById("save-asset-form").requestSubmit()'); await settle();
+  await evaluate('document.getElementById("main-canvas").dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true}));document.querySelector("[data-context-action=save-asset]").click()');
+  await evaluate('document.getElementById("asset-name").value="Cell cropped";document.getElementById("save-asset-form").requestSubmit()'); await settle();
   check((await list()).reusable_assets.some(asset => asset.name === 'Cell cropped'), 'A cropped canvas selection can be saved as a new reusable asset');
   await evaluate('document.getElementById("crop-raster").click()'); await cropReady();
   await apply([{ op: 'title', title: 'Concurrent edit' }]);

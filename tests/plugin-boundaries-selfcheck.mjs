@@ -182,6 +182,29 @@ async function checkFiles(temp) {
   assert.equal((await api.readPluginFile({ ...payload, pluginId: '../outside' })).ok, false);
   assert.equal((await api.writePluginFile({ ...payload, dataBase64: 'invalid' })).ok, false);
   assert.equal((await api.readPluginFile(payload)).dataBase64, 'bmV3', 'rejected writes leave saved bytes intact');
+
+  const legacy = path.join(root, 'Plugins/scientific-illustration');
+  await fs.mkdir(legacy);
+  await fs.writeFile(path.join(legacy, 'library.json'), 'saved figure index');
+  const figura = { storagePath: root, pluginId: 'scientific-illustration', path: 'library.json' };
+  const reads = await Promise.all(Array.from({ length: 5 }, () => api.readPluginFile(figura)));
+  assert.ok(reads.every(result => result.ok && Buffer.from(result.dataBase64, 'base64').toString() === 'saved figure index'));
+  await assert.rejects(fs.stat(legacy), { code: 'ENOENT' });
+  assert.equal(await fs.readFile(path.join(root, 'Plugins/Figura/library.json'), 'utf8'), 'saved figure index');
+  assert.equal((await api.writePluginFile({ ...figura, path: 'scene.json', dataBase64: 'bmV3' })).ok, true);
+  assert.equal(await fs.readFile(path.join(root, 'Plugins/Figura/scene.json'), 'utf8'), 'new');
+  assert.equal((await api.readPluginFile({ ...figura, pluginId: 'figura' })).ok, false, 'the display folder does not grant another plugin access');
+  await fs.mkdir(legacy);
+  await fs.writeFile(path.join(legacy, 'library.json'), 'separate legacy data');
+  assert.equal((await api.readPluginFile(figura)).dataBase64, reads[0].dataBase64, 'an existing Figura namespace stays authoritative');
+  assert.equal(await fs.readFile(path.join(legacy, 'library.json'), 'utf8'), 'separate legacy data', 'a second namespace is never merged or overwritten');
+  const linkedFiguraRoot = path.join(temp, 'linked-figura');
+  await fs.mkdir(path.join(linkedFiguraRoot, 'Plugins'), { recursive: true });
+  await fs.symlink(outside, path.join(linkedFiguraRoot, 'Plugins/scientific-illustration'));
+  assert.equal((await api.writePluginFile({ ...figura, storagePath: linkedFiguraRoot, dataBase64: 'bmV3' })).ok, false);
+  await fs.unlink(path.join(linkedFiguraRoot, 'Plugins/scientific-illustration'));
+  await fs.symlink(outside, path.join(linkedFiguraRoot, 'Plugins/Figura'));
+  assert.equal((await api.writePluginFile({ ...figura, storagePath: linkedFiguraRoot, dataBase64: 'bmV3' })).ok, false);
 }
 
 async function checkServers(temp) {

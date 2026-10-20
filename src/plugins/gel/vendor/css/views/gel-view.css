@@ -28,13 +28,6 @@
   min-width: 0;
 }
 
-.gel-side-rail {
-  display: grid;
-  gap: var(--space-18);
-  align-content: start;
-  min-width: 0;
-}
-
 
 /* Keep the Gel workspace frame fixed on desktop. The viewer and tool rail own
  * their overflow so a large image or long tool list cannot scroll the module
@@ -80,28 +73,10 @@
     overscroll-behavior: contain;
   }
 
-  .gel-side-rail {
-    min-height: 0;
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-gutter: stable;
-  }
-
 }
 
-.gel-workspace > .panel,
-.gel-side-rail > .panel {
+.gel-workspace > .panel {
   margin-top: 0;
-}
-
-.gel-cell-table-dialog.app-dialog-surface {
-  --app-dialog-width: 540px;
-  --app-dialog-max-height: calc(100% - 36px);
-  --app-dialog-padding: var(--space-18);
-  --app-dialog-gap: var(--space-14);
-  grid-template-rows: auto minmax(0, 1fr);
-  overflow: hidden;
 }
 
 .gel-setup-panel,
@@ -110,8 +85,7 @@
 }
 
 .gel-setup-panel,
-.gel-viewer-panel,
-.gel-manual-panel {
+.gel-viewer-panel {
   display: grid;
   gap: var(--space-12);
   align-content: start;
@@ -123,22 +97,6 @@
 
 .gel-lane-profile-panel {
   min-width: 0;
-}
-
-.gel-lane-profile-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-12);
-}
-
-.gel-lane-profile-head h3,
-.gel-lane-profile-head p {
-  margin: 0;
-}
-
-.gel-lane-profile-head p {
-  margin-top: var(--space-4);
 }
 
 .gel-lane-profile-picker {
@@ -163,7 +121,7 @@
 .gel-lane-profile-chart {
   display: block;
   width: 100%;
-  height: 190px;
+  height: auto;
   overflow: visible;
   cursor: crosshair;
 }
@@ -214,8 +172,7 @@
   stroke-width: 2;
 }
 
-.gel-lane-profile-chart .lane-profile-axis-label,
-.gel-lane-profile-chart .lane-profile-empty {
+.gel-lane-profile-chart .lane-profile-axis-label {
   fill: var(--theme-text-muted);
   font-size: 10px;
   font-family: var(--font-app);
@@ -420,6 +377,9 @@
 }
 
 .gel-form-fields {
+  /* Contain absolutely positioned descendants (.sr-only labels) so they scroll
+   * and clip with the fields instead of stretching the rail itself. */
+  position: relative;
   display: grid;
   align-content: start;
   gap: var(--space-16);
@@ -433,39 +393,62 @@
   padding: var(--space-2) var(--space-4) var(--space-12) var(--space-2);
 }
 
-.gel-setup-group {
+/* Tools are grouped by function in collapsible sections; any can be open. */
+.gel-tool-body {
   display: grid;
   gap: var(--space-10);
   min-width: 0;
+  padding: var(--space-2) 0 var(--space-14);
 }
 
-.gel-setup-group + .gel-setup-group {
-  border-top: 1px solid var(--theme-border-soft);
-  padding-top: var(--space-14);
-}
-
-.gel-setup-heading {
-  margin: 0;
-  font-size: 0.75rem;
-  font-weight: 650;
-  letter-spacing: 0.045em;
-  text-transform: uppercase;
-  color: var(--theme-text-muted);
-}
-
-.gel-setup-group > label {
+.gel-name-field,
+.gel-tool-body > label {
   min-width: 0;
   gap: var(--space-6);
   font-size: 0.8125rem;
 }
 
-.gel-setup-group input:not([type='range']),
-.gel-setup-group select {
+.gel-name-field input,
+.gel-tool-body > label input:not([type='range']),
+.gel-tool-body > label select {
   width: 100%;
   min-width: 0;
   max-width: 100%;
   padding: var(--space-8) var(--space-10);
   font-size: 0.8125rem;
+}
+
+.gel-result-block {
+  display: grid;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.gel-result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.gel-result-head h4 {
+  margin: 0;
+  color: var(--theme-text-strong);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.gel-result-head .ghost-btn {
+  min-height: 1.75rem;
+  padding: var(--space-2) var(--space-10);
+  border: 1px solid var(--theme-border-soft);
+  background: var(--theme-surface);
+  font-size: 0.75rem;
+}
+
+#gel-cell-table-copy-status:empty {
+  display: none;
 }
 
 #gel-form .gel-record-actions {
@@ -501,7 +484,7 @@
   position: absolute;
   z-index: 3200;
   bottom: calc(100% + 7px);
-  left: 50%;
+  right: 0;
   width: max-content;
   max-width: 180px;
   padding: var(--space-4) var(--space-8);
@@ -518,7 +501,6 @@
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
-  transform: translateX(-50%);
   transition: opacity 90ms ease, visibility 0s linear 90ms;
 }
 
@@ -529,17 +511,20 @@
   transition-delay: 0s;
 }
 
-#gel-form .gel-record-btn:first-child::after {
-  left: 0;
-  transform: none;
+#gel-form .gel-save-btn {
+  display: inline-flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
+  height: 2.25rem;
+  padding: 0 var(--space-12);
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
 }
 
-#gel-form .gel-record-btn:last-child::after {
-  right: 0;
-  left: auto;
-  transform: none;
-}
-
+#gel-form .gel-save-btn svg,
 #gel-form .gel-record-btn svg {
   width: 1.125rem;
   height: 1.125rem;
@@ -548,11 +533,6 @@
   stroke-width: 1.75;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-
-#gel-form .gel-process-row > button {
-  width: 100%;
-  min-height: 2rem;
 }
 
 @media (max-width: 720px) {
@@ -677,44 +657,10 @@
   min-width: 0;
 }
 
-.gel-viewer-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-10);
-  align-items: center;
-}
-
-/* Export is an output action, not a crop tool: keep it at the far end of the bar. */
-#gel-export-image-btn {
-  margin-left: auto;
-}
-
-/* Two auto margins split the free space, so this sits centred in the gap while divider mode is on. */
-#gel-finish-dividers-btn {
-  margin-left: auto;
-}
-
-.gel-viewer-toolbar .ghost-btn {
-  border: 1px solid var(--theme-border-soft);
-  background: var(--theme-surface);
-  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
-}
-
-.gel-viewer-toolbar .ghost-btn.is-active,
 .gel-tool-actions .ghost-btn.is-active {
   border-color: var(--theme-success-line);
   background: var(--theme-success-soft);
   color: var(--theme-success-ink);
-}
-
-.gel-viewer-toolbar .gel-viewer-icon-btn {
-  width: 34px;
-  min-width: 34px;
-  height: 34px;
-  min-height: 34px;
-  padding: 0;
-  display: inline-grid;
-  place-items: center;
 }
 
 .gel-viewer-button-icon {
@@ -837,19 +783,6 @@
 .gel-viewer-stage .cropper-point.point-w::before { left: 10px; }
 .gel-viewer-stage .cropper-point.point-e::before { right: 10px; }
 
-.gel-tool-panel {
-  min-width: 0;
-  padding: var(--space-2) var(--space-2) var(--space-8);
-  gap: var(--space-10);
-  border-top: 0;
-}
-
-.gel-tool-panel h3 {
-  margin: 0;
-  font-size: 1rem;
-  line-height: 1.5;
-}
-
 .gel-tool-groups {
   display: grid;
   gap: 0;
@@ -899,11 +832,9 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-auto-rows: minmax(2.125rem, auto);
   gap: var(--space-6);
-  padding: var(--space-2) 0 var(--space-10);
 }
 
-.gel-tool-actions .ghost-btn,
-.gel-tool-footer .ghost-btn {
+.gel-tool-actions .ghost-btn {
   width: 100%;
   min-width: 0;
   min-height: 2.125rem;
@@ -915,6 +846,26 @@
   white-space: normal;
   overflow-wrap: anywhere;
   transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+/* Three equal tools per row; the section heading carries the noun, so the
+ * short labels never wrap, and the tooltip holds the full description. */
+.gel-tool-actions--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.gel-tool-actions--three > .ghost-btn {
+  padding-inline: var(--space-4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gel-tool-actions .ghost-btn:has(> svg) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6);
 }
 
 .gel-tool-field {
@@ -963,31 +914,10 @@
   border-top: 1px solid var(--theme-border-soft);
 }
 
-.gel-tool-footer {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--space-6);
-}
-
-.gel-tool-footer .ghost-btn {
-  width: auto;
-  flex: 0 1 auto;
-}
-
 .gel-tool-group summary:focus-visible {
   outline: 2px solid var(--theme-focus);
   outline-offset: -2px;
   border-radius: 0.25rem;
-}
-
-/* When tools sit below the viewer, use the available width for the groups. */
-@media (min-width: 721px) and (max-width: 1099px) {
-  .gel-tool-groups {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
-    align-items: start;
-    column-gap: var(--space-16);
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1221,8 +1151,7 @@ body.theme-night .gel-lane-profile-chart .lane-profile-peak {
   stroke: var(--theme-surface);
 }
 
-body.theme-night .gel-lane-profile-chart .lane-profile-axis-label,
-body.theme-night .gel-lane-profile-chart .lane-profile-empty {
+body.theme-night .gel-lane-profile-chart .lane-profile-axis-label {
   fill: var(--theme-text-muted);
 }
 
@@ -1262,14 +1191,11 @@ body.theme-night .gel-tool-group {
   border-color: var(--theme-border-soft);
 }
 
-body.theme-night .gel-viewer-toolbar .ghost-btn,
-body.theme-night .gel-tool-actions .ghost-btn,
-body.theme-night .gel-tool-footer .ghost-btn {
+body.theme-night .gel-tool-actions .ghost-btn {
   border-color: var(--theme-border-soft);
   background: var(--theme-surface);
 }
 
-body.theme-night .gel-viewer-toolbar .ghost-btn.is-active,
 body.theme-night .gel-tool-actions .ghost-btn.is-active {
   border-color: var(--theme-success-line);
   background: var(--theme-success-soft);
@@ -1306,14 +1232,6 @@ body.theme-night .gel-lane-table-input::placeholder {
 
 body.theme-night .gel-lane-table-input:focus {
   background: var(--theme-surface-elevated);
-}
-
-@media (min-width: 1100px) {
-  .gel-main-grid {
-    grid-template-columns: minmax(0, 1fr) minmax(15rem, 17rem);
-    align-items: stretch;
-  }
-
 }
 
 /* Extracted from ui/css/overrides/cross-view-fixes.css */
@@ -1377,13 +1295,6 @@ body.theme-night .gel-lane-table-input:focus {
   grid-column: 1;
 }
 
-#gel-form .gel-compact-btn {
-  flex: 0 1 auto;
-  padding: var(--space-6) var(--space-10);
-  font-size: 12px;
-  white-space: nowrap;
-}
-
 @media (max-width: 960px) {
   #gel-form {
     grid-template-columns: 1fr;
@@ -1395,10 +1306,6 @@ body.theme-night .gel-lane-table-input:focus {
 }
 
 @media (max-width: 720px) {
-  .gel-lane-profile-head {
-    flex-direction: column;
-  }
-
   .gel-lane-profile-picker {
     min-width: 0;
   }
@@ -1446,19 +1353,12 @@ body.theme-night .gel-lane-table-input:focus {
   box-shadow: none;
 }
 
-.gel-cell-table-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-12);
-  flex-wrap: wrap;
-}
-
 #gel-cell-table-copy-btn {
   margin-left: auto;
 }
 
 .gel-cell-table-host {
+  max-height: 15rem;
   min-height: 0;
   overflow: auto;
 }

@@ -47,7 +47,6 @@ The non-agent application data API. Channels come from the `STORAGE`, `SEQUENCE_
 - `storage:store-imported-file`, `storage:move-stored-file`, `storage:write-json-file`, `storage:open-file`
 - `storage:read-file-bytes`, `storage:read-file-base64`
 - `storage:transform-paper-pdf` (PDF → Markdown under `KnowledgeBase/papers.md/`), `storage:discover-papers`
-- `storage:append-notebook-page-log`
 
 `storage:import-root` calls `importStorageRoot(...)` from `storage/`, producing a merged summary plus a `recognized` flag (whether the folder already has Hikari's layout), `lastSavedAt` (newest snapshot's mtime), and any `alerts` (for example, an unreadable chemicals index that was moved aside). `storage:last-root` reads the `Config/last-storage-root.json` pointer in the app-data folder so startup can find the workspace after renderer storage is cleared.
 

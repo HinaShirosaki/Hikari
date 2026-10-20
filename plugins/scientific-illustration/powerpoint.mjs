@@ -67,7 +67,7 @@ export async function exportPowerPoint(documentState, canvas = 'main') {
   for (const object of snapshot.objects.filter(object => object.canvas === canvas && object.visible)) {
     const options = powerPointObject(object, layout);
     if (object.type === 'text') slide.addText(object.text, options);
-    else slide.addImage({ ...options, data: object.type === 'vector'
+    else slide.addImage({ ...options, data: ['vector', 'plot'].includes(object.type)
       ? `data:image/svg+xml;base64,${encodeText(componentSvgSource(object))}` : await rasterData(object) });
   }
   const dataBase64 = await presentation.write({ outputType: 'base64', compression: true });

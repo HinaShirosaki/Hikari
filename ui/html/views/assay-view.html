@@ -181,26 +181,26 @@
               <div class="foldable-section__body">
                 <details id="assay-result-data-panel" class="foldable-section foldable-section--subsection" open>
                   <summary class="foldable-section__summary">
-                    <span>Result Data</span>
+                    <span>Result data</span>
                   </summary>
                   <div class="foldable-section__body">
                     <select id="assay-results-assay-select" hidden>
                       <option value="">Select assay plate</option>
                     </select>
-                    <div class="form-actions assay-results-actions">
-                      <button type="button" id="assay-attach-result-file-btn" class="ghost-btn assay-results-icon-btn" aria-label="Attach result file" data-hover-caption="Attach result file">
+                    <div class="form-actions assay-results-actions assay-analysis-action-row">
+                      <button type="button" id="assay-attach-result-file-btn" class="ghost-btn assay-results-icon-btn assay-analysis-action-btn assay-analysis-import-btn" aria-label="Import result file" title="Import CSV or Excel results">
                         <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                           <path d="m21.4 11.6-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 1 1-2.8-2.8l8.5-8.5"></path>
-                        </svg>
+                        </svg><span>Import</span>
                       </button>
                       <input id="assay-result-file-input" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
-                      <button type="button" id="assay-transform-open-btn" class="ghost-btn assay-results-icon-btn" aria-label="Transform plate" data-hover-caption="Transform plate">
+                      <button type="button" id="assay-transform-open-btn" class="ghost-btn assay-results-icon-btn assay-analysis-action-btn" aria-label="Transform plate" title="Create a transformed plate">
                         <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                           <path d="M4 7h11"></path>
                           <path d="m12 4 3 3-3 3"></path>
                           <path d="M20 17H9"></path>
                           <path d="m12 14-3 3 3 3"></path>
-                        </svg>
+                        </svg><span>Transform</span>
                       </button>
                       <button type="button" id="assay-clear-results-btn" class="ghost-btn assay-results-icon-btn row-action-icon-btn-danger" aria-label="Clear results" data-hover-caption="Clear results">
                         <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
@@ -217,29 +217,29 @@
 
                 <details id="assay-groups-panel" class="foldable-section foldable-section--subsection" open>
                   <summary class="foldable-section__summary">
-                    <span>Groups (optional)</span>
+                    <span>Groups <span class="assay-analysis-optional">Optional</span></span>
                   </summary>
                   <div class="foldable-section__body assay-analysis-controls">
                     <input id="assay-analysis-row-groups" type="hidden" />
                     <input id="assay-analysis-column-groups" type="hidden" />
-                    <div class="form-actions assay-analysis-group-actions" role="group" aria-label="Grouping actions">
-                      <button type="button" id="assay-analysis-add-row-group-btn" class="ghost-btn assay-analysis-group-icon-btn" aria-label="Add selected rows as group" data-hover-caption="Add selected rows as group">
+                    <div class="form-actions assay-analysis-group-actions assay-analysis-action-row" role="group" aria-label="Grouping actions">
+                      <button type="button" id="assay-analysis-add-row-group-btn" class="ghost-btn assay-analysis-group-icon-btn assay-analysis-action-btn" aria-label="Add selected rows as group" title="Add selected rows as a group">
                         <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                           <path d="M3 4h12v16H3Z"></path>
                           <path d="M3 9h12"></path>
                           <path d="M3 15h12"></path>
                           <path d="M19 9v6"></path>
                           <path d="M16 12h6"></path>
-                        </svg>
+                        </svg><span>Rows</span>
                       </button>
-                      <button type="button" id="assay-analysis-add-column-group-btn" class="ghost-btn assay-analysis-group-icon-btn" aria-label="Add selected columns as group" data-hover-caption="Add selected columns as group">
+                      <button type="button" id="assay-analysis-add-column-group-btn" class="ghost-btn assay-analysis-group-icon-btn assay-analysis-action-btn" aria-label="Add selected columns as group" title="Add selected columns as a group">
                         <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                           <path d="M4 3h16v12H4Z"></path>
                           <path d="M9 3v12"></path>
                           <path d="M15 3v12"></path>
                           <path d="M9 19h6"></path>
                           <path d="M12 16v6"></path>
-                        </svg>
+                        </svg><span>Columns</span>
                       </button>
                       <button type="button" id="assay-analysis-clear-groups-btn" class="ghost-btn assay-analysis-group-icon-btn row-action-icon-btn-danger" aria-label="Clear groups" data-hover-caption="Clear groups">
                         <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
@@ -254,13 +254,28 @@
                   </div>
                 </details>
 
-                <details id="assay-analysis-settings-panel" class="foldable-section foldable-section--subsection" open>
+                <details id="assay-analysis-source-panel" class="foldable-section foldable-section--subsection" open>
                   <summary class="foldable-section__summary">
-                    <span>Fit &amp; Summary</span>
+                    <span>Data source</span>
                   </summary>
                   <div class="foldable-section__body">
                     <label>
-                      Group By
+                      <span class="sr-only">Analysis data source</span>
+                      <select id="assay-analysis-data-source">
+                        <option value="raw" selected>Plate results · Table1</option>
+                        <option value="transformed" disabled>Transformed plate · Table2</option>
+                      </select>
+                    </label>
+                  </div>
+                </details>
+
+                <details id="assay-analysis-settings-panel" class="foldable-section foldable-section--subsection" open>
+                  <summary class="foldable-section__summary">
+                    <span>Fit &amp; summary</span>
+                  </summary>
+                  <div class="foldable-section__body">
+                    <label>
+                      Group by
                       <select id="assay-analysis-group-by">
                         <option value="auto" selected>Auto (from plate mapping)</option>
                         <option value="sample">Sample ID</option>
@@ -272,20 +287,26 @@
                       </select>
                     </label>
                     <label>
-                      Analysis
+                      Method
                       <select id="assay-analysis-kind">
-                        <option value="summary" selected>Summary statistics</option>
-                        <option value="linear">Linear fit</option>
-                        <option value="sigmoidal">Sigmoidal fit (4PL / 5PL)</option>
-                        <option value="hyperbola">Hyperbola</option>
-                        <option value="polynomial">Polynomial</option>
-                        <option value="pade11">Pade (1,1)</option>
-                        <option value="exponential">One-phase exponential (decay / association)</option>
-                        <option value="normalize">Normalize to baseline</option>
-                        <option value="percent_control">Percent of control / inhibition</option>
-                        <option value="plate_qc">Plate QC (Z&#39;-factor, SSMD, CV%)</option>
-                        <option value="zscore">Well Z-score / hit list</option>
-                        <option value="ttest">Compare groups to control (t-test)</option>
+                        <optgroup label="Statistics">
+                          <option value="summary" selected>Summary statistics</option>
+                          <option value="plate_qc">Plate QC (Z&#39;-factor, SSMD, CV%)</option>
+                          <option value="zscore">Well Z-score / hit list</option>
+                          <option value="ttest">Compare groups to control (t-test)</option>
+                        </optgroup>
+                        <optgroup label="Curve fitting">
+                          <option value="linear">Linear fit</option>
+                          <option value="sigmoidal">Sigmoidal fit (4PL / 5PL)</option>
+                          <option value="hyperbola">Hyperbola</option>
+                          <option value="polynomial">Polynomial</option>
+                          <option value="pade11">Pade (1,1)</option>
+                          <option value="exponential">One-phase exponential (decay / association)</option>
+                        </optgroup>
+                        <optgroup label="Normalization">
+                          <option value="normalize">Normalize to baseline</option>
+                          <option value="percent_control">Percent of control / inhibition</option>
+                        </optgroup>
                       </select>
                     </label>
                     <div id="assay-analysis-controls-field" class="assay-analysis-modifiers" hidden>
@@ -359,10 +380,6 @@
             <header class="assay-workspace-chart-header">
               <div><h3 id="assay-workspace-chart-title">Summary statistics</h3><p id="assay-workspace-chart-source" class="small-note"></p></div>
               <div class="assay-workspace-chart-actions">
-                <div class="assay-workspace-chart-types" role="group" aria-label="Chart type">
-                  <button type="button" class="ghost-btn" data-assay-chart-type="bar" aria-pressed="false">Bars</button>
-                  <button type="button" class="ghost-btn" data-assay-chart-type="line" aria-pressed="false">Line</button>
-                </div>
                 <button type="button" id="assay-workspace-format-btn" class="row-action-icon-btn" aria-label="Format chart"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></svg></button>
                     <div class="form-actions assay-chart-export-actions">
                       <span class="sr-only">Export chart</span><svg class="btn-icon assay-chart-export-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3M7 10l5 5 5-5M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>

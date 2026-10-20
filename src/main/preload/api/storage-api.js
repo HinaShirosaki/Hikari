@@ -31,7 +31,6 @@ function createStorageApi(ipcRenderer) {
     openFilePath: (path) => ipcRenderer.invoke(STORAGE.OPEN_FILE, { path }),
     readFileBytes: (path) => ipcRenderer.invoke(STORAGE.READ_FILE_BYTES, { path }),
     readFileBase64: (path) => ipcRenderer.invoke(STORAGE.READ_FILE_BASE64, { path }),
-    appendNotebookPageLog: (payload) => ipcRenderer.invoke(STORAGE.APPEND_NOTEBOOK_PAGE_LOG, payload),
     onProtocolRecordSaved: (handler) => subscribe(STORAGE.PROTOCOL_RECORD_SAVED, handler),
     onPaperFileSaved: (handler) => subscribe(STORAGE.PAPER_FILE_SAVED, handler)
   };

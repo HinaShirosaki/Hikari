@@ -1,6 +1,9 @@
 /* Universal context and searchable dropdown menu styling. */
 
 :root {
+  --hikari-context-menu-radius: 12px;
+  --hikari-context-item-radius: 6px;
+  --hikari-context-menu-shadow: 0 12px 30px var(--theme-shadow-color-subtle), 0 2px 6px var(--theme-shadow-color-subtle);
   --hikari-menu-radius: 10px;
   --hikari-menu-item-radius: 8px;
   --hikari-menu-surface: color-mix(in srgb, var(--theme-surface-elevated) 96%, var(--theme-surface-subtle) 4%);
@@ -13,6 +16,7 @@
 }
 
 body.theme-night {
+  --hikari-context-menu-shadow: 0 12px 30px var(--theme-shadow-color), 0 2px 6px var(--theme-shadow-color-subtle);
   --hikari-menu-surface: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-background) 8%);
   --hikari-menu-border: color-mix(in srgb, var(--theme-border) 84%, var(--theme-surface-elevated) 8%);
   --hikari-menu-separator: color-mix(in srgb, var(--theme-border-soft) 86%, var(--theme-surface-elevated) 8%);
@@ -33,9 +37,8 @@ body.theme-night {
 }
 
 /*
- * Right-click menus are intentionally flatter than searchable/action menus.
- * Keep this as the single visual owner so module-local menu shells do not
- * drift back into rounded cards with stacked shadows.
+ * Soft is the shared right-click menu design. Keep its inset rows, opaque
+ * surface, rounded corners and subtle elevation consistent across modules.
  */
 .papers-context-menu,
 .biology-notebook-context-menu,
@@ -44,13 +47,18 @@ body.theme-night {
 .sequence-viewer-context-menu:not(.sequence-viewer-toolbar-menu),
 .personal-inventory-context-menu,
 .agent-session-context-menu,
-.selection-insight-menu {
+.selection-insight-menu,
+.assay-sample-picker {
   gap: 0;
-  padding: var(--space-4) 0 !important;
+  box-sizing: border-box;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  padding: var(--space-6) !important;
   border: 1px solid var(--hikari-menu-border) !important;
-  border-radius: 0 !important;
-  background: var(--hikari-menu-surface) !important;
-  box-shadow: none !important;
+  border-radius: var(--hikari-context-menu-radius) !important;
+  background: var(--theme-surface-elevated) !important;
+  box-shadow: var(--hikari-context-menu-shadow) !important;
   backdrop-filter: none;
 }
 
@@ -90,14 +98,14 @@ body.theme-night {
   align-items: center;
   justify-content: flex-start;
   gap: var(--space-10);
-  padding: var(--space-8) var(--space-12);
+  padding: var(--space-8) var(--space-10);
   border: 0 !important;
-  border-radius: 0 !important;
+  border-radius: var(--hikari-context-item-radius) !important;
   background: transparent !important;
   color: var(--theme-text-strong);
   font: inherit;
   font-size: var(--text-base);
-  font-weight: 500;
+  font-weight: 400;
   line-height: 1.2;
   letter-spacing: 0;
   text-align: left;
@@ -200,4 +208,120 @@ body.theme-night .protocol-action-item:hover,
 body.theme-night .protocol-action-item:focus-visible {
   background: var(--hikari-menu-hover) !important;
   color: var(--theme-text-strong);
+}
+
+/* CSS masks keep dynamic menu actions decorated without changing their DOM or
+ * event targets. Model actions retain the existing Hikari mark. */
+:where(.papers-context-item, .biology-notebook-context-item,
+  .biology-notebook-placeholder-table-action, .workflow-context-item,
+  .sequence-viewer-context-menu:not(.sequence-viewer-toolbar-menu) .sequence-viewer-context-item,
+  .personal-inventory-context-item, .agent-session-context-item) {
+  --hikari-context-item-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.65' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 17 17 7M7 7h10v10'/%3E%3C/svg%3E");
+}
+
+:is(.papers-context-item, .biology-notebook-context-item,
+  .biology-notebook-placeholder-table-action, .workflow-context-item,
+  .sequence-viewer-context-menu:not(.sequence-viewer-toolbar-menu) .sequence-viewer-context-item,
+  .personal-inventory-context-item, .agent-session-context-item):not(.hikari-agent-action)::before {
+  content: '';
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  background: currentColor;
+  opacity: .65;
+  -webkit-mask: var(--hikari-context-item-icon) center / contain no-repeat;
+  mask: var(--hikari-context-item-icon) center / contain no-repeat;
+}
+
+:is([id$="context-new-folder"], [id$="context-rename-folder"],
+  [data-sequence-library-action="new-folder"], [data-folder-context-add-folder],
+  [data-location-context-add-folder]) {
+  --hikari-context-item-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.65' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 20H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2ZM12 10v7M8.5 13.5h7'/%3E%3C/svg%3E");
+}
+
+:is([id$="context-rename-folder"], [data-sequence-library-action^="rename"],
+  [data-container-context-rename], [data-folder-context-rename], [data-location-context-rename],
+  [data-sequence-feature-action="edit"], [data-vector-action*="replace"]) {
+  --hikari-context-item-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.65' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m16 3 5 5L8 21H3v-5ZM13 6l5 5'/%3E%3C/svg%3E");
+}
+
+:is([data-sequence-library-action="move-entry"]) {
+  --hikari-context-item-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.65' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 7V5h6l2 3h9v12H3v-3M2 12h12m-4-4 4 4-4 4'/%3E%3C/svg%3E");
+}
+
+:is(#biology-notebook-add-project-btn, [data-sequence-feature-action="add"],
+  [data-sequence-cursor-action="insert"], [data-vector-action*="insert"],
+  [data-folder-context-add-container], [data-location-context-add-container]) {
+  --hikari-context-item-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.65' stroke-linecap='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='3'/%3E%3Cpath d='M12 7v10M7 12h10'/%3E%3C/svg%3E");
+}
+
+#biology-notebook-add-table-row-btn {
+  --hikari-context-item-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.65' stroke-linecap='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Cpath d='M3 10h18M3 15h18M12 5v3M10.5 6.5h3'/%3E%3C/svg%3E");
+}
+
+#biology-notebook-add-table-column-btn {
+  --hikari-context-item-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.65' stroke-linecap='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Cpath d='M10 3v18M15 3v18M5 12h3M6.5 10.5v3'/%3E%3C/svg%3E");
+}
+
+[data-placeholder-add-table] {
+  --hikari-context-item-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.65' stroke-linecap='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Cpath d='M3 9h18M9 9v12M15 9v12M3 15h18'/%3E%3C/svg%3E");
+}
+
+:is([data-sequence-feature-action="design-primer"], [data-vector-action="design-primer"]) {
+  --hikari-context-item-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.65' stroke-linecap='round'%3E%3Cpath d='M6 3c0 9 12 9 12 18M18 3c0 9-12 9-12 18M7 6h10M9 10h6M9 14h6M7 18h10'/%3E%3C/svg%3E");
+}
+
+[data-sequence-cursor-action="set-origin"] {
+  --hikari-context-item-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.65' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 21V3c4-3 10 3 14 0v11c-4 3-10-3-14 0'/%3E%3C/svg%3E");
+}
+
+:is([data-workflow-menu-action="disconnect-selected"], [data-workflow-menu-action="remove-link"]) {
+  --hikari-context-item-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.65' stroke-linecap='round'%3E%3Cpath d='m8 15-2 2a3 3 0 0 1-4-4l3-3a3 3 0 0 1 4 0m6-2 2-2a3 3 0 0 1 4 4l-3 3a3 3 0 0 1-4 0M3 3l18 18'/%3E%3C/svg%3E");
+}
+
+:is([data-workflow-menu-action="clear-selection"], [data-workflow-menu-action="cancel-link"]) {
+  --hikari-context-item-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.65' stroke-linecap='round'%3E%3Cpath d='m6 6 12 12M18 6 6 18'/%3E%3C/svg%3E");
+}
+
+/* Destructive actions stay legible in every theme, including DNA and workflow
+ * actions that are identified by their action attribute rather than a class. */
+:is(.papers-context-item-danger, .personal-inventory-context-item-danger,
+  .agent-session-context-item-danger, .sequence-viewer-context-item-danger,
+  #biology-notebook-remove-table-btn, [data-sequence-feature-action="delete"],
+  [data-workflow-menu-action="delete-selected"], [data-workflow-menu-action="remove-link"]) {
+  --hikari-context-item-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.65' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7'/%3E%3C/svg%3E");
+  color: var(--theme-danger) !important;
+}
+
+:is(.papers-context-item-danger, .personal-inventory-context-item-danger,
+  .agent-session-context-item-danger, .sequence-viewer-context-item-danger,
+  #biology-notebook-remove-table-btn, [data-sequence-feature-action="delete"],
+  [data-workflow-menu-action="delete-selected"], [data-workflow-menu-action="remove-link"]):is(:hover, :focus-visible):not(:disabled) {
+  background: var(--theme-danger-wash) !important;
+}
+
+:is(.papers-context-item, .biology-notebook-context-item,
+  .biology-notebook-placeholder-table-action, .workflow-context-item,
+  .sequence-viewer-context-menu:not(.sequence-viewer-toolbar-menu) .sequence-viewer-context-item,
+  .personal-inventory-context-item, .agent-session-context-item, .selection-insight-menu-item):disabled {
+  opacity: .5;
+  cursor: not-allowed;
+  background: transparent !important;
+}
+
+.sequence-viewer-context-menu:not(.sequence-viewer-toolbar-menu) > .small-note {
+  margin: 0 var(--space-4) var(--space-4);
+  padding: var(--space-6);
+  color: var(--theme-text-muted);
+}
+
+.sequence-viewer-context-menu:not(.sequence-viewer-toolbar-menu) > hr {
+  width: auto;
+  margin: var(--space-4) var(--space-6);
+  border: 0;
+  border-top: 1px solid var(--hikari-menu-separator);
+}
+
+.selection-insight-menu-label {
+  font-weight: 400;
 }

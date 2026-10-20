@@ -10,6 +10,7 @@ const { GENERATED_MARKER, renderNotebook, renderProtocol } = require('./render')
 const { block, derivedBlock, documentMarker, fieldsForRecord, preserveDocument } = require('./document-fields');
 const { checkpointMarker } = require('../../lib/record-markdown/checkpoint');
 const { embedRecordMetadata } = require('../../lib/record-markdown/metadata');
+const { appendNotebookMarkdownLog } = require('./notebook-log');
 
 const ASSET_FOLDER = '.hikari-markdown';
 const IMAGE_EXTENSIONS = {
@@ -150,7 +151,7 @@ async function renderRecordMarkdown({ filePath, payload, kind, snapshot = {}, st
   return { folderPath, markdownPath, previous, markdown, assets: images.assets, manifest };
 }
 
-async function commitRecordMarkdown({ folderPath, markdownPath, previous, markdown, assets, manifest }, { kind, canonical = false, transaction }) {
+async function commitRecordMarkdown({ folderPath, markdownPath, previous, markdown, assets, manifest }, { kind, canonical = false, transaction, warnings }) {
   if (transaction) {
     markdown = markdown.replace(/^<!-- hikari-checkpoint:[a-f0-9-]+ -->\r?\n/gm, '')
       .replace(documentMarker(kind), `${documentMarker(kind)}\n${checkpointMarker(transaction)}`);
@@ -159,6 +160,7 @@ async function commitRecordMarkdown({ folderPath, markdownPath, previous, markdo
   if (markdown !== previous) {
     if (canonical && await existingMarkdown(markdownPath) !== previous) throw new Error(`Markdown changed while saving ${markdownPath}`);
     await writeFileAtomic(fs, markdownPath, markdown);
+    if (kind === 'notebook') await appendNotebookMarkdownLog(markdownPath, previous, markdown, warnings);
   }
   await finishImages(imageState, assets);
   return markdownPath;

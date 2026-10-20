@@ -11,7 +11,7 @@
 - `spreadsheet-tables/`: the result-table grid (column definitions, context menu)
 - `linked-previews.js`: builds linked assay/gel/record preview models
 - `samples/`: sample normalization and linking UI
-- `storage/`: imported result files and page logs
+- `storage/`: imported result files; Markdown commits and page logs are owned by the main process
 - `tools/`: calculation sidebar; its cross-feature record model lives in `renderer/lib/notebook-tool-calculations.js`
 
 Keep new behavior in the owning package and reserve `index.js` for view-level wiring.

@@ -401,7 +401,7 @@ test('assay browser renders the Setup list and selectable Analyze list from the 
   assert.match(resultsList.innerHTML, /data-assay-delete="assay-2"[^>]*aria-label="Delete Current assay"[^>]*data-hover-caption="Delete"/);
 });
 
-test('assay analysis grouping keeps manual specs hidden without rendering summary chips', () => {
+test('assay analysis grouping keeps raw group specifications hidden', () => {
   const { createAssayResultsManager } = loadEsmStyleModule(path.join(
     __dirname,
     'src',
@@ -610,6 +610,68 @@ test('assay analysis split initializes chart collaborators before the extracted 
   assert.equal(typeof view.getChartStyle, 'function');
   view.loadChartStyle({ title: 'Split-safe chart' });
   assert.equal(runtime.chartStyle.title, 'Split-safe chart');
+  view.destroy();
+});
+
+test('assay analysis uses the selected plate without mixing raw and transformed responses', () => {
+  const document = createMockDocument();
+  const { createAssayAnalysisView } = loadEsmStyleModule(path.join(
+    __dirname, 'src', 'renderer', 'modules', 'assay', 'analysis-view.js'
+  ), { document });
+  const table = new MockElement();
+  const source = new MockElement();
+  const transformedOption = { disabled: true };
+  source.querySelector = () => transformedOption;
+  const groupBy = new MockElement();
+  groupBy.value = 'row';
+  const runtime = {
+    currentLayout: [{ well: 'A1', sampleId: 'S' }, { well: 'A2', sampleId: 'S' }],
+    currentResults: { A1: '10', A2: '20' }
+  };
+  let preview;
+  const selected = [];
+  const view = createAssayAnalysisView({
+    runtime,
+    elements: { assayAnalysisTable: table, assayAnalysisDataSourceInput: source, assayAnalysisGroupByInput: groupBy },
+    safeText: String,
+    TabulatorLib: null,
+    getCurrentDefinition: () => ({ rows: 1, columns: 2 }),
+    syncCurrentResultsFromGrid() {},
+    onAnalysisRendered: value => { preview = value; },
+    onAnalysisDataSourceChanged: value => selected.push(value)
+  });
+  const mean = () => Number(preview.rows[0][preview.headers.indexOf('Mean')]);
+  assert.equal(source.value, 'raw');
+  assert.equal(transformedOption.disabled, true);
+  view.loadTransformSpec({ mode: 'cells', enabled: true, formulas: { A1: '=Table1:A1*2', A2: '=Table1:A2*2' } });
+  view.loadAnalysisDataSource();
+  view.renderAnalysis();
+  assert.equal(source.value, 'transformed', 'legacy transformed assays retain their previous source');
+  assert.equal(transformedOption.disabled, false);
+  assert.equal(mean(), 30);
+  assert.equal(preview.dataSource, 'transformed');
+  source.value = 'raw';
+  view.onAnalysisDataSourceChange();
+  assert.equal(mean(), 15, 'Table1 remains selectable with an active transformed plate');
+  assert.equal(preview.dataSource, 'raw');
+  assert.equal(selected.at(-1), 'raw');
+  view.createTransformPlate();
+  assert.equal(source.value, 'raw', 'opening an existing transform preserves the chosen source');
+  view.loadTransformSpec({ mode: 'cells', enabled: true, formulas: { A1: '=25' } });
+  view.loadAnalysisDataSource('transformed');
+  view.renderAnalysis();
+  assert.equal(mean(), 25, 'a partial transformed plate does not add missing Table1 responses');
+  view.loadTransformSpec({ mode: 'cells', enabled: true, formulas: {} });
+  view.renderAnalysis();
+  assert.match(table.innerHTML, /No result values to analyze/, 'an empty Table2 never falls back to Table1');
+  runtime.currentResults = {};
+  view.loadTransformSpec({ mode: 'cells', enabled: true, formulas: { A1: '=25' } });
+  view.onAnalysisConfigChange();
+  assert.equal(mean(), 25, 'Table2 constants are analyzable without raw results');
+  view.clearTransform();
+  assert.equal(source.value, 'raw');
+  assert.equal(transformedOption.disabled, true);
+  assert.equal(selected.at(-1), 'raw');
   view.destroy();
 });
 

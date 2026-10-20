@@ -263,9 +263,7 @@ async function checkAdapterContract() {
   assert.match(viewSource, /id="gel-save-btn"/, 'the save action has a stable busy-state target');
   [
     ['gel-save-btn', 'Save'],
-    ['gel-cancel-btn', 'Cancel'],
-    ['gel-export-csv-btn', 'Export CSV'],
-    ['gel-reset-overrides-btn', 'Reset manual overrides']
+    ['gel-record-menu-btn', 'More gel actions']
   ].forEach(([id, caption]) => {
     assert.match(
       viewSource,
@@ -275,8 +273,13 @@ async function checkAdapterContract() {
   });
   assert.match(
     viewSource,
-    /<div class="form-actions gel-record-actions">[\s\S]*id="gel-save-btn"[\s\S]*id="gel-cancel-btn"[\s\S]*id="gel-export-csv-btn"[\s\S]*id="gel-reset-overrides-btn"[\s\S]*<\/div>/,
-    'resetting manual overrides stays beside the record actions at the bottom of the Gel rail'
+    /<div class="form-actions gel-record-actions">[\s\S]*id="gel-save-btn"[\s\S]*id="gel-record-menu"[^>]*popover[\s\S]*id="gel-cancel-btn"[\s\S]*id="gel-reset-overrides-btn"[\s\S]*<\/div>/,
+    'New gel and the lane/band reset stay in the record menu beside Save at the bottom of the Gel rail'
+  );
+  assert.match(
+    viewSource,
+    /id="gel-export-menu"[^>]*popover[\s\S]*id="gel-export-image-btn"[\s\S]*id="gel-export-pptx-btn"[\s\S]*id="gel-export-csv-btn"/,
+    'every export sits in the one Export menu'
   );
   assert.doesNotMatch(viewSource, /gel-override-actions/, 'manual-override reset is no longer duplicated in the scrolling form fields');
   assert.match(viewSource, /id="gel-ladder-preset"/, 'the ladder preset select is present for records-manager to read');

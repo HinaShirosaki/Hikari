@@ -12,7 +12,6 @@ export function createPluginsController({
   escapeHtml
 }) {
   let statusMessage = '';
-  let pendingReload = false;
 
   function getPlugins() {
     if (!Array.isArray(state.settings.plugins)) {
@@ -21,9 +20,8 @@ export function createPluginsController({
     return state.settings.plugins;
   }
 
-  function setStatus(message, needsReload = false) {
+  function setStatus(message) {
     statusMessage = String(message || '');
-    pendingReload = pendingReload || needsReload;
     render();
   }
 
@@ -68,7 +66,7 @@ export function createPluginsController({
       enabled: true
     });
     persist();
-    setStatus(`Added "${inspected.name}".`, true);
+    setStatus('');
   }
 
   function setPluginEnabled(pluginId, enabled) {
@@ -78,7 +76,7 @@ export function createPluginsController({
     }
     plugin.enabled = enabled === true;
     persist();
-    setStatus(`${plugin.enabled ? 'Enabled' : 'Disabled'} "${plugin.name}".`, true);
+    setStatus(`${plugin.enabled ? 'Enabled' : 'Disabled'} "${plugin.name}".`);
   }
 
   function removePlugin(pluginId) {
@@ -88,12 +86,12 @@ export function createPluginsController({
       return;
     }
     if (plugins[index].bundled) {
-      setStatus(`"${plugins[index].name}" is bundled with Hikari. Turn it off to disable it.`, true);
+      setStatus(`"${plugins[index].name}" is bundled with Hikari. Turn it off to disable it.`);
       return;
     }
     const [removed] = plugins.splice(index, 1);
     persist();
-    setStatus(`Removed "${removed.name}". The plugin folder itself was not deleted.`, true);
+    setStatus(`Removed "${removed.name}". The plugin folder itself was not deleted.`);
   }
 
   function render() {
@@ -101,10 +99,8 @@ export function createPluginsController({
       return;
     }
     const plugins = getPlugins();
-    const reloadNote = pendingReload ? ' Reload the app to apply plugin changes.' : '';
     statusElement.textContent = statusMessage
-      ? `${statusMessage}${reloadNote}`
-      : `${plugins.length} plugin${plugins.length === 1 ? '' : 's'} installed.${reloadNote}`;
+      || `${plugins.length} plugin${plugins.length === 1 ? '' : 's'} installed.`;
 
     if (!plugins.length) {
       listElement.innerHTML = '<p class="small-note">No plugins installed. Click "Add Plugin Folder" to install one.</p>';

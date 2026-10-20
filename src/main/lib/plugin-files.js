@@ -7,6 +7,7 @@ const path = require('node:path');
 
 const MAX_BASE64_CHARS = 24_000_000;
 const PLUGIN_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const figuraMigrations = new Map();
 
 async function statIfPresent(target) {
   try {
@@ -15,6 +16,27 @@ async function statIfPresent(target) {
     if (error.code === 'ENOENT') return null;
     throw error;
   }
+}
+
+// Keep the installed id (and its chat/settings identity) stable while using
+// the product name for its on-disk data. Serialize the first rename so reads
+// and writes cannot create a second, empty namespace during migration.
+async function migrateFiguraFolder(pluginsFolder) {
+  const pending = figuraMigrations.get(pluginsFolder);
+  if (pending) return pending;
+  const migration = (async () => {
+    const target = path.join(pluginsFolder, 'Figura');
+    if (await statIfPresent(target)) return;
+    const legacy = path.join(pluginsFolder, 'scientific-illustration');
+    const stat = await statIfPresent(legacy);
+    if (!stat) return;
+    if (!stat.isDirectory() || stat.isSymbolicLink()) {
+      throw new Error('Plugin file directories must be real directories, not files or symbolic links.');
+    }
+    await fs.rename(legacy, target);
+  })();
+  figuraMigrations.set(pluginsFolder, migration);
+  try { await migration; } finally { figuraMigrations.delete(pluginsFolder); }
 }
 
 // Resolve the configured storage root, then reject links anywhere below it,
@@ -30,13 +52,19 @@ async function resolvePluginFile(payload, createDirectories = false) {
   if (!PLUGIN_ID_PATTERN.test(pluginId) || pluginId.length > 80) {
     throw new Error('Invalid plugin id.');
   }
+  if (pluginId === 'figura') {
+    throw new Error('The Figura storage folder belongs to the scientific-illustration plugin.');
+  }
   const parts = requested.split('/').filter((part) => part && part !== '.');
   if (!parts.length || requested.startsWith('/') || /^[a-zA-Z]:/.test(requested)
     || requested.includes('\\') || requested.includes('\0') || parts.includes('..')) {
     throw new Error('Invalid plugin file path.');
   }
   let folder = await fs.realpath(storagePath);
-  for (const part of ['Plugins', pluginId, ...parts.slice(0, -1)]) {
+  const pluginFolder = pluginId === 'scientific-illustration' ? 'Figura' : pluginId;
+  const directories = ['Plugins', pluginFolder, ...parts.slice(0, -1)];
+  for (const [index, part] of directories.entries()) {
+    if (index === 1 && pluginId === 'scientific-illustration') await migrateFiguraFolder(folder);
     folder = path.join(folder, part);
     let stat = await statIfPresent(folder);
     if (!stat && createDirectories) {

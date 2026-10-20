@@ -8,6 +8,7 @@ const path = require('node:path');
 const os = require('node:os');
 const { pathToFileURL } = require('node:url');
 const { randomUUID } = require('node:crypto');
+const { verifyPlotly } = require('./scientific-illustration-plotly.cjs');
 const { verifyPlacement } = require('./scientific-illustration-placement.cjs');
 const { verifyCanvasInteraction } = require('./scientific-illustration-interaction.cjs');
 const { verifyTextResize } = require('./scientific-illustration-text-resize.cjs');
@@ -25,9 +26,11 @@ const { verifyImportCrop } = require('./scientific-illustration-import-crop.cjs'
 const { verifyPowerPoint } = require('./scientific-illustration-powerpoint.cjs');
 const { verifyRotation } = require('./scientific-illustration-rotation.cjs');
 const { verifyClipboard } = require('./scientific-illustration-clipboard.cjs');
+const { verifyContextMenu } = require('./scientific-illustration-context-menu.cjs');
 const { verifySystemHistory } = require('./scientific-illustration-history.cjs');
 const { verifyAlignment } = require('./scientific-illustration-alignment.cjs');
 const { verifySingleCanvas } = require('./scientific-illustration-single-canvas.cjs');
+const { verifyLibraryNavigation } = require('./scientific-illustration-library-navigation.cjs');
 const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
 const repo = path.resolve(__dirname, '..');
@@ -168,6 +171,11 @@ async function run() {
     const result = await client.callTool({ name: 'plugin_canvas', arguments: { plugin_id: 'scientific-illustration', request, ...(assets ? { assets } : {}) } });
     return { ...result.structuredContent, content: result.content };
   };
+  if (process.env.HIKARI_LIBRARY_NAVIGATION_QA_ONLY === '1') {
+    await verifyLibraryNavigation({ tool, evaluate, check, win, pause, waitFor });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura library navigation: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
   if (process.env.HIKARI_SINGLE_CANVAS_QA_ONLY === '1') {
     await verifySingleCanvas({ tool, evaluate, check, win, pause, temp, storage, reloadPlugin: async () => {
       await evaluate('location.reload()'); await pause(350);
@@ -176,6 +184,11 @@ async function run() {
     } });
     check(errors.length === 0, errors.join('\n'));
     console.log(`Figura single canvas: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
+  if (process.env.HIKARI_PLOTLY_QA_ONLY === '1') {
+    await verifyPlotly({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura Plotly: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
   }
   if (process.env.HIKARI_ALIGNMENT_QA_ONLY === '1') {
     await verifyAlignment({ tool, evaluate, check, win, pause, temp });
@@ -207,6 +220,11 @@ async function run() {
     await verifyCanvasInteraction({ tool, evaluate, check, win, pause, temp });
     check(errors.length === 0, errors.join('\n'));
     console.log(`Figura rotation and canvas interaction: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
+  if (process.env.HIKARI_CONTEXT_MENU_QA_ONLY === '1') {
+    await verifyContextMenu({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura context menu: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
   }
   if (process.env.HIKARI_CLIPBOARD_QA_ONLY === '1') {
     await verifyClipboard({ tool, evaluate, check, win, pause, temp });
@@ -438,7 +456,7 @@ async function run() {
   frame = win.webContents.mainFrame.frames.find(item => item.url.startsWith('http://127.0.0.1'));
   await evaluate('illustrationWorkspace.ready.then(()=>true)');
   check((await tool({ action: 'read' })).revision === revision, 'Reload preserves the document');
-  const pluginStorage = path.join(storage, 'Plugins/scientific-illustration');
+  const pluginStorage = path.join(storage, 'Plugins/Figura');
   const index = JSON.parse(await fs.readFile(path.join(pluginStorage, 'library.json'), 'utf8'));
   const saved = JSON.parse(await fs.readFile(path.join(pluginStorage, index.illustrations.find(item => item.id === originalId).path), 'utf8'));
   check(saved.revision === revision, 'Scene is saved in the plugin file namespace');

@@ -69,7 +69,7 @@ async function main() {
           cursor:host.querySelector('.sequence-viewer-line-cursor').style.left};
       })()`);
       assert.equal(readout.hidden, false);
-      assert.match(readout.text, /Before base 6/);
+      assert.doesNotMatch(readout.text, /(?:Before|After) base/);
       assert.match(readout.text, /Insert Sequence/);
       assert.match(readout.text, /Set Sequence Start Here/);
       assert.ok(readout.left >= 0 && readout.right <= readout.w && readout.top >= 0 && readout.bottom <= readout.h);

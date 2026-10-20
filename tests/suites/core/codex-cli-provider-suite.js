@@ -7,6 +7,7 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
     require('./codex-cli-provider-suite/model-selection-and-exec-args.js'),
     require('./codex-cli-provider-suite/mcp-gateway-tool-surface.js'),
     require('./codex-cli-provider-suite/agent-runtime-prompts.js'),
+    require('./codex-cli-provider-suite/tool-routing.js'),
     require('./codex-cli-provider-suite/session-resume-and-mcp-servers.js'),
     require('./codex-cli-provider-suite/exec-streaming.js'),
     require('./codex-cli-provider-suite/auth-and-session-transcripts.js'),

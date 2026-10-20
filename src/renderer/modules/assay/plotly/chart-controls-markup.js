@@ -9,7 +9,7 @@ const TAB_KEYS = {
     'showHorizontalGrid', 'gridColor', 'gridStrokeWidth', 'sizeAuto', 'frameWidth', 'frameHeight'],
   axis: ['xScale', 'yScale', 'xRange', 'yRange', 'xTick', 'yTick', 'axisStyles',
     'tickDir', 'tickLen', 'minorTicks', 'tickFormat', 'refLineAxis', 'refLineValue'],
-  series: ['chartType', 'xColumn', 'yColumn', 'seriesColumn', 'barMode', 'barLabels', 'barCornerRadius',
+  series: ['xColumn', 'yColumn', 'seriesColumn', 'barMode', 'barLabels', 'barCornerRadius',
     'mode', 'legendPosition', 'pointShape', 'pointSize', 'markerFill', 'opacity', 'lineStyle', 'lineWidth',
     'seriesColors', 'seriesShapes', 'seriesStyles', 'replicateStyle', 'palette', 'seriesColor', 'barOutlineColor',
     'barOutlineWidth', 'errorColor', 'errorCapWidth', 'errorThickness'],
@@ -87,7 +87,6 @@ const PANEL_HTML = `<div class="assay-chart-style">
       + number('refLineValue', 'Value', null, null, 'any', 'Off'))}
   `)}
   ${panel('series', `
-    ${select('chartType', 'Chart type', [['auto', 'Auto'], ['line', 'Line'], ['bar', 'Bar']])}
     ${select('seriesTarget', 'Data series', [['', 'All series']])}
     ${row(color('color', 'Series color') + number('opacity', 'Opacity', 0.1, 1, 0.1))}
     <div class="form-actions"><button type="button" data-cc="seriesDefaults" class="ghost-btn">Use defaults</button></div>

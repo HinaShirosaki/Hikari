@@ -40,7 +40,7 @@ test('every level and percentage keeps schematic geometry SVG and labels separat
       assert.match(instructions, /not a quota of assets or tool calls/);
       assert.match(instructions, /Never rasterize schematic symbols/);
       assert.match(instructions, /preserve existing artwork/);
-      assert.match(instructions, /Keep the current canvas dimensions, complexity and image-generation target unless the user asks to change them/);
+      assert.match(instructions, /Keep the current canvas dimensions, complexity, image-generation target and image style unless the user asks to change them/);
       assert.match(instructions, /render the canvas/);
       if (percent === 0) assert.match(instructions, /Do not call image_gen/);
       else if (percent !== null) assert.ok(instructions.includes(`target: ${percent}%`));

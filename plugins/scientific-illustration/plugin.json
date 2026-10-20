@@ -1,7 +1,7 @@
 {
   "id": "scientific-illustration",
   "name": "Figura",
-  "version": "1.5.11",
+  "version": "1.6.0",
   "icon": "icon.svg",
   "description": "Assemble editable scientific figures with Codex, a canvas, and reusable components.",
   "serve": true,

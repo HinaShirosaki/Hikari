@@ -64,7 +64,7 @@ The service layer is the glue you should reach for whenever a change in one modu
 | Service | Methods (examples) |
 | --- | --- |
 | `protocolService` | `handleProtocolsChanged()`, `handleProtocolsImported()`, `handleExternalProtocolRecordSaved(payload)`, `saveProtocolRecord(...)`, `openProtocol(id)`, `importProtocolsFromJson(json, opts)`, `createDraftFromPaper({method, paper})` |
-| `notebookService` | `handleNotebookEntriesChanged()`, `handleAgentNotebookEntriesChanged()`, `logPageEvent(...)` |
+| `notebookService` | `handleNotebookEntriesChanged()`, `handleAgentNotebookEntriesChanged()` |
 | `projectService` | `handleProjectsChanged()`, `ensureProjectRecord(...)` |
 | `inventoryService` | `handleSamplesChanged()`, `handleSampleInventorySettingsChanged()`, `openSampleSearch(query)` |
 | `analysisService` | `handleAssaysChanged()`, `openAssayForNotebook(...)` |
@@ -139,7 +139,7 @@ The surface is one spread per domain, built in `src/main/preload/create-preload-
 | Area | Methods |
 | --- | --- |
 | Storage root and snapshot | `autoSaveDataFile(state, filePath)` (called from the renderer core's `persist`), `importStorageRoot(path)`, `pickStorageDirectory(current)`, `ensureStorageDirectory(path)`, `getLastStorageRoot()` |
-| Files in the storage root | `storeImportedFile(...)`, `moveStoredFile(...)`, `writeJsonFile(...)`, `readFileBytes(path)`, `readFileBase64(path)`, `openFilePath(path)`, `appendNotebookPageLog(...)` |
+| Files in the storage root | `storeImportedFile(...)`, `moveStoredFile(...)`, `writeJsonFile(...)`, `readFileBytes(path)`, `readFileBase64(path)`, `openFilePath(path)` |
 | Import parsers | `parseChemicalImportFile(...)`, `parseAssayResultImportFile(...)` |
 | Sequence library | `sequenceLibraryList`, `sequenceLibraryGet`, `sequenceLibraryUpsert`, `sequenceLibrarySearchFeatures`, … |
 | LLM and agent | `runDirectLlmPrompt(...)` (through `services/direct-llm.js`), `agentChat(...)`, `agentChatCancel(...)`, `onAgentProgress(handler)`, `agentGenerateProtocol(...)` (see [docs/agent/](../agent/)) |

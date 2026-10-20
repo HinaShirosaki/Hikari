@@ -79,12 +79,26 @@
   min-width: 0;
   min-height: 0;
   height: auto;
+  padding: 0;
+  border: 0;
   border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   font: inherit;
+  line-height: 1.5;
   field-sizing: content;
   resize: none;
   overflow-wrap: anywhere;
 }
+
+.sequence-viewer-primer-library-name:focus,
+.sequence-viewer-primer-library-name:focus-visible {
+  border: 0;
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+}
+
 .sequence-viewer-primer-library-dialog .ghost-btn { color: var(--theme-text); }
 .sequence-viewer-primer-library-table code { word-break: break-all; line-height: 1.5; }
 .sequence-viewer-primer-library-table .sequence-viewer-primer-library-empty { padding: var(--space-24); text-align: center; color: var(--theme-text-muted); }

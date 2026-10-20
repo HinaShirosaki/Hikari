@@ -43,6 +43,7 @@ export function getAssayElements(root = document) {
     assayResultsSearchInput: root.getElementById('assay-results-search'),
     assayResultsList: root.getElementById('assay-results-list'),
     assayAnalysisGroupByInput: root.getElementById('assay-analysis-group-by'),
+    assayAnalysisDataSourceInput: root.getElementById('assay-analysis-data-source'),
     assayAnalysisKindInput: root.getElementById('assay-analysis-kind'),
     assayAnalysisXAxisInput: root.getElementById('assay-analysis-x-axis'),
     assayAnalysisXAxisField: root.getElementById('assay-analysis-x-axis-field'),

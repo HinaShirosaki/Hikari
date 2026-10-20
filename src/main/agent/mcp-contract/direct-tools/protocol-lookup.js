@@ -15,7 +15,7 @@ const {
 
 const PROTOCOL_LOOKUP_MCP_TOOL = Object.freeze({
   name: 'protocol_lookup',
-  description: 'Look up local Hikari protocol records by protocol name, purpose, category, or step text.',
+  description: 'Use when the user wants an existing lab method or asks how the lab previously performed a procedure. Look up local Hikari protocol records by protocol name, purpose, category, or step text. Retrieve the saved procedure before describing or reusing it; authoring a new procedure uses protocol_generation.',
   annotations: buildReadOnlyToolAnnotations('Protocol lookup'),
   inputSchema: buildCommonLookupInputSchema()
 });

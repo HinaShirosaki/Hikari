@@ -30,13 +30,26 @@ curl -fsSL https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.sh | bash
 iwr -useb https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.ps1 | iex
 ```
 
-No Node.js needed: if Node.js 20+ is not on your PATH, the script downloads a private copy to `~/.hikari/node` (macOS) or `%LOCALAPPDATA%\HikariNode` (Windows) and touches nothing system-wide. With Node.js 20+ already installed you can run the same thing directly:
+No Node.js needed: the script first resolves the current npm release and downloads its SHA-256-verified app archive from GitHub Releases. Prebuilt archives cover macOS Apple Silicon, macOS Intel, and Windows x64. If an archive is unavailable, it builds that same version locally. For local builds, a missing or incomplete Node.js/npm/npx installation is replaced with a validated private runtime at `~/.hikari/node` (macOS) or `%LOCALAPPDATA%\HikariNode` (Windows). Downloads are staged and checked before replacing the cache; failed downloads leave the previous cache intact.
+
+With Node.js 20+ and npm already installed, you can build directly:
 
 ```bash
-npx @hinashirosaki/hikari
+npx --yes @hinashirosaki/hikari@latest
 ```
 
-Either way this downloads the source from npm, builds the native app for your OS and CPU on your machine, and writes a single `Hikari.app` to `./hikari-out/Hikari-darwin-<arch>/` on macOS. Move it to Applications and open it. On Windows, `./hikari-out/Hikari-win32-<arch>/` holds a portable `Hikari\Hikari.exe` (move the `Hikari` folder anywhere and run it, no install needed) and `HikariSetup.exe` (installs to `%LOCALAPPDATA%\hikari` with Desktop and Start menu shortcuts). Set `HIKARI_OUT_DIR` to build somewhere else.
+Both paths write `Hikari.app` to `./hikari-out/Hikari-darwin-<arch>/` on macOS. Move it to Applications and open it. On Windows, `./hikari-out/Hikari-win32-<arch>/` holds a portable `Hikari\Hikari.exe` (move the `Hikari` folder anywhere and run it, no install needed) and `HikariSetup.exe` (installs to `%LOCALAPPDATA%\hikari` with Desktop and Start menu shortcuts). Existing prebuilt output is preserved; choose another `HIKARI_OUT_DIR` if the destination already exists.
+
+Installer environment options:
+
+| Variable | Purpose |
+| --- | --- |
+| `HIKARI_OUT_DIR` | Choose the output folder. |
+| `HIKARI_VERSION` | Download or build an exact release, such as `1.1.0-beta.9`. Defaults to npm's `latest` tag, including beta releases. |
+| `HIKARI_BUILD_FROM_SOURCE=1` | Skip prebuilt archives and build locally. |
+| `HIKARI_NODE_DIR` | Choose the private Node.js cache folder. |
+
+Local builds run `npm ci` in an isolated temporary workspace using the build lock shipped with the release. The workspace is cleaned after success or failure; the cached Hikari source stays unchanged. A checksum mismatch stops installation instead of silently falling back.
 
 ### Let a coding agent install it
 
@@ -55,7 +68,8 @@ Preserve any existing Hikari application data. Do not choose or change the Hikar
 
 ### Prerequisites
 
-- Node.js 20+ to install and build (the installers fetch Node 24 when none is found)
+- Prebuilt installation requires no Node.js or build tools.
+- Node.js 20+ and npm for local builds (the installers fetch Node 24 when the existing runtime is missing or incomplete)
 - Node.js 24 to run the test suite, matching CI: the vendored pdf.js uses `Promise.try`, which Node 22 lacks, and `node test.js` stops partway through on older versions
 - npm
 - macOS or Windows (Linux is not supported)

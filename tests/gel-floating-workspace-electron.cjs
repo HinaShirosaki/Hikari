@@ -93,12 +93,23 @@ async function main() {
     win.focus();
     await waitFor('Boolean(window.qaReady)');
     await exec('loadGel()');
-    await waitFor("!document.getElementById('gel-open-profile-btn').disabled");
-    await exec("document.getElementById('gel-expected-lane-count').value='6';click('gel-auto-detect-lanes-btn');click('gel-tool-dividers-btn');");
+    await waitFor("!document.getElementById('gel-crop-mode-btn').disabled");
+    // One toolbar row over the gel; the tools are function sections in the rail.
+    const layout=await exec(`(()=>{const rail=document.querySelector('.gel-setup-panel'),status=document.getElementById('gel-status');return {toolbars:document.querySelectorAll('.gel-viewer-panel [role=toolbar]').length,sections:[...rail.querySelectorAll('.gel-tool-group > summary')].map(s=>s.textContent.trim()),hint:status.textContent.trim(),hintOnScreen:status.getBoundingClientRect().width>1,card:document.querySelector('.gel-viewer-card').getBoundingClientRect().toJSON(),stage:rect('gel-viewer-stage')}})()`);
+    assert.equal(layout.toolbars,1,'The viewer keeps a single toolbar row');
+    assert.deepEqual(layout.sections,['Image','Lanes','Ladder','Bands','Results'],'Rail tools are grouped by function');
+    assert.equal(layout.hintOnScreen,false,'Status text is for screen readers only; no message row over the gel');
+    assert.ok(layout.card.left>=layout.stage.right&&layout.card.top<=layout.stage.top+1,'The action card sits beside the gel, at the top right');
+    assert.equal(layout.hint,'','Loading an image needs no message');
+    await exec("document.getElementById('gel-expected-lane-count').value='6';click('gel-auto-detect-lanes-btn')");
+    assert.equal(await exec("getComputedStyle(document.getElementById('gel-canvas')).cursor"),'col-resize','Placing dividers shows a divider cursor');
+    assert.match(await exec("document.getElementById('gel-status').textContent"),/Finish dividers/,'A pending step says what to do next');
+    await exec("click('gel-tool-dividers-btn')");
+    assert.notEqual(await exec("getComputedStyle(document.getElementById('gel-canvas')).cursor"),'col-resize','Finishing dividers restores the cursor');
     await waitFor("!document.getElementById('gel-add-table-btn').disabled");
     await settle();
     // MW entry belongs to the clicked band, with a visible mode and keyboard input.
-    await exec("click('gel-tool-ladder-lane-btn');gelPointer('click',.08,.13);document.querySelector('[data-gel-tool-group=analysis]').click();click('gel-tool-ladder-mw-btn');");
+    await exec("click('gel-tool-ladder-lane-btn');gelPointer('click',.08,.13);click('gel-tool-ladder-mw-btn');");
     assert.equal(await exec("getComputedStyle(document.getElementById('gel-canvas')).cursor"),'crosshair');
     assert.equal(await exec("document.getElementById('gel-tool-ladder-mw-btn').getAttribute('aria-pressed')"),'true');
     await exec("gelPointer('click',.28,.13)");
@@ -122,7 +133,7 @@ async function main() {
     assert.equal(await exec("document.getElementById('gel-ladder-mw-editor').hidden"),false,'Nonpositive MW is rejected');
     await exec("document.getElementById('gel-ladder-band-mw').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))");
     assert.equal(await exec("document.getElementById('gel-ladder-mw-editor').hidden"),true,'Escape cancels entry');
-    assert.equal(await exec("document.getElementById('gel-tools-window').hidden"),false,'Escape leaves Gel Tools open');
+    assert.equal(await exec("document.getElementById('gel-tool-ladder-mw-btn').getAttribute('aria-pressed')"),'true','Escape cancels the entry but leaves Set MW on');
     await exec("gelPointer('click',.08,.13);document.getElementById('gel-ladder-band-mw').value='80.5';document.getElementById('gel-ladder-band-mw').dispatchEvent(new Event('input'));document.getElementById('gel-ladder-mw-editor').requestSubmit();gelPointer('click',.08,.13)");
     assert.equal(await exec("document.getElementById('gel-ladder-band-mw').value"),'80.5');
     await exec('controller.undo()');
@@ -142,27 +153,26 @@ async function main() {
     await new Promise(resolve=>setTimeout(resolve,350));
     fs.writeFileSync(path.join(output,'ladder-mw-night.png'),(await win.webContents.capturePage()).toPNG());
     await exec("dismissMw();click('gel-tool-ladder-mw-btn');document.body.classList.remove('theme-night')");
-    const baseline = await exec("rect('gel-canvas')");
-    await exec("click('gel-open-profile-btn')");
-    await settle();
-    sameRect(baseline,await exec("rect('gel-canvas')"),'Opening Lane Intensity');
+    assert.ok(await exec("document.getElementById('gel-lane-profile-select').options.length")>1,'The lane profile renders inline in Results');
+    await exec("document.getElementById('gel-lane-profile-select').focus()");
+    assert.ok(await exec("(()=>{const rail=document.querySelector('.gel-setup-panel');return rail.scrollTop===0&&rail.scrollHeight<=rail.clientHeight+1})()"),'Only the rail fields scroll; Save stays pinned');
     await exec("click('gel-open-lane-table-btn');click('gel-add-table-btn')");
     await settle();
     async function checkDock() {
       const dock=await exec(`(()=>{const panel=document.getElementById('gel-lane-table-panel'),canvas=rect('gel-canvas'),grid=document.querySelector('.gel-lane-table-grid-shell').getBoundingClientRect(),layer=document.querySelector('.gel-floating-layer').getBoundingClientRect();return {panel:panel.getBoundingClientRect().toJSON(),canvas,grid:grid.toJSON(),layer:layer.toJSON(),floating:Boolean(panel.closest('[data-gel-window],.gel-floating-layer')),hidden:panel.hidden}})()`);
       assert.equal(dock.hidden,false,'The lane table dock is visible');
       assert.equal(dock.floating,false,'The lane table stays outside floating windows');
-      assert.ok(dock.panel.top>=dock.canvas.bottom+8,'The lane table sits below the gel');
+      assert.ok(dock.panel.bottom<=dock.canvas.top-8,'The lane table sits above the gel');
       assert.ok(Math.abs(dock.grid.left-dock.canvas.left)<2&&Math.abs(dock.grid.width-dock.canvas.width)<2,`Table columns share the image position and width: ${JSON.stringify(dock)}`);
-      assert.ok(dock.layer.bottom<=dock.panel.top,'Floating windows stay above the table');
+      assert.ok(dock.layer.top>=dock.panel.bottom,`Floating windows stay below the table: ${JSON.stringify({layer:dock.layer,panel:dock.panel})}`);
     }
     await checkDock();
     await exec("document.querySelector('[data-gel-table-add-row]').click();document.querySelector('[data-gel-table-role=label]').value='Label';document.querySelector('[data-gel-table-role=label]').dispatchEvent(new Event('input',{bubbles:true}));");
     await settle();
     await checkDock();
     const dockedBaseline=await exec("rect('gel-canvas')");
-    await exec("document.querySelector('[data-gel-window-close=profile]').click();click('gel-process-image-btn');");
-    assert.equal(await exec("document.getElementById('gel-lane-profile-panel').hidden"),true,'Rendering must not reopen a dismissed profile');
+    await exec("click('gel-process-image-btn')");
+    assert.equal(await exec("document.getElementById('gel-process-image-btn').getAttribute('aria-pressed')"),'true','The Processed switch turns on');
     await exec("click('gel-open-peak-editor-btn')");
     await settle();
     assert.equal(await exec("document.getElementById('gel-peak-editor-overlay').hidden"),false);
@@ -171,8 +181,6 @@ async function main() {
     await exec("document.querySelector('#gel-peak-editor-overlay [data-gel-window-handle]').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))");
     assert.equal(await exec("document.getElementById('gel-peak-editor-overlay').hidden"),true);
     assert.equal(await exec("document.getElementById('gel-lane-table-panel').hidden"),false,'Escape leaves the docked table visible');
-    await exec("click('gel-hide-windows-btn')");
-    assert.equal(await exec("document.getElementById('gel-lane-table-panel').hidden"),false,'Hide windows leaves the docked table visible');
     await exec("click('gel-close-lane-table-btn')");
     await settle();
     assert.equal(await exec("document.getElementById('gel-lane-table-panel').hidden"),true);
@@ -189,27 +197,30 @@ async function main() {
     await settle();
     await checkDock();
     assert.ok(await exec("(()=>{const body=document.querySelector('.gel-lane-table-body');return body.scrollHeight>body.clientHeight})()"),'Long tables scroll inside the dock');
-    await exec("click('gel-open-tools-btn');document.querySelector('[data-gel-tool-group=band]').click();click('gel-tool-band-top-btn');const c=rect('gel-canvas');document.getElementById('gel-canvas').dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:c.x+c.width*.4,clientY:c.y+c.height*.55}));click('gel-tool-band-bottom-btn');document.getElementById('gel-canvas').dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:c.x+c.width*.4,clientY:c.y+c.height*.66}));");
-    await waitFor("!document.getElementById('gel-open-cell-table-btn').disabled");
-    await exec("click('gel-open-cell-table-btn')");
-    assert.ok(await exec("document.querySelectorAll('#gel-cell-table-host tbody tr').length") > 0);
-    await exec("click('gel-hide-windows-btn')");
-    assert.equal(await exec("[...document.querySelectorAll('[data-gel-window]')].every(e=>e.hidden)"),true);
-    await exec("click('gel-open-tools-btn')");
-    const toolBefore = await exec("rect('gel-tools-window')");
-    await exec("const h=document.querySelector('#gel-tools-window [data-gel-window-handle]');h.focus();h.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true}));");
-    assert.ok((await exec("rect('gel-tools-window')")).x < toolBefore.x,'Keyboard moves the floating window');
-    const handle = await exec("document.querySelector('#gel-tools-window [data-gel-window-handle]').getBoundingClientRect().toJSON()");
+    await exec("click('gel-tool-band-top-btn');const c=rect('gel-canvas');document.getElementById('gel-canvas').dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:c.x+c.width*.4,clientY:c.y+c.height*.55}));click('gel-tool-band-bottom-btn');document.getElementById('gel-canvas').dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:c.x+c.width*.4,clientY:c.y+c.height*.66}));");
+    await waitFor("document.querySelectorAll('#gel-cell-table-host tbody tr').length > 0");
+    assert.equal(await exec("document.getElementById('gel-cell-table-copy-btn').disabled"),false,'Band intensities render inline in Results');
+    assert.equal(await exec("document.querySelectorAll('[data-gel-window]').length"),1,'The peak editor is the only floating window');
+    await exec("click('gel-open-peak-editor-btn')");
+    await settle();
+    const peakBefore = await exec("rect('gel-peak-editor-overlay')");
+    await exec("const h=document.querySelector('#gel-peak-editor-overlay [data-gel-window-handle]');h.focus();h.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));");
+    assert.ok((await exec("rect('gel-peak-editor-overlay')")).x > peakBefore.x,'Keyboard moves the floating window');
+    const handle = await exec("document.querySelector('#gel-peak-editor-overlay [data-gel-window-handle]').getBoundingClientRect().toJSON()");
     const start = { x:Math.round(handle.x+45), y:Math.round(handle.y+18) };
     win.webContents.sendInputEvent({type:'mouseDown',button:'left',clickCount:1,...start});
-    win.webContents.sendInputEvent({type:'mouseMove',x:start.x-65,y:start.y+40});
-    win.webContents.sendInputEvent({type:'mouseUp',button:'left',clickCount:1,x:start.x-65,y:start.y+40});
+    win.webContents.sendInputEvent({type:'mouseMove',x:start.x+65,y:start.y});
+    win.webContents.sendInputEvent({type:'mouseUp',button:'left',clickCount:1,x:start.x+65,y:start.y});
     await settle();
-    const dragged = await exec("rect('gel-tools-window')");
-    assert.ok(dragged.x<handle.x-50&&dragged.y>handle.y+30,'Pointer dragging moves the window without editing the gel');
-    await exec("click('gel-open-profile-btn')");
-    await settle();
+    const dragged = await exec("rect('gel-peak-editor-overlay')");
+    assert.ok(dragged.x>handle.x+50,'Pointer dragging moves the window without editing the gel');
+    await exec("click('gel-peak-editor-close-btn')");
+    await exec("document.getElementById('gel-cell-table-panel').scrollIntoView({block:'center'})");
+    // Rail buttons scrolled into view finish their theme transition late; capture the settled look.
+    await new Promise(resolve=>setTimeout(resolve,350));
     fs.writeFileSync(path.join(output,'workspace.png'),(await win.webContents.capturePage()).toPNG());
+    // Keep a window open through the resize checks so its bounds are covered.
+    await exec("click('gel-open-peak-editor-btn')");
     for (const [width,height] of [[1400,900],[1024,768],[800,700],[600,800]]) {
       win.setSize(width,height);
       await settle();
@@ -218,7 +229,7 @@ async function main() {
       assert.ok(sizes.canvas.bottom<=sizes.stage.bottom+1,'Gel fits stage height');
       await checkDock();
       sizes.windows.forEach(rect=>{assert.ok(rect.left>=sizes.layer.left-1&&rect.right<=sizes.layer.right+1,'Window fits width');assert.ok(rect.top>=sizes.layer.top-1&&rect.bottom<=sizes.layer.bottom+1,'Window fits height');});
-      await exec("document.querySelector('[data-gel-tool-group=analysis]').click();click('gel-tool-ladder-mw-btn');gelPointer('click',.08,.98)");
+      await exec("click('gel-tool-ladder-mw-btn');gelPointer('click',.08,.98)");
       const entry=await exec("({box:rect('gel-ladder-mw-editor'),width:innerWidth,height:innerHeight,hidden:document.getElementById('gel-ladder-mw-editor').hidden})");
       assert.equal(entry.hidden,false,`MW box opens at ${width}×${height}`);
       assert.ok(entry.box.left>=8&&entry.box.right<=entry.width-7&&entry.box.top>=8&&entry.box.bottom<=entry.height-7,`MW box fits ${width}×${height}`);
@@ -226,11 +237,18 @@ async function main() {
     }
     win.setSize(1400,900);await settle();
     const beforeCrop=await exec("rect('gel-canvas')");
-    await exec("click('gel-hide-windows-btn');click('gel-crop-mode-btn')");
+    await exec("click('gel-peak-editor-close-btn');click('gel-crop-mode-btn')");
     await waitFor("Boolean(document.querySelector('.cropper-container'))");
     await waitFor("document.querySelector('.cropper-view-box')?.getBoundingClientRect().width > 100");
     await settle();
     fs.writeFileSync(path.join(output,'crop.png'),(await win.webContents.capturePage()).toPNG());
+    // The crop bar takes over the toolbar row; the slider straightens the image.
+    assert.deepEqual(await exec("['gel-crop-bar','gel-process-image-btn','gel-export-menu-btn','gel-open-figure-btn'].map(id=>document.getElementById(id).checkVisibility())"),[true,false,false,false],'Only the crop controls show in the card while cropping');
+    await exec("const a=document.getElementById('gel-crop-angle');a.value='5';a.dispatchEvent(new Event('input',{bubbles:true}))");
+    assert.equal(await exec("document.getElementById('gel-cropper-image').cropper.getData().rotate"),5,'The straighten slider rotates the crop');
+    assert.equal(await exec("document.getElementById('gel-crop-angle-value').textContent"),'5°');
+    await exec("click('gel-reset-crop-btn')");
+    assert.equal(await exec("document.getElementById('gel-cropper-image').cropper.getData().rotate"),0,'Reset clears the rotation');
     const cropRect=()=>exec("document.querySelector('.cropper-crop-box').getBoundingClientRect().toJSON()");
     const fullCrop=await cropRect();
     async function dragCropTarget(selector,dx,dy) {
@@ -252,8 +270,9 @@ async function main() {
     await new Promise(resolve=>setTimeout(resolve,350));
     fs.writeFileSync(path.join(output,'crop-selection-night.png'),(await win.webContents.capturePage()).toPNG());
     await exec("document.body.classList.remove('theme-night')");
-    await exec("click('gel-crop-mode-btn')");
+    await exec("document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))");
     await settle();
+    assert.equal(await exec("document.getElementById('gel-crop-bar').hidden"),true,'Escape cancels crop mode');
     sameRect(beforeCrop,await exec("rect('gel-canvas')"),'Cancelling crop');
     await exec("document.body.classList.add('theme-night');click('gel-open-peak-editor-btn')");
     await settle();

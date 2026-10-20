@@ -27,6 +27,7 @@ export function renderViewerToolbar(elements, selectedViewerTool, laneBandMode =
   if (elements.gelFinishDividersBtn) {
     elements.gelFinishDividersBtn.hidden = !dividersSelected;
   }
+  elements.gelCanvas?.classList.toggle('is-setting-dividers', dividersSelected);
   elements.gelToolLadderLaneBtn?.classList.toggle('is-active', selectedViewerTool === 'ladder');
   const ladderMwSelected = selectedViewerTool === 'ladder-mw';
   elements.gelToolLadderMwBtn?.classList.toggle('is-active', ladderMwSelected);

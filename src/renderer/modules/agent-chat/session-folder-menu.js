@@ -8,6 +8,7 @@ import {
 } from './session-folders.js';
 import { showTransientNotice } from '../../lib/notify.js';
 import { startInlineRename } from '../../lib/folder-tree.js';
+import { positionContextMenu } from '../../lib/context-menu.js';
 
 // Right-click menu and inline rename for the agent chat session folders, plus
 // the drop-target bookkeeping shared with the drag handlers.
@@ -57,9 +58,7 @@ function createSessionFolderMenu({
     if (contextDeleteFolderBtn) {
       contextDeleteFolderBtn.hidden = folder?.type !== 'custom';
     }
-    sessionContextMenu.style.left = `${Math.max(0, Number(event?.clientX) || 0)}px`;
-    sessionContextMenu.style.top = `${Math.max(0, Number(event?.clientY) || 0)}px`;
-    sessionContextMenu.hidden = false;
+    positionContextMenu(sessionContextMenu, event?.clientX, event?.clientY);
   }
 
   // The list re-renders before the input goes in, so the row has to be looked

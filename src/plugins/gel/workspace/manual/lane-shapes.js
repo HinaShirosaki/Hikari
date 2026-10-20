@@ -197,11 +197,11 @@ function createManualLaneShapes({
     if (nextMode) {
       const progress = getLaneBandProgress();
       deps.setStatus(progress.totalLanes
-        ? `Lane-by-lane target band enabled. Click the top line in lane ${progress.missingCompleteLaneIndex || 1}.`
-        : 'Lane-by-lane target band enabled. Finish lane dividers before setting target bands.');
+        ? `Click the top edge of the band in lane ${progress.missingCompleteLaneIndex || 1}.`
+        : 'Finish the lane dividers first.');
       return;
     }
-    deps.setStatus('Lane-by-lane target band disabled. Top and bottom lines will apply to every lane.');
+    deps.setStatus('');
     if (
       runtime.currentImage
       && Number.isFinite(normalized.laneSegmentation?.bandTop)

@@ -18,15 +18,10 @@ import {
   mergeImportedResultFiles
 } from '../entry/entry-record-builder.js';
 import { isPathInsideRoot } from '../../../lib/storage-paths.js';
-import {
-  changedFieldList,
-  describeNotebookEntryChanges,
-  logNotebookPageEvent
-} from '../../../services/notebook-page-log.js';
 import { normalizeNotebookExperimentNameSource } from '../entry/page-name-generator.js';
 
 // Writing the open notebook page back to state: builds the record, copies any
-// imported result files into storage, logs the change, and offers the
+// imported result files into storage, and offers the
 // clarify-then-save variant.
 function createNotebookSaveEntry({
   state,
@@ -167,13 +162,11 @@ function createNotebookSaveEntry({
     const index = editingEntry
       ? state.notebookEntries.findIndex((item) => item.id === editingEntry.id)
       : -1;
-    const previousEntrySnapshot = index >= 0 ? { ...state.notebookEntries[index] } : null;
     if (index >= 0) {
       state.notebookEntries[index] = { ...state.notebookEntries[index], ...entry };
     } else {
       state.notebookEntries.push(entry);
     }
-    const persistedEntry = index >= 0 ? state.notebookEntries[index] : entry;
 
     setEditingEntryId(entry.id);
     protocolEditor.setDraft(null);
@@ -181,39 +174,6 @@ function createNotebookSaveEntry({
     updateSaveButtonLabel();
 
     persist();
-    if (previousEntrySnapshot) {
-      const changes = describeNotebookEntryChanges(previousEntrySnapshot, persistedEntry);
-      const changedFields = changedFieldList(changes);
-      if (changedFields.length) {
-        logNotebookPageEvent({
-          entry: persistedEntry,
-          storagePath: state.settings?.storagePath,
-          action: 'update',
-          summary: `Updated notebook page (${changedFields.join(', ')})`,
-          details: {
-            changedFields,
-            changes,
-            experimentName: persistedEntry.experimentName || '',
-            importedFileCount: importedResultFileRecords.length
-          }
-        });
-      }
-    } else {
-      logNotebookPageEvent({
-        entry: persistedEntry,
-        storagePath: state.settings?.storagePath,
-        action: 'create',
-        summary: `Created notebook page${persistedEntry.experimentName ? ` "${persistedEntry.experimentName}"` : ''}`,
-        details: {
-          notebookType,
-          carriedOver,
-          projectName: persistedEntry.projectName || '',
-          protocolName: persistedEntry.protocolName || '',
-          experimentName: persistedEntry.experimentName || '',
-          importedFileCount: importedResultFileRecords.length
-        }
-      });
-    }
     clearPendingNotebookResultFiles();
     entryListRenderer.renderEntries();
     renderProtocolViewer({
@@ -225,7 +185,7 @@ function createNotebookSaveEntry({
     if (typeof onNotebookEntriesChanged === 'function') {
       onNotebookEntriesChanged();
     }
-    if (!previousEntrySnapshot && entry.notebookState === 'executed') onEntryExecuted(entry);
+    if (index < 0 && entry.notebookState === 'executed') onEntryExecuted(entry);
     return entry;
   }
 
@@ -249,16 +209,6 @@ function createNotebookSaveEntry({
       if (!savedEntry) {
         throw new Error('Unable to save the clarified notebook entry.');
       }
-      logNotebookPageEvent({
-        entry: savedEntry,
-        storagePath: state.settings?.storagePath,
-        action: 'clarify',
-        summary: 'Clarified notebook note via LLM',
-        details: {
-          sourceCharacters: source.length,
-          combinedCharacters: combinedNote.length
-        }
-      });
       showTransientNotice('Clarified note saved.');
     } catch (error) {
       showTransientNotice(String(error?.message || error || 'Failed to clarify the notebook entry.'), {

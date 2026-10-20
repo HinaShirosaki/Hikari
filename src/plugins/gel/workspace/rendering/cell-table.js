@@ -53,22 +53,9 @@ export function createCellTableController({ runtime, elements, safeText, deps = 
     }
   }
 
-  // The report lives in its own dialog, so "has data" only gates the trigger
-  // button; whether it is on screen is the user's choice.
+  // The table sits inline in the rail's Results section; with no measurement
+  // the host is simply empty.
   function setCellTableVisibility(hasCells) {
-    if (!hasCells) {
-      runtime.cellTableDialogOpen = false;
-    }
-    if (elements.gelOpenCellTableBtn) {
-      elements.gelOpenCellTableBtn.disabled = !hasCells;
-      elements.gelOpenCellTableBtn.setAttribute?.(
-        'aria-expanded',
-        String(hasCells && Boolean(runtime.cellTableDialogOpen))
-      );
-    }
-    if (elements.gelCellTableOverlay) {
-      elements.gelCellTableOverlay.hidden = !hasCells || !runtime.cellTableDialogOpen;
-    }
     if (elements.gelCellTableCopyBtn) {
       elements.gelCellTableCopyBtn.disabled = !hasCells;
     }

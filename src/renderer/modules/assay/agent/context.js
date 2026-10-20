@@ -238,6 +238,7 @@ export function createAssayAgentContext({
       `Mapped wells: ${layout.length}`,
       `Result values: ${resultCount}`,
       analysisMethod ? `Analysis method: ${analysisMethod}` : '',
+      `Analysis data source: ${elements.assayAnalysisDataSourceInput?.value === 'transformed' ? 'Transformed plate · Table2' : 'Plate results · Table1'}`,
       compactAgentText(elements.assayAnalysisRowGroupsInput?.value, 500)
         ? `Row groups: ${compactAgentText(elements.assayAnalysisRowGroupsInput.value, 500)}`
         : '',

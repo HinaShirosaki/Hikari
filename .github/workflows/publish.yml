@@ -13,10 +13,23 @@ jobs:
   validate:
     uses: ./.github/workflows/ci.yml
 
-  windows-distribution:
+  distributions:
     needs: validate
-    runs-on: windows-latest
-    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15-intel
+            platform: darwin
+            arch: x64
+          - runner: macos-latest
+            platform: darwin
+            arch: arm64
+          - runner: windows-latest
+            platform: win32
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 35
     permissions:
       contents: write
     steps:
@@ -25,29 +38,39 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-      - run: npm ci
-      - run: npm run dist
-      - name: Verify installer and portable app output
-        shell: pwsh
+      - name: Check release identity
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          EXPECTED_PLATFORM: ${{ matrix.platform }}
+          EXPECTED_ARCH: ${{ matrix.arch }}
         run: |
-          $setup = Get-Item out/Hikari-win32-x64/HikariSetup.exe -ErrorAction SilentlyContinue
-          if (-not $setup -or $setup.Length -eq 0) { throw 'Expected a nonempty out/Hikari-win32-x64/HikariSetup.exe' }
-          if (-not (Test-Path out/Hikari-win32-x64/Hikari/Hikari.exe)) { throw 'Expected the portable out/Hikari-win32-x64/Hikari/Hikari.exe' }
+          node -e 'const p=require("./package.json"); if (process.platform!==process.env.EXPECTED_PLATFORM || process.arch!==process.env.EXPECTED_ARCH) throw Error("Unexpected runner architecture"); if (process.env.RELEASE_TAG && process.env.RELEASE_TAG!=="v"+p.version) throw Error("Release tag does not match package.json")'
+      - run: npm ci --allow-git=all
+      - run: npm run dist
+      - run: npm run release:assets
       - uses: actions/upload-artifact@v4
         with:
-          name: Hikari-Windows-x64
-          path: out/Hikari-win32-x64/HikariSetup.exe
+          name: Hikari-${{ matrix.platform }}-${{ matrix.arch }}
+          path: out/release-assets/*
           if-no-files-found: error
-      - name: Attach Windows installer to published release
+      - name: Attach verified archives to the release
         if: github.event_name == 'release'
-        shell: pwsh
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
-        run: gh release upload "$env:RELEASE_TAG" out/Hikari-win32-x64/HikariSetup.exe --clobber
+        run: gh release upload "$RELEASE_TAG" out/release-assets/* --clobber
+      - name: Retain the direct Windows installer download
+        if: github.event_name == 'release' && matrix.platform == 'win32'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$RELEASE_TAG" out/Hikari-win32-x64/HikariSetup.exe --clobber
 
   npmjs:
-    needs: validate
+    needs: [validate, distributions]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # id-token lets npm prove this workflow's identity to npmjs (trusted
@@ -76,7 +99,7 @@ jobs:
           fi
 
   github-packages:
-    needs: validate
+    needs: [validate, distributions]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

@@ -8,12 +8,74 @@ band quantification, peak editing, reports, saved records, and CSV export.
 Generated PNG figures use up to 4× raster density for publication-scale text,
 and PowerPoint export keeps the lane table as an editable native table.
 
-The main workspace stays on the gel image. Open **Gel Tools**, **Lane Intensity**,
-**Lane table**, **Peak editor**, or **Band intensity** from the toolbar to work in
-overlapping, nonmodal windows. Drag a title bar to move a window, or focus its
-title bar and use the arrow keys (Shift moves farther). Escape closes the top
-window; **Hide windows** clears the canvas. The setup rail keeps its existing
-controls, and adding table rows does not shrink the image.
+## Gel layers and Stack
+
+Open **Layers** and choose **Add → Current gel** to capture the gel you are
+editing, or **Add → Image files…** to import images (up to 16 layers). New layers are named Gel 1,
+Gel 2, and so on. Select a layer and edit **Layer name** to name it after the
+antibody; double-clicking its name focuses the rename field. That name is
+also the antibody caption in the figure. **Process gel** returns to the
+existing crop, rotation, enhancement, and lane tools with that layer's settings.
+
+Check the gel layers to combine and click **Stack**. The **Stack** entry
+previews those gels in layer order inside the current Gel viewer. The rail and
+the viewer toolbar stay visible. Clicking a gel previews it on its own.
+The **Export** menu's image and PowerPoint entries use the active layer or Stack;
+using an individual processing control resumes that gel in the same viewer.
+Changing the checkboxes or adding gels leaves the existing Stack intact until
+Stack is clicked again. Excluded layers remain available for individual editing.
+
+In Stack, **Trim excess** crops every blot to their shared horizontal area so
+the left and right image edges match. Adjust **Left edge (%)** and
+**Right edge (%)** to refine the crop, or use **Reset trim** to restore the
+full margins. The crop shifts the shared lane table and guides together with
+the blots, preserving their alignment. Automatic trim follows later changes
+to the Stack's gels and alignment. Trim is included in PNG/PPTX exports and
+saved projects; individual gel images and their processing remain available.
+
+Arrange blots directly in the preview, in a single layer or the Stack: drag
+a blot to slide it (in the Stack, drag it up or down past another blot to
+reorder), drag its top or bottom edge to crop it, and drag a side
+to stretch it (uniformly, the other side fixed) until its lanes line up with
+the guides and the other blots. Lane detection or existing dividers give the
+starting position; **Reset alignment** returns to it, and **Exact values**
+shows the same first/last lane anchors and crop as numbers. The figure
+translates and uniformly scales each intact blot; it does not rearrange lanes
+or warp individual bands. The shared lane guides help check alignment and
+never appear in exports.
+
+**Export → Image (PNG)** produces a white figure at up to 3× density.
+**Export → PowerPoint (PPTX)** exports the active gel or Stack to one slide
+with separate blot images and editable antibody labels on the left.
+**Save project** downloads a `.gel-figure.json` file containing all layers,
+their names, Stack membership, selection, normalized original images,
+processing settings, and placement; it preserves 16-bit intensity data.
+**Add → Project…** appends its layers so existing work is retained.
+Projects are saved explicitly through the native file dialog, separately
+from Existing Gels.
+
+The editable lane table sits above the image in the individual editor, with
+columns aligned to the gel lanes. In Stack, **Lane table** selects the
+included gel whose table forms a shared header above the entire stack (the first
+available table by default). Its columns follow that blot's alignment transform
+in the preview and both exports. PowerPoint retains editable table cells.
+
+The main workspace stays on the gel image. The rail groups every tool by
+function in collapsible sections: **Image** (file, analysis type, crop,
+denoise, contrast), **Lanes**, **Ladder**, **Bands**, and **Results** (the band
+intensity table with Copy, the lane profile, and the peak editor). Sections are
+not steps; open whichever you need. Nothing sits above the gel: a small card
+at its top right holds the pending finish action (**Finish dividers**, **Done
+Ladder MW**, **Done Quantify**), the **Processed** switch, an **Export** menu
+(PNG, PPTX, CSV), and **Layers** with its layer count. Status text goes to
+screen readers only. **Crop** opens crop mode, as in photo editors: drag the
+edges on the image, and the card holds **Straighten** (±45°), **90°**,
+**Reset**, **Cancel**, and **Done** (Enter keeps the crop, Esc cancels). Reset shows the full original image again; nothing
+changes until Done. **Save** stays at the bottom of the rail beside
+a menu with **New gel** and **Reset lanes and bands**. The peak editor is the
+only floating window: drag its title bar, or focus the title bar and use the
+arrow keys (Shift moves farther); Escape closes it. The lane table scrolls
+within its panel above the gel.
 
 ## Distribution and permissions
 

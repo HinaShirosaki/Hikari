@@ -1,0 +1,167 @@
+import { buildLanesFromManualSegmentation } from '../analysis/analysis-core.js';
+import { detectLanes } from '../analysis/auto-lanes.js';
+import { resolveStackCrop } from './trim.js';
+
+export const MAX_BLOTS = 16;
+export const FIGURE_WIDTH = 900;
+export const LABEL_WIDTH = 190;
+export const FIGURE_MARGIN = 24;
+export const FIGURE_FONT_SIZE = 22;
+// The first and last lane anchors land on these fractions of FIGURE_WIDTH.
+export const GUIDE_LEFT = 0.08;
+export const GUIDE_RIGHT = 0.92;
+const MIN_CROP_SPAN = 1;
+
+export function inferBlotPlacement(draft) {
+  const image = draft.currentImage;
+  const segmentation = draft.manualOverrides?.laneSegmentation || {};
+  const lanes = buildLanesFromManualSegmentation(draft.manualOverrides, image.width, image.height) || [];
+  const centers = lanes.length >= 2
+    ? lanes.map(lane => lane.center)
+    : detectLanes({ gray: image.gray, width: image.width, height: image.height })?.peaks || [];
+  return {
+    first: centers.length >= 2 ? centers[0] / image.width * 100 : 10,
+    last: centers.length >= 2 ? centers[centers.length - 1] / image.width * 100 : 90,
+    top: Number.isFinite(segmentation.bandTop) ? segmentation.bandTop / image.height * 100 : 0,
+    bottom: Number.isFinite(segmentation.bandBottom) ? (segmentation.bandBottom + 1) / image.height * 100 : 100
+  };
+}
+
+// Anchors may sit up to one image width outside the blot, so a dragged blot
+// can slide past the guides; they stay at least 2% apart.
+export function validatePlacement(placement) {
+  const { first, last, top, bottom } = placement || {};
+  if (![first, last, top, bottom].every(Number.isFinite)
+    || first < -100 || last > 200 || last - first < 2
+    || top < 0 || bottom > 100 || bottom <= top) {
+    throw new Error('Keep the lane anchors within one blot width of the image, at least 2% apart, and the crop bottom below its top.');
+  }
+  return { first, last, top, bottom };
+}
+
+// A preview drag, in figure units, turned back into lane anchors and crop:
+// "move" slides the blot, "left"/"right" stretch it with the other side fixed,
+// "top"/"bottom" crop it. Same transform as buildBlotFigurePlan, inverted.
+export function dragPlacement(placement, image, zone, dx, dy) {
+  const { first, last, top, bottom } = placement;
+  const scale = FIGURE_WIDTH * (GUIDE_RIGHT - GUIDE_LEFT) / (image.width * (last - first) / 100);
+  if (zone === 'move') {
+    const shift = dx / (scale * image.width) * 100;
+    return validatePlacement({ ...placement, first: first - shift, last: last - shift });
+  }
+  if (zone === 'top' || zone === 'bottom') {
+    const delta = dy / scale / image.height * 100;
+    return validatePlacement(zone === 'top'
+      ? { ...placement, top: Math.min(bottom - MIN_CROP_SPAN, Math.max(0, top + delta)) }
+      : { ...placement, bottom: Math.max(top + MIN_CROP_SPAN, Math.min(100, bottom + delta)) });
+  }
+  const left = FIGURE_WIDTH * GUIDE_LEFT - image.width * first / 100 * scale;
+  const right = left + image.width * scale;
+  const minWidth = FIGURE_WIDTH * 0.05;
+  const nextLeft = zone === 'left' ? Math.min(left + dx, right - minWidth) : left;
+  const nextRight = zone === 'right' ? Math.max(right + dx, left + minWidth) : right;
+  const nextScale = (nextRight - nextLeft) / image.width;
+  const nextFirst = (FIGURE_WIDTH * GUIDE_LEFT - nextLeft) / (image.width * nextScale) * 100;
+  return validatePlacement({ ...placement, first: nextFirst,
+    last: nextFirst + FIGURE_WIDTH * (GUIDE_RIGHT - GUIDE_LEFT) / (image.width * nextScale) * 100 });
+}
+
+export function wrapAntibodyLabel(value, measureText = text => Array.from(text).reduce((sum, char) =>
+  sum + (/[MW@\u2e80-\uffff]/u.test(char) ? 1 : 0.6) * FIGURE_FONT_SIZE, 0), maxWidth = LABEL_WIDTH - 20) {
+  const lines = [];
+  for (const paragraph of String(value || '').split('\n')) {
+    let line = '';
+    for (const word of paragraph.split(/\s+/).filter(Boolean)) {
+      if (measureText(line ? `${line} ${word}` : word) <= maxWidth) {
+        line = line ? `${line} ${word}` : word;
+        continue;
+      }
+      if (line) { lines.push(line); line = ''; }
+      for (const char of word) {
+        if (line && measureText(line + char) > maxWidth) { lines.push(line); line = ''; }
+        line += char;
+      }
+    }
+    lines.push(line);
+  }
+  return lines;
+}
+
+// One affine horizontal transform per intact blot. The same factor is used on
+// Y, preserving band proportions; no lanes are cut apart or independently warped.
+export function buildBlotFigurePlan(rows, { measureText, tableSource = 'auto', trim } = {}) {
+  if (!rows?.length) throw new Error('Add at least one blot to the figure.');
+  if (rows.length > MAX_BLOTS) throw new Error(`A figure can contain up to ${MAX_BLOTS} blots.`);
+  let y = FIGURE_MARGIN;
+  const plannedRows = rows.map(row => {
+    const { width, height } = row.draft.currentImage;
+    const placement = validatePlacement(row.placement);
+    const scale = FIGURE_WIDTH * (GUIDE_RIGHT - GUIDE_LEFT) / (width * (placement.last - placement.first) / 100);
+    const sourceTop = Math.floor(height * placement.top / 100);
+    const sourceBottom = Math.min(height, Math.max(sourceTop + 1, Math.ceil(height * placement.bottom / 100)));
+    const imageHeight = (sourceBottom - sourceTop) * scale;
+    const labelLines = wrapAntibodyLabel(row.label, measureText);
+    const rowHeight = Math.max(imageHeight, labelLines.length * 28 + 12);
+    const imageY = y + (rowHeight - imageHeight) / 2;
+    const result = {
+      id: row.id, labelLines, y, rowHeight, imageY, imageHeight,
+      sourceTop, sourceHeight: sourceBottom - sourceTop,
+      imageX: FIGURE_WIDTH * GUIDE_LEFT - width * placement.first / 100 * scale,
+      imageWidth: width * scale
+    };
+    y += rowHeight + 16;
+    return result;
+  });
+  // Expand the shared image area to include every transformed source. In
+  // particular, a two-lane blot can have wide outer bands: clipping at the
+  // nominal 8%/92% guide margins would silently cut those bands in half.
+  const left = Math.min(0, ...plannedRows.map(row => row.imageX));
+  const right = Math.max(FIGURE_WIDTH, ...plannedRows.map(row => row.imageX + row.imageWidth));
+  const fullImageWidth = right - left;
+  plannedRows.forEach(row => { row.imageX -= left; });
+  const crop = resolveStackCrop(plannedRows, fullImageWidth, trim);
+  const imageWidth = crop.sourceWidth;
+  plannedRows.forEach(row => { row.imageX -= crop.sourceLeft; });
+  const reference = tableSource === 'none' ? null : rows.find(row =>
+    (tableSource === 'auto' || row.id === tableSource) && row.draft.manualOverrides?.laneTable?.rows?.length);
+  let table = null;
+  let blotTop = FIGURE_MARGIN;
+  if (reference) {
+    const part = plannedRows[rows.indexOf(reference)];
+    const image = reference.draft.currentImage;
+    const lanes = buildLanesFromManualSegmentation(reference.draft.manualOverrides, image.width, image.height) || [];
+    const centers = lanes.map(lane => part.imageX + lane.center / image.width * part.imageWidth);
+    const columns = lanes.map((lane, index) => {
+      const width = Math.max(8, Math.min(
+        (lane.xEnd - lane.xStart + 1) / image.width * part.imageWidth,
+        index ? (centers[index] - centers[index - 1]) * 0.96 : Infinity,
+        index < lanes.length - 1 ? (centers[index + 1] - centers[index]) * 0.96 : Infinity,
+        centers[index] * 2, (imageWidth - centers[index]) * 2
+      ));
+      return { laneIndex: lane.index + 1, center: centers[index], width, x: centers[index] - width / 2 };
+    }).filter(column => column.center >= 0 && column.center <= imageWidth);
+    if (columns.length) {
+      let tableY = FIGURE_MARGIN;
+      const tableRows = reference.draft.manualOverrides.laneTable.rows.map(row => {
+        const labelLines = wrapAntibodyLabel(row.label, measureText);
+        const values = columns.map(column => wrapAntibodyLabel(row.values?.[column.laneIndex - 1] || '', measureText, Math.max(8, column.width - 12)));
+        const height = Math.max(44, Math.max(labelLines.length, ...values.map(lines => lines.length)) * 28 + 12);
+        const result = { labelLines, values, y: tableY, height };
+        tableY += height;
+        return result;
+      });
+      table = { sourceId: reference.id, columns, rows: tableRows, y: FIGURE_MARGIN, height: tableY - FIGURE_MARGIN };
+      const offset = table.height + 16;
+      plannedRows.forEach(row => { row.y += offset; row.imageY += offset; });
+      y += offset; blotTop += offset;
+    }
+  }
+  const width = Math.ceil(FIGURE_MARGIN * 2 + LABEL_WIDTH + imageWidth);
+  const height = Math.ceil(y - 16 + FIGURE_MARGIN);
+  if (height > 12000 || width > 12000 || width * height > 24000000) {
+    throw new Error('This figure is too large. Check the lane anchors, crop the blots, or use fewer rows.');
+  }
+  return { width, height, imageWidth, fullImageWidth, crop, guideLeft: FIGURE_WIDTH * GUIDE_LEFT - left - crop.sourceLeft,
+    guideRight: FIGURE_WIDTH * GUIDE_RIGHT - left - crop.sourceLeft, imageLeft: FIGURE_MARGIN + LABEL_WIDTH,
+    table, blotTop, rows: plannedRows };
+}

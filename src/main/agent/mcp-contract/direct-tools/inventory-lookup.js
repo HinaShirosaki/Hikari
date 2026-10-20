@@ -14,7 +14,7 @@ const {
 
 const INVENTORY_LOOKUP_MCP_TOOL = Object.freeze({
   name: 'inventory_lookup',
-  description: 'Look up local Hikari personal inventory items: personal containers and samples. For chemical stock, use chemical_lookup.',
+  description: 'Use when the user asks what personal samples or proteins they have, where a sample is stored, or which physical container holds it. Look up local Hikari personal inventory items: personal containers and samples. For chemical stock, use chemical_lookup; temporary string/number scratch storage uses container.',
   annotations: buildReadOnlyToolAnnotations('Inventory lookup'),
   inputSchema: buildCommonLookupInputSchema({
     inventory_search: {

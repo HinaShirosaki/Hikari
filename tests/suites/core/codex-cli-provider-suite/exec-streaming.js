@@ -274,28 +274,31 @@ module.exports = function registerCodexCliProviderSuiteExecStreaming(context = {
         try {
           const result = await provider.requestCodexCliText({
             prompt: 'Return OK only.',
-            cwd: projectDir
+            cwd: projectDir,
+            envOverrides: { HIKARI_AGENT_MCP_REQUEST_CONTEXT: '{}' }
           });
           const captured = JSON.parse(fs.readFileSync(fakeCodex.capturePath, 'utf8'));
           assert.equal(result, 'OK from fake codex');
           assert.equal(fs.realpathSync(captured.cwd), fs.realpathSync(projectDir));
           assert.equal(fs.existsSync(path.join(projectDir, 'MEMORY.md')), true);
-          assert.equal(fs.existsSync(path.join(projectDir, '.agents', 'skills')), true);
-          const protocolSkillPath = path.join(projectDir, '.agents', 'skills', 'hikari-protocol-generation', 'SKILL.md');
+          // Codex always reads $CODEX_HOME/skills; a project copy would be listed twice.
+          assert.equal(fs.existsSync(path.join(projectDir, '.agents', 'skills', 'hikari-protocol-generation')), false);
+          const skillRoot = path.join(captured.codexHome, 'skills');
+          const protocolSkillPath = path.join(skillRoot, 'hikari-protocol-generation', 'SKILL.md');
           assert.equal(fs.existsSync(protocolSkillPath), true);
-          assert.equal(fs.existsSync(path.join(projectDir, '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md')), true);
-          const paperRetrievalSkillPath = path.join(projectDir, '.agents', 'skills', 'hikari-paper-retrieval', 'SKILL.md');
+          assert.equal(fs.existsSync(path.join(skillRoot, 'hikari-notebook-draft', 'SKILL.md')), true);
+          const paperRetrievalSkillPath = path.join(skillRoot, 'hikari-paper-retrieval', 'SKILL.md');
           assert.equal(fs.existsSync(paperRetrievalSkillPath), true);
-          const containerSkillPath = path.join(projectDir, '.agents', 'skills', 'hikari-container', 'SKILL.md');
+          const containerSkillPath = path.join(skillRoot, 'hikari-container', 'SKILL.md');
           assert.equal(fs.existsSync(containerSkillPath), true);
-          const assayPlotlySkillPath = path.join(projectDir, '.agents', 'skills', 'hikari-assay-plotly', 'SKILL.md');
+          const assayPlotlySkillPath = path.join(skillRoot, 'hikari-assay-plotly', 'SKILL.md');
           assert.equal(fs.existsSync(assayPlotlySkillPath), true);
           const protocolSkillText = fs.readFileSync(protocolSkillPath, 'utf8');
           assert.match(protocolSkillText, /Placeholder usage:/);
           assert.match(protocolSkillText, /Produce an executable starting protocol, not a questionnaire/);
           assert.match(protocolSkillText, /Aim for 0-3 unresolved placeholders and do not exceed 5/);
           assert.match(protocolSkillText, /Routine recommended starting conditions are allowed/);
-          const notebookSkillText = fs.readFileSync(path.join(projectDir, '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md'), 'utf8');
+          const notebookSkillText = fs.readFileSync(path.join(skillRoot, 'hikari-notebook-draft', 'SKILL.md'), 'utf8');
           assert.match(notebookSkillText, /These are the only supported tool arguments/);
           assert.match(notebookSkillText, /keys are its returned placeholder ids/);
           assert.match(notebookSkillText, /Never fill a placeholder with uncertainty prose/);

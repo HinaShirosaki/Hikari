@@ -53,7 +53,6 @@ const STORAGE = Object.freeze({
   OPEN_FILE: 'storage:open-file',
   READ_FILE_BYTES: 'storage:read-file-bytes',
   READ_FILE_BASE64: 'storage:read-file-base64',
-  APPEND_NOTEBOOK_PAGE_LOG: 'storage:append-notebook-page-log',
   PROTOCOL_RECORD_SAVED: 'storage:protocol-record-saved',
   PAPER_FILE_SAVED: 'storage:paper-file-saved'
 });

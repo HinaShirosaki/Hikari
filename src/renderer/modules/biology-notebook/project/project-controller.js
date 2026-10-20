@@ -1,4 +1,5 @@
 import { showTransientNotice } from '../../../lib/notify.js';
+import { positionContextMenu as placeContextMenu } from '../../../lib/context-menu.js';
 import { projectFolderPath, sanitizeFolderName } from '../../../../shared/storage-layout.mjs';
 
 export function createNotebookProjectController({
@@ -43,9 +44,7 @@ export function createNotebookProjectController({
     if (!contextMenuEl) {
       return;
     }
-    contextMenuEl.style.left = `${Math.max(0, Number(clientX) || 0)}px`;
-    contextMenuEl.style.top = `${Math.max(0, Number(clientY) || 0)}px`;
-    contextMenuEl.hidden = false;
+    placeContextMenu(contextMenuEl, clientX, clientY, windowRef);
   }
 
   function setDialogError(message = '') {

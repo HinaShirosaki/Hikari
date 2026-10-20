@@ -12,10 +12,10 @@ const QUERY_EXPERIMENTS_DEFINITION = Object.freeze({
     'Use for exact filters, joins, counts, grouping, or inspection of extracted paper experiments.',
     'Tables: experiments(paper_id, ordinal, id, title, technique, variables, figure_ref, outcome, evidence);',
     'papers(paper_id, title, doi, doc_type, one_sentence_summary, project_ids_json, intake_path, paper_md, figures_dir, pdf_path, created_at, updated_at).',
-    'Join on paper_id, which is the intake folder ID. Discover columns with SELECT * FROM pragma_table_info(\'experiments\').',
+    'Join on paper_id, which is the intake folder ID, and select papers.paper_md for citations. Discover columns with SELECT * FROM pragma_table_info(\'experiments\').',
     'Queries cover the whole workspace library; there is no automatic active-project filter.',
     'Use project-summary search for current project membership; project_ids_json reflects only the saved intake.',
-    'Results contain columns and row-value arrays in that order, with truncation reported. Use ORDER BY and LIMIT/OFFSET for paging.',
+    'Results contain columns and row-value arrays in that order, with truncation reported; check truncated before claiming complete results. Use ORDER BY and LIMIT/OFFSET for paging.',
     'Integers outside the JavaScript safe range are decimal strings; blobs are base64 objects.',
     'Default 50 rows, maximum 200 rows, 48 KB result budget, 3-second deadline. No file paths, writes, PRAGMA statements, or multiple statements.',
     'If the database is missing, use existing intake search tools; it is created on intake save or by the rebuild command.'

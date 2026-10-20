@@ -19,7 +19,6 @@ function createProtocolDetailPanels({
   state,
   persist,
   onProtocolsChanged,
-  logNotebookPageEvent = () => {},
   selectionInsightsController
 } = {}) {
   function applyDetailMode(nextMode) {
@@ -216,24 +215,6 @@ function createProtocolDetailPanels({
     }
 
     persist();
-    // The page folder and its page.log outlive the entry, so without this the
-    // trail just stops mid-story and a deleted page looks like a crash.
-    deletedEntries.forEach((entry) => {
-      logNotebookPageEvent({
-        entry,
-        storagePath: state.settings?.storagePath,
-        action: 'delete',
-        summary: `Deleted notebook page${entry.experimentName ? ` "${entry.experimentName}"` : ''} with its protocol`,
-        details: {
-          reason: 'protocol-deleted',
-          protocolId,
-          protocolName: entry.protocolName || '',
-          experimentName: entry.experimentName || '',
-          notebookState: entry.notebookState || '',
-          executedAt: entry.executedAt || ''
-        }
-      });
-    });
     getListController().renderList();
     if (localState.activeProtocolId === protocolId) {
       setSelectedProtocol('');

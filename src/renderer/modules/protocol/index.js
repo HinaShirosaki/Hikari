@@ -24,7 +24,6 @@ export function initProtocolManagement({
   createId,
   safeText,
   onProtocolsChanged,
-  logNotebookPageEvent,
   selectionInsightsController = null,
   contextActions = null,
   __globals = {}
@@ -164,7 +163,6 @@ export function initProtocolManagement({
     state,
     persist,
     onProtocolsChanged,
-    logNotebookPageEvent,
     selectionInsightsController
   });
 

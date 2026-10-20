@@ -84,7 +84,7 @@ function createManualLadderBands({
     renderOverrideStatus();
     deps.renderCanvas();
     deps.setStatus(rows.length === standards.length
-      ? `Annotated ${rows.length} ladder bands from the preset. Drag a band to adjust it.`
+      ? 'Click the top edge of the target band.'
       : `Only ${rows.length} of ${standards.length} preset bands were detected. Check the labels and drag to adjust.`);
     deps.onRunAnalysis();
   }

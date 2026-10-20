@@ -5,7 +5,6 @@ import {
   resolveEntryExperimentName,
   shouldSyncExperimentNameWithProtocol
 } from '../entry/entry-helpers.js';
-import { logNotebookPageEvent } from '../../../services/notebook-page-log.js';
 
 // Editing the protocol snapshot attached to a saved page, and re-syncing the
 // page when its project or protocol selection changes.
@@ -124,21 +123,9 @@ function createNotebookProtocolEdit({
       return;
     }
 
-    const previousProtocolName = entry.protocolName || '';
     state.notebookEntries[index] = nextEntry;
     protocolEditor.setDraft(null);
     persist();
-    logNotebookPageEvent({
-      entry: nextEntry,
-      storagePath: state.settings?.storagePath,
-      action: 'protocol-edit',
-      summary: `Edited protocol snapshot${nextEntry.protocolName ? ` (${nextEntry.protocolName})` : ''}`,
-      details: {
-        previousProtocolName,
-        protocolName: nextEntry.protocolName || '',
-        protocolId: nextEntry.protocolId || ''
-      }
-    });
     entryListRenderer.renderEntries();
     renderProtocolViewer({
       project,

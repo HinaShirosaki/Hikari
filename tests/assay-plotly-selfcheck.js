@@ -138,9 +138,6 @@ assert.equal(shp.C, 'triangle', 'seriesShapes keeps another valid shape');
 assert.equal('B' in shp, false, 'seriesShapes drops an invalid shape');
 
 // --- new style fields the redesigned panel writes ---
-assert.equal(createDefaultChartStyle().chartType, 'auto', 'chart type defaults to auto');
-assert.equal(normalizeChartStyle({ chartType: 'bar' }).chartType, 'bar', 'chart type override survives');
-assert.equal(normalizeChartStyle({ chartType: 'pie' }).chartType, 'auto', 'unknown chart type falls back to auto');
 assert.equal(normalizeChartStyle({ xTitle: 'Dose (nM)' }).xTitle, 'Dose (nM)', 'x axis title is editable');
 assert.equal(normalizeChartStyle({ yTitle: 'Viability' }).yTitle, 'Viability', 'y axis title is editable');
 assert.equal(normalizeChartStyle({ xTitle: 42 }).xTitle, '', 'non-string axis title is dropped');
@@ -152,11 +149,10 @@ const presets = loadEsmStyleModule(
   { localStorage: storage }
 );
 assert.equal(presets.listChartPresets().join('|'), '', 'no presets to start');
-assert.equal(presets.saveChartPreset('  Publication  ', { pointSize: 11, chartType: 'bar' }), true, 'saving returns true');
+assert.equal(presets.saveChartPreset('  Publication  ', { pointSize: 11 }), true, 'saving returns true');
 assert.equal(presets.listChartPresets().join('|'), 'Publication', 'preset name is trimmed');
 const loaded = presets.getChartPreset('Publication');
 assert.equal(loaded.pointSize, 11, 'preset keeps its style');
-assert.equal(loaded.chartType, 'bar', 'preset keeps the chart type');
 assert.equal(loaded.lineWidth, 2.5, 'preset is normalized on read');
 assert.equal(presets.getChartPreset('missing'), null, 'unknown preset reads as null');
 assert.equal(presets.saveChartPreset('   ', {}), false, 'a blank name is rejected');

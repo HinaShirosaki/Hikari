@@ -10,7 +10,7 @@ const {
 
 const NOTEBOOK_LIST_MCP_TOOL = Object.freeze({
   name: 'notebook_list',
-  description: 'List notebook page titles and compact metadata, with optional project, protocol, state, title substring, and date-range filters. No filters lists all pages. Follow pagination.next_offset with unchanged filters until null; access.complete reports storage coverage. Dates use created, updated (default), or executed timestamps; YYYY-MM-DD bounds include the entire UTC day. Results sort newest first, then by entry id.',
+  description: 'List notebook page titles and compact metadata, with optional project, protocol, state, title substring, and date-range filters. No filters lists all pages. Follow pagination.next_offset with unchanged filters until null; access.complete reports storage coverage. Dates use created, updated (default), or executed timestamps; YYYY-MM-DD bounds include the entire UTC day. Results sort newest first, then by entry id. Claim a complete list only after next_offset is null and access.complete is true. Pages lacking the selected date are excluded from date ranges and counted in counts.missing_dates; use timestamps with explicit offsets for local-day boundaries. Read selected pages with notebook_lookup using the entry id as query and detail full.',
   annotations: buildReadOnlyToolAnnotations('Notebook list'),
   inputSchema: {
     type: 'object',

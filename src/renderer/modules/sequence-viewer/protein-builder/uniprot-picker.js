@@ -12,8 +12,9 @@ export function installProteinBuilderUniProtPicker(ctx) {
   let busy = false;
   let autoName = '';
   let manualDraft = null;
+  let resultsCollapsed = false;
 
-  ctx.isUniProtSource = () => e.proteinBuilderAddProteinSource?.value === 'uniprot';
+  ctx.isUniProtSource = () => e.proteinBuilderAddProteinSourceUniProt?.checked === true;
 
   function setStatus(message = '') {
     if (e.proteinBuilderUniProtStatus) {
@@ -25,14 +26,21 @@ export function installProteinBuilderUniProtPicker(ctx) {
   function syncControls() {
     if (e.proteinBuilderUniProtSearchBtn) e.proteinBuilderUniProtSearchBtn.disabled = busy;
     if (e.proteinBuilderUniProtMoreBtn) {
-      e.proteinBuilderUniProtMoreBtn.hidden = !nextCursor;
+      e.proteinBuilderUniProtMoreBtn.hidden = !nextCursor || resultsCollapsed;
       e.proteinBuilderUniProtMoreBtn.disabled = busy;
+    }
+    if (e.proteinBuilderUniProtResultsToggleBtn) {
+      e.proteinBuilderUniProtResultsToggleBtn.hidden = !entry || (items.length <= 1 && !nextCursor);
+      e.proteinBuilderUniProtResultsToggleBtn.textContent = resultsCollapsed ? 'Show all results' : 'Show selected only';
+      e.proteinBuilderUniProtResultsToggleBtn.setAttribute?.('aria-expanded', String(!resultsCollapsed));
+      e.proteinBuilderUniProtResultsToggleBtn.disabled = busy;
     }
     e.proteinBuilderUniProtPanel?.setAttribute?.('aria-busy', String(busy));
   }
 
   function clearEntry() {
     entry = null;
+    resultsCollapsed = false;
     regions = [];
     autoName = '';
     if (e.proteinBuilderUniProtDetail) e.proteinBuilderUniProtDetail.hidden = true;
@@ -43,8 +51,9 @@ export function installProteinBuilderUniProtPicker(ctx) {
   }
 
   function renderResults() {
+    syncControls();
     if (!e.proteinBuilderUniProtResults) return;
-    e.proteinBuilderUniProtResults.innerHTML = items.map((item, index) => `
+    e.proteinBuilderUniProtResults.innerHTML = items.map((item, index) => resultsCollapsed && item.accession !== entry?.accession ? '' : `
       <button type="button" class="sequence-viewer-protein-builder-uniprot-result" data-uniprot-result="${index}" aria-pressed="${item.accession === entry?.accession}">
         <strong>${escapeHtml(item.proteinName || item.entryId || item.accession)}</strong>
         <span class="small-note">${escapeHtml([
@@ -54,6 +63,12 @@ export function installProteinBuilderUniProtPicker(ctx) {
         ].filter(Boolean).join(' · '))}</span>
       </button>`).join('');
   }
+
+  ctx.toggleUniProtResults = function toggleUniProtResults() {
+    if (!entry) return;
+    resultsCollapsed = !resultsCollapsed;
+    renderResults();
+  };
 
   ctx.getUniProtInput = function getUniProtInput() {
     const value = e.proteinBuilderUniProtRegion?.value || 'full';
@@ -76,6 +91,7 @@ export function installProteinBuilderUniProtPicker(ctx) {
 
   function showEntry(selected) {
     entry = selected;
+    resultsCollapsed = true;
     regions = getUniProtRegions(entry);
     const length = entry.sequence.value.length;
     if (e.proteinBuilderUniProtSummary) {
@@ -91,6 +107,7 @@ export function installProteinBuilderUniProtPicker(ctx) {
     if (e.proteinBuilderAddProteinName) e.proteinBuilderAddProteinName.value = '';
     renderResults();
     applySelection();
+    e.proteinBuilderUniProtResults?.querySelector?.('[aria-pressed="true"]')?.focus?.({ preventScroll: true });
   }
 
   ctx.cancelUniProtRequests = function cancelUniProtRequests() {
@@ -114,7 +131,8 @@ export function installProteinBuilderUniProtPicker(ctx) {
     nextCursor = '';
     query = '';
     manualDraft = null;
-    if (e.proteinBuilderAddProteinSource) e.proteinBuilderAddProteinSource.value = 'manual';
+    if (e.proteinBuilderAddProteinSourceManual) e.proteinBuilderAddProteinSourceManual.checked = true;
+    if (e.proteinBuilderAddProteinSourceUniProt) e.proteinBuilderAddProteinSourceUniProt.checked = false;
     if (e.proteinBuilderUniProtQuery) e.proteinBuilderUniProtQuery.value = '';
     applySourceUi(false);
     clearEntry();
@@ -136,7 +154,6 @@ export function installProteinBuilderUniProtPicker(ctx) {
       if (e.proteinBuilderAddProteinType) e.proteinBuilderAddProteinType.value = 'protein';
       if (e.proteinBuilderAddProteinName) e.proteinBuilderAddProteinName.value = '';
       applySelection();
-      e.proteinBuilderUniProtQuery?.focus?.();
     } else {
       if (manualDraft) {
         if (e.proteinBuilderAddProteinName) e.proteinBuilderAddProteinName.value = manualDraft.name;
@@ -212,6 +229,7 @@ export function installProteinBuilderUniProtPicker(ctx) {
         protein = response.result?.entry;
       }
       if (!protein?.sequence?.value) throw new Error('This UniProt entry has no amino-acid sequence.');
+      items[index] = protein;
       showEntry(protein);
       setStatus(`${protein.proteinName || protein.entryId || protein.accession} · ${protein.reviewed ? 'Reviewed' : 'Unreviewed'}`);
     } catch (error) {
@@ -228,6 +246,7 @@ export function installProteinBuilderUniProtPicker(ctx) {
     e.proteinBuilderAddProteinSource?.addEventListener('change', ctx.setAddProteinSource);
     e.proteinBuilderUniProtSearchBtn?.addEventListener('click', () => { void ctx.searchUniProt(); });
     e.proteinBuilderUniProtMoreBtn?.addEventListener('click', () => { void ctx.searchUniProt(true); });
+    e.proteinBuilderUniProtResultsToggleBtn?.addEventListener('click', ctx.toggleUniProtResults);
     e.proteinBuilderUniProtQuery?.addEventListener('keydown', (event) => {
       if (event.key !== 'Enter') return;
       event.preventDefault();

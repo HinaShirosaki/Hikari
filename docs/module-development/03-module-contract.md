@@ -176,7 +176,7 @@ Inside the module you only call `onMyFeatureChanged()`. You don't know (or care)
 The services are defined in [src/renderer/services/](../../src/renderer/services/):
 
 - `protocolService.js` — `handleProtocolsChanged`, `handleProtocolsImported`, `handleExternalProtocolRecordSaved`, `saveProtocolRecord`, `openProtocol`, `importProtocolsFromJson`, `createDraftFromPaper`
-- `notebookService.js` — `handleNotebookEntriesChanged`, `handleAgentNotebookEntriesChanged`, `logPageEvent`
+- `notebookService.js` — `handleNotebookEntriesChanged`, `handleAgentNotebookEntriesChanged`
 - `projectService.js` — `handleProjectsChanged`, `ensureProjectRecord`
 - `inventoryService.js` — `handleSamplesChanged`, `handleSampleInventorySettingsChanged`, `openSampleSearch`
 - `analysisService.js` — `handleAssaysChanged`, `openAssayForNotebook`

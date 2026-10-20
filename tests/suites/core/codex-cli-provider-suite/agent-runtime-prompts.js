@@ -4,6 +4,68 @@ module.exports = function registerCodexCliProviderSuiteAgentRuntimePrompts(conte
   const { assert, path, test } = scope;
     const os = require('node:os');
 
+    test('Codex sends full workflow routes on fresh turns and a compact refresh on resumed turns', () => {
+      const { buildCodexAgentPrompt } = require(path.join(__dirname, 'src/main/agent/codex-agent/prompts.js'));
+      const { buildHikariToolRoutingInstructionLines } = require(path.join(__dirname, 'src/main/agent/mcp-contract/tool-routing.js'));
+      const { buildHikariAgentMcpInstructions } = require(path.join(__dirname, 'src/main/agent/mcp-contract/instructions.js'));
+      const { getAvailableHikariMcpToolNames } = require(path.join(__dirname, 'src/main/agent/mcp-contract/tool-availability.js'));
+      const enabledToolNames = getAvailableHikariMcpToolNames();
+      const guidance = buildHikariToolRoutingInstructionLines({ enabledToolNames }).join('\n');
+      const compactGuidance = buildHikariToolRoutingInstructionLines({ enabledToolNames, compact: true }).join('\n');
+      assert.ok(!buildHikariAgentMcpInstructions().includes('Hikari workflow routing'));
+      assert.ok(compactGuidance.length < guidance.length / 2);
+
+      for (const message of [
+        'How to make 1L 10x PBS',
+        'Can you help me find where to buy dialysis tubing, 6k 8k MWCO, and are in stock?',
+        'Only in stock, and cheaper than the last one.',
+        'Show every notebook page from last week.',
+        'What papers have we read for this project?',
+        'Summarize this paper and explain its controls.',
+        'Where did I store the GFP sample?',
+        'Make this native plot logarithmic.',
+        'Build a calculator where I can vary the dilution.',
+        'Find this plasmid and add an N-terminal His tag.',
+        'Remember this preference for future chats.',
+        'What does MWCO mean? Just explain it.',
+        'Show an unsaved structured protocol preview.'
+      ]) {
+        const fresh = buildCodexAgentPrompt({ message });
+        const resumed = buildCodexAgentPrompt({ message, codexSessionId: 'existing-session' });
+        assert.ok(fresh.includes(guidance));
+        assert.equal(resumed, fresh.replace(guidance, compactGuidance));
+        assert.ok(fresh.endsWith(`Current user request:\n${message}`));
+        assert.equal(fresh.split('Hikari workflow routing (apply before answering):').length - 1, 1);
+        assert.equal(resumed.split('Hikari workflow routing (apply before answering):').length - 1, 1);
+      }
+    });
+
+    test('Codex turn guidance omits disabled routes and preserves view context', () => {
+      const { buildCodexAgentPrompt } = require(path.join(__dirname, 'src/main/agent/codex-agent/prompts.js'));
+      const { buildHikariToolRoutingInstructionLines } = require(path.join(__dirname, 'src/main/agent/mcp-contract/tool-routing.js'));
+      const { HIKARI_MCP_TOOL_NAMES } = require(path.join(__dirname, 'src/main/agent/mcp-contract/instructions.js'));
+      const lines = buildHikariToolRoutingInstructionLines({ enabledToolNames: ['purchase_recommendation'] });
+      const allLines = buildHikariToolRoutingInstructionLines();
+      assert.equal(lines.length, buildHikariToolRoutingInstructionLines({ enabledToolNames: [] }).length + 1);
+      assert.ok(lines.some((line) => line.includes('`purchase_recommendation`')));
+      assert.ok(!lines.some((line) => line.includes('`protocol_generation`')));
+      assert.ok(allLines.length > lines.length);
+
+      const sessionPrompt = 'Only enrich the active notebook page; do not create a new page.';
+      const message = 'Add preparation notes to this page.';
+      const prompt = buildCodexAgentPrompt({
+        message,
+        codexSessionId: 'existing-session',
+        agent: { sessionPrompt },
+        snapshot: { settings: { agent: { disabledMcpToolNames: HIKARI_MCP_TOOL_NAMES } } }
+      });
+      assert.ok(prompt.includes(buildHikariToolRoutingInstructionLines({ enabledToolNames: [], compact: true }).join('\n')));
+      assert.ok(prompt.includes(`Active Hikari view instructions:\n${sessionPrompt}`));
+      assert.ok(prompt.endsWith(`Current user request:\n${message}`));
+      assert.ok(!prompt.includes('`protocol_generation`'));
+      assert.ok(!prompt.includes('`purchase_recommendation`'));
+    });
+
     test('Codex prompt carries complete non-paper scoped view instructions', () => {
       const { buildCodexAgentPrompt } = require(path.join(
         __dirname,
@@ -354,13 +416,15 @@ module.exports = function registerCodexCliProviderSuiteAgentRuntimePrompts(conte
       assert.match(calls[0].prompt, /Codex Chat Turn/);
       assert.match(calls[0].prompt, /Current user request:\nWhy was SUMO1 conjugation weak\?/);
       assert.doesNotMatch(calls[0].prompt, /Protocol and notebook handoff:|Assay context handoff:/);
-      const { buildHikariAgentMcpInstructions } = require(path.join(__dirname, 'src/main/agent/mcp-contract/instructions.js'));
-      const contract = buildHikariAgentMcpInstructions();
-      assert.match(contract, /author complete protocol JSON first/);
-      assert.match(contract, /tab-separated header and rows/);
-      assert.match(contract, /Do not use local lookup tools for active Assay/);
-      assert.match(contract, /at most one `literature_search` delegation/);
-      assert.match(contract, /research_id until completion/);
+      const { getDirectMcpToolDefinitions } = require(path.join(__dirname, 'src/main/agent/mcp-contract/direct-tools/index.js'));
+      const { buildHikariCodexAgentsInstructions } = require(path.join(__dirname, 'src/main/agent/codex-agent/agent-instructions.js'));
+      const describe = (name) => getDirectMcpToolDefinitions().find((tool) => tool.name === name).description;
+      const agentsText = buildHikariCodexAgentsInstructions();
+      assert.match(describe('protocol_generation'), /Author the complete protocol JSON yourself, then call this tool/);
+      assert.match(describe('assay_table'), /map its header and rows to explicit row objects, preserving empty cells/);
+      assert.match(describe('assay_table'), /never local lookup tools for active plate rows/);
+      assert.match(describe('literature_search'), /at most one delegation per turn/);
+      assert.match(describe('literature_search'), /only the returned research_id until it completes/);
       assert.doesNotMatch(calls[0].prompt, /at most one `literature_search` call/);
       const retiredDirectToolName = ['record', 'lookup'].join('_');
       assert.equal(calls[0].prompt.includes(retiredDirectToolName), false);
@@ -374,9 +438,9 @@ module.exports = function registerCodexCliProviderSuiteAgentRuntimePrompts(conte
       assert.match(calls[0].prompt, /"preferred_journals": \[/);
       assert.match(calls[0].prompt, /Nature Biotechnology/);
       assert.doesNotMatch(calls[0].prompt, /soft ranking preferences/);
-      assert.match(contract, /soft ranking preferences/);
-      assert.match(contract, /canonical publisher pages/);
-      assert.match(contract, /Do not call memory to rediscover/);
+      assert.match(agentsText, /soft ranking preferences/);
+      assert.match(agentsText, /canonical publisher pages/);
+      assert.match(agentsText, /Do not call `memory` to rediscover/);
       assert.match(calls[0].prompt, /pilot\.pdf/);
       assert.doesNotMatch(calls[0].prompt, /"assistant_text"/);
       const mcpContext = JSON.parse(calls[0].envOverrides.HIKARI_AGENT_MCP_REQUEST_CONTEXT);

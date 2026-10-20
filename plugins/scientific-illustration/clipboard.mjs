@@ -70,18 +70,31 @@ export function installCanvasClipboard({ document, canHandle, getSelection, past
     if (JSON.stringify(value) !== JSON.stringify(snapshot)) { snapshot = value; pasted = 0; }
     event.preventDefault(); insert(snapshot);
   });
+  function copy() {
+    if (!canHandle({ target: document.activeElement })) return false;
+    try {
+      if (!capture()) return false;
+      command('copy'); status('Components copied'); return true;
+    } catch (error) { status(error.message); return false; }
+  }
+  function pasteSelection() {
+    if (!canHandle({ target: document.activeElement })) return false;
+    pasteEventSeen = false;
+    command('paste');
+    if (!pasteEventSeen) insert(snapshot);
+    return true;
+  }
   return {
+    copy, paste: pasteSelection,
     handleKey(event) {
       if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey || !canHandle(event)) return false;
       const key = event.key.toLowerCase(); if (!['c', 'v'].includes(key)) return false;
       try {
         if (key === 'c') {
-          if (!capture()) return false;
-          event.preventDefault(); command('copy'); status('Components copied');
+          if (!copy()) return false;
+          event.preventDefault();
         } else {
-          pasteEventSeen = false;
-          command('paste');
-          if (!pasteEventSeen) insert(snapshot);
+          pasteSelection();
           event.preventDefault();
         }
       } catch (error) { event.preventDefault(); status(error.message); }

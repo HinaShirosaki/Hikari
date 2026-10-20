@@ -101,7 +101,7 @@ function getLaneProfileLanes(runtime) {
   }));
 }
 
-function renderLaneProfilePlaceholder(svg, message) {
+function renderLaneProfilePlaceholder(svg) {
   const {
     width,
     height,
@@ -114,7 +114,6 @@ function renderLaneProfilePlaceholder(svg, message) {
   svg.innerHTML = `
     <line class="lane-profile-grid" x1="${plotLeft}" y1="${plotTop}" x2="${plotLeft}" y2="${plotBottom}" />
     <line class="lane-profile-grid" x1="${plotLeft}" y1="${plotBottom}" x2="${plotRight}" y2="${plotBottom}" />
-    <text class="lane-profile-empty" x="${width / 2}" y="${height / 2}" text-anchor="middle">${message}</text>
     <text class="lane-profile-axis-label" x="${plotLeft}" y="${height - 8}">Top</text>
     <text class="lane-profile-axis-label" x="${plotRight}" y="${height - 8}" text-anchor="end">Bottom</text>
   `;
@@ -216,17 +215,11 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       return;
     }
 
-    elements.gelLaneProfilePanel.hidden = !runtime.currentImage
-      || runtime.laneProfileWindowOpen === false;
-    if (elements.gelOpenProfileBtn) {
-      elements.gelOpenProfileBtn.disabled = !runtime.currentImage;
-    }
-
     if (!runtime.currentImage) {
       runtime.selectedLaneProfileLane = null;
       elements.gelLaneProfileSelect.disabled = true;
       elements.gelLaneProfileSelect.innerHTML = '<option value="">Select lane</option>';
-      renderLaneProfilePlaceholder(elements.gelLaneProfileChart, 'Lane profile appears here after you divide the gel into lanes.');
+      renderLaneProfilePlaceholder(elements.gelLaneProfileChart);
       return;
     }
 
@@ -237,7 +230,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       runtime.selectedLaneProfileLane = null;
       elements.gelLaneProfileSelect.disabled = true;
       elements.gelLaneProfileSelect.innerHTML = '<option value="">Select lane</option>';
-      renderLaneProfilePlaceholder(elements.gelLaneProfileChart, 'Set the lane dividers first.');
+      renderLaneProfilePlaceholder(elements.gelLaneProfileChart);
       return;
     }
 
@@ -264,7 +257,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     }) : null;
 
     if (!profile) {
-      renderLaneProfilePlaceholder(elements.gelLaneProfileChart, 'Lane profile unavailable.');
+      renderLaneProfilePlaceholder(elements.gelLaneProfileChart);
       return;
     }
 
@@ -334,30 +327,9 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     renderCellTable
   } = canvasDrawController;
 
-  function onCellTableOpen() {
-    if (elements.gelOpenCellTableBtn?.disabled) {
-      deps.setStatus?.('Measure a target band before opening the band intensity report.');
-      return;
-    }
-    runtime.cellTableDialogOpen = true;
-    renderCellTable();
-    elements.gelCellTableCloseBtn?.focus?.();
-  }
-
-  function onCellTableClose() {
-    if (!runtime.cellTableDialogOpen) {
-      return;
-    }
-    runtime.cellTableDialogOpen = false;
-    renderCellTable();
-    elements.gelOpenCellTableBtn?.focus?.();
-  }
-
   return {
     onCanvasHoverLeave,
     onCellTableCopy,
-    onCellTableClose,
-    onCellTableOpen,
     onCanvasHoverMove,
     onLaneProfileChartMouseLeave,
     onLaneProfileChartMouseMove,

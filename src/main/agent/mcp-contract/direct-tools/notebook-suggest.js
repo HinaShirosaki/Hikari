@@ -7,7 +7,7 @@ const { cleanText } = require('./shared.js');
 const NOTEBOOK_SUGGEST_MCP_TOOL = Object.freeze({
   ...NOTEBOOK_DRAFT_MCP_TOOL,
   name: 'notebook_suggest',
-  description: 'Only available in the background next-experiment suggestion workflow. Submit zero to five Suggested experiments in the suggestions array using the notebook_draft protocol, placeholder and per-copy step-edit contract. Hikari adds it to the scoped project for review; it becomes Planned only when the user takes it into plan. Supply a concise title and evidence-grounded rationale for each. An empty suggestions array explicitly reports that there is no useful next experiment. Never download papers in this workflow.',
+  description: 'Only available in the background next-experiment suggestion workflow. Submit zero to five Suggested experiments in the suggestions array using the notebook_draft protocol, placeholder and per-copy step-edit contract. Hikari adds it to the scoped project for review; it becomes Planned only when the user takes it into plan. Supply a concise title and evidence-grounded rationale for each. An empty suggestions array explicitly reports that there is no useful next experiment. Never download papers, create protocols, or ask the user for approval in this workflow; unknown values remain for review on the Suggested page.',
   annotations: { ...NOTEBOOK_DRAFT_MCP_TOOL.annotations, title: 'Suggest next experiment' },
   inputSchema: {
     ...SINGLE_DRAFT_SCHEMA,

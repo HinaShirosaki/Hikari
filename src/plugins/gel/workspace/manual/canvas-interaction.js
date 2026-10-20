@@ -4,7 +4,6 @@ import {
   isPerLaneBandMode,
   normalizeManualOverrides
 } from '../shared.js';
-import { LANE_VERTEX_LABELS } from './lane-constants.js';
 
 // Pointer work on the gel canvas: dragging a lane corner or a ladder band, and
 // what a plain click means for whichever manual tool is armed.
@@ -74,7 +73,7 @@ function createManualCanvasInteraction({
     runtime.suppressNextLaneVertexClick = true;
     renderOverrideStatus();
     deps.renderCanvas();
-    deps.setStatus(`Lane ${target.laneIndex} ${LANE_VERTEX_LABELS[target.vertexKey]} vertex selected.`);
+    deps.setStatus('');
     event.preventDefault?.();
   }
 
@@ -122,11 +121,11 @@ function createManualCanvasInteraction({
       }
       const point = getCanvasPoint(event);
       const { mw } = runtime.ladderBandDrag;
-      const rowY = point ? moveLadderBand(mw, point) : null;
+      if (point) moveLadderBand(mw, point);
       runtime.ladderBandDrag = null;
       renderOverrideStatus();
       deps.renderCanvas();
-      deps.setStatus(`Ladder band ${mw} kDa moved to row=${rowY ?? '-'}.`);
+      deps.setStatus('');
       deps.onRunAnalysis();
       event.preventDefault?.();
       return;
@@ -142,7 +141,7 @@ function createManualCanvasInteraction({
     runtime.laneVertexDrag = null;
     renderOverrideStatus();
     deps.renderCanvas();
-    deps.setStatus(`Lane ${target.laneIndex} ${LANE_VERTEX_LABELS[target.vertexKey]} vertex updated.`);
+    deps.setStatus('');
     deps.onRunAnalysis();
     event.preventDefault?.();
   }
@@ -162,7 +161,7 @@ function createManualCanvasInteraction({
       return;
     }
     if (runtime.cropperActive) {
-      deps.setStatus('Finish crop mode first: Apply Crop or Cancel Crop.');
+      deps.setStatus('Finish cropping first: Done or Cancel.');
       return;
     }
 
@@ -183,7 +182,7 @@ function createManualCanvasInteraction({
       }
       renderOverrideStatus();
       deps.renderCanvas();
-      deps.setStatus(`Lane ${target.laneIndex} ${LANE_VERTEX_LABELS[target.vertexKey]} vertex updated.`);
+      deps.setStatus('');
       deps.onRunAnalysis();
       return;
     }
@@ -199,10 +198,10 @@ function createManualCanvasInteraction({
       deps.renderCanvas();
       const segmentation = normalizeManualOverrides(runtime.manualOverrides).laneSegmentation || {};
       if (!Number.isFinite(segmentation.gelRight)) {
-        deps.setStatus(`First lane divider added at x=${point.x}. Add at least one more to define the gel edges.`);
+        deps.setStatus('Add at least one more divider to mark the gel edges.');
         return;
       }
-      deps.setStatus(`Lane divider added at x=${point.x}. The outermost lines define the gel edges; add more or click Lane dividers again to finish.`);
+      deps.setStatus('');
       return;
     }
     if (step === 'ladder') {
@@ -220,7 +219,7 @@ function createManualCanvasInteraction({
       };
       renderOverrideStatus();
       deps.renderCanvas();
-      deps.setStatus(`Ladder lane set to ${laneIndex}.`);
+      deps.setStatus('Detect the ladder, or use Set MW to label its bands.');
       deps.onRunAnalysis();
       return;
     }
@@ -255,7 +254,7 @@ function createManualCanvasInteraction({
         clearCanvasTool('band-top');
         renderOverrideStatus();
         deps.renderCanvas();
-        deps.setStatus(`Lane ${laneIndex} top line set at row=${rowY}. Click the bottom line in lane ${laneIndex}.`);
+        deps.setStatus(`Click the bottom edge in lane ${laneIndex}.`);
         return;
       }
       const rowY = getRectifiedLaneRowFromPoint(point);
@@ -267,7 +266,7 @@ function createManualCanvasInteraction({
       clearCanvasTool('band-top');
       renderOverrideStatus();
       deps.renderCanvas();
-      deps.setStatus(`Band top line set at row=${rowY}.`);
+      deps.setStatus('Click the bottom edge of the band.');
       return;
     }
     if (step === 'band-bottom') {
@@ -301,9 +300,9 @@ function createManualCanvasInteraction({
         deps.renderCanvas();
         const nextProgress = getLaneBandProgress();
         if (nextProgress.totalLanes && nextProgress.completeCount >= nextProgress.totalLanes) {
-          deps.setStatus(`Lane ${pendingLaneIndex} bottom line set at row=${rowY}. Per-lane intensities ready in the Quantify panel.`);
+          deps.setStatus('');
         } else {
-          deps.setStatus(`Lane ${pendingLaneIndex} bottom line set at row=${rowY}. Click the top line in lane ${nextProgress.missingCompleteLaneIndex || 1}.`);
+          deps.setStatus(`Click the top edge in lane ${nextProgress.missingCompleteLaneIndex || 1}.`);
         }
         deps.onRunAnalysis();
         return;
@@ -318,7 +317,7 @@ function createManualCanvasInteraction({
       clearCanvasTool('band-bottom');
       renderOverrideStatus();
       deps.renderCanvas();
-      deps.setStatus(`Band bottom line set at row=${rowY}. Per-lane intensities ready in the Quantify panel.`);
+      deps.setStatus('');
       deps.onRunAnalysis();
       return;
     }
@@ -331,7 +330,7 @@ function createManualCanvasInteraction({
       const rowY = getRectifiedLaneRowFromPoint(point, laneIndex);
       appendBandOverride(laneIndex, rowY);
       renderOverrideStatus();
-      deps.setStatus(`Band added in lane ${laneIndex} near row=${rowY}.`);
+      deps.setStatus('');
       deps.onRunAnalysis();
     }
   }

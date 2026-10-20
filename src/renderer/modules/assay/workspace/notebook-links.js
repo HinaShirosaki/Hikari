@@ -85,7 +85,7 @@ function createAssayNotebookLinks({
     assay.latestAnalysis = preview && typeof preview === 'object'
       ? { ...preview }
       : null;
-    assay.updatedAt = new Date().toISOString();
+    // Rendering a preview is not an edit: no updatedAt bump, so it adds no Undo step.
     syncNotebookAssayLinks();
     persist();
     renderResultsAssayOptions(assay.id);

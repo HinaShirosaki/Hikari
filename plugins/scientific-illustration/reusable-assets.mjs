@@ -62,8 +62,12 @@ export function assetContent(asset) {
     return { raster: object.dataUrl, rotation: object.rotation, opacity: object.opacity, visible: object.visible,
       aspectRatio: Math.round(object.width / object.height * 1e6) / 1e6 };
   }
-  return asset.objects.map(({ id, name, canvas, ...object }) => Object.fromEntries(Object.entries(object)
-    .map(([key, value]) => [key, typeof value === 'number' ? Math.round(value * 1e6) / 1e6 : value])));
+  return asset.objects.map(({ id, name, canvas, ...object }) => {
+    // Plotly's generated clip IDs are random; data/layout define chart content.
+    if (object.type === 'plot') delete object.svg;
+    return Object.fromEntries(Object.entries(object)
+      .map(([key, value]) => [key, typeof value === 'number' ? Math.round(value * 1e6) / 1e6 : value]));
+  });
 }
 export function compoundGroups(document) {
   return document.groups.filter(group => document.objects.filter(object => group.ids.includes(object.id) && object.type !== 'text').length >= 2);

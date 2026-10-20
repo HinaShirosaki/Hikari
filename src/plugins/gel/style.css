@@ -1,3 +1,5 @@
+@import url('./blot-figure.css');
+
 /* Only what the frame needs on top of the app's own stylesheets: the shell
    used to own the page chrome and the active-view toggle, and neither exists
    here. Everything else comes from vendor/css. */

@@ -1,5 +1,6 @@
-/* The viewer owns the main workspace. Auxiliary windows are out of flow and
- * bounded to the image stage, so they cannot cover the window launchers. */
+/* The viewer owns the main workspace: the gel, with a small action card on its
+ * right (view, export, layers). Tools live in the rail's sections; the peak
+ * editor is the only window, out of flow and bounded to the image stage. */
 body.plugin-gel,
 body.plugin-gel #gel-host,
 body.plugin-gel #gel-view.is-active {
@@ -30,41 +31,126 @@ body.plugin-gel #gel-view.is-active {
   overflow: hidden;
 }
 
-#gel-view .gel-side-rail { display: contents; }
-
 #gel-view .gel-viewer-panel {
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 16px;
   height: 100%;
   min-height: 0;
   padding: 0;
   overflow: hidden;
 }
 
-#gel-view .gel-viewer-panel > h3 { margin: 0; }
+/* The action card, in the style of Claude Code's side cards: one action per
+ * row, icon on the left, value or switch on the right. */
+#gel-view .gel-viewer-card {
+  align-self: start;
+  width: 188px;
+  padding: 6px;
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 12px;
+  background: var(--theme-surface);
+}
 
-#gel-view .gel-viewer-toolbar,
-#gel-view .gel-window-toolbar {
+#gel-view .gel-viewer-toolbar { display: flex; flex-direction: column; gap: 2px; }
+
+#gel-view .gel-card-row {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-#gel-view .gel-window-toolbar {
-  border-bottom: 1px solid var(--theme-border-soft);
-  padding-bottom: 12px;
-}
-
-#gel-view .gel-window-toolbar .ghost-btn,
-#gel-view .gel-viewer-toolbar .ghost-btn {
-  min-height: 32px;
+  gap: 10px;
+  width: 100%;
+  min-height: 34px;
   padding: 6px 10px;
-  border-radius: 3px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--theme-text);
+  background: transparent;
+  font-size: 0.8125rem;
+  text-align: left;
+}
+
+#gel-view .gel-card-row[hidden] { display: none; }
+#gel-view .gel-card-row:hover:not(:disabled),
+#gel-view .gel-card-row[aria-expanded='true'] { background: var(--theme-fill); }
+#gel-view .gel-card-label { flex: 1; min-width: 0; }
+#gel-view .gel-card-value { color: var(--theme-text-muted); font-variant-numeric: tabular-nums; }
+
+#gel-view .gel-card-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+#gel-view .gel-card-row > .gel-card-icon { color: var(--theme-text-muted); }
+
+/* An on/off switch, like the Remote Control toggle. */
+#gel-view .gel-switch {
+  position: relative;
+  flex: none;
+  width: 28px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--theme-fill-strong);
+  transition: background 140ms ease;
+}
+
+#gel-view .gel-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--theme-surface-elevated);
+  box-shadow: var(--theme-shadow-small);
+  transition: transform 140ms ease;
+}
+
+#gel-view [aria-pressed='true'] > .gel-switch { background: var(--theme-accent); }
+#gel-view [aria-pressed='true'] > .gel-switch::after { transform: translateX(12px); }
+
+/* Finish dividers / Done: the pending step leads the card. */
+#gel-view .gel-viewer-card .gel-step-btn {
+  justify-content: center;
+  color: var(--theme-accent-ink);
+  background: var(--theme-accent-wash);
+  font-weight: 600;
+}
+
+#gel-view .gel-viewer-card .gel-step-btn:hover:not(:disabled) { background: var(--theme-accent-soft); }
+
+/* Crop mode: the card holds only the crop controls. */
+#gel-view .gel-viewer-toolbar.is-cropping > :not(.gel-crop-bar) { display: none; }
+#gel-view .gel-crop-bar { display: grid; gap: 10px; padding: 4px; }
+#gel-view .gel-crop-bar[hidden] { display: none; }
+#gel-view .gel-crop-angle { display: grid; gap: 6px; color: var(--theme-text-muted); font-size: 0.78rem; }
+#gel-view .gel-crop-angle-head { display: flex; justify-content: space-between; }
+#gel-view .gel-crop-angle input { width: 100%; margin: 0; accent-color: var(--theme-accent); }
+#gel-view #gel-crop-angle-value { color: var(--theme-text); font-variant-numeric: tabular-nums; }
+#gel-view .gel-crop-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+
+#gel-view .gel-card-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--theme-text);
+  background: var(--theme-fill);
   font-size: 0.78rem;
 }
+
+#gel-view .gel-card-btn:hover:not(:disabled) { background: var(--theme-fill-strong); }
 
 #gel-view .gel-main .ghost-btn {
   color: var(--theme-text);
@@ -76,15 +162,47 @@ body.plugin-gel #gel-view.is-active {
 #gel-view .gel-main .ghost-btn:hover { background: var(--theme-surface-elevated); }
 #gel-view .gel-main .ghost-btn:disabled { opacity: 0.5; }
 
-#gel-view .gel-window-toolbar .is-active,
-#gel-view .gel-tool-tabs [aria-pressed='true'],
 #gel-view .gel-main .ghost-btn[aria-pressed='true'] {
   color: var(--theme-accent);
   background: var(--theme-accent-soft);
   border-color: var(--theme-accent);
 }
 
-#gel-hide-windows-btn { margin-left: auto; }
+/* Export and record actions are native popovers anchored to their buttons. */
+#gel-export-menu-btn { anchor-name: --gel-export-menu; }
+#gel-record-menu-btn { anchor-name: --gel-record-menu; }
+
+#gel-view .gel-menu {
+  inset: auto;
+  min-width: 10rem;
+  margin: 4px 0;
+  padding: 4px;
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 6px;
+  color: var(--theme-text);
+  background: var(--theme-surface-elevated);
+  box-shadow: var(--theme-shadow-medium, 0 8px 28px rgb(0 0 0 / 18%));
+}
+
+#gel-view #gel-export-menu { position-anchor: --gel-export-menu; top: anchor(bottom); right: anchor(right); }
+#gel-view #gel-record-menu { position-anchor: --gel-record-menu; bottom: anchor(top); right: anchor(right); }
+
+#gel-view .gel-menu button {
+  display: block;
+  width: 100%;
+  min-height: 0;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 4px;
+  color: inherit;
+  background: transparent;
+  font-size: 0.8125rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+#gel-view .gel-menu button:hover:not(:disabled) { background: var(--theme-fill); }
+#gel-view .gel-menu button:disabled { opacity: 0.5; cursor: default; }
 
 #gel-view .gel-viewer-stage {
   display: flex;
@@ -104,6 +222,8 @@ body.plugin-gel #gel-view.is-active {
 #gel-view #gel-canvas { min-height: 0; }
 
 #gel-view #gel-canvas.is-setting-ladder-mw { cursor: crosshair; }
+/* Lane dividers: each click places a vertical boundary. */
+#gel-view #gel-canvas.is-setting-dividers { cursor: col-resize; }
 
 #gel-view .gel-ladder-mw-editor {
   position: fixed;
@@ -161,8 +281,7 @@ body.plugin-gel #gel-view.is-active {
   overscroll-behavior: contain;
 }
 
-#gel-view .gel-floating-window[hidden],
-#gel-view [data-gel-tool-panel][hidden] { display: none; }
+#gel-view .gel-floating-window[hidden] { display: none; }
 
 #gel-view .gel-floating-head {
   display: flex;
@@ -198,18 +317,8 @@ body.plugin-gel #gel-view.is-active {
   background: transparent;
 }
 
-#gel-view .gel-tool-tabs { display: flex; padding: 8px 12px 0; gap: 4px; }
-#gel-view .gel-tool-tabs button { flex: 1; min-width: 0; padding: 6px; border-radius: 3px; }
-#gel-view .gel-tool-groups { display: block; padding: 12px; }
-#gel-view .gel-tool-group { border: 0; padding: 0; }
-#gel-view .gel-tool-actions { padding: 0; }
-#gel-view .gel-tool-footer { padding: 0 12px 12px; }
-
-#gel-view #gel-lane-profile-panel { inset: auto auto 0 0; width: 360px; }
-#gel-view .gel-lane-profile-head { padding: 12px 12px 0; justify-content: flex-end; }
 #gel-view .gel-lane-profile-picker { display: flex; align-items: center; min-width: 0; }
-#gel-view .gel-lane-profile-picker select { width: 110px; }
-#gel-view .gel-lane-profile-chart-shell { padding: 8px 12px 12px; }
+#gel-view .gel-lane-profile-picker select { width: 110px; padding: 2px 6px; font-size: 0.75rem; }
 
 #gel-view .gel-viewer-stage:has(> .gel-lane-table-panel:not([hidden])) {
   flex-direction: column;
@@ -224,7 +333,7 @@ body.plugin-gel #gel-view.is-active {
   width: 100%;
   max-height: 42%;
   min-height: 0;
-  border-top: 1px solid var(--theme-border-soft);
+  border-bottom: 1px solid var(--theme-border-soft);
 }
 
 #gel-view .gel-lane-table-panel[hidden] { display: none; }
@@ -234,16 +343,7 @@ body.plugin-gel #gel-view.is-active {
 #gel-view .gel-lane-table-body { min-height: 0; overflow: auto; }
 #gel-view .gel-lane-table-body > p { margin: 0 0 8px; }
 
-#gel-view #gel-cell-table-overlay { inset: 32px auto auto 28px; width: 540px; }
-#gel-view .gel-cell-table-dialog {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  max-height: 100%;
-  overflow: hidden;
-}
-#gel-view .gel-cell-table-host { padding: 12px; min-height: 0; overflow: auto; }
-#gel-view #gel-cell-table-copy-btn { flex-shrink: 0; font-size: 0.75rem; }
+#gel-view #gel-cell-table-copy-btn { flex-shrink: 0; }
 
 #gel-view #gel-peak-editor-overlay { inset: 12px auto auto 12px; width: 780px; height: 540px; }
 #gel-view .gel-peak-editor-dialog {
@@ -282,13 +382,18 @@ body.plugin-gel #gel-view.is-active {
   #gel-view .gel-main { padding: 12px; }
 }
 
-/* Keep the desktop canvas usable in narrow plugin frames. The setup rail's
+@media (max-width: 900px) {
+  #gel-view .gel-viewer-panel { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 10px; }
+  #gel-view .gel-viewer-card { order: -1; align-self: stretch; width: auto; }
+  #gel-view .gel-viewer-toolbar { flex-direction: row; flex-wrap: wrap; }
+  #gel-view .gel-card-row { width: auto; flex: 1 1 140px; }
+}
+
+/* Keep the desktop canvas usable in narrow plugin frames. The rail's
  * controls and ordering are unchanged; only its width contracts. */
 @media (max-width: 720px) {
   #gel-view .gel-workspace { grid-template-columns: minmax(160px, 30%) minmax(0, 1fr); }
   #gel-view .gel-workspace > .gel-setup-panel { min-height: 0; height: 100%; }
-  #gel-view .gel-viewer-toolbar .ghost-btn,
-  #gel-view .gel-window-toolbar .ghost-btn { padding: 5px 6px; font-size: 0.72rem; }
   #gel-view .gel-viewer-panel { gap: 8px; }
   #gel-view .gel-floating-head { padding: 6px 8px; flex-wrap: wrap; }
 }

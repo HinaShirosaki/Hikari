@@ -1,7 +1,9 @@
 // Opt-in live percentage and complex hybrid QA. Real signed-in Codex; private
 // installed-plugin profile, scoped chat, native image generation, MCP and inspection.
 // node node_modules/electron/cli.js tests/scientific-illustration-levels-live.cjs --live
-// --case=<id> reruns a single case; --model=<id> never silently substitutes.
+// --case=<id> reruns a single case; --styles tests saved style controls.
+// --pathways tests a complex 4K flat-style hybrid pathway.
+// --model=<id> never silently substitutes.
 const { app, BrowserWindow, dialog, ipcMain, session } = require('electron');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
@@ -23,17 +25,20 @@ const { prepareCodexRuntime } = require(path.join(runtime, 'src/main/lib/codex-c
 const { requestCodexCliCatalog } = require(path.join(runtime, 'src/main/lib/codex-cli-provider/catalog.js'));
 const { HIKARI_MCP_TOOL_NAMES } = require(path.join(runtime, 'src/main/agent/mcp-contract/instructions.js'));
 const temp = fsSync.mkdtempSync(path.join(os.tmpdir(), 'illustration-edit-live-'));
-const cases = require('./scientific-illustration-level-cases.cjs');
+const styles = process.argv.includes('--styles');
+const pathways = process.argv.includes('--pathways');
+const cases = require(pathways ? './scientific-illustration-pathway-cases.cjs' : styles ? './scientific-illustration-style-cases.cjs' : './scientific-illustration-level-cases.cjs');
 const selectedCase = process.argv.find(arg => arg.startsWith('--case='))?.slice(7);
 const selected = selectedCase ? cases.filter(item => item.id === selectedCase) : cases;
 if (!selected.length) throw new Error('Unknown --case');
-const output = path.join(repo, 'artifacts', `scientific-illustration-levels-${new Date().toISOString().replace(/[:.]/g, '-')}`);
+const output = path.join(repo, 'artifacts', `scientific-illustration-${pathways ? 'pathways' : styles ? 'styles' : 'levels'}-${new Date().toISOString().replace(/[:.]/g, '-')}`);
 const home = path.join(temp, 'codex-home');
 const model = process.argv.find(arg => arg.startsWith('--model='))?.slice(8) || 'gpt-6.1-sol';
 app.setPath('userData', path.join(temp, 'profile')); app.setPath('sessionData', path.join(temp, 'session'));
 app.on('window-all-closed', () => {});
 const evidence = { started_at: new Date().toISOString(), runtime, model, temp, cases: selected, runs: [], calls: [], checks: [] };
 let win, frame, service, registry, agent, activeRun, targetId;
+let runTimeoutMs = 600000;
 const codexSessions = new Map();
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const save = () => fs.writeFile(path.join(output, 'evaluation.json'), JSON.stringify(evidence, null, 2));
@@ -62,6 +67,14 @@ async function snapshot(name, inspectionRunId = '') {
     const data = preview.data_url || preview.dataUrl;
     if (data) await fs.writeFile(path.join(output, `${name}-${preview.canvas}.png`), Buffer.from(data.split(',')[1], 'base64'));
   }
+  if (read.canvases.main.width > 1600) {
+    const full = await evaluate(`(async()=>{const {renderPreview}=await import('./artwork.mjs');return renderPreview(illustrationWorkspace.getDocument(),'main',8000)})()`);
+    await fs.writeFile(path.join(output, `${name}-full.png`), Buffer.from(full.data_url.split(',')[1], 'base64'));
+    assert.equal(full.width, read.canvases.main.width, 'Full export preserves the canvas width');
+    assert.equal(full.height, read.canvases.main.height, 'Full export preserves the canvas height');
+    await fs.writeFile(path.join(output, `${name}.svg`), await evaluate(`illustrationWorkspace.exportSvg('main')`));
+    await fs.writeFile(path.join(output, `${name}-scene.json`), JSON.stringify(await evaluate('illustrationWorkspace.getDocument()')));
+  }
   for (const object of read.objects.filter(item => item.type === 'raster')) {
     const extension = object.dataUrl.startsWith('data:image/jpeg;') ? 'jpg' : object.dataUrl.startsWith('data:image/webp;') ? 'webp' : 'png';
     await fs.writeFile(path.join(output, `${name}-${object.id}.${extension}`), Buffer.from(object.dataUrl.split(',')[1], 'base64'));
@@ -75,9 +88,10 @@ async function submit(id, prompt) {
   evidence.runs.push(activeRun); await save();
   await win.webContents.executeJavaScript('qaRailRuntime.setExpanded(false)');
   await waitFor(() => evaluate('!document.getElementById("prompt-form").hidden'), 'Empty illustration starter must be visible');
+  assert.ok(prompt.length <= await evaluate('document.getElementById("prompt").maxLength'), 'The live brief must fit the visible starter field');
   await evaluate(`document.getElementById('prompt').value=${JSON.stringify(prompt)};document.getElementById('prompt-form').requestSubmit()`);
   await waitFor(() => Boolean(activeRun.request), 'User prompt did not reach the real agent IPC');
-  await waitFor(() => Boolean(activeRun.result || activeRun.error), 'Live drawing timed out', 660000);
+  await waitFor(() => Boolean(activeRun.result || activeRun.error), 'Live drawing timed out', runTimeoutMs + 60000);
   if (activeRun.error) throw new Error(activeRun.error);
   check(activeRun.request.message === prompt, `${id}: the visible prompt reaches the agent unchanged`);
   check(activeRun.request.agent.pluginCanvasIllustrationId === targetId, `${id}: the request pins the intended illustration`);
@@ -90,7 +104,7 @@ async function submit(id, prompt) {
   check(calls.some(call => call.request.action === 'read' && call.ok), `${id}: agent reads the selected figure and contract`);
   check(calls.some(call => call.request.action === 'render' && (!call.request.canvas || ['main', 'both'].includes(call.request.canvas)) && call.ok), `${id}: agent renders the canvas`);
   check(calls.some(call => call.request.action === 'inspect' && call.ok), `${id}: agent submits a successful review`);
-  check(calls.filter(call => !['list', 'asset_list'].includes(call.request.action)).every(call => call.request.illustration_id === targetId), `${id}: every agent canvas request targets the same figure`);
+  check(calls.filter(call => !['list', 'asset_list', 'asset_read', 'asset_render', 'asset_delete'].includes(call.request.action)).every(call => call.request.illustration_id === targetId), `${id}: every figure-scoped agent request targets the same figure`);
   await save();
   activeRun.answer = activeRun.result.codex_agent?.answer || activeRun.result.parser?.reasoning_summary;
   activeRun.session = activeRun.result.codex_session_id;
@@ -115,6 +129,14 @@ async function collectCalls(home) {
     for (const line of (await fs.readFile(file, 'utf8')).split('\n')) {
       let entry; try { entry = JSON.parse(line); } catch { continue; }
       const item = entry.payload;
+      if (entry.type === 'event_msg' && item?.type === 'item_completed' && item.item?.kind === 'image_gen.generation') {
+        const generated = item.item;
+        calls.push({ timestamp: entry.timestamp, session: path.basename(file), name: 'image_gen.generation',
+          call_id: generated.id, status: generated.status, failure: generated.failure,
+          saved_path: generated.savedPath, prompt: generated.revisedPrompt,
+          nested_tools: [], canvas_actions: [], imports_native_image: false });
+        continue;
+      }
       if (entry.type !== 'response_item' || !['function_call', 'custom_tool_call'].includes(item?.type)) continue;
       let args = item.arguments || item.input || '';
       const source = typeof args === 'string' ? args : JSON.stringify(args);
@@ -185,7 +207,7 @@ async function run() {
       const result = await agent.run({ model: payload.llm.model, reasoningEffort: payload.llm.reasoningEffort,
         message: payload.message, recoveryConversation: payload.conversation, snapshot: payload.stateSnapshot,
         agent: payload.agent, chatSessionId: payload.chatSessionId, codexSessionId: codexSessions.get(payload.chatSessionId) || '',
-        cwd: storage, timeoutMs: 600000, enableWebSearch: false });
+        cwd: storage, timeoutMs: runTimeoutMs, enableWebSearch: false });
       if (result.codex_session_id) codexSessions.set(payload.chatSessionId, result.codex_session_id);
       current.result = result; await save();
       return { ...result, chat_session: { id: payload.chatSessionId } };
@@ -223,6 +245,7 @@ async function run() {
   await evaluate('illustrationWorkspace.ready.then(()=>true)');
   for (const test of selected) {
     activeRun = null;
+    runTimeoutMs = test.timeoutMs || 600000;
     const listing = await canvas({ action: 'list' });
     let current = await canvas({ action: 'create', title: test.title, expected_library_revision: listing.library_revision, request_id: randomUUID() });
     check(current.ok, `${test.id}: disposable illustration created`); targetId = current.illustration_id;
@@ -232,20 +255,36 @@ async function run() {
       { op: 'image_generation', imageGenerationPercent: test.percent }
     ] });
     check(current.ok && current.imageGenerationPercent === test.percent, `${test.id}: saved target reaches the installed plugin`);
+    if (test.style) {
+      await evaluate(`document.getElementById('image-generation-style').value=${JSON.stringify(test.style.preset)};document.getElementById('image-generation-style-prompt').value=${JSON.stringify(test.style.prompt)};document.getElementById('image-generation-style').dispatchEvent(new Event('change',{bubbles:true}))`);
+      await waitFor(async () => {
+        const read = await canvas({ action: 'read', illustration_id: targetId });
+        return read.ok && JSON.stringify(read.imageGenerationStyle) === JSON.stringify(test.style);
+      }, 'The image style UI did not persist');
+      current = await canvas({ action: 'read', illustration_id: targetId });
+      check(current.agent_contract.instructions.includes(test.style.prompt), `${test.id}: saved style notes reach the drawing contract`);
+    }
     console.log(JSON.stringify({ phase: 'drawing', id: test.id, percent: test.percent, complexity: current.complexity, canvas: current.canvases.main }));
     try {
       const after = await submit(test.id, test.prompt);
       const vectors = after.objects.filter(item => item.type === 'vector'), rasters = after.objects.filter(item => item.type === 'raster'), labels = after.objects.filter(item => item.type === 'text');
       activeRun.layer_counts = { vector: vectors.length, raster: rasters.length, text: labels.length };
       check(after.imageGenerationPercent === test.percent, `${test.id}: agent preserves the user target`);
+      if (test.style) check(JSON.stringify(after.imageGenerationStyle) === JSON.stringify(test.style), `${test.id}: agent preserves the selected style and art direction`);
       check(after.complexity === (test.complexity || 'standard') && after.canvases.main.width === (test.width || 1600) && after.canvases.main.height === (test.height || 1000), `${test.id}: detail level and canvas size stay unchanged`);
-      check(labels.length > 0 && test.labels.every(label => labels.some(item => item.text.toLowerCase().includes(label.toLowerCase()))), `${test.id}: requested labels are independent text objects`);
+      const labelText = value => value.toLowerCase().replace(/\s+/g, ' ').trim();
+      check(labels.length > 0 && test.labels.every(label => labels.some(item => labelText(item.text).includes(labelText(label)))), `${test.id}: requested labels are independent text objects`);
       check(rasters.every(item => item.textFree === true), `${test.id}: every imported raster has text-free confirmation`);
       const primitives = after.objects.filter(item => /arrow|leader|panel|frame|connector|scale.bar/i.test(`${item.id} ${item.name}`));
       activeRun.schematic_components = primitives.map(({ id, name, type }) => ({ id, name, type }));
       check(primitives.length > 0 && primitives.every(item => item.type === 'vector'), `${test.id}: arrows and panel geometry remain vector layers`);
       check(test.percent === 0 ? rasters.length === 0 && vectors.length > 0 : rasters.length > 0 && vectors.length > 0, `${test.id}: actual placed artwork matches the expected SVG or hybrid choice`);
-      if (test.percent === 100) check(rasters.length >= 2, `${test.id}: both blood-cell subjects have independent generated artwork`);
+      if (test.minRasters || test.percent === 100) check(rasters.length >= (test.minRasters || 2), `${test.id}: illustrative subjects have independent generated artwork`);
+      if (test.minVectors) check(vectors.length >= test.minVectors, `${test.id}: at least ${test.minVectors} independent SVG components remain editable`);
+      if (test.minTexts) check(labels.length >= test.minTexts, `${test.id}: at least ${test.minTexts} labels remain editable text`);
+      if (test.minArrows) check(vectors.filter(item => /\bmarker-(?:start|end)\s*=/.test(item.svg) || /<polyline\b/.test(item.svg) && /<polygon\b/.test(item.svg) || /arrow|connector|inhibit/i.test(`${item.id} ${item.name}`)).length >= test.minArrows, `${test.id}: pathway connections remain separate vector components`);
+      if (test.flatSvg) check(vectors.every(item => !/<(?:linearGradient|radialGradient|filter)\b/i.test(item.svg)), `${test.id}: SVG components use flat fills without gradients or lighting filters`);
+      if (test.minPanels) check(vectors.filter(item => /panel|frame/i.test(`${item.id} ${item.name}`)).length >= test.minPanels, `${test.id}: all ${test.minPanels} panel frames remain separate SVG objects`);
       if (test.id === 'complex-hybrid-secretion') check(vectors.filter(item => /panel|frame/i.test(`${item.id} ${item.name}`)).length >= 3, `${test.id}: all three panel frames remain separate SVG objects`);
       activeRun.passed = true;
     } catch (error) {
@@ -258,7 +297,19 @@ async function run() {
     const calls = await collectCalls(home);
     const from = Date.parse(activeRun.started_at), to = Date.parse(activeRun.ended_at);
     const trace = calls.filter(call => Date.parse(call.timestamp) >= from && Date.parse(call.timestamp) <= to);
-    activeRun.native_generation_calls = trace.filter(call => /image_gen|imagegen/.test(call.name || '') || call.nested_tools.some(name => /image_gen|imagegen/.test(name))).length;
+    const generations = trace.filter(call => call.name === 'image_gen.generation');
+    activeRun.native_generation_calls = generations.length || trace.filter(call => /image_gen|imagegen/.test(call.name || '') || call.nested_tools.some(name => /image_gen|imagegen/.test(name))).length;
+    activeRun.native_generation_completed = generations.filter(call => call.status === 'completed').length;
+    if (test.stylePattern) {
+      activeRun.style_prompt_matched = generations.some(call => new RegExp(test.stylePattern, 'i').test(call.prompt || ''));
+      if (!activeRun.style_prompt_matched) { activeRun.passed = false; activeRun.error ||= 'The native image-generation prompt did not demonstrate the selected style'; }
+      if (test.everyGenerationStyle && generations.some(call => !new RegExp(test.stylePattern, 'i').test(call.prompt || ''))) { activeRun.passed = false; activeRun.error ||= 'A native image-generation prompt omitted the selected flat style'; }
+    }
+    activeRun.native_image_files = generations.filter(call => call.status === 'completed' && call.saved_path).map(call => path.basename(call.saved_path));
+    for (const generated of generations.filter(call => call.status === 'completed' && call.saved_path)) {
+      const folder = path.join(output, 'generated'); await fs.mkdir(folder, { recursive: true });
+      await fs.copyFile(generated.saved_path, path.join(folder, path.basename(generated.saved_path)));
+    }
     activeRun.native_import_trace = trace.some(call => call.imports_native_image);
     if (test.percent === 0 && activeRun.native_generation_calls !== 0) { activeRun.passed = false; activeRun.error = '0% unexpectedly invoked native image generation'; }
     if (test.percent > 0 && (!activeRun.native_generation_calls || !activeRun.native_import_trace)) { activeRun.passed = false; activeRun.error ||= 'Generated raster source was not proven by the native transcript'; }

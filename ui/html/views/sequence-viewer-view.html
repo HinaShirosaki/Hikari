@@ -253,13 +253,19 @@
                 <h4 id="sequence-viewer-protein-builder-add-protein-title">Add Protein</h4>
                 <button id="sequence-viewer-protein-builder-add-protein-close-btn" type="button" class="app-dialog-close-btn" aria-label="Close Add Protein window" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
               </div>
-              <label class="sequence-viewer-protein-builder-add-protein-field">
-                Source
-                <select id="sequence-viewer-protein-builder-add-protein-source">
-                  <option value="manual">Enter sequence</option>
-                  <option value="uniprot">Search UniProt</option>
-                </select>
-              </label>
+              <fieldset id="sequence-viewer-protein-builder-add-protein-source" class="sequence-viewer-protein-builder-source-field">
+                <legend>Source</legend>
+                <div class="sequence-viewer-protein-builder-source-switch">
+                  <label>
+                    <input id="sequence-viewer-protein-builder-add-protein-source-manual" class="sr-only" type="radio" name="protein-builder-source" value="manual" checked />
+                    <span>Enter sequence</span>
+                  </label>
+                  <label>
+                    <input id="sequence-viewer-protein-builder-add-protein-source-uniprot" class="sr-only" type="radio" name="protein-builder-source" value="uniprot" />
+                    <span>Search UniProt</span>
+                  </label>
+                </div>
+              </fieldset>
               <section id="sequence-viewer-protein-builder-uniprot-panel" class="sequence-viewer-protein-builder-uniprot-panel" aria-label="UniProt search" hidden>
                 <label class="sequence-viewer-protein-builder-add-protein-field" for="sequence-viewer-protein-builder-uniprot-query">UniProt query</label>
                 <div class="sequence-viewer-protein-builder-uniprot-query-row">
@@ -268,6 +274,7 @@
                 </div>
                 <p id="sequence-viewer-protein-builder-uniprot-status" class="small-note" role="status" aria-live="polite"></p>
                 <div id="sequence-viewer-protein-builder-uniprot-results" class="sequence-viewer-protein-builder-uniprot-results" aria-label="UniProt results"></div>
+                <button id="sequence-viewer-protein-builder-uniprot-results-toggle-btn" type="button" class="sequence-viewer-protein-builder-uniprot-results-toggle" aria-expanded="true" aria-controls="sequence-viewer-protein-builder-uniprot-results" hidden>Show all results</button>
                 <button id="sequence-viewer-protein-builder-uniprot-more-btn" type="button" class="ghost-btn" hidden>More results</button>
                 <div id="sequence-viewer-protein-builder-uniprot-detail" class="sequence-viewer-protein-builder-uniprot-detail" hidden>
                   <p id="sequence-viewer-protein-builder-uniprot-summary" class="small-note"></p>

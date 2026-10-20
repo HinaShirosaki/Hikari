@@ -4,7 +4,7 @@ const { validateValueAgainstSchema } = require('../../tools/tool-loading/schema-
 const MAX_HTML_BYTES = 512 * 1024;
 const HTML_OUTPUT_MCP_TOOL = Object.freeze({
   name: 'html_output',
-  description: 'Display a self-contained interactive HTML document inline in Hikari Agent Chat and preserve its source in chat history. Inline CSS and JavaScript work in an isolated frame. No network, local files, Hikari APIs, popups, downloads, or persistent browser storage. Maximum 512 KiB UTF-8.',
+  description: 'Use for interactive explanations, calculators, sliders, filters, or data explorers in chat, including requests to vary inputs and see the effect. Author and display a self-contained interactive HTML document inline in Hikari Agent Chat and preserve its source in chat history. Inline CSS and JavaScript work in an isolated frame. No network, local files, Hikari APIs, popups, downloads, or persistent browser storage. Maximum 512 KiB UTF-8.',
   annotations: { title: 'Display interactive HTML', readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   inputSchema: {
     type: 'object', additionalProperties: false, required: ['title', 'html'],
