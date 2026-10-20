@@ -1,6 +1,6 @@
 ---
 name: "hikari-protocol-generation"
-description: "Use Hikari MCP protocol_generation to normalize complete protocol JSON and queue protocol saves for user approval."
+description: "Use Hikari MCP protocol_generation for practical wet-lab how-to, buffer recipes, solution preparation, and experimental procedures, including informal questions such as How to make 1L 10x PBS. Author complete protocol JSON and queue it for user review."
 ---
 
 <!-- HIKARI_OFFICIAL_MCP_SKILL:protocol-generation -->
@@ -9,6 +9,7 @@ description: "Use Hikari MCP protocol_generation to normalize complete protocol 
 
 Use this skill when the user asks Codex to prepare, normalize, add, save, or import a wet-lab protocol for Hikari.
 Also use it when the user asks to turn paper methods, selected paper text, local records, or a draft procedure into a Protocols-module candidate.
+Practical questions such as "How to make 1L 10x PBS" request a usable preparation protocol even without the words "protocol", "generate", or "save". Use `save: true` to prepare a review candidate; Hikari still requires approval before saving. Respect explicit text-only requests, use `save: false` for a requested unsaved structured preview, and answer pure conceptual questions directly.
 
 Direct tool:
 
@@ -24,7 +25,7 @@ Protocol JSON checklist:
 - `protocol.steps`: ordered array of strings or step objects, one operation per step, as many steps as the procedure genuinely needs. Do not merge several operations into one step or split one action across several.
 - `protocol.troubleshooting`: one plain-text block, written as labeled lines so it stays readable after normalization: `Expected outcome:`, `Quality checks:`, `Starting defaults:` (each conventional value you chose and why), `Failure modes:` (symptom then corrective action), `Safety:`, `Source limitations:`. Omit a label with nothing real to report.
 - `result_summary`: one sentence describing what was prepared.
-- `save: true`: include this when the user asks to add, save, import, persist, or queue the generated protocol for review.
+- `save: true`: default for practical protocol/preparation requests, including informal how-to questions, to queue the result for review. Use `save: false` when the user requests an unsaved structured preview.
 
 Step writing:
 

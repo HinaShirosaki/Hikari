@@ -5,14 +5,13 @@ const path = require('node:path');
 const { asArray, ensureObject } = require('../../lib/normalize.js');
 const { isFilesystemRoot } = require('../../lib/path-safety.js');
 const {
-  releaseOfficialMcpSkillsForWorkspace
+  getCodexWorkspaceSkillRoot,
+  removeOfficialMcpSkills
 } = require('../../agent/codex-agent/official-mcp-skills.js');
 const {
   ensureCodexCliRuntimeHome
 } = require('../../lib/codex-cli-provider/runtime-home.js');
-const {
-  sanitizeProjectMemoryFolderName
-} = require('../../project-memory');
+const { projectFolderPath } = require('../../../shared/storage-layout.mjs');
 
 function defaultCleanText(value, maxLength = 2000) {
   const text = String(value || '').trim();
@@ -103,36 +102,33 @@ function collectCodexWorkspacePaths({ cwd = '', snapshot = {}, storagePath = '',
       }
       addWorkspacePath(
         workspacePaths,
-        path.join(storagePath, 'Project', sanitizeProjectMemoryFolderName(projectName, 'Untitled_Project'))
+        path.join(storagePath, projectFolderPath(projectName))
       );
     });
   }
   return [...workspacePaths];
 }
 
-async function releaseSkillsForWorkspaces(
-  workspacePaths = [],
-  releaseOfficialSkills = releaseOfficialMcpSkillsForWorkspace,
-  context = {}
-) {
-  const releases = [];
+// Official skills live in the runtime home (codex-cli-provider/guidance.js).
+// Copies older builds left in these folders made Codex list every skill twice.
+async function removeSkillsFromWorkspaces(workspacePaths = []) {
+  const removals = [];
   for (const workspacePath of workspacePaths) {
     try {
-      const skillReleases = await releaseOfficialSkills(workspacePath, context);
-      releases.push({
+      removals.push({
         workspacePath,
         ok: true,
-        releases: asArray(skillReleases)
+        removed: await removeOfficialMcpSkills(getCodexWorkspaceSkillRoot(workspacePath))
       });
     } catch (error) {
-      releases.push({
+      removals.push({
         workspacePath,
         ok: false,
-        error: String(error?.message || error || 'Unable to release official MCP skills.')
+        error: String(error?.message || error || 'Unable to remove released official MCP skills.')
       });
     }
   }
-  return releases;
+  return removals;
 }
 
 function createCodexWorkspaceInitializer(deps = {}) {
@@ -145,9 +141,6 @@ function createCodexWorkspaceInitializer(deps = {}) {
   const ensureRuntimeHome = typeof deps.ensureCodexCliRuntimeHome === 'function'
     ? deps.ensureCodexCliRuntimeHome
     : ensureCodexCliRuntimeHome;
-  const releaseOfficialSkills = typeof deps.releaseOfficialMcpSkillsForWorkspace === 'function'
-    ? deps.releaseOfficialMcpSkillsForWorkspace
-    : releaseOfficialMcpSkillsForWorkspace;
   let activeInitialization = null;
   let lastResult = null;
 
@@ -256,21 +249,17 @@ function createCodexWorkspaceInitializer(deps = {}) {
       dataFilePath,
       cleanText
     });
-    const skillReleases = await releaseSkillsForWorkspaces(
-      workspacePaths,
-      releaseOfficialSkills,
-      { snapshot }
-    );
+    const skillCleanup = await removeSkillsFromWorkspaces(workspacePaths);
     const result = {
-      ok: Boolean(runtimeHome) && skillReleases.every((release) => release.ok !== false),
-      status: skillReleases.every((release) => release.ok !== false) ? 'initialized' : 'failed',
+      ok: Boolean(runtimeHome) && skillCleanup.every((cleanup) => cleanup.ok !== false),
+      status: skillCleanup.every((cleanup) => cleanup.ok !== false) ? 'initialized' : 'failed',
       host_url: hostUrl,
       has_token: Boolean(token),
       runtime_home: runtimeHome,
       data_file_path: dataFilePath,
       storage_path: storagePath,
       workspace_paths: workspacePaths,
-      skill_releases: skillReleases
+      skill_cleanup: skillCleanup
     };
     lastResult = result;
     return result;

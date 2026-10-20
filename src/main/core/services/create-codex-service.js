@@ -4,9 +4,7 @@ const path = require('node:path');
 const {
   createCodexAgentRuntime
 } = require('../../agent/codex-agent/runtime.js');
-const {
-  sanitizeProjectMemoryFolderName
-} = require('../../project-memory');
+const { projectFolderPath } = require('../../../shared/storage-layout.mjs');
 const {
   createCodexSubAgentTurnRunner
 } = require('../../agent/tools/sub-agent/codex-turn-runner.js');
@@ -164,11 +162,7 @@ function createMainCodexService({
     if (!storageRootPath) {
       return '';
     }
-    return path.join(
-      storageRootPath,
-      'Project',
-      sanitizeProjectMemoryFolderName(project.name, 'Untitled_Project')
-    );
+    return path.join(storageRootPath, projectFolderPath(project.name));
   }
 
   async function requestCodexAgentText(input = {}) {

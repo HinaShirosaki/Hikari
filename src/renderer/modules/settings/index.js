@@ -25,6 +25,7 @@ export function initSettings({
   state,
   persist,
   onStoragePathSaved,
+  onReloadRequested,
   onSampleInventorySettingsChanged,
   document: rootDocument = globalThis?.document || null,
   windowObject = globalThis?.window || null
@@ -269,7 +270,7 @@ export function initSettings({
     void pluginsController.onAddPlugin();
   });
   pluginsReloadBtn?.addEventListener('click', () => {
-    window.location.reload();
+    onReloadRequested?.();
   });
   locationAddBtn.addEventListener('click', sampleInventoryController.onAddLocation);
   sampleInventoryLocationAddBtn?.addEventListener('click', sampleInventoryController.onAddSampleInventoryLocation);

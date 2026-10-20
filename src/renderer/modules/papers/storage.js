@@ -1,3 +1,5 @@
+import { paperFolderPath } from '../../../shared/storage-layout.mjs';
+
 export function fileToBytes(file) {
   if (file && typeof file.arrayBuffer === 'function') {
     return file.arrayBuffer().then((buffer) => new Uint8Array(buffer));
@@ -17,24 +19,8 @@ export function fileToBytes(file) {
   });
 }
 
-export function sanitizeFolderName(value) {
-  return String(value || '')
-    .trim()
-    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
-    .replace(/\s+/g, '_')
-    .replace(/^_+|_+$/g, '');
-}
-
 export function buildPaperStorageFolder({ rootPath, linkedType, linkedName }) {
-  const normalizedType = String(linkedType || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_]+/g, '-');
-  const safeLinkedName = sanitizeFolderName(linkedName) || 'Uncategorized';
-  if (normalizedType === 'journal-club' || normalizedType === 'literature-search') {
-    return `${String(rootPath || '').trim()}/Papers/${safeLinkedName}`;
-  }
-  return `${String(rootPath || '').trim()}/Project/${safeLinkedName}/Papers`;
+  return `${String(rootPath || '').trim()}/${paperFolderPath({ linkedType, linkedName })}`;
 }
 
 export function resolveStoredPaperPath(paper, storagePath = '') {

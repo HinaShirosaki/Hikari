@@ -61,13 +61,11 @@ test('overlapping items can be distributed with equal negative gaps without resi
   assert.deepEqual(operations, [{ op: 'update', id: '1', patch: { x: 50 } }]);
 });
 
-test('insufficient selections and already aligned items are no-ops; mixed canvases are rejected', () => {
+test('insufficient selections and already aligned items are no-ops', () => {
   const before = fixture();
   for (const selected of [[], ['a'], ['missing']]) assert.deepEqual(alignmentOperations(before, selected, 'left'), []);
   const aligned = applyOperations(before, alignmentOperations(before, ids, 'left', measured));
   assert.deepEqual(alignmentOperations(aligned, ids, 'left', measured), []);
-  const mixed = { ...before, objects: before.objects.map(o => o.id === 'c' ? { ...o, canvas: 'unknown' } : o) };
-  assert.throws(() => alignmentOperations(mixed, ids, 'left'), /one canvas/);
   assert.throws(() => alignmentOperations(before, ids, 'unknown'), /Unknown alignment/);
 });
 

@@ -263,8 +263,7 @@
     try {
       const metadata = summary(calculation, inputs).split('\n').map(line => `# ${line.replace(/[\t\r]/g, ' ')}`).join('\n');
       const bytes = new TextEncoder().encode(`${metadata}\n\n${math.toTsv(math.resultTable(calculation))}`);
-      let binary = ''; for (const byte of bytes) binary += String.fromCharCode(byte);
-      const response = await hikari.call('downloads.save', { fileName: `qpcr-${calculation.kind === 'expression' ? 'relative-expression' : 'standard-curve'}.tsv`, dataBase64: btoa(binary) });
+      const response = await hikari.call('downloads.save', { fileName: `qpcr-${calculation.kind === 'expression' ? 'relative-expression' : 'standard-curve'}.tsv`, dataBase64: bytes.toBase64() });
       status('export-status', response?.saved ? 'TSV exported.' : 'Export canceled.');
     } catch (error) { status('export-status', `Export failed: ${error.message} Try again.`, true); }
     finally { exporting = false; updateActions(); }

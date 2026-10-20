@@ -8,7 +8,7 @@ const { withStorageRootWrite } = require('../write-coordinator');
 const { array, object } = require('./format');
 const { existingMarkdown } = require('./index');
 const { prepareRecordDocument, readRecordDocument, writeRecordDocument } = require('./document-storage');
-const { sanitizeFolderName } = require('../storage-utils');
+const { notebookPageFolderPath, protocolFolderPath } = require('../../../shared/storage-layout.mjs');
 const { isPathInside } = require('../../lib/path-safety');
 const { buildWorkflowFolderLayout, collectLinkedNotebookIds } = require('../workflow/folder-names');
 const { buildNotebookStorageFolder } = require('../workflow/fs-helpers');
@@ -43,7 +43,7 @@ function addSnapshotDocuments(snapshot, records, storageRoot) {
       if (known.has(`${kind}:${record.id}`)) continue;
       let folder;
       if (kind === 'protocol') {
-        folder = path.join(storageRoot, 'Protocol', `${sanitizeFolderName(record.name, 'Protocol')}__${sanitizeFolderName(record.id, 'protocol')}`);
+        folder = path.join(storageRoot, protocolFolderPath(record));
       } else {
         const workflow = array(snapshot.workflows).find(item => item.id === record.workflowContext?.workflowId);
         if (workflow) {
@@ -52,8 +52,7 @@ function addSnapshotDocuments(snapshot, records, storageRoot) {
         } else if (record.storageFolder && isPathInside(storageRoot, record.storageFolder)) {
           folder = path.resolve(record.storageFolder);
         } else {
-          folder = path.join(storageRoot, 'Project', sanitizeFolderName(record.projectName, 'Untitled_Project'), 'Notebook',
-            `${sanitizeFolderName(record.protocolName || record.id, 'Notebook_Page')}__${sanitizeFolderName(record.id, 'page')}`);
+          folder = path.join(storageRoot, notebookPageFolderPath(record));
         }
       }
       records.push({ kind, time: 0, filePath: path.join(folder, kind === 'protocol' ? 'protocol.md' : 'page.md'),

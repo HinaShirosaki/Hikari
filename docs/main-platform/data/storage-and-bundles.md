@@ -35,13 +35,15 @@ Internally those all funnel into:
 - `persistSnapshot(...)`
 - `loadSnapshot(...)`
 
-The key detail is that persistence is not “write one JSON file and stop.” A save also writes the record folders and the chemicals SQLite index through `syncBundleFromSnapshot(...)`. Production callers use the decorated version built in `core/main-services.js`, which also releases the official Codex skills into each project's `.agents/skills/` and requests project-memory conclusions.
+The key detail is that persistence is not “write one JSON file and stop.” A save also writes the record folders and the chemicals SQLite index through `syncBundleFromSnapshot(...)`. Production callers use the decorated version built in `core/main-services.js`, which also requests project-memory conclusions. Official Codex skills are released into the Codex runtime home before each agent request, not by storage saves.
 
 ## `storage/` is the persistence engine
 
 This folder defines the on-disk layout. Its work is split across focused modules — `storage-paths.js`, `storage-sidecars.js`, `storage-discovery.js`, `storage-hydration.js` (+ `hydration/`), `storage-import.js`, `storage-sql-read.js`, `storage-sql-write.js`, `storage-sql-schema.js`, `chemical-index-guard.js`, `sample-containers.js`, `experiment-log-storage.js`, `workflow-storage.js` (+ `workflow/`), `paper-discovery.js`, and `sequence-library-summary.js` — re-exported from `storage/index.js`.
 
 `getBundlePaths(...)` is the shared path builder used throughout the folder. Given the snapshot path (or just the storage root), it resolves every root folder below: `Protocol/`, `Samples/`, `Plates/`, `Gels/`, `Papers/`, `KnowledgeBase/` and its `papers.md/`, `Dashboard/experiment-log.json`, and `hikari-chemicals.index.sqlite`. It still reports the old `<snapshot>.notebook-pages.json` path so a save can delete it and a load can read it once.
+
+Record folder names come from `src/shared/storage-layout.mjs`: the folder-name sanitizer and the `Project/`, notebook page, protocol, paper, plate and workflow folder builders. The renderer and main both import it, so the folder the renderer files a record under is the folder storage reads back.
 
 Every save updates these from the snapshot. Protocol and notebook Markdown stores both readable content and hidden typed YAML state. Other modules retain their existing JSON or SQLite storage:
 

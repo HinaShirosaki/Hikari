@@ -17,16 +17,16 @@ Each is a `createXController({ runtime, elements, deps })` factory returning a s
 - `images/image-controller.js`: file load, decode, enhancement settings (denoise/contrast), and the preprocessed-image cache (`getPreprocessedImageForCurrentSettings`).
 - `images/crop-controller.js`: interactive crop and rotate, normalizing the canvas back into a working image.
 - `manual/manual-workflow.js`: the largest controller. Owns the guided manual segmentation workflow, the viewer-tool toolbar, canvas pointer interaction (clicks, context menu, vertex dragging), auto-detect-lanes, and override status. See the workflow breakdown below.
-- `rendering/lane-table.js`: the editable lane/sample table docked below the gel, with columns aligned to the image lanes. The viewer fits into the remaining space; long tables scroll within the dock. The Lane table toolbar button shows or hides it, and exports compose the saved table with the gel.
-- `rendering/index.js`: canvas drawing, the per-lane intensity-profile chart, the cell table, and hover overlays. `selectViewerBaseImageData(...)` (also re-exported from `index.js`) picks original vs. processed pixels for display.
-- `floating-windows.js`: owns the nonmodal Gel Tools, Lane Intensity, peak editor, and band intensity windows. Their launchers stay above the canvas. Windows are bounded to the image stage, support pointer dragging and arrow-key movement from their title bars, and close individually or with **Hide windows**. The docked lane table stays visible when floating windows are hidden. Escape closes the top window. Rendering remains owned by the existing controllers; opening or dismissing a floating window does not resize the gel. Observers and pointer listeners are disposed with the workspace.
+- `rendering/lane-table.js`: the editable lane/sample table docked above the gel, with columns aligned to the image lanes. The viewer fits into the remaining space; long tables scroll within the dock. The Lane table button in the rail's Lanes section shows or hides it, and exports compose the saved table with the gel.
+- `rendering/index.js`: canvas drawing, the per-lane intensity-profile chart and the band intensity (cell) table shown inline in the rail's Results section, and hover overlays. `selectViewerBaseImageData(...)` (also re-exported from `index.js`) picks original vs. processed pixels for display.
+- `floating-windows.js`: owns the one nonmodal window, the peak editor, opened from the rail's Results section (it needs ~780 px, so it is the only tool that is not inline). It is bounded to the image stage, supports pointer dragging and arrow-key movement from its title bar, and Escape closes it. Rendering remains owned by the existing controllers; opening or dismissing it does not resize the gel. Observers and pointer listeners are disposed with the workspace.
 - `history.js`: the frame's own undo/redo stack over `manualOverrides`. `commit()` runs after every render and is a no-op unless the overrides actually moved, so no call site has to decide whether an interaction was an edit. A changed `runtime.imageRevision` (load, crop, rotate) drops the stack rather than replaying coordinates onto different pixels.
 - `records-manager.js`: form state, save/load of plugin-owned gel-analysis records, saved-record list/search, CSV export wiring, and compatibility metadata retained on migrated records. It does not call Notebook or other host modules.
 
 ### Pure / support modules (no DOM)
 
 - `analysis/analysis-core.js`: the analysis engine — `analyzeGelImage(...)` plus `buildCalibration`, `applyCalibrationToBands`, `applyNormalization`, `clusterBandsAcrossLanes`, `computeLaneConfidence`, `interpretLane`, and `linearRegression`.
-- `analysis/auto-lanes.js`: `detectLanes(...)` automatic lane detection combines overlapping height windows with column-background contrast, centers flat peaks, rejects shallow splits, and selects a compatible set of peaks. Expected-count reconstruction labels inferred blank lanes and reports unresolved count mismatches. Explicit outer boundaries can resolve blank edge lanes; without them the detector does not guess their location. `createLaneDetector()` caches the pixel profile by image revision and height window for repeat detections; preview contrast settings do not affect detection.
+- `analysis/auto-lanes.js`: `detectLanes(...)` automatic lane detection combines overlapping height windows with column-background contrast, centers flat peaks, rejects shallow splits, and selects a compatible set of peaks. Expected-count reconstruction labels inferred blank lanes and reports unresolved count mismatches. Explicit outer boundaries can resolve blank edge lanes; without them the detector does not guess their location. Preview contrast settings do not affect detection.
 - `analysis/image-processing.js`: histogram percentiles, range normalization, Gaussian blur, `preprocessWithJs`, polarity detection, and the quantification signal.
 - `images/image-io.js`: decode and `normalizeDecodedImage` (handles multi-page TIFF). Single-channel 16-bit TIFFs keep a full-precision float `gray` (the 8-bit `imageData` is display only); resize and `cropGray` work on that float image, replaying Cropper.js's rotation. Saving such a gel also writes `source-16bit.tif` beside `source.png`, fingerprinted with that PNG; reopening restores the 16-bit grey only when the fingerprint still matches.
 - `shared.js`: math helpers plus the manual-override model (`createEmptyManualOverrides`, lane-vertex and lane-band-window normalization/geometry helpers).
@@ -36,18 +36,19 @@ Each is a `createXController({ runtime, elements, deps })` factory returning a s
 
 ### Guided manual segmentation workflow
 
-The headline feature is a step-by-step manual override flow driven by `manual/manual-workflow.js` and rendered as a numbered progress stepper. A viewer tool is selected, the user clicks on the canvas to place geometry, and `runtime.manualOverrides` accumulates:
+The headline feature is a step-by-step manual override flow driven by `manual/manual-workflow.js`; the pending finish action shows in the action card at the gel's top right, and its next-step hint is announced to screen readers. A viewer tool is selected, the user clicks on the canvas to place geometry, and `runtime.manualOverrides` accumulates:
 
 1. **Set dividers** — lane boundaries, with the outermost dividers also defining
-   the gel edges. The green **Lane dividers** tool means editing is active;
-   clicking it again finishes the step.
-2. **Set ladder lane** — which lane is the MW ladder (Gel Tools → Lane → Ladder lane).
-3. **Ladder MW** — toggle **Set MW** in Analysis, then click a band in the
+   the gel edges. The green **Dividers** tool (rail → Lanes) means editing is
+   active and the canvas shows a column-resize cursor; **Finish dividers** in the
+   action card, or clicking the tool again, finishes the step.
+2. **Set ladder lane** — which lane is the MW ladder (rail → Ladder → Pick lane).
+3. **Ladder MW** — toggle **Set MW** in the Ladder section, then click a band in the
    ladder lane to enter its MW in a single inline number field (Enter saves,
    Escape dismisses). The cursor becomes a
    crosshair while the tool is on. Clicking an existing label edits its value;
    dragging it moves the calibration row. Confirm via "Done Ladder MW".
-4. **Band top** / 5. **Band bottom** — the quantification band window; supports
+4. **Top** / 5. **Bottom** (rail → Bands) — the quantification band window; supports
    a per-lane band mode where each lane gets its own top/bottom (progress shows
    `n/total` lanes).
 - **Quantify** confirmation and freeform **added bands** rounds.

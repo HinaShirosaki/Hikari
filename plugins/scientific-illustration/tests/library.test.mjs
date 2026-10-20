@@ -13,7 +13,7 @@ function fixture(legacy) {
     if (verb === 'storage.get') return { value: stored };
     if (verb === 'storage.set') { stored = params.value; return {}; }
     if (verb === 'files.read') {
-      if (!files.has(params.path)) throw new Error('Missing file');
+      if (!files.has(params.path)) throw new Error('Plugin file not found.');
       return { dataBase64: files.get(params.path) };
     }
     if (verb === 'files.write') {
@@ -59,6 +59,31 @@ test('image generation preference follows the figure through history, duplicatio
   const reloaded = host.open(); await reloaded.ready;
   assert.equal((await reloaded.request({ action: 'read' })).imageGenerationPercent, 60);
   assert.equal((await reloaded.manage('open', copy.illustration_id)).imageGenerationPercent, 60);
+});
+
+test('image style and notes persist per figure through history, duplication and reload', async () => {
+  const host = fixture(), workspace = host.open(); await workspace.ready;
+  const before = await workspace.request({ action: 'read' });
+  const style = { preset: 'watercolor', prompt: 'Pale teal and gold, soft edges' };
+  const changed = await workspace.request({ action: 'apply', illustration_id: before.illustration_id,
+    expected_revision: before.revision, request_id: crypto.randomUUID(), operations: [{ op: 'image_generation_style', imageGenerationStyle: style }] });
+  assert.ok(changed.ok, changed.error);
+  assert.deepEqual(changed.imageGenerationStyle, style);
+  assert.match((await workspace.request({ action: 'read' })).agent_contract.instructions, /Image style for image_gen artwork: Watercolor/);
+  const lined = await workspace.request({ action: 'apply', illustration_id: before.illustration_id, expected_revision: changed.revision, request_id: crypto.randomUUID(),
+    operations: [{ op: 'image_style_line', imageStyleLine: 'Watercolor, palette #3a9 #c90, light upper left' }] });
+  assert.ok(lined.ok, lined.error);
+  assert.match((await workspace.request({ action: 'read' })).agent_contract.instructions, /Style line for this figure: "Watercolor, palette #3a9 #c90, light upper left"/);
+  await workspace.history('undo');
+  await workspace.history('undo'); assert.deepEqual(workspace.getDocument().imageGenerationStyle, before.imageGenerationStyle);
+  await workspace.history('redo'); assert.deepEqual(workspace.getDocument().imageGenerationStyle, style);
+  const copy = await workspace.manage('duplicate', before.illustration_id);
+  assert.deepEqual(copy.imageGenerationStyle, style);
+  const fresh = await workspace.manage('create');
+  assert.deepEqual(fresh.imageGenerationStyle, { preset: 'automatic', prompt: '' });
+  const reloaded = host.open(); await reloaded.ready;
+  assert.deepEqual((await reloaded.manage('open', before.illustration_id)).imageGenerationStyle, style);
+  assert.deepEqual((await reloaded.manage('open', copy.illustration_id)).imageGenerationStyle, style);
 });
 
 test('migrates a legacy scene without changing its artwork or original file', async () => {
@@ -120,7 +145,7 @@ test('every complexity exposes drawing and inspection rules through the canvas c
       request_id: crypto.randomUUID(), operations: [{ op: 'complexity', complexity }] })).ok);
     const { instructions } = (await workspace.request({ action: 'read' })).agent_contract;
     assert.ok(instructions.includes(`Complexity: ${COMPLEXITY_PROFILES[complexity].label}.`));
-    assert.match(instructions, /every label must be an independent text object/);
+    assert.match(instructions, /figure labels must be independent text objects/);
     assert.match(instructions, /Use SVG by default/);
     assert.match(instructions, /Codex-provided built-in image_gen/);
     assert.match(instructions, /render the canvas/);
@@ -157,6 +182,81 @@ test('a dropped storage pointer adopts the indexes on disk instead of overwritin
   await host.call('storage.set', { value: null });
   await assert.rejects(host.open().ready);
   assert.equal(host.files.get('library.json'), encodeText('{'));
+});
+
+test('a dropped legacy pointer adopts workspace.json and preserves the original bytes', async () => {
+  const legacy = createDocument(); legacy.title = 'Recovered legacy figure';
+  legacy.objects = [{ id: 'kept', type: 'text', text: 'Saved label' }];
+  const host = fixture(legacy), original = host.files.get('workspace.json');
+  await host.call('storage.set', { value: null });
+  const workspace = host.open(); await workspace.ready;
+  assert.equal(workspace.getDocument().title, legacy.title);
+  assert.equal(workspace.getDocument().objects[0].text, 'Saved label');
+  assert.equal(host.files.get('workspace.json'), original);
+  assert.equal(host.json('library.json').illustrations[0].path, 'workspace.json');
+});
+
+test('read errors never create an empty replacement library or asset index', async () => {
+  for (const target of ['library.json', 'workspace.json', 'reusable-assets.json']) {
+    const host = fixture(), workspace = host.open(); await workspace.ready;
+    const before = new Map(host.files), writes = host.writes.length, call = host.call;
+    await call('storage.set', { value: null });
+    if (target === 'workspace.json') host.files.delete('library.json');
+    host.call = async (verb, params) => {
+      if (verb === 'files.read' && params.path === target) throw new Error('Plugin file operation failed (EACCES).');
+      return call(verb, params);
+    };
+    await assert.rejects(host.open().ready, /EACCES/);
+    assert.equal(host.writes.length, writes);
+    for (const [path, data] of host.files) assert.equal(data, before.get(path));
+  }
+});
+
+test('legacy scratch artwork migrates on initial load and selection without changing source files', async () => {
+  const legacy = createDocument(); legacy.title = 'Saved two-canvas figure';
+  legacy.canvases.scratch = { width: 500, height: 350, background: '#ffffff' };
+  legacy.objects = [{ id: 'main-label', type: 'text', text: 'Main', canvas: 'main' },
+    { id: 'old-label', type: 'text', text: 'Scratch label', canvas: 'scratch', x: 350, y: 80 },
+    { id: 'old-label-2', type: 'text', text: 'Second', canvas: 'scratch', x: 350, y: 150 }];
+  legacy.groups = [{ id: 'old-group', name: 'Legacy group', canvas: 'scratch', ids: ['old-label', 'old-label-2'] }];
+  const host = fixture(legacy), original = host.files.get('workspace.json');
+  const workspace = host.open(); await workspace.ready;
+  assert.equal(workspace.getDocument().objects.length, 3);
+  assert.ok(workspace.getDocument().objects.every(object => object.canvas === 'main'));
+  assert.equal(workspace.getDocument().objects[1].text, 'Scratch label');
+  assert.equal(workspace.getDocument().objects[1].x, 350);
+  assert.deepEqual(workspace.getDocument().groups[0], { ...legacy.groups[0], canvas: 'main' });
+  assert.equal(host.files.get('workspace.json'), original);
+  assert.notEqual(host.json('library.json').illustrations[0].path, 'workspace.json');
+  const id = workspace.getLibrary().active_illustration_id;
+  await workspace.manage('create');
+  const library = host.json('library.json'), entry = library.illustrations.find(item => item.id === id);
+  host.files.set(entry.path, original);
+  const opened = await workspace.manage('open', id);
+  assert.ok(opened.ok, opened.error);
+  assert.ok(opened.objects.every(object => object.canvas === 'main'));
+  assert.notEqual(host.json('library.json').illustrations.find(item => item.id === id).path, entry.path);
+  assert.equal(host.files.get(entry.path), original);
+  const reloaded = host.open(); await reloaded.ready;
+  assert.equal(reloaded.getDocument().revision, opened.revision);
+  assert.equal(reloaded.getDocument().objects.length, 3);
+});
+
+test('a failed scratch migration index commit leaves the original scene selected and recoverable', async () => {
+  const host = fixture(), workspace = host.open(); await workspace.ready;
+  const library = host.json('library.json'), entry = library.illustrations[0];
+  const legacy = host.json(entry.path);
+  legacy.canvases.scratch = legacy.canvases.main;
+  legacy.objects.push({ id: 'old-label', type: 'text', canvas: 'scratch', text: 'Keep' });
+  const original = encodeText(JSON.stringify(legacy)); host.files.set(entry.path, original);
+  host.failIndex = true;
+  await assert.rejects(host.open().ready, /Index disk failure/);
+  assert.deepEqual(host.json('library.json'), library);
+  assert.equal(host.files.get(entry.path), original);
+  host.failIndex = false;
+  const reopened = host.open(); await reopened.ready;
+  assert.equal(reopened.getDocument().objects[0].canvas, 'main');
+  assert.equal(host.files.get(entry.path), original);
 });
 
 test('a failed index commit preserves the committed scene across reload and retry', async () => {
@@ -240,18 +340,6 @@ test('stored entries cannot redirect a figure to another scene or outside its na
   raw.illustrations[0].path = '../scene.json'; assert.throws(() => normalizeLibrary(raw), /Invalid illustration entry/);
 });
 
-function legacyScratch() {
-  const legacy = createDocument();
-  legacy.canvases.scratch = { width: 500, height: 350, background: '#f7faf8' };
-  legacy.objects = [
-    { id: 'existing', type: 'text', text: 'Keep main', canvas: 'main', x: 100, y: 120 },
-    { id: 'component', type: 'text', text: 'Component label', canvas: 'scratch', x: 45, y: 60, width: 130, height: 40, fontSize: 28, rotation: 37, color: '#287c75' },
-    { id: 'second', type: 'text', text: 'ATP', canvas: 'scratch', x: 230, y: 90, width: 80, height: 30 }
-  ];
-  legacy.groups = [{ id: 'legacy-group', name: 'Saved assembly', canvas: 'scratch', ids: ['component', 'second'] }];
-  return legacy;
-}
-
 test('read advertises one canvas and rejects obsolete scratch actions without edits', async () => {
   const host = fixture(), workspace = host.open(); await workspace.ready;
   const current = await workspace.request({ action: 'read' }), writes = host.writes.length;
@@ -269,67 +357,3 @@ test('read advertises one canvas and rejects obsolete scratch actions without ed
   assert.equal((await workspace.request({ action: 'read' })).revision, current.revision);
 });
 
-test('legacy scratch components migrate to main with their geometry and groups intact', async () => {
-  const legacy = legacyScratch(), host = fixture(legacy), original = host.files.get('workspace.json');
-  const workspace = host.open(); await workspace.ready;
-  const current = await workspace.request({ action: 'read' });
-  assert.deepEqual(Object.keys(current.canvases), ['main']);
-  assert.deepEqual(current.canvases.main, legacy.canvases.main);
-  assert.ok(current.objects.every(object => object.canvas === 'main'));
-  assert.deepEqual(current.groups[0].ids, legacy.groups[0].ids);
-  assert.equal(current.groups[0].canvas, 'main');
-  assert.equal(current.groups[0].name, legacy.groups[0].name);
-  for (const object of legacy.objects) for (const [key, value] of Object.entries(object)) {
-    assert.equal(current.objects.find(item => item.id === object.id)[key], key === 'canvas' ? 'main' : value);
-  }
-  assert.notEqual(current.revision, legacy.revision);
-  assert.equal(host.files.get('workspace.json'), original, 'The original file stays recoverable');
-  const entry = host.json('library.json').illustrations[0];
-  assert.notEqual(entry.path, 'workspace.json');
-  assert.deepEqual(Object.keys(host.json(entry.path).canvases), ['main']);
-  assert.ok((await title(workspace, 'Migrated figure')).ok);
-  await workspace.history('undo');
-  assert.ok(workspace.getDocument().objects.every(object => object.canvas === 'main'));
-  await workspace.history('redo');
-  const reloaded = host.open(); await reloaded.ready;
-  assert.deepEqual(reloaded.getDocument().objects, workspace.getDocument().objects);
-  assert.deepEqual(reloaded.getDocument().groups, workspace.getDocument().groups);
-});
-
-test('indexed scenes migrate through a new file and failed index writes leave the legacy file committed', async () => {
-  const host = fixture(), workspace = host.open(); await workspace.ready;
-  const entry = host.json('library.json').illustrations[0], legacy = legacyScratch();
-  host.files.set(entry.path, encodeText(JSON.stringify(legacy)));
-  const original = host.files.get(entry.path), index = host.files.get('library.json');
-  host.failIndex = true;
-  await assert.rejects(host.open().ready, /Index disk failure/);
-  assert.equal(host.files.get(entry.path), original);
-  assert.equal(host.files.get('library.json'), index);
-  host.failIndex = false;
-  const restored = host.open(); await restored.ready;
-  const changed = host.json('library.json').illustrations[0];
-  assert.notEqual(changed.path, entry.path);
-  assert.equal(host.files.get(entry.path), original);
-  assert.ok(restored.getDocument().objects.every(object => object.canvas === 'main'));
-  const writes = host.writes.length, reloaded = host.open(); await reloaded.ready;
-  assert.equal(host.writes.length, writes, 'Already migrated scenes are not rewritten again');
-  assert.deepEqual(reloaded.getDocument(), restored.getDocument());
-});
-
-test('opening an inactive legacy illustration migrates only that figure before selection', async () => {
-  const host = fixture(), workspace = host.open(); await workspace.ready;
-  const entry = host.json('library.json').illustrations[0];
-  const other = await workspace.manage('create');
-  host.files.set(entry.path, encodeText(JSON.stringify(legacyScratch())));
-  const original = host.files.get(entry.path);
-  const reloaded = host.open(); await reloaded.ready;
-  assert.equal(reloaded.getLibrary().active_illustration_id, other.illustration_id);
-  const opened = await reloaded.manage('open', entry.id);
-  assert.ok(opened.ok, opened.error);
-  assert.equal(opened.illustration_id, entry.id);
-  assert.ok(opened.objects.every(object => object.canvas === 'main'));
-  assert.equal(host.files.get(entry.path), original);
-  assert.notEqual(host.json('library.json').illustrations.find(item => item.id === entry.id).path, entry.path);
-  const afterReload = host.open(); await afterReload.ready;
-  assert.deepEqual(afterReload.getDocument().objects, reloaded.getDocument().objects);
-});

@@ -1,0 +1,33 @@
+name: Fresh computer install
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+jobs:
+  bootstrap:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      # Node is only for packing and driving the test. The test removes every
+      # Node/npm/npx directory from the actual installer's PATH.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Pack the branch with its build lock
+        id: pack
+        shell: bash
+        run: |
+          tarball=$(npm pack --silent --pack-destination "$RUNNER_TEMP" | tail -1)
+          echo "tarball=$tarball" >> "$GITHUB_OUTPUT"
+      - name: Installer failures, recovery, and prebuilt downloads
+        run: node tests/installer-selfcheck.js
+      - name: Bootstrap without Node and repair an incomplete cache
+        env:
+          HIKARI_SMOKE_TARBALL: ${{ runner.temp }}/${{ steps.pack.outputs.tarball }}
+        run: node tests/installer-bootstrap-smoke.mjs

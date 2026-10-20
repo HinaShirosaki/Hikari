@@ -15,8 +15,9 @@ const { CHEMICAL_INDEX_UNREADABLE_CODE } = require('./chemical-index-guard');
 const { writeSampleContainers } = require('./sample-containers');
 const { writeExperimentLogSidecar } = require('./experiment-log-storage');
 const { writePrimerLibrary } = require('./primer-library-storage');
-const { asArray, cleanText, ensureObject, forEachInBatches, isUnreadableJsonFile, sanitizeFolderName } = require('./storage-utils');
+const { asArray, cleanText, ensureObject, forEachInBatches, isUnreadableJsonFile } = require('./storage-utils');
 const { syncWorkflowRootFromSnapshot } = require('./workflow-storage');
+const { recordFolderName } = require('../../shared/storage-layout.mjs');
 const { isPathInside } = require('../lib/path-safety.js');
 const { writeFileAtomic } = require('../lib/shared-json-file.js');
 const { withStorageRootWrite } = require('./write-coordinator');
@@ -105,8 +106,7 @@ function buildRecordFolderName(rootPath, record, label) {
   if (storageFolder && path.dirname(path.resolve(storageFolder)) === path.resolve(rootPath)) {
     return path.basename(path.resolve(storageFolder));
   }
-  const id = sanitizeFolderName(record.id, label.toLowerCase());
-  return `${sanitizeFolderName(record.name || record.assayNumber || record.id, label)}__${id}`;
+  return recordFolderName(record, label);
 }
 
 // One folder per record, found again on load by scanning the root. The folders

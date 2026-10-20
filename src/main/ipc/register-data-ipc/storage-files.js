@@ -2,6 +2,7 @@
 
 const path = require('node:path');
 const { ensurePathWithinRoot, pathExists } = require('../../lib/path-safety.js');
+const { sanitizeFolderName: sanitizeStorageName } = require('../../../shared/storage-layout.mjs');
 
 const { transformPaperPdfToMarkdown } = require('../../papers/parse/paper-markdown-import.js');
 const { PAPER_RECORD_FILE_SUFFIX } = require('../../storage/paper-discovery.js');
@@ -41,16 +42,6 @@ function createStorageFileHelpers({
       }
     }
     return fallback;
-  }
-
-  function sanitizeStorageName(value, fallback = 'item') {
-    const cleaned = String(value || '')
-      .trim()
-      .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
-      .replace(/\s+/g, '_')
-      .replace(/^_+|_+$/g, '')
-      .slice(0, 180);
-    return cleaned || fallback;
   }
 
   function sanitizeImportedFileName(fileName) {
@@ -307,51 +298,6 @@ function createStorageFileHelpers({
     };
   }
 
-  async function appendNotebookPageLog(payload) {
-    const storagePath = String(payload?.storagePath || '').trim();
-    const targetFolderInput = String(payload?.storageFolder || '').trim();
-    const action = cleanText(payload?.action, 80);
-    const entryId = cleanText(payload?.entryId, 200);
-
-    if (!storagePath) {
-      throw new Error('Missing storage path.');
-    }
-    if (!targetFolderInput) {
-      throw new Error('Missing notebook page storage folder.');
-    }
-    if (!action) {
-      throw new Error('Missing log action.');
-    }
-
-    const resolvedStoragePath = await resolveConfiguredStorageRoot(storagePath);
-    const resolvedTargetFolder = ensurePathWithinRoot(resolvedStoragePath, targetFolderInput);
-    await fs.mkdir(resolvedTargetFolder, { recursive: true });
-
-    const timestamp = typeof payload?.timestamp === 'string' && payload.timestamp.trim()
-      ? payload.timestamp.trim()
-      : new Date().toISOString();
-    const summary = cleanText(payload?.summary, 600);
-    const details = payload?.details && typeof payload.details === 'object' && !Array.isArray(payload.details)
-      ? payload.details
-      : {};
-
-    const record = {
-      ts: timestamp,
-      action,
-      entryId,
-      summary,
-      details
-    };
-    const line = `${JSON.stringify(record)}\n`;
-    const logFilePath = path.join(resolvedTargetFolder, 'page.log');
-    await fs.appendFile(logFilePath, line, 'utf8');
-
-    return {
-      filePath: logFilePath,
-      relativePath: path.relative(resolvedStoragePath, logFilePath).split(path.sep).join('/')
-    };
-  }
-
   async function writeJsonStorageFile(payload) {
     const storagePath = String(payload?.storagePath || '').trim();
     const targetFolderInput = String(payload?.targetFolder || '').trim();
@@ -430,7 +376,6 @@ function createStorageFileHelpers({
     transformStoredPaperPdf,
     resolveStorageFilePath,
     moveStoredFile,
-    appendNotebookPageLog,
     writeJsonStorageFile,
     mirrorStorageRoot,
     readStorageRootFrom

@@ -1,6 +1,7 @@
 'use strict';
 
-const WORKFLOW_ROOT_FOLDER_NAME = 'Workflow';
+const { WORKFLOW_ROOT_FOLDER_NAME } = require('../../../shared/storage-layout.mjs');
+
 const TEMPLATE_METADATA_FILE_NAME = 'template.json';
 const WORKFLOW_METADATA_FILE_NAME = 'workflow.json';
 const RELATED_PAPERS_FILE_NAME = 'related-papers.json';

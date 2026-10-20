@@ -24,7 +24,6 @@ function checkPreserved(patch, normalized, path = 'style') {
 }
 export function preparePlotStylePatch(current, patch, context) {
   for (const key of Object.keys(patch)) if (!PLOT_STYLE_FIELDS.includes(key)) throw new Error(`Unsupported style field: ${key}`);
-  if (context.hasFittedCurve && patch.chartType && patch.chartType !== 'auto' && patch.chartType !== current.chartType) throw new Error('The fitted analysis determines its chart type.');
   for (const label of Object.keys(patch.seriesStyles || {})) if (!context.seriesLabels.includes(label)) throw new Error(`Unknown series: ${label}`);
   for (const key of ['seriesColors', 'seriesShapes']) {
     for (const label of Object.keys(patch[key] || {})) if (!context.seriesLabels.includes(label)) throw new Error(`Unknown series: ${label}`);

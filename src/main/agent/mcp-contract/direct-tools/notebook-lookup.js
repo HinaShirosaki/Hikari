@@ -27,7 +27,7 @@ const NOTEBOOK_LOOKUP_INPUT_SCHEMA = Object.freeze({
 
 const NOTEBOOK_LOOKUP_MCP_TOOL = Object.freeze({
   name: 'notebook_lookup',
-  description: 'Search Hikari notebook pages by text, project, protocol, or state. Returns agent-safe content, UI targets, source coverage, and explicit storage-access status.',
+  description: 'Use to recall saved experiments, read prior results, or find a specific notebook page, even when the user asks conversationally what happened last time. Search Hikari notebook pages by text, project, protocol, or state. Returns agent-safe content, UI targets, source coverage, and explicit storage-access status. access.complete: false means partial evidence: follow access.user_action and never turn it into a definitive no-match claim. Use notebook_list for complete title/date lists.',
   annotations: buildReadOnlyToolAnnotations('Notebook lookup'),
   inputSchema: NOTEBOOK_LOOKUP_INPUT_SCHEMA
 });

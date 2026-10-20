@@ -49,7 +49,7 @@ module.exports = {
       // node_modules is unpacked whole: the MCP stdio server runs under an external
       // Node that cannot read app.asar, and a hand-picked package list kept missing
       // transitive SDK deps (fast-uri, pkce-challenge, @hono/node-server, ...).
-      unpackDir: '{src/main/agent,src/main/storage,src/main/data,src/main/lib,src/main/papers,src/renderer/lib,src/renderer/modules/sequence-viewer,vendor/pdfjs,vendor/sqljs,vendor/onnxruntime,vendor/colony-counter,node_modules}'
+      unpackDir: '{src/main/agent,src/main/storage,src/main/data,src/main/lib,src/main/papers,src/shared,src/renderer/lib,src/renderer/modules/sequence-viewer,vendor/pdfjs,vendor/sqljs,vendor/onnxruntime,vendor/colony-counter,node_modules}'
     },
     prune: true,
     ignore: [

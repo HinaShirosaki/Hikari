@@ -1,8 +1,15 @@
 'use strict';
 
 const path = require('path');
-const { asArray, cleanText, ensureObject, sanitizeFolderName } = require('../storage-utils');
+const { asArray, cleanText, ensureObject } = require('../storage-utils');
 const { WORKFLOW_ROOT_FOLDER_NAME } = require('./constants.js');
+const {
+  workflowBlockFolderName: buildBlockFolderName,
+  workflowEntryFolderName: buildEntryFolderName,
+  workflowFolderName: buildWorkflowFolderName,
+  workflowNotebookPageFolderName: buildNotebookPageFolderName,
+  workflowTemplateFolderName: buildTemplateFolderName
+} = require('../../../shared/storage-layout.mjs');
 
 function isPermissionDeniedError(error) {
   return error?.code === 'EPERM' || error?.code === 'EACCES';
@@ -21,28 +28,6 @@ function resolveWorkflowStoragePaths(storagePath = '') {
     storagePath: rootPath,
     workflowRootPath: path.join(rootPath, WORKFLOW_ROOT_FOLDER_NAME)
   };
-}
-
-function buildTemplateFolderName(template) {
-  const source = ensureObject(template);
-  return `${sanitizeFolderName(source.name, 'Untitled_Template')}__${sanitizeFolderName(source.id, 'template')}`;
-}
-
-function buildWorkflowFolderName(workflow) {
-  const source = ensureObject(workflow);
-  return `${sanitizeFolderName(source.name, 'Untitled_Workflow')}__${sanitizeFolderName(source.id, 'workflow')}`;
-}
-
-function buildEntryFolderName(entryName = '', entryId = '') {
-  return `${sanitizeFolderName(entryName, 'Entry')}__${sanitizeFolderName(entryId, 'entry')}`;
-}
-
-function buildNotebookPageFolderName(notebookEntryId = '') {
-  return `${sanitizeFolderName('Notebook_Page', 'Notebook_Page')}__${sanitizeFolderName(notebookEntryId, 'page')}`;
-}
-
-function buildBlockFolderName(blockName = '', blockId = '') {
-  return `${sanitizeFolderName(blockName, 'Step')}__${sanitizeFolderName(blockId, 'step')}`;
 }
 
 function buildWorkflowFolderLayout({ storagePath, template, workflow }) {

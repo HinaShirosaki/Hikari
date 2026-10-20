@@ -51,8 +51,10 @@
   opacity: 0;
 }
 
+/* Pinned to the last column so the chevron lines up whether or not a count sits beside the title. */
 .foldable-section__summary::after {
   content: '';
+  grid-column: 3;
   width: 10px;
   height: 10px;
   margin-right: 3px;

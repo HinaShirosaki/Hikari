@@ -56,7 +56,7 @@ export function initAssetsPanel({ workspace, getSelection, getCanvas, getIllustr
       row.append(button, remove); $('saved-assets').append(row); observer.observe(image);
     }
     $('assets-hint').textContent = library.reusable_assets.length
-      ? 'Click to insert on the canvas. Copies stay editable.' : 'Import artwork, or select components and choose Save as asset.';
+      ? 'Click to insert on the canvas. Copies stay editable.' : 'Import artwork, or right-click components and choose Save as an asset.';
     $('assets-empty').hidden = entries.length > 0;
     $('assets-empty').textContent = library.reusable_assets.length ? 'No assets match your search.' : 'Your reusable components will appear here.';
     if (focusedId && action) ($('saved-assets').querySelector(`[data-saved-asset="${focusedId}"] [data-asset-action="${action}"]`) || $('asset-search')).focus({ preventScroll: true });
@@ -68,7 +68,6 @@ export function initAssetsPanel({ workspace, getSelection, getCanvas, getIllustr
     $('asset-name').value = selection.name; $('asset-save-error').textContent = '';
     $('save-asset-dialog').showModal(); $('asset-name').focus(); $('asset-name').select();
   }
-  for (const id of ['save-selection-asset', 'menu-save-selection-asset']) $(id).addEventListener('click', save);
   $('cancel-save-asset').addEventListener('click', () => $('save-asset-dialog').close());
   $('save-asset-dialog').addEventListener('close', () => { saveSelection = null; });
   $('save-asset-form').addEventListener('submit', async event => {
@@ -81,5 +80,5 @@ export function initAssetsPanel({ workspace, getSelection, getCanvas, getIllustr
     } catch (error) { $('asset-save-error').textContent = error.message; }
     finally { button.disabled = false; }
   });
-  return { render, closeSave: () => $('save-asset-dialog').close() };
+  return { render, save, closeSave: () => $('save-asset-dialog').close() };
 }

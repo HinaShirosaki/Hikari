@@ -46,7 +46,7 @@ async function verifySingleCanvas({ tool, evaluate, check, win, pause, temp, sto
   check(JSON.stringify((await read()).objects) === JSON.stringify(beforeCopy.objects), 'One undo restores the single canvas after insertion');
   // Simulate an existing installed figure before reloading, using only the
   // fixture's temporary plugin storage. The old file must stay recoverable.
-  const root = path.join(storage, 'Plugins/scientific-illustration');
+  const root = path.join(storage, 'Plugins/Figura');
   const library = JSON.parse(await fs.readFile(path.join(root, 'library.json'), 'utf8'));
   const entry = library.illustrations.find(item => item.id === current.illustration_id);
   const legacy = JSON.parse(await fs.readFile(path.join(root, entry.path), 'utf8'));

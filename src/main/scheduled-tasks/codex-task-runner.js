@@ -1,7 +1,7 @@
 'use strict';
 
 const path = require('node:path');
-const { sanitizeProjectMemoryFolderName } = require('../project-memory');
+const { projectFolderPath } = require('../../shared/storage-layout.mjs');
 
 function ensurePlainObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -57,11 +57,7 @@ function createCodexScheduledTaskRunner({ cleanText, codexAgentRuntime } = {}) {
       || (dataFilePath ? path.dirname(path.resolve(dataFilePath)) : '');
     const cwd = cleanText(project.cwd, 2400)
       || (storagePath && projectName
-        ? path.join(
-          storagePath,
-          'Project',
-          sanitizeProjectMemoryFolderName(projectName, 'Untitled_Project')
-        )
+        ? path.join(storagePath, projectFolderPath(projectName))
         : '');
     const snapshot = {
       settings: {

@@ -342,7 +342,8 @@ at `state.settings.pluginStorage[<plugin id>]`, read and written with
 ### 3.2 Plugin files
 
 A plugin holding the `files` permission also gets a folder at
-`<storage root>/Plugins/<plugin id>/`, addressed with `files.write` /
+`<storage root>/Plugins/<plugin id>/` (Figura uses `Plugins/Figura/` while
+retaining its installed `scientific-illustration` id), addressed with `files.write` /
 `files.read` and relative paths only.
 
 - **Containment is enforced in the main process.** Dedicated plugin-file IPC
@@ -813,9 +814,10 @@ Agent-facing tools live in the provider-neutral contract at
 3. **Expose to Codex** in
    [`instructions.js`](../../src/main/agent/mcp-contract/instructions.js): add
    `'my_tool'` to `HIKARI_MCP_TOOL_NAMES` (this becomes `enabled_tools` in the
-   Codex `config.toml` written by `codex-agent/runtime-files.js`) and add a
-   `` `${toolName('my_tool')}`: … `` bullet to
-   `buildHikariAgentMcpInstructionBodyLines()`.
+   Codex `config.toml` written by `codex-agent/runtime-files.js`), add its
+   route to `HIKARI_MCP_TOOL_ROUTES` in `tool-routing.js`, and put its usage
+   rules in the tool's own `description`. Codex reads the description when it
+   looks the tool up; the MCP server `instructions` are not read as rules.
 4. **Keep [mcp-contract.md](../agent/mcp-contract/mcp-contract.md) and
    `mcp-contract.json` in sync.** Tests compare several snapshot entries with
    the live definitions.
@@ -850,10 +852,11 @@ into `OFFICIAL_MCP_SKILLS`:
 2. If the skill depends on MCP tools, list them under its id in
    `OFFICIAL_MCP_SKILL_TOOL_REQUIREMENTS`. When any of them is switched off in
    **Settings > Tool access**, the skill is withdrawn from the workspace.
-3. That's it — at agent startup and on every storage-root save the app releases
-   each enabled official skill into
-   `<workspace>/.agents/skills/<directory>/SKILL.md` for the storage root and
-   each project folder (`releaseOfficialMcpSkillsForWorkspace`). Release is
+3. That's it — before each agent request the app releases each enabled
+   official skill into `<Codex runtime home>/skills/<directory>/SKILL.md`
+   (`ensureCodexCliSkillFolder`). Codex reads that folder for every run, with
+   or without a project; copies older builds left in a workspace's
+   `.agents/skills` are removed so Codex does not list them twice. Release is
    idempotent: a file carrying the marker is Hikari's to update or withdraw, and
    a file *without* it (hand-edited by the user) is preserved, never
    overwritten.

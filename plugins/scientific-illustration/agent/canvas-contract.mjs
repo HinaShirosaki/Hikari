@@ -1,12 +1,18 @@
 // This request contract belongs to the portable plugin, not the host.
 import { COMPLEXITY_LEVELS } from '../complexity.mjs';
+import { IMAGE_STYLE_IDS, MAX_IMAGE_STYLE_PROMPT, MAX_IMAGE_STYLE_LINE } from '../image-style.mjs';
 const objectProperties = {
   id: { type: 'string', maxLength: 100, description: 'Logical object ID, unchanged by rendering. DOM and SVG fragment IDs are namespaced separately.' }, name: { type: 'string', maxLength: 200, description: 'Layer name shown to the user; defaults to id.' },
-  type: { type: 'string', enum: ['vector', 'raster', 'text'] }, canvas: { type: 'string', enum: ['main'] },
+  type: { type: 'string', enum: ['vector', 'raster', 'text', 'plot'] }, canvas: { type: 'string', enum: ['main'] },
   x: { type: 'number', description: 'Left of the unrotated object box, in canvas units.' }, y: { type: 'number', description: 'Top of the unrotated object box, in canvas units.' },
   width: { type: 'number', minimum: 1, maximum: 8000, description: 'Object viewport width in canvas units. SVG aspect ratio may leave space inside this box. PNG import trims fully transparent borders, preserves x/y and fits the cropped aspect ratio at this width, adjusting size only at object limits. Read the returned raster_imports before positioning labels.' }, height: { type: 'number', minimum: 1, maximum: 8000, description: 'Object viewport height in canvas units.' },
   rotation: { type: 'number', minimum: -360, maximum: 360, description: 'Clockwise degrees around the center of the object box; x/y remain its unrotated top-left.' }, opacity: { type: 'number', minimum: 0, maximum: 1 }, visible: { type: 'boolean' },
   svg: { type: 'string', maxLength: 300000, description: 'Complete SVG with xmlns and viewBox. Its preserveAspectRatio is honored (default xMidYMid meet); use none only for intentional stretching. A nonzero viewBox origin is supported. currentColor defaults to black, independent of theme; SVG color can override it. Presentation attributes only. Supported: g, defs, path, rect, circle, ellipse, line, polyline, polygon, clipPath, mask and gradients. No text, image, style, script, use or external references. One independently editable component per object.' },
+  plotly: { type: 'object', additionalProperties: false, required: ['data'], description: 'For type:plot: canonical Plotly.js traces and layout. Omit svg; Hikari renders the vendored library locally and saves the generated SVG. Read returns the plot data/layout for edits. Replace plotly as a complete figure to update data or chart labels; moving, grouping, resizing, copying, assets and exports preserve the plot.', properties: {
+    data: { type: 'array', minItems: 1, maxItems: 100, items: { type: 'object' }, description: 'Actual numeric/categorical observations or explicitly calculated values. Supports scatter, bar, box, violin, histogram, heatmap, contour, pie and other offline SVG traces. Histograms, boxes and violins can process raw observations.' },
+    layout: { type: 'object', description: 'Plotly axes, units, ticks, legend, titles, annotations, colors and margins. The layer box controls width and height. Chart-owned labels belong here; figure labels remain text layers. No remote images or geographic map services.' },
+    source: { type: 'string', maxLength: 2000, description: 'Data provenance and processing: source values, units, normalization, grouping, error-bar definition and any assumptions. Do not invent measured data.' }
+  } },
   fill: { type: 'string', description: 'Optional vector-wide fill override: hex or none.' }, stroke: { type: 'string' }, strokeWidth: { type: 'number' },
   dataUrl: { type: 'string', maxLength: 7000000, description: 'Embedded PNG/JPEG/WebP. Prefer operation.raster_asset with plugin_canvas assets to import a file without transmitting base64.' },
   textFree: { type: 'boolean', description: 'Required true for raster, after checking the image has no baked-in text.' },
@@ -41,7 +47,7 @@ export const CANVAS_TOOL_CONTRACT = Object.freeze({
       expected_revision: { type: 'string', maxLength: 100 }, request_id: { type: 'string', maxLength: 100 },
       operations: { type: 'array', minItems: 1, maxItems: 200, items: {
         type: 'object', additionalProperties: false, required: ['op'], properties: {
-          op: { type: 'string', enum: ['upsert', 'update', 'delete', 'transfer', 'canvas', 'order', 'title', 'complexity', 'image_generation', 'group', 'ungroup', 'transform', 'rotate', 'insert_asset'] },
+          op: { type: 'string', enum: ['upsert', 'update', 'delete', 'transfer', 'canvas', 'order', 'title', 'complexity', 'image_generation', 'image_generation_style', 'image_style_line', 'group', 'ungroup', 'transform', 'rotate', 'insert_asset'] },
           asset_id: { type: 'string', maxLength: 100, description: 'insert_asset: saved reusable asset ID. Creates independent editable components with fresh IDs; multiple components become one named group. apply returns inserted_assets with ids, group_id and bounds. Deleting the saved asset never changes placed copies.' },
           x: { type: 'number', description: 'insert_asset: left of the rotated selection bounds, in destination canvas units. Defaults to centering.' },
           y: { type: 'number', description: 'insert_asset: top of the rotated selection bounds, in destination canvas units. Defaults to centering.' },
@@ -58,6 +64,10 @@ export const CANVAS_TOOL_CONTRACT = Object.freeze({
           title: { type: 'string', maxLength: 200 },
           complexity: { type: 'string', enum: COMPLEXITY_LEVELS, description: 'For the complexity operation: saved figure detail level. Change only when the user requests it. Read returns matching drawing instructions.' },
           imageGenerationPercent: { type: ['integer', 'null'], minimum: 0, maximum: 100, description: 'image_generation operation: saved target share of eligible illustrative artwork area. UI presets: 0, 25, 50, 75, 100; choose a preset unless the user specifies a custom whole percentage. null restores Automatic SVG-first choice. Excludes boxes, arrows, connectors, charts, exact geometry and separate text labels. A preference, not an asset/call quota. Change only when the user requests it; read returns matching preset instructions. Existing custom targets remain supported.' },
+          imageGenerationStyle: { type: 'object', additionalProperties: false, required: ['preset'], description: 'image_generation_style operation: saved art direction for new or requested image_gen artwork. Does not enable generation or restyle existing components. Change only when the user requests it.', properties: {
+            preset: { type: 'string', enum: IMAGE_STYLE_IDS }, prompt: { type: 'string', maxLength: MAX_IMAGE_STYLE_PROMPT, description: 'Optional user style notes: palette, lighting, materials or other visual direction.' }
+          } },
+          imageStyleLine: { type: 'string', maxLength: MAX_IMAGE_STYLE_LINE, description: 'image_style_line operation: the figure\'s concrete style line (medium, hex palette, light direction, outline weight, shading, viewpoint), pasted verbatim into every image_gen prompt. Changing the image style clears it.' },
           raster_asset: { type: 'string', maxLength: 2400, description: 'ID of an image supplied in plugin_canvas assets. upsert/update only.' }
         }
       } }

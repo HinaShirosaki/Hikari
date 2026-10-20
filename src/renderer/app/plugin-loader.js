@@ -194,6 +194,18 @@ function installServiceFrame({ documentObject, host, plugin, services, bridge, a
   });
 }
 
+// A visible plugin frame. Folder frames remain opaque while the server starts;
+// startServedFrame grants their own origin only alongside a validated loopback URL.
+function createPluginFrame(documentObject, plugin, isRemote = false) {
+  const frame = documentObject.createElement('iframe');
+  frame.className = 'plugin-frame';
+  const summary = describePlugin(plugin, { isRemote });
+  frame.title = summary;
+  frame.setAttribute('aria-label', summary);
+  frame.setAttribute('sandbox', isRemote ? REMOTE_SANDBOX : LOCAL_SANDBOX);
+  return frame;
+}
+
 // Mounts a tool plugin: one more tile in the Tools rail and a panel holding its
 // frame, laid out like the built-in tools (host head, then the tool body). It
 // adds no view section and no navigation entry; the Tools view manager binds
@@ -239,12 +251,7 @@ function installToolFrame({ documentObject, plugin, bridge, api }) {
     note.textContent = plugin.description;
     head.append(note);
   }
-  const frame = documentObject.createElement('iframe');
-  frame.className = 'plugin-frame';
-  const summary = describePlugin(plugin, { isRemote: false });
-  frame.title = summary;
-  frame.setAttribute('aria-label', summary);
-  frame.setAttribute('sandbox', LOCAL_SANDBOX);
+  const frame = createPluginFrame(documentObject, plugin);
   panel.append(head, frame);
   content.append(panel);
 
@@ -298,18 +305,9 @@ export function installPlugins({ state, documentObject, appRegistry, bridge = nu
       // even classic sibling scripts in Electron.
       const isRemote = isSameOriginSafeUrl(plugin.embedUrl);
 
-      const frame = documentObject.createElement('iframe');
-      frame.className = 'plugin-frame';
+      const frame = createPluginFrame(documentObject, plugin, isRemote);
       if (isRemote) {
         frame.src = plugin.embedUrl;
-      }
-      const summary = describePlugin(plugin, { isRemote });
-      frame.title = summary;
-      frame.setAttribute('aria-label', summary);
-      // Folder frames remain opaque while the server starts. startServedFrame
-      // grants their own origin only alongside a validated loopback URL.
-      frame.setAttribute('sandbox', isRemote ? REMOTE_SANDBOX : LOCAL_SANDBOX);
-      if (isRemote) {
         frame.setAttribute('referrerpolicy', 'no-referrer');
       }
 

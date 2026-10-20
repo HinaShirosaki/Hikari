@@ -62,5 +62,5 @@ export function buildPeptideInsertDna(partKey, referenceStrand = 1, orientation 
   const translated = reverseTranslateProteinSequence(part.sequence);
   if (!translated?.ok || !translated.dna) return null;
   const strand = (Number(referenceStrand) === -1 ? -1 : 1) * (orientation === 'reverse' ? -1 : 1);
-  return { part, type, strand, sequence: strand === -1 ? reverseComplementDna(translated.dna) : translated.dna };
+  return { part, strand, sequence: strand === -1 ? reverseComplementDna(translated.dna) : translated.dna };
 }

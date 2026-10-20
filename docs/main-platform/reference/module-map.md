@@ -45,7 +45,7 @@ Root-folder layout, per-record folders, hydration, storage-root import, and the 
 | `storage/storage-sql-read.js` / `storage-sql-write.js` / `storage-sql-schema.js` | Support | chemicals SQLite index |
 | `storage/chemical-index-guard.js` | Support | moves an unreadable chemicals index aside instead of overwriting it |
 | `storage/sequence-library-summary.js` | Support | summarizes the Sequence Viewer library during import |
-| `storage/storage-utils.js` | Support | shared helpers (`cleanText`, `sanitizeFolderName`, JSON reads, `keepLatestById`) |
+| `storage/storage-utils.js` | Support | shared helpers (`cleanText`, `sanitizeFolderName` re-exported from `src/shared/storage-layout.mjs`, JSON reads, `keepLatestById`) |
 
 ## Feature-owned services
 

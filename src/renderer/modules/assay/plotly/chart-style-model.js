@@ -24,7 +24,6 @@ const TICK_FORMATS = Object.freeze(['auto', 'fixed1', 'fixed2', 'sci', 'si', 'po
 const MARKER_FILLS = Object.freeze(['filled', 'open']);
 const BAR_MODES = Object.freeze(['group', 'stack']);
 const REF_AXES = Object.freeze(['y', 'x']);
-const CHART_TYPES = Object.freeze(['auto', 'line', 'bar']);
 
 export const CHART_FONT_FAMILY = 'Arial, sans-serif';
 export const TEXT_TARGETS = Object.freeze(['title', 'xTitle', 'yTitle', 'xTicks', 'yTicks', 'legend', 'barLabels']);
@@ -79,7 +78,6 @@ export function createDefaultChartStyle() {
     errorColor: null,
     titlePos: null,
     titleOffset: null,
-    chartType: 'auto',
     xColumn: 'auto',
     yColumn: 'auto',
     seriesColumn: 'auto',
@@ -236,7 +234,6 @@ export function normalizeChartStyle(input) {
     errorColor: sanitizeColor(input.errorColor, null),
     titlePos: clampOptional(input.titlePos, 0, 1),
     titleOffset: clampOptional(input.titleOffset, 0, 200),
-    chartType: sanitizeEnum(input.chartType, CHART_TYPES, base.chartType),
     xColumn: typeof input.xColumn === 'string' ? input.xColumn : base.xColumn,
     yColumn: typeof input.yColumn === 'string' ? input.yColumn : base.yColumn,
     seriesColumn: typeof input.seriesColumn === 'string' ? input.seriesColumn : base.seriesColumn,
@@ -343,7 +340,6 @@ function normalizeReplicateStyle(input) {
 }
 
 export const CHART_STYLE_OPTIONS = Object.freeze({
-  chartTypes: CHART_TYPES,
   pointShapes: POINT_SHAPES,
   lineStyles: LINE_STYLES,
   frameStyles: FRAME_STYLES,

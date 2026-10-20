@@ -35,3 +35,6 @@ jobs:
         run: node -e "require('node:child_process').execFileSync(process.execPath, ['tests/hikari-mcp-launch-selfcheck.js', '.', require('electron'), process.cwd()], {stdio:'inherit'})"
       - name: Workspace onboarding and recovery
         run: node node_modules/electron/cli.js tests/storage-setup-electron.cjs
+
+  installers:
+    uses: ./.github/workflows/installer-smoke.yml

@@ -84,8 +84,7 @@ module.exports = function registerMcpStartup(context = {}) {
       ensureCodexCliRuntimeHome: async () => {
         if (fail) throw new Error('EACCES: config.toml');
         return path.join(workspace, 'Config', 'codex-cli-home');
-      },
-      releaseOfficialMcpSkillsForWorkspace: async () => []
+      }
     });
     try {
       await assert.rejects(initializer.initialize(), /EACCES/);

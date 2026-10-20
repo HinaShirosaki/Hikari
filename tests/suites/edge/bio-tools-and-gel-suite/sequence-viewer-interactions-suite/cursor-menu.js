@@ -107,7 +107,7 @@ module.exports = function registerCursorMenuTests(context = {}) {
     viewer.loadFromExternal({ name: 'cursor_plasmid', topology: 'circular', sequence: 'AAAACCCCGGGG', features: [] });
     trigger(host, 'contextmenu', { target, clientX: 52, clientY: 84 });
     assert.equal(menu.hidden, false);
-    assert.match(menu.innerHTML, /Before base 5/);
+    assert.doesNotMatch(menu.innerHTML, /(?:Before|After) base/);
     assert.match(menu.innerHTML, /Set Sequence Start Here/);
     clickAction('set-origin');
     await flushAsync();

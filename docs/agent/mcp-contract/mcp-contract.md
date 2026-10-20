@@ -2,6 +2,26 @@
 
 This document exports the provider-neutral MCP-facing contract for Hikari agents. The live reusable implementation is in `src/main/agent/mcp-contract/`. Codex-specific behavior, such as AGENTS.md injection and Codex CLI config writing, stays in `src/main/agent/codex-agent/`.
 
+## Routing conversational requests
+
+`tool-routing.js` supplies an independent intent-to-workflow route for every one of the 36 MCP tools on the first Codex chat turn of a session (including recovered sessions). Resumed turns repeat the general rules and the names of the tools available that turn, not the full routes, since the session already holds them. Each route describes the requested outcome with conversational examples and key operational limits. Turn guidance follows enabled tools and workflow policy. A route remains available when another tool is disabled. The conditional `notebook_suggest` tool is documented separately in the JSON export under `mcp.conditional_tools` and appears in live routing only for authorized background suggestion runs.
+
+Routing remains a model decision using the current request, conversation, and view context; there is no keyword dispatcher or automatic mutation after a prose answer. Quoted examples and hypothetical discussion do not request app actions. Current context and sufficient prior results avoid duplicate lookups/submissions. Route coverage and initialization/listing/turn consistency are checked against the live registry.
+
+Practical lab how-to and preparation questions such as "How to make 1L 10x PBS" call `protocol_generation` with agent-authored JSON and `save: true` to queue a review candidate. Product sourcing and stock questions such as "Where can I buy 6–8 kDa MWCO dialysis tubing in stock?" call `purchase_recommendation`; native search can then verify missing vendor details. Short follow-ups retain the prior objective and constraints. Conceptual questions and explicit text-only requests may be answered directly; unsaved structured protocol previews use `save: false`. Existing view scope, background restrictions, disabled tools, and user approval requirements still apply.
+
+The remaining routes distinguish local chemicals from personal samples and scratch containers; notebook lists from page retrieval, new planned pages and active-page appends; external paper research from specific-paper reading, downloads, local paper/experiment searches, project summaries and SQL aggregation; calculation tables from native plot styling, custom graphs, saved images, interactive HTML and plugin canvases; durable memory from workspace files; and all nine sequence discovery, inspection, editing, assembly and primer tools. Clarification uses `ask_user` only for a blocking choice and ends the turn for the user's answer.
+
+## Server instructions
+
+The MCP `instructions` field (`buildHikariAgentMcpInstructions` in `instructions.js`) is two lines of server-wide essentials. Codex CLI 0.163 does not put it in the model's system or developer context. It prepends the text to the description of every tool from this server in its code-mode tool list, so the model sees it only when it looks a tool up, and treats it as tool data. Keep routes and rules out of it: a long field is repeated on every lookup and makes all Hikari tools share the same keywords.
+
+Rules live where Codex reads them as instructions:
+
+- Cross-tool rules (evidence and citations, saved Preferred Journals, workspace files, MEMORY.md) are in the AGENTS block, `codex-agent/agent-instructions.js`.
+- Multi-step workflows are in the official skills, for example protocol placeholders in `hikari-protocol-generation` and the protocol-then-notebook handoff in `hikari-notebook-draft`.
+- Per-tool rules are in each tool's description: notebook enrichment and append formatting in `notebook_append`, the delegation limit in `literature_search`, the download policy in `paper_download`, Assay TSV intake in `assay_table`, and citation columns in `paper_experiments_sql`.
+
 ## Background experiment suggestions
 
 `notebook_suggest` is a conditional tool available only to Hikari background experiment suggestion runs. It prepares zero to five Suggested pages with the notebook draft contract; paper downloads are blocked. See [Notebook suggestions](notebook-suggestions.md) for triggers, state transitions and access rules.
@@ -61,6 +81,7 @@ enabled_tools = [
   "inventory_lookup",
   "chemical_lookup",
   "notebook_lookup",
+  "notebook_list",
   "protocol_lookup",
   "protocol_generation",
   "notebook_draft",
@@ -308,7 +329,7 @@ Read-only title enumeration, independent of the lookup candidate limit. `{}` lis
 
 Each item contains its `id`, `title`, notebook type/state, project/protocol identity, all three timestamps, and `ui_target`, without page content, result text, tables, file paths, or images. Results sort by the selected date newest first, with entry ID as the tie-breaker and undated pages last. `updated_at` falls back to creation time when the record has no update timestamp.
 
-`limit` defaults to 100 (maximum 200). `pagination` contains `total`, `offset`, `limit`, `has_more`, and `next_cursor`. Repeat with the same filters and the returned cursor until `next_cursor` is null. Cursor consistency covers returned metadata and storage access; changed records or filters return `stale_cursor`, requiring a restart. Totals refer to available matching pages; a complete inventory also requires `access.complete: true`. Unreadable storage or a bounded live index without persisted storage yields incomplete coverage. To read a listed page, call `notebook_lookup` with its ID as `query` and `detail: "full"`.
+`limit` defaults to 100 (maximum 200). `pagination` contains `total`, `offset`, `limit`, `has_more`, and `next_offset`. Repeat with the same filters and `offset: next_offset` until `next_offset` is null. Totals refer to available matching pages; a complete inventory also requires `access.complete: true`. Unreadable storage or a bounded live index without persisted storage yields incomplete coverage. To read a listed page, call `notebook_lookup` with its ID as `query` and `detail: "full"`.
 
 ### `literature_search`
 

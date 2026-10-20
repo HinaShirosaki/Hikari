@@ -1,5 +1,5 @@
 import { buildLanesFromManualSegmentation } from '../analysis/analysis-core.js';
-import { createLaneDetector } from '../analysis/auto-lanes.js';
+import { detectLanes } from '../analysis/auto-lanes.js';
 import { getViewerToolLabel, renderViewerToolbar } from './manual-ui.js';
 import { createManualCanvasInteraction } from './canvas-interaction.js';
 import { createManualStepNavigation } from './step-navigation.js';
@@ -20,7 +20,6 @@ import {
 
 
 export function createManualWorkflowController({ runtime, elements, deps }) {
-  const detectLanes = createLaneDetector();
   const ladderMwEditor = createLadderMwEditor({
     runtime,
     elements,
@@ -29,7 +28,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       renderOverrideStatus();
       deps.renderCanvas();
       deps.onRunAnalysis();
-      deps.setStatus(`Set ladder calibration point: row=${rowY}, MW=${mw} kDa.`);
+      deps.setStatus('');
     }
   });
   function clearCanvasInteractionState({ clearTool = true } = {}) {
@@ -70,21 +69,21 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     const label = getViewerToolLabel(runtime.selectedViewerTool);
     if (label) {
       if (runtime.selectedViewerTool === 'dividers') {
-        deps.setStatus('Set lane dividers selected. Click every lane boundary; the outermost lines define the gel edges.');
+        deps.setStatus('Click each lane boundary; the outermost dividers mark the gel edges.');
         return;
       }
       if (runtime.selectedViewerTool === 'lane-vertices') {
-        deps.setStatus('Adjust lane vertices selected. Drag one of the four corner handles for a lane.');
+        deps.setStatus('Drag a lane’s corner handles to correct tilt.');
         return;
       }
       if (runtime.selectedViewerTool === 'ladder-mw') {
-        deps.setStatus('Set MW on. Click a band in the ladder lane to enter its MW; drag a label to move it.');
+        deps.setStatus('Click a band in the ladder lane to enter its MW; drag a label to move it.');
         return;
       }
-      deps.setStatus(`${label} selected. Click the gel image to apply it.`);
+      deps.setStatus(`${label}: click the gel.`);
       return;
     }
-    deps.setStatus('Viewer tool cleared. Gel tools will follow the current selection.');
+    deps.setStatus('');
   }
 
   const {
@@ -167,7 +166,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     clearCanvasTool('dividers');
     renderOverrideStatus();
     deps.renderCanvas();
-    deps.setStatus('Lane dividers finished. Click a lane to set the ladder lane.');
+    deps.setStatus('Click the ladder lane on the gel.');
     return true;
   }
 
@@ -266,8 +265,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
 
   const {
     onManualNextStep,
-    onManualPrevStep,
-    onManualResetSteps
+    onManualPrevStep
   } = createManualStepNavigation({
     runtime,
     deps,
@@ -275,7 +273,6 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     finishLaneDividers: (...args) => finishLaneDividers(...args),
     getLaneBandProgress: (...args) => getLaneBandProgress(...args),
     getManualStep: (...args) => getManualStep(...args),
-    renderManualProgress: (...args) => renderManualProgress(...args),
     renderOverrideStatus: (...args) => renderOverrideStatus(...args),
     updateLaneSegmentation: (...args) => updateLaneSegmentation(...args)
   });
@@ -378,7 +375,6 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       gray: runtime.currentImage.gray,
       width: runtime.currentImage.width,
       height: runtime.currentImage.height,
-      imageRevision: runtime.imageRevision,
       yStart: Number.isFinite(segmentation.bandTop) ? segmentation.bandTop : null,
       yEnd: Number.isFinite(segmentation.bandBottom) ? segmentation.bandBottom : null,
       gelLeft: segmentation.gelLeft,
@@ -415,7 +411,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       ? ` Lane(s) ${inferredLaneNumbers} inferred as blank from spacing; verify their positions.` : '';
     const countNote = result.countMismatch
       ? ` Expected ${expectedLaneCount}; found ${peakCount}. Add missing boundaries or correct the expected count.` : '';
-    deps.setStatus(`Auto-detected ${peakCount} lane(s).${inferenceNote}${countNote} Review the boundaries, add any missing ones, then click Lane dividers again to finish.`);
+    deps.setStatus(`Auto-detected ${peakCount} lane(s).${inferenceNote}${countNote} Check the dividers, then click Finish dividers.`);
   }
 
   function onResetManualOverrides() {
@@ -424,12 +420,9 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     clearCanvasInteractionState();
     runtime.currentReport = null;
     renderOverrideStatus();
-    deps.setStatus('Manual overrides cleared.');
-    if (runtime.currentImage) {
-      deps.onRunAnalysis();
-    } else {
-      deps.renderCanvas();
-    }
+    // Analysis needs lane dividers, so there is nothing to re-run until they are set again.
+    deps.renderCanvas();
+    deps.setStatus('');
   }
 
   return {
@@ -444,7 +437,6 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     onLaneBandModeToggle,
     onManualNextStep,
     onManualPrevStep,
-    onManualResetSteps,
     onResetManualOverrides,
     onViewerToolSelected,
     renderManualProgress,

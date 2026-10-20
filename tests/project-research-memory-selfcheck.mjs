@@ -749,28 +749,16 @@ try {
   assert.equal(sanitizeFolderName('.hikari', 'Untitled_Project'), '.hikari', 'a leading dot is still a usable name');
   assert.equal(sanitizeFolderName('../../evil', 'Untitled_Project'), '.._.._evil');
 
-  // The notebook's project dialog cannot import the helper above, so it carries
-  // its own copy to decide both the folder it asks main to create and whether a
-  // new name would collide. Drift means the dialog creates one folder while
-  // storage writes MEMORY.md into another.
-  const controllerSource = await fs.readFile(
-    new URL('../src/renderer/modules/biology-notebook/project/project-controller.js', import.meta.url),
-    'utf8'
-  );
-  const rendererSanitize = new Function(`${
-    controllerSource.slice(
-      controllerSource.indexOf('function sanitizeFolderName'),
-      controllerSource.indexOf('function projectFolderKey')
-    )
-  } return sanitizeFolderName;`)();
-  for (const candidate of [
-    'Atlas', 'Atlas ', 'My Project', 'My/Project', 'My_Project', 'My  Project',
-    '..', '.', '...', '.hikari', '../../evil', 'a'.repeat(400), '', '   '
-  ]) {
+  // Renderer and main name storage folders through src/shared/storage-layout.mjs.
+  // These are the inputs their old private copies disagreed on: the renderer
+  // kept 200-character names and "..", while storage cut them to 180 or fell back.
+  const { buildNotebookFolderPath } = await import('../src/renderer/lib/storage-paths.js');
+  const { buildNotebookPageFolderPath } = require('../src/main/storage/record-markdown/record-paths.js');
+  for (const projectName of ['Atlas', 'My  Project', 'a'.repeat(200), '..', '']) {
     assert.equal(
-      rendererSanitize(candidate),
-      sanitizeFolderName(candidate, ''),
-      `renderer and storage must agree on the folder for ${JSON.stringify(candidate)}`
+      path.resolve(buildNotebookFolderPath({ storagePath: tempDir, projectName, protocolName: 'PCR', entryId: 'e1' })),
+      buildNotebookPageFolderPath(tempDir, { projectName, protocolName: 'PCR', id: 'e1' }),
+      `renderer and storage must agree on the notebook folder for ${JSON.stringify(projectName)}`
     );
   }
 

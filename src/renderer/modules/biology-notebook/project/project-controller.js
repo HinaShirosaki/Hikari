@@ -1,4 +1,6 @@
 import { showTransientNotice } from '../../../lib/notify.js';
+import { positionContextMenu as placeContextMenu } from '../../../lib/context-menu.js';
+import { projectFolderPath, sanitizeFolderName } from '../../../../shared/storage-layout.mjs';
 
 export function createNotebookProjectController({
   state,
@@ -42,9 +44,7 @@ export function createNotebookProjectController({
     if (!contextMenuEl) {
       return;
     }
-    contextMenuEl.style.left = `${Math.max(0, Number(clientX) || 0)}px`;
-    contextMenuEl.style.top = `${Math.max(0, Number(clientY) || 0)}px`;
-    contextMenuEl.hidden = false;
+    placeContextMenu(contextMenuEl, clientX, clientY, windowRef);
   }
 
   function setDialogError(message = '') {
@@ -89,25 +89,11 @@ export function createNotebookProjectController({
     returnFocusEl = null;
   }
 
-  // Mirrors sanitizeFolderName in src/main/storage/storage-utils.js, which the
-  // renderer cannot import. project-research-memory-selfcheck asserts the two
-  // agree: when they drift, this asks main to create one folder while storage
-  // writes MEMORY.md to another.
-  function sanitizeFolderName(value) {
-    const cleaned = String(value || '')
-      .trim()
-      .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
-      .replace(/\s+/g, '_')
-      .replace(/^_+|_+$/g, '')
-      .slice(0, 180);
-    return !cleaned || /^\.+$/.test(cleaned) ? '' : cleaned;
-  }
-
   // Two names that sanitize alike share one project folder, and the loser's
   // notebooks and papers drop out of project memory entirely. Comparing raw
   // names lets "Atlas" and "Atlas " both through.
   function projectFolderKey(value) {
-    return sanitizeFolderName(value).toLowerCase();
+    return sanitizeFolderName(value, '').toLowerCase();
   }
 
   async function ensureProjectDirectory(projectName) {
@@ -116,8 +102,7 @@ export function createNotebookProjectController({
       return;
     }
 
-    const safeProjectName = sanitizeFolderName(projectName) || 'Untitled_Project';
-    const projectFolder = `${rootPath}/Project/${safeProjectName}`;
+    const projectFolder = `${rootPath}/${projectFolderPath(projectName)}`;
     try {
       const result = await windowRef.hikariApi.ensureStorageDirectory(projectFolder);
       if (result?.ok !== true) {

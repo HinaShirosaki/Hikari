@@ -19,6 +19,8 @@ function safeHasUnsavedChanges(moduleApi) {
 export function createUnsavedChangesService({
   moduleRegistry,
   api,
+  flushPendingSaves = () => {},
+  hasPendingSaves = () => false,
   // Sources that are not modules in this registry — today, plugin frames, which
   // report their dirty state over the bridge because the host cannot reach into
   // them. Same { key, label, moduleApi } shape as EDITOR_SOURCES.
@@ -27,6 +29,7 @@ export function createUnsavedChangesService({
   windowObject = globalThis?.window || globalThis
 } = {}) {
   const overlay = documentObject?.getElementById?.('unsaved-changes-overlay') || null;
+  const title = documentObject?.getElementById?.('unsaved-changes-title') || null;
   const list = documentObject?.getElementById?.('unsaved-changes-list') || null;
   const description = documentObject?.getElementById?.('unsaved-changes-description') || null;
   const status = documentObject?.getElementById?.('unsaved-changes-status') || null;
@@ -38,6 +41,7 @@ export function createUnsavedChangesService({
   const selectedKeys = new Set();
   let allowUnload = false;
   let saveInProgress = false;
+  let pendingAction = 'quit';
 
   function getUnsavedSources() {
     let external = [];
@@ -65,11 +69,12 @@ export function createUnsavedChangesService({
   }
 
   function syncActions() {
+    const actionLabel = pendingAction === 'reload' ? 'Reload' : 'Quit';
     if (saveButton) {
-      saveButton.disabled = saveInProgress || selectedKeys.size === 0;
+      saveButton.disabled = saveInProgress || (checkboxes.length > 0 && selectedKeys.size === 0);
       saveButton.textContent = saveInProgress
         ? 'Saving...'
-        : (selectedKeys.size > 1 ? `Save ${selectedKeys.size} & Quit` : 'Save & Quit');
+        : (selectedKeys.size > 1 ? `Save ${selectedKeys.size} & ${actionLabel}` : `Save & ${actionLabel}`);
     }
     if (discardButton) {
       discardButton.disabled = saveInProgress;
@@ -122,14 +127,20 @@ export function createUnsavedChangesService({
     // A single dirty editor needs no chooser: unchecking the only box would
     // just be "Discard & Quit", which is already a button.
     const selectable = sources.length > 1;
+    const actionLabel = pendingAction === 'reload' ? 'Reload' : 'Quit';
+    if (title) {
+      title.textContent = pendingAction === 'reload'
+        ? 'Save changes before reloading?'
+        : 'Save changes before quitting?';
+    }
     if (description) {
       description.textContent = selectable
-        ? 'Pick what to save. Anything left unchecked is discarded on quit.'
-        : 'The following work has not been saved.';
+        ? `Pick what to save. Anything left unchecked is discarded on ${pendingAction}.`
+        : (sources.length ? 'The following work has not been saved.' : 'Changes still need to be written to the storage folder.');
     }
     if (discardButton) {
       // "Discard" has to own up to dropping the checked rows too.
-      discardButton.textContent = selectable ? 'Discard All & Quit' : 'Discard & Quit';
+      discardButton.textContent = selectable ? `Discard All & ${actionLabel}` : `Discard & ${actionLabel}`;
     }
     list.replaceChildren(...sources.map((source) => {
       const item = documentObject.createElement('li');
@@ -164,10 +175,21 @@ export function createUnsavedChangesService({
 
   function respondToClose(action) {
     allowUnload = action === 'quit';
+    if (pendingAction === 'reload') {
+      pendingAction = 'quit';
+      if (allowUnload) windowObject.location.reload();
+      return;
+    }
     api?.respondToAppClose?.(action);
   }
 
   function handleCloseRequested() {
+    pendingAction = 'quit';
+    if (saveInProgress) {
+      syncActions();
+      api?.respondToAppClose?.('pending');
+      return;
+    }
     const sources = getUnsavedSources();
     if (!sources.length) {
       respondToClose('quit');
@@ -183,18 +205,44 @@ export function createUnsavedChangesService({
     api?.respondToAppClose?.('pending');
   }
 
+  // location.reload() alone is silently vetoed by our beforeunload listener
+  // when an editor is dirty. Resolve the same save/discard choice first.
+  async function requestReload() {
+    if (saveInProgress || overlay?.hidden === false) return;
+    pendingAction = 'reload';
+    const sources = getUnsavedSources();
+    if (!sources.length) {
+      await finishClose();
+    } else if (!showDialog(sources)) {
+      respondToClose('cancel');
+      showTransientNotice('Could not check unsaved changes before reloading.', { type: 'error' });
+    }
+  }
+
+  async function finishClose() {
+    if (overlay?.hidden !== false) showDialog([]);
+    setBusy(true);
+    setStatus('Saving to the storage folder...');
+    try {
+      await flushPendingSaves();
+    } catch (error) {
+      if (overlay?.hidden !== false) showDialog([]);
+      const message = `Could not save to the storage folder: ${String(error?.message || error || 'Unknown error')}`;
+      setStatus(message, true);
+      setBusy(false);
+      if (!overlay) showTransientNotice(message, { type: 'error' });
+      return;
+    }
+    hideDialog();
+    respondToClose('quit');
+  }
+
   async function saveAndQuit() {
     if (saveInProgress) {
       return;
     }
     // Unchecked editors are left dirty on purpose: quitting drops them.
     const sources = getUnsavedSources().filter((source) => selectedKeys.has(source.key));
-    if (!sources.length) {
-      hideDialog();
-      respondToClose('quit');
-      return;
-    }
-
     setBusy(true);
     for (const source of sources) {
       setStatus(`Saving ${source.label}...`);
@@ -212,16 +260,14 @@ export function createUnsavedChangesService({
       }
     }
 
-    hideDialog();
-    respondToClose('quit');
+    await finishClose();
   }
 
-  function discardAndQuit() {
+  async function discardAndQuit() {
     if (saveInProgress) {
       return;
     }
-    hideDialog();
-    respondToClose('quit');
+    await finishClose();
   }
 
   function cancelClose() {
@@ -234,7 +280,7 @@ export function createUnsavedChangesService({
 
   closeButton?.addEventListener('click', cancelClose);
   cancelButton?.addEventListener('click', cancelClose);
-  discardButton?.addEventListener('click', discardAndQuit);
+  discardButton?.addEventListener('click', () => { void discardAndQuit(); });
   saveButton?.addEventListener('click', () => {
     void saveAndQuit();
   });
@@ -249,8 +295,10 @@ export function createUnsavedChangesService({
       cancelClose();
     }
   });
+  // Every quit answers the close handshake first, so a veto here only stops a
+  // direct reload (macOS View > Reload) that would race a queued storage save.
   windowObject?.addEventListener?.('beforeunload', (event) => {
-    if (allowUnload || !getUnsavedSources().length) {
+    if (allowUnload || (!saveInProgress && !hasPendingSaves() && !getUnsavedSources().length)) {
       return;
     }
     event.preventDefault();
@@ -262,6 +310,7 @@ export function createUnsavedChangesService({
   return {
     getUnsavedSources,
     handleCloseRequested,
+    requestReload,
     saveAndQuit
   };
 }

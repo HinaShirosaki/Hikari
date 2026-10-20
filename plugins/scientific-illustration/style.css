@@ -94,8 +94,61 @@ button:disabled:hover { background: transparent; }
 .popover-panel small { color: var(--theme-text-muted); font-size: 0.6875rem; }
 .alignment-panel > button { justify-content: flex-start; }
 .alignment-panel hr { border: 0; border-top: 1px solid var(--theme-border-soft); margin: 5px 3px; }
+/* Mirror the shell's Soft menu in ui/css/overrides/universal-menus.css while
+   keeping this installable plugin independent of application-source imports. */
+.canvas-context-menu {
+  --hikari-menu-border: var(--theme-border-soft);
+  --hikari-menu-separator: color-mix(in srgb, var(--theme-border-soft) 88%, transparent);
+  --hikari-menu-hover: color-mix(in srgb, var(--theme-surface-subtle) 74%, var(--theme-surface-elevated) 26%);
+  --hikari-menu-pressed: color-mix(in srgb, var(--theme-surface-subtle) 88%, var(--theme-surface-elevated) 12%);
+  --hikari-context-menu-shadow: 0 12px 30px var(--theme-shadow-color-subtle), 0 2px 6px var(--theme-shadow-color-subtle);
+  position: fixed;
+  z-index: 50;
+  width: 220px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  overflow-y: auto;
+  padding: .375rem;
+  border: 1px solid var(--hikari-menu-border);
+  border-radius: 12px;
+  background: var(--theme-surface-elevated);
+  box-shadow: var(--hikari-context-menu-shadow);
+}
+.canvas-context-menu > button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: .625rem;
+  min-height: 36px;
+  width: 100%;
+  padding: .5rem .625rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--theme-text-strong);
+  font: inherit;
+  font-size: .8125rem;
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: 0;
+  text-align: left;
+}
+.canvas-context-menu > button:is(:hover, :focus-visible):not(:disabled) { background: var(--hikari-menu-hover); color: var(--theme-text-strong); outline: none; }
+.canvas-context-menu > button:active:not(:disabled) { background: var(--hikari-menu-pressed); }
+.canvas-context-menu > button:disabled { opacity: .5; cursor: not-allowed; background: transparent; }
+.canvas-context-menu .ui-icon { flex: 0 0 16px; width: 16px; height: 16px; stroke-width: 1.65; opacity: .65; pointer-events: none; }
+.canvas-context-menu hr { border: 0; border-top: 1px solid var(--hikari-menu-separator); margin: .25rem .375rem; }
+body.theme-night .canvas-context-menu {
+  --hikari-menu-border: color-mix(in srgb, var(--theme-border) 84%, var(--theme-surface-elevated) 8%);
+  --hikari-menu-separator: color-mix(in srgb, var(--theme-border-soft) 86%, var(--theme-surface-elevated) 8%);
+  --hikari-menu-hover: color-mix(in srgb, var(--theme-surface-subtle) 82%, var(--theme-surface-elevated) 8%);
+  --hikari-menu-pressed: color-mix(in srgb, var(--theme-surface-subtle) 92%, var(--theme-surface-elevated) 10%);
+  --hikari-context-menu-shadow: 0 12px 30px var(--theme-shadow-color), 0 2px 6px var(--theme-shadow-color-subtle);
+}
+body.theme-night .canvas-context-menu > button { color: var(--theme-text); }
+body.theme-night .canvas-context-menu > button:is(:hover, :focus-visible):not(:disabled) { color: var(--theme-text-strong); }
 #figure-menu { position: static; }
-#figure-menu .popover-panel { width: 240px; max-width: 100%; }
+#figure-menu .popover-panel { width: 270px; max-width: 100%; max-height: calc(100vh - 80px); overflow-y: auto; }
 .image-generation-control { padding: 8px; border-bottom: 1px solid var(--theme-border-soft); margin-bottom: 4px; }
 .image-generation-toggle, .image-generation-range { display: flex; align-items: center; gap: 10px; }
 .image-generation-toggle { flex-direction: row; justify-content: space-between; font-weight: 500; }
@@ -108,6 +161,11 @@ button:disabled:hover { background: transparent; }
 .image-generation-range input:disabled { opacity: .45; }
 .image-generation-range output { min-width: 36px; text-align: right; font-variant-numeric: tabular-nums; }
 #image-generation-help { margin: 8px 0 0; color: var(--theme-text-muted); font-size: 0.6875rem; line-height: 1.45; }
+.image-style-field { margin-top: 12px; }
+.image-style-field select, .image-style-field textarea { width: 100%; min-width: 0; }
+.image-style-field textarea { resize: vertical; min-height: 56px; max-height: 140px; }
+.image-style-optional, #image-style-help { color: var(--theme-text-muted); font-size: 0.6875rem; }
+#image-style-help { margin: 6px 0 0; line-height: 1.45; }
 .export-button { padding: 5px 8px 5px 12px; margin-left: 4px; border: 1px solid var(--theme-border); }
 .export-button .ui-icon { width: 14px; height: 14px; }
 .export-mark { display: none; }
@@ -147,13 +205,13 @@ button:disabled:hover { background: transparent; }
 .main-stage-wrap { display: flex; position: relative; flex: 1; min-height: 160px; overflow: hidden; }
 .canvas-stage { display: flex; align-items: safe center; justify-content: safe center; min-width: 0; min-height: 0; width: 100%; padding: 12px; background: transparent; overflow: auto; outline: none; }
 .canvas-stage > svg { display: block; flex: 0 0 auto; touch-action: none; box-shadow: 0 1px 6px var(--theme-shadow-color-subtle); }
-.canvas-stage:focus-visible > svg { outline: 2px solid var(--theme-focus); outline-offset: -2px; }
+.canvas-stage:focus-visible:not(.pointer-focus) > svg { outline: 2px solid var(--theme-focus); outline-offset: -2px; }
 #main-canvas { flex: 1; }
 .canvas-empty { position: absolute; inset: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; pointer-events: none; text-align: center; color: #72675d; }
 .canvas-empty strong { font-size: 0.9375rem; font-weight: 500; color: #2a241d; }
 .canvas-empty span { font-size: 0.75rem; max-width: 240px; }
 .main-stage-wrap:has(.canvas-crop-overlay) { min-height: 240px; }
-[data-object-id] { cursor: move; outline: none; }
+[data-object-id], .selection-move { cursor: move; outline: none; }
 [data-object-id]:focus-visible .object-hit { stroke: var(--theme-focus); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
 .selection > rect { stroke: var(--theme-accent); }
 .selection-member { stroke: var(--theme-accent); stroke-dasharray: 3 2; }
@@ -220,8 +278,6 @@ button:disabled:hover { background: transparent; }
 .layer { display: flex; align-items: center; min-height: 36px; padding-right: 3px; border-radius: 6px; margin-bottom: 2px; }
 .layer:hover { background: var(--rail-hover); }
 .layer.is-selected { background: var(--rail-selected); }
-.selection-actions { display: flex; gap: 4px; margin: 0 2px 6px; }
-.selection-actions button { font-size: 0.6875rem; padding: 4px 8px; }
 .group-child { margin-left: 15px; }
 .grouped-layer .layer-name { font-weight: 600; }
 .group-count { color: var(--theme-text-muted); font-size: 0.625rem; margin-left: auto; }
@@ -258,7 +314,7 @@ input[type="color"] { width: 28px; height: 28px; padding: 3px !important; cursor
 .format-group button { display: grid; place-items: center; width: 29px; height: 28px; padding: 5px; }
 .format-group button[aria-pressed="true"] { background: var(--theme-surface-subtle); color: var(--theme-text-strong); }
 .format-group .ui-icon { width: 15px; height: 15px; }
-.color-field, .inline-field { flex-direction: row; justify-content: space-between; align-items: center; gap: 12px; }
+.inline-field { flex-direction: row; justify-content: space-between; align-items: center; gap: 12px; }
 .inline-field input { width: 80px; }
 .secondary-button { border: 1px solid var(--theme-border); width: 100%; font-size: 0.6875rem; margin-bottom: 8px; }
 .object-basics { margin-top: 10px; }
@@ -269,8 +325,8 @@ input[type="color"] { width: 28px; height: 28px; padding: 3px !important; cursor
 .object-actions > span { flex: 1; }
 .object-actions .ui-icon { width: 16px; height: 16px; }
 .danger-button:hover { color: var(--theme-danger); }
+/* Always in flow: collapsing it when empty resized the canvas on every save. */
 #status { color: var(--theme-text-muted); font-size: 0.625rem; line-height: 1.4; min-height: 14px; }
-#status:empty { position: absolute; width: 1px; height: 1px; min-height: 0; overflow: hidden; clip-path: inset(50%); }
 .check { flex-direction: row; align-items: center; }
 .check input { width: auto; accent-color: var(--theme-accent); }
 .actions { display: flex; align-items: center; gap: 6px; }

@@ -8,6 +8,7 @@ const { buildWorkflowFolderLayout, collectLinkedNotebookIds } = require('../work
 const { buildNotebookStorageFolder } = require('../workflow/fs-helpers');
 const { resolveWorkflowTemplateRecord } = require('../workflow/record-compaction');
 const { readRecordDocument } = require('../../lib/record-markdown/read');
+const { notebookPageFolderPath } = require('../../../shared/storage-layout.mjs');
 
 // Copying a folder in Finder or Explorer repeats its protocol ID. The folder
 // Hikari named for the protocol owns the ID; readers skip copies and the
@@ -65,8 +66,7 @@ function buildNotebookPageFolderPath(root, entry) {
   const record = ensureObject(entry);
   const existing = cleanText(record.storageFolder, 2400);
   if (existing && isPathInside(root, existing)) return path.resolve(existing);
-  return path.join(root, 'Project', sanitizeFolderName(record.projectName || 'Untitled_Project', 'Untitled_Project'), 'Notebook',
-    `${sanitizeFolderName(record.protocolName || record.id || 'Notebook_Page', 'Notebook_Page')}__${sanitizeFolderName(record.id, 'page')}`);
+  return path.join(root, notebookPageFolderPath(record));
 }
 
 function workflowDocumentInputs(root, snapshot) {

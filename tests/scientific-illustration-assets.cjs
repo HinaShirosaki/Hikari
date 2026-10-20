@@ -41,7 +41,7 @@ async function verifyReusableAssets({ tool, evaluate, check, win, pause, temp })
   const review = { layout: 'Mixed component lies within the canvas.', labels: 'Cell alpha is independent text.', artwork: 'Vector and embedded raster are text-free.', science: 'Geometry fixture only; no scientific interpretation.' };
   const inspected = await tool({ action: 'inspect', expected_revision: before.revision, inspection_id: beforePreview.inspection.inspection_id, review });
   check(inspected.ok, 'Inspection completes before saving an asset');
-  await evaluate('document.querySelector("[data-layer-id=asset-source-group] .layer-select").click();document.getElementById("save-selection-asset").click()');
+  await evaluate('document.querySelector("[data-layer-id=asset-source-group] .layer-select").click();document.getElementById("main-canvas").dispatchEvent(new MouseEvent("contextmenu",{bubbles:true,cancelable:true}));document.querySelector("[data-context-action=save-asset]").click()');
   check(await evaluate('document.getElementById("save-asset-dialog").open && document.getElementById("asset-name").value==="Cell component"'), 'UI saving a selected group opens its named snapshot dialog');
   await evaluate('document.getElementById("asset-name").value="Reusable cell";document.getElementById("save-asset-form").requestSubmit()'); await settle(); await pause(80);
   let list = await tool({ action: 'asset_list' }), entry = list.reusable_assets.find(asset => asset.name === 'Reusable cell');

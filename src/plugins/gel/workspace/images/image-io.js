@@ -204,9 +204,7 @@ export function encodeSourceGray16(image, sourcePngBase64) {
       view.setUint32(offset + 8, type === 2 ? textOffset : value, true);
     }
   });
-  for (let index = 0; index < text.length; index += 1) {
-    bytes[textOffset + index] = text.charCodeAt(index);
-  }
+  bytes.set(new TextEncoder().encode(text), textOffset);
   return bytes;
 }
 
@@ -214,12 +212,7 @@ export function encodeSourceGray16(image, sourcePngBase64) {
 // sidecar was saved with that exact PNG; otherwise it comes back unchanged.
 export async function applySourceGray16(image, sidecarBase64, sourcePngBase64) {
   await loadUtifScript();
-  const binary = atob(sidecarBase64);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-  const buffer = bytes.buffer;
+  const { buffer } = Uint8Array.fromBase64(sidecarBase64);
   const [page] = window.UTIF.decode(buffer) || [];
   if (!page || page.t270?.[0] !== `${SOURCE_GRAY16_TAG}${fingerprintBase64(sourcePngBase64)}`
     || Number(page.t256) !== image.width || Number(page.t257) !== image.height) {

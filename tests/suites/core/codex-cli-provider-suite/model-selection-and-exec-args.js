@@ -611,7 +611,7 @@ process.stdin.on('data', (chunk) => {
         const firstContent = fs.readFileSync(agentsPath, 'utf8');
         assert.equal(agentsPath, path.join(workspaceDir, 'AGENTS.md'));
         assert.match(firstContent, /HIKARI_CODEX_AGENT_INSTRUCTIONS_START/);
-        assert.match(firstContent, /`hikari` MCP server's instructions are the app tool contract/);
+        assert.match(firstContent, /Each tool's description is its contract/);
         assert.match(firstContent, /KnowledgeBase\/papers\.md/);
         assert.doesNotMatch(firstContent, /Interactive paper-search download policy/);
         assert.doesNotMatch(firstContent, /mcp__[a-z0-9-]+__/i);
@@ -624,20 +624,29 @@ process.stdin.on('data', (chunk) => {
           'mcp-contract',
           'instructions.js'
         ));
-        const mcpInstructions = buildHikariAgentMcpInstructions();
-        assert.match(mcpInstructions, /literature_search/);
-        assert.match(mcpInstructions, /paper_download/);
-        assert.match(mcpInstructions, /Interactive paper-search download policy/);
-        assert.match(mcpInstructions, /research sub-agent may freely use `paper_download`/);
-        assert.match(mcpInstructions, /main agent must not download the same papers again/);
-        assert.match(mcpInstructions, /pass its title as `paper_title`/);
-        assert.match(mcpInstructions, /original `literature_search\.query` as `collection_name`/);
-        assert.doesNotMatch(mcpInstructions, /use its title as `linked_name`/);
-        assert.match(mcpInstructions, /deny_paper_download: true/);
-        assert.match(mcpInstructions, /load bounded paper context blocks/);
-        assert.match(mcpInstructions, /retrieve the active assay data by parsing its `Assay plate data \(TSV\.\.\.\)` block directly from the chat prompt/);
-        assert.match(mcpInstructions, /Do not use local lookup tools for active Assay plate\/result rows/);
-        assert.doesNotMatch(mcpInstructions, /mcp__[a-z0-9-]+__/i);
+        const { getDirectMcpToolDefinitions } = require(path.join(
+          __dirname,
+          'src',
+          'main',
+          'agent',
+          'mcp-contract',
+          'direct-tools',
+          'index.js'
+        ));
+        const definitions = getDirectMcpToolDefinitions();
+        const describe = (name) => definitions.find((tool) => tool.name === name).description;
+        // Paper download policy now lives in the tool descriptions Codex reads on lookup.
+        assert.match(describe('literature_search'), /download relevant papers with paper_download/);
+        assert.match(describe('paper_download'), /After literature_search returns, do not download its papers again/);
+        assert.match(describe('paper_download'), /Pass `paper_title` for the PDF filename/);
+        assert.match(describe('paper_download'), /share its original query as `collection_name`/);
+        assert.doesNotMatch(describe('paper_download'), /linked_name/);
+        assert.match(describe('paper_download'), /deny_paper_download: true/);
+        assert.match(describe('assay_table'), /hidden Assay plate TSV/);
+        assert.match(describe('assay_table'), /never local lookup tools for active plate rows/);
+        for (const text of [buildHikariAgentMcpInstructions(), ...definitions.map((tool) => tool.description)]) {
+          assert.doesNotMatch(text, /mcp__[a-z0-9-]+__/i);
+        }
 
         fs.writeFileSync(agentsPath, `${firstContent}\nLocal note stays here.\n`, 'utf8');
         await provider.ensureCodexCliAgentsFile(workspaceDir);

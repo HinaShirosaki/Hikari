@@ -147,6 +147,11 @@ function createAssayAnalysisGroups({
   function refreshAnalysisGroupDisplay() {
     const analysisGroups = getAnalysisGroups();
     applyAnalysisGroupHighlights(analysisGroups);
+    if (elements.assayAnalysisClearGroupsBtn) {
+      elements.assayAnalysisClearGroupsBtn.disabled = !(
+        analysisGroups.row.groups.length || analysisGroups.column.groups.length
+      );
+    }
     return analysisGroups;
   }
 

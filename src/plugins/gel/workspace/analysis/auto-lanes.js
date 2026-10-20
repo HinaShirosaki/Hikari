@@ -403,7 +403,7 @@ function detectWithProfile({
   }
   return {
     gelLeft: outerLeft, gelRight: outerRight, bandTop, bandBottom, dividers, peaks,
-    observedPeaks, inferredPeaks, expectedLaneCount: wantCount,
+    observedPeaks, inferredPeaks,
     countMismatch: Boolean(wantCount && peaks.length !== wantCount)
   };
 }
@@ -417,21 +417,4 @@ export function detectLanes(options = {}) {
   if (!validImage(options)) return null;
   return detectWithProfile(options, buildDetectionProfile(options.gray, options.width,
     options.height, options.yStart, options.yEnd));
-}
-
-// The controller owns a one-image cache. Count/boundary edits reuse pixel work;
-// a load, crop, rotation, or height-window edit invalidates it. No global image
-// retention, and callers using the pure detectLanes API never receive stale data.
-export function createLaneDetector() {
-  let cached = null;
-  return (options = {}) => {
-    if (!validImage(options)) return null;
-    if (!Number.isFinite(options.imageRevision)) return detectLanes(options);
-    const keys = ['gray', 'width', 'height', 'imageRevision', 'yStart', 'yEnd'];
-    if (!cached || keys.some((key) => cached.options[key] !== options[key])) {
-      cached = { options: { ...options }, profile: buildDetectionProfile(options.gray,
-        options.width, options.height, options.yStart, options.yEnd) };
-    }
-    return detectWithProfile(options, cached.profile);
-  };
 }

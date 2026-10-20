@@ -44,6 +44,20 @@ npm run build:ui
 node node_modules/electron/cli.js tests/storage-setup-electron.cjs
 ```
 
+`HIKARI_PLOTLY_QA_ONLY=1 node node_modules/electron/cli.js tests/scientific-illustration-electron.cjs`
+checks Figura's data-backed Plot layers through the real public canvas bridge:
+vendored Plotly rendering, supplied error bars, raw histogram bin counts,
+heatmap pixels, strict CSP, resizing, undo, clipboard/assets, reopening,
+4K PNG/SVG and PowerPoint export. Uses disposable profile/storage and no model inference.
+
+`node node_modules/electron/cli.js tests/scientific-illustration-levels-live.cjs --live --pathways`
+runs a real signed-in Codex drawing test in an isolated Figura profile: a complex
+3840 × 2160 EGF signaling and trafficking pathway with saved Flat style, native
+image generation, SVG connections and independent labels. It saves full-size
+PNG/SVG, the scene, generated originals and a native-tool transcript summary
+under `artifacts/`. This opt-in test consumes model/image-generation usage and
+checks the saved style, layer mix, native image provenance and final inspection.
+
 `HIKARI_POWERPOINT_QA_ONLY=1 node node_modules/electron/cli.js tests/scientific-illustration-electron.cjs`
 checks Figura's PPTX export through the real save IPC using disposable artwork.
 It inspects separate SVG/raster components and native text boxes, layer order,
@@ -63,6 +77,12 @@ snapshot independence, media, typography, grouping, undo/redo, rapid pastes,
 Scratch, cross-illustration paste, text fields, malformed input, failure/retry,
 and persistence. Use `HIKARI_PLUGIN_QA_ROOT` for packaged-host compatibility.
 
+`HIKARI_CONTEXT_MENU_QA_ONLY=1 node node_modules/electron/cli.js tests/scientific-illustration-electron.cjs`
+checks Figura's canvas/layer right-click menu with native pointer and keyboard
+input, including selection targeting, copy/paste, group/ungroup, reusable asset
+saving, undo, dismissal, viewport placement, and text-field isolation. Clipboard
+events use a private fixture buffer and preserve the system clipboard.
+
 `HIKARI_HISTORY_QA_ONLY=1 node node_modules/electron/cli.js tests/scientific-illustration-electron.cjs`
 checks real system Undo/Redo clicks through the history service and plugin API,
 including button availability, frame keyboard shortcuts, text-field undo,
@@ -72,7 +92,11 @@ Packaged-host fixtures use the updated source focus delegate with the packaged
 history service and bridge; this does not update the running installed app.
 
 `node tests/module-history-selfcheck.mjs` covers independent module histories,
-linked changes, external updates, workspace resets, and draft protection.
+linked changes, external updates, workspace resets, draft protection, and
+analysis-cache invalidation before undo/redo persistence.
+`node tests/reload-persistence-selfcheck.mjs` checks the reload save barrier
+with the real Markdown queue, including delayed writes, failed/skipped saves,
+retry after an editor becomes clean, and discard behavior.
 `node node_modules/electron/cli.js tests/module-history-electron.cjs` loads the
 real renderer modules with a temporary profile and stubbed storage IPC. It
 checks module routing, Inventory's shared history, editor refreshes, and
@@ -88,17 +112,19 @@ notebook suggestions and drafts, selection insights, spreadsheet fill,
 sequence CDS properties and MCP, sample suggestions, the assay chart, and the
 plugin runtime.
 
-`cloud-drive-electron.cjs` exercises Google Drive and Dropbox controls through
-real preload/storage/cloud IPC with in-memory providers and a temporary profile.
-It checks sign-in cancellation, workspace linking, upload/download, conflicts,
-offline retry, disconnection, and responsive layout. `cloud-drive-selfcheck.js`
-adds provider HTTP, credential, OAuth callback, and two-device sync checks. These
-fixtures do not sign in to live accounts; see `docs/main-platform/data/cloud-drives.md`
-for OAuth application configuration and the limits of this verification.
-
 CI (`.github/workflows/ci.yml`, macOS) runs `npm test`, then
 `tests/hikari-mcp-launch-selfcheck.js` against Electron's embedded Node (the
 packaged `--hikari-mcp-stdio` path), then `storage-setup-electron.cjs`.
+
+CI also calls `.github/workflows/installer-smoke.yml` on macOS and Windows.
+`node tests/installer-selfcheck.js` exercises the actual installer scripts with
+download fixtures: prebuilt success, checksum rejection, missing Node, broken
+and valid runtime caches, interrupted downloads, and build failure propagation.
+It also checks lock publication, isolated source builds, and release asset names.
+`tests/installer-bootstrap-smoke.mjs` then uses the locally packed branch with
+Node/npm/npx removed from the installer's PATH. It downloads a real private Node
+runtime, repairs an incomplete cache, and builds the app with locked dependencies.
+Run it with `node tests/installer-bootstrap-smoke.mjs /absolute/path/hikari.tgz`.
 
 `tests/installed-app-smoke.mjs` drives an installed build over the Chrome
 DevTools protocol (`--remote-debugging-port=9333`): the opening page, Codex CLI

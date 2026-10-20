@@ -1,14 +1,5 @@
 import { showTransientNotice } from '../../lib/notify.js';
-
-function sanitizeStorageName(value, fallback = 'item') {
-  const cleaned = String(value || '')
-    .trim()
-    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
-    .replace(/\s+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 180);
-  return cleaned || fallback;
-}
+import { PLATES_ROOT_FOLDER_NAME, recordFolderName } from '../../../shared/storage-layout.mjs';
 
 function encodeDataUrlPayload(dataUrl) {
   const source = String(dataUrl || '').trim();
@@ -51,11 +42,11 @@ export function createAssayArtifactStorage({
       return '';
     }
     const linkedEntry = (state.notebookEntries || []).find((entry) => entry.id === assay.notebookEntryId);
-    const folderName = `${sanitizeStorageName(assay.name || assay.assayNumber || assay.id, 'Assay')}__${sanitizeStorageName(assay.id, 'assay')}`;
+    const folderName = recordFolderName(assay, 'Assay');
     if (linkedEntry?.storageFolder) {
       return `${String(linkedEntry.storageFolder).replace(/[\\/]+$/, '')}/plate/${folderName}`;
     }
-    return `${storageRoot.replace(/[\\/]+$/, '')}/Plates/${folderName}`;
+    return `${storageRoot.replace(/[\\/]+$/, '')}/${PLATES_ROOT_FOLDER_NAME}/${folderName}`;
   }
 
   async function persistAssayImageArtifact({ targetFolder, fileName, dataUrl }) {

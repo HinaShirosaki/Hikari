@@ -36,6 +36,8 @@
     "!assets/loadingicon.png"
   ],
   "scripts": {
+    "prepack": "node bin/prepare-package.js",
+    "release:assets": "node bin/release-assets.js",
     "migrate:markdown": "node scripts/maintenance/migrate-record-markdown.js",
     "build:ui": "node scripts/build-ui.mjs",
     "check:css-colors": "node scripts/check-css-colors.mjs",

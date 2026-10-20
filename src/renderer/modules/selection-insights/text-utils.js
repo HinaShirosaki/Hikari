@@ -24,16 +24,6 @@ export function cloneJson(value, fallback) {
   }
 }
 
-export function sanitizeFolderName(value, fallback = 'item') {
-  const cleaned = String(value || '')
-    .trim()
-    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
-    .replace(/\s+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 180);
-  return cleaned || fallback;
-}
-
 export function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }

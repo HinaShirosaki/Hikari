@@ -11,7 +11,7 @@ function fixture() {
     if (verb === 'storage.get') return { value: stored };
     if (verb === 'storage.set') { stored = params.value; return {}; }
     if (verb === 'files.read') {
-      if (!files.has(params.path)) throw new Error('Missing file');
+      if (!files.has(params.path)) throw new Error('Plugin file not found.');
       return { dataBase64: files.get(params.path) };
     }
     if (verb === 'files.write') {

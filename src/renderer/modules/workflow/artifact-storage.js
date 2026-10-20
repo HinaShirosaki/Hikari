@@ -1,16 +1,11 @@
-function sanitizeFolderName(value) {
-  return String(value || '')
-    .trim()
-    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
-    .replace(/\s+/g, '_')
-    .replace(/^_+|_+$/g, '');
-}
-
-function buildNamedFolder(name, nameFallback, id, idFallback) {
-  const safeName = sanitizeFolderName(name || nameFallback) || nameFallback;
-  const safeId = sanitizeFolderName(id || idFallback) || idFallback;
-  return `${safeName}__${safeId}`;
-}
+import {
+  WORKFLOW_ROOT_FOLDER_NAME,
+  workflowBlockFolderName,
+  workflowEntryFolderName,
+  workflowFolderName,
+  workflowNotebookPageFolderName,
+  workflowTemplateFolderName
+} from '../../../shared/storage-layout.mjs';
 
 function blobToDataUrl(blob, FileReaderClass) {
   return new Promise((resolve, reject) => {
@@ -49,19 +44,7 @@ export function createWorkflowArtifactStorage({
       id: String(workflow?.templateId || 'untemplated').trim() || 'untemplated',
       name: 'Untemplated Workflow'
     };
-    const templateFolder = buildNamedFolder(
-      template?.name,
-      'Untitled_Template',
-      template?.id,
-      'template'
-    );
-    const workflowFolder = buildNamedFolder(
-      workflow?.name,
-      'Untitled_Workflow',
-      workflow?.id,
-      'workflow'
-    );
-    return `${rootPath}/Workflow/${templateFolder}/${workflowFolder}`;
+    return `${rootPath}/${WORKFLOW_ROOT_FOLDER_NAME}/${workflowTemplateFolderName(template)}/${workflowFolderName(workflow)}`;
   }
 
   function buildWorkflowStepResultsFolderPath(workflow, entry, block) {
@@ -69,13 +52,8 @@ export function createWorkflowArtifactStorage({
     if (!workflowRoot) {
       return '';
     }
-    const entryFolder = buildNamedFolder(entry?.name, 'Entry', entry?.id, 'entry');
-    const blockFolder = buildNamedFolder(
-      renderer.titleForBlock?.(block) || block?.id,
-      'Step',
-      block?.id,
-      'step'
-    );
+    const entryFolder = workflowEntryFolderName(entry?.name, entry?.id);
+    const blockFolder = workflowBlockFolderName(renderer.titleForBlock?.(block) || block?.id, block?.id);
     return `${workflowRoot}/Results/${entryFolder}/${blockFolder}`;
   }
 
@@ -84,9 +62,7 @@ export function createWorkflowArtifactStorage({
     if (!workflowRoot) {
       return '';
     }
-    const entryFolder = buildNamedFolder(entry?.name, 'Entry', entry?.id, 'entry');
-    const notebookFolder = buildNamedFolder('Notebook_Page', 'Notebook_Page', notebookEntryId, 'page');
-    return `${workflowRoot}/Notebook/${entryFolder}/${notebookFolder}`;
+    return `${workflowRoot}/Notebook/${workflowEntryFolderName(entry?.name, entry?.id)}/${workflowNotebookPageFolderName(notebookEntryId)}`;
   }
 
   async function ensureStorageFolderExists(storageFolder) {

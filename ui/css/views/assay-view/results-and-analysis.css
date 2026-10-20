@@ -1045,11 +1045,11 @@ body.theme-night .assay-analysis-chart {
   max-height: min(480px, calc(100vh - 24px));
   overflow: hidden;
   gap: 0 !important;
-  padding: 0 !important;
+  padding: var(--space-6) !important;
   border: 1px solid var(--hikari-menu-border) !important;
-  border-radius: 0 !important;
-  background: var(--hikari-menu-surface) !important;
-  box-shadow: none !important;
+  border-radius: var(--hikari-context-menu-radius) !important;
+  background: var(--theme-surface-elevated) !important;
+  box-shadow: var(--hikari-context-menu-shadow) !important;
   backdrop-filter: none;
 }
 
@@ -1070,10 +1070,10 @@ body.theme-night .assay-analysis-chart {
 .assay-sample-picker-head strong {
   color: var(--theme-text-muted);
   font-size: var(--text-xs);
-  font-weight: 650;
+  font-weight: 500;
   line-height: 1.2;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .assay-sample-picker-head span {
@@ -1138,7 +1138,7 @@ body.theme-night .assay-sample-picker-search-input {
   gap: var(--space-2);
   padding: 9px var(--space-10);
   border: 0 !important;
-  border-radius: 0;
+  border-radius: var(--hikari-context-item-radius);
   background: transparent !important;
   color: var(--theme-text);
   text-align: left;
@@ -1156,7 +1156,7 @@ body.theme-night .assay-sample-picker-search-input {
 .assay-sample-picker-item-title {
   color: var(--theme-text-strong);
   font-size: var(--text-md);
-  font-weight: 650;
+  font-weight: 400;
   line-height: 1.2;
 }
 

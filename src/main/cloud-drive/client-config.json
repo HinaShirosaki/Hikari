@@ -1,4 +1,0 @@
-{
-  "google-drive": { "clientId": "", "clientSecret": "" },
-  "dropbox": { "clientId": "", "redirectPort": 53682 }
-}

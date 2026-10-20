@@ -341,8 +341,8 @@
   font-weight: 600;
 }
 
-.sequence-viewer-feature-hover-tooltip.has-primer-card,
-.vector-map__tooltip.has-primer-card {
+.sequence-viewer-feature-hover-tooltip:has(.sequence-viewer-primer-hover-card),
+.vector-map__tooltip:has(.sequence-viewer-primer-hover-card) {
   box-sizing: border-box;
   width: 340px;
   min-width: 0;

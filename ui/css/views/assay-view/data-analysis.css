@@ -1,0 +1,153 @@
+/* Data Analysis owns its compact rail treatment; shared disclosures and Setup
+   retain their existing spacing. */
+#assay-analysis-panel {
+  container-type: inline-size;
+}
+
+#assay-analysis-panel > .foldable-section__body {
+  gap: 0;
+  padding-top: 0;
+  padding-bottom: 8px;
+}
+
+#assay-analysis-panel .foldable-section--subsection {
+  min-width: 0;
+}
+
+#assay-analysis-panel .foldable-section--subsection:first-child {
+  border-top: 0;
+}
+
+#assay-analysis-panel .foldable-section--subsection > .foldable-section__summary {
+  min-height: 36px;
+  padding-block: 8px;
+  gap: 8px;
+  color: var(--theme-text-strong);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+#assay-analysis-panel .foldable-section--subsection > .foldable-section__summary::after {
+  color: var(--theme-text-muted);
+}
+
+#assay-analysis-panel .foldable-section--subsection > .foldable-section__body {
+  min-width: 0;
+  gap: 10px;
+  padding: 2px 0 14px;
+}
+
+#assay-analysis-panel .assay-analysis-optional {
+  margin-left: 5px;
+  color: var(--theme-text-muted);
+  font-size: var(--text-2xs);
+  font-weight: 400;
+}
+
+#assay-analysis-panel .assay-analysis-action-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+}
+
+#assay-analysis-panel .assay-analysis-action-row > .assay-analysis-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  gap: 6px;
+  width: auto;
+  min-width: 0;
+  min-height: 32px;
+  height: auto;
+  padding: 6px 9px;
+  border: 1px solid var(--theme-border);
+  border-radius: 6px;
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text-strong);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+#assay-analysis-panel .assay-analysis-action-row > .assay-analysis-import-btn {
+  border-color: var(--theme-accent-line);
+  background: var(--theme-accent-wash);
+  color: var(--theme-accent);
+}
+
+#assay-analysis-panel .assay-analysis-action-row > .assay-analysis-action-btn:hover {
+  border-color: var(--theme-accent-line);
+  background: var(--theme-accent-wash);
+  color: var(--theme-accent);
+}
+
+#assay-analysis-panel .assay-analysis-action-row > button:focus-visible {
+  outline: 2px solid var(--theme-focus);
+  outline-offset: 2px;
+}
+
+#assay-analysis-panel .assay-analysis-action-row > .row-action-icon-btn-danger {
+  flex: 0 0 30px;
+  width: 30px;
+  min-width: 30px;
+  height: 32px;
+  min-height: 32px;
+  margin-left: auto;
+}
+
+#assay-analysis-panel .assay-analysis-action-row > button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+#assay-analysis-panel .assay-analysis-action-btn svg {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+}
+
+#assay-analysis-source-panel label,
+#assay-analysis-settings-panel label {
+  min-width: 0;
+  gap: 5px;
+  font-size: var(--text-xs);
+}
+
+#assay-analysis-source-panel select,
+#assay-analysis-settings-panel select,
+#assay-analysis-settings-panel input:not([type="checkbox"]) {
+  min-width: 0;
+  min-height: 34px;
+  padding: 6px 9px;
+  font-size: var(--text-xs);
+}
+
+#assay-analysis-settings-panel .assay-analysis-checkbox {
+  gap: 8px;
+  line-height: 1.4;
+}
+
+#assay-analysis-settings-panel input[type="checkbox"] {
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--theme-accent);
+}
+
+/* Preserve readable labels and a single action row at the shared rail minimum. */
+@container (max-width: 225px) {
+  #assay-analysis-panel .assay-analysis-action-row > .assay-analysis-action-btn {
+    padding-inline: 7px;
+  }
+
+  #assay-analysis-panel .assay-analysis-action-btn svg {
+    display: none;
+  }
+}

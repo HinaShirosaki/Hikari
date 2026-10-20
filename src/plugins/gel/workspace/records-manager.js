@@ -139,11 +139,9 @@ export function createRecordsManager({ runtime, elements, deps }) {
     if (typeof runtime.onGelAnalysesChanged === 'function') {
       runtime.onGelAnalysesChanged();
     }
-    // Cleared, not announced: a completed save needs no caption, but the previous
-    // status must not linger as if it were the result of this save.
-    deps.setStatus(record.report
-      ? ''
-      : `Saved gel draft: ${record.name}. You can finish the analysis later.`);
+    // Cleared, not announced: the record appears in Existing Gels, but the
+    // previous status must not linger as if it were the result of this save.
+    deps.setStatus('');
     runtime.markDraftSaved?.();
     return record;
   }
@@ -184,7 +182,6 @@ export function createRecordsManager({ runtime, elements, deps }) {
       return savePromise;
     }
     setSaveBusy(true);
-    deps.setStatus('Saving gel analysis…');
     savePromise = performSaveAnalysis().finally(() => {
       setSaveBusy(false);
       savePromise = null;
@@ -197,10 +194,9 @@ export function createRecordsManager({ runtime, elements, deps }) {
       return exportPromise;
     }
     const originalLabel = activeButton?.getAttribute('aria-label') || activeButton?.textContent || '';
-    // Restore what each button was, not an assumed "enabled": these live inside
-    // #gel-form, so a save running concurrently snapshots them and restores its
-    // own copy afterwards. Forcing false here loses that race and leaves both
-    // export buttons dead until the plugin reloads.
+    // Restore what each button was, not an assumed "enabled": another lock may
+    // have changed it meanwhile, and forcing false here would leave the export
+    // dead until the plugin reloads.
     const lockedExportButtons = [elements.gelExportCsvBtn]
       .filter(Boolean)
       .map((button) => ({ button, disabled: Boolean(button.disabled) }));
@@ -243,7 +239,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
           fileName,
           mimeType: 'text/csv;charset=utf-8;'
         });
-        deps.setStatus(result?.canceled ? 'Export canceled.' : `Exported ${result?.fileName || fileName}.`);
+        deps.setStatus(result?.canceled ? '' : `Exported ${result?.fileName || fileName}.`);
         return result;
       } catch (error) {
         deps.setStatus(`Could not export CSV: ${error?.message || error}`);
@@ -362,8 +358,8 @@ export function createRecordsManager({ runtime, elements, deps }) {
       deps.leaveCropMode();
       deps.renderCanvas();
       deps.setStatus(restored.kind === 'source'
-        ? `Loaded saved gel: ${record.name || record.id}.`
-        : `Loaded saved gel preview: ${record.name || record.id}. Upload the original image before reanalyzing.`);
+        ? ''
+        : 'Showing the saved preview only. Upload the original image before reanalyzing.');
     } else if (restored.hadCandidate) {
       const reason = restored.error instanceof Error ? ` ${restored.error.message}` : '';
       deps.setStatus(`Loaded saved analysis, but its image could not be restored.${reason}`);
@@ -382,7 +378,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
       return;
     }
     if (typeof deps.confirmDelete === 'function' && !deps.confirmDelete(record)) {
-      deps.setStatus('Delete canceled.');
+      deps.setStatus('');
       return;
     }
     deleteRequests.add(recordId);
@@ -406,7 +402,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
     if (elements.gelIdInput?.value === recordId) {
       resetForm();
     }
-    deps.setStatus(`Removed saved gel record: ${record.name || record.id}. Stored artifact files were left in place.`);
+    deps.setStatus('');
   }
 
   async function onListClick(event) {
@@ -458,9 +454,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
       elements.gelNameInput.focus();
       elements.gelNameInput.select?.();
     }
-    deps.setStatus(notebookEntryId
-      ? `New gel analysis will be linked to notebook page ${notebookEntryId}.`
-      : 'Create a new linked gel analysis.');
+    deps.setStatus(notebookEntryId ? `This gel will be linked to notebook page ${notebookEntryId}.` : '');
   }
 
   return {

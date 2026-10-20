@@ -14,7 +14,7 @@ import {
 import {
   createCellTableController,
   formatIntensity,
-  readSnrThreshold
+  SNR_THRESHOLD
 } from './cell-table.js';
 
 export function selectViewerBaseImageData(currentImage, preprocessed = null, viewerMode = 'original') {
@@ -246,8 +246,6 @@ export function createCanvasDrawController({
     if (!hasAnyTargetBandWindow(segmentation)) {
       return;
     }
-    const threshold = readSnrThreshold(elements.gelCellSnrThresholdInput);
-
     context.save();
     context.font = '11px "SF Pro Text", "Segoe UI", sans-serif';
     reportLanes.forEach((lane) => {
@@ -257,7 +255,7 @@ export function createCanvasDrawController({
       }
       const top = clamp(Math.min(cell.top, cell.bottom), 0, runtime.currentImage.height - 1);
       const bottom = clamp(Math.max(cell.top, cell.bottom), top + 1, runtime.currentImage.height - 1);
-      const hasBand = Number(cell.snr) >= threshold;
+      const hasBand = Number(cell.snr) >= SNR_THRESHOLD;
       context.lineWidth = 1.4;
       if (hasBand) {
         context.setLineDash([]);

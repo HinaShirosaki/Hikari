@@ -122,13 +122,9 @@ export function createImageController({ runtime, elements, deps }) {
       deps.leaveCropMode();
       deps.renderOverrideStatus();
       deps.renderCanvas();
-      if (isTiffFile(file)) {
-        deps.setStatus(
-          `Loaded ${file.name} page ${runtime.currentImage.tiffPageIndex || 1}/${runtime.currentImage.tiffPageCount || 1} (${runtime.currentImage.width}x${runtime.currentImage.height}) via TIFF decoder.`
-        );
-      } else {
-        deps.setStatus(`Loaded ${file.name} (${runtime.currentImage.width}x${runtime.currentImage.height}).`);
-      }
+      const pages = isTiffFile(file) ? runtime.currentImage.tiffPageCount || 1 : 1;
+      // Only a multi-page TIFF needs saying which page was loaded.
+      deps.setStatus(pages > 1 ? `Loaded page ${runtime.currentImage.tiffPageIndex || 1} of ${pages}.` : '');
     } catch (error) {
       setCurrentImage(null);
       runtime.originalImage = null;
@@ -155,19 +151,20 @@ export function createImageController({ runtime, elements, deps }) {
 
   // The canvas crop is 8-bit; the grey image is cropped from the current float
   // one with the same geometry so a 16-bit TIFF keeps its precision.
-  function normalizeCurrentCanvasCrop(croppedCanvas, cropData) {
+  // source is the image the cropper showed: the current one, or the original after Reset.
+  function normalizeCurrentCanvasCrop(croppedCanvas, cropData, source = runtime.currentImage) {
     const context = croppedCanvas.getContext('2d', { willReadFrequently: true });
     const croppedData = context.getImageData(0, 0, croppedCanvas.width, croppedCanvas.height);
-    const { gray, width, height } = runtime.currentImage;
+    const { gray, width, height } = source;
     return normalizeDecodedImage({
-      name: runtime.currentImage.name,
+      name: source.name,
       width: croppedCanvas.width,
       height: croppedCanvas.height,
       imageData: croppedData,
       gray: cropGray(gray, width, height, cropData, croppedCanvas.width, croppedCanvas.height),
-      grayBitDepth: runtime.currentImage.grayBitDepth,
-      tiffPageIndex: runtime.currentImage.tiffPageIndex,
-      tiffPageCount: runtime.currentImage.tiffPageCount
+      grayBitDepth: source.grayBitDepth,
+      tiffPageIndex: source.tiffPageIndex,
+      tiffPageCount: source.tiffPageCount
     });
   }
 

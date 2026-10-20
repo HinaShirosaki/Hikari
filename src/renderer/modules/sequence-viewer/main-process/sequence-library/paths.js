@@ -8,11 +8,9 @@ const {
   RECOGNIZED_BACKBONE_ARTIFACT_DIR_NAME,
   RECOGNIZED_BACKBONE_STORE_FILE_NAME
 } = require('./constants');
-const {
-  PROJECT_ROOT_FOLDER_NAME,
-  PROJECT_SEQUENCE_FOLDER_NAME
-} = require('../../../../../main/storage/storage-paths');
+const { PROJECT_SEQUENCE_FOLDER_NAME } = require('../../../../../main/storage/storage-paths');
 const { sanitizeFolderName } = require('../../../../../main/storage/storage-utils');
+const { projectFolderPath } = require('../../../../../shared/storage-layout.mjs');
 const { cleanText } = require('./utils');
 const { ensureRelativePathWithinRoot } = require('../../../../../main/lib/path-safety.js');
 
@@ -94,16 +92,10 @@ async function removeLibraryFolderDirIfEmpty(paths, folderName) {
   await fs.rmdir(resolveLibraryFolderDir(paths, folderName)).catch(() => {});
 }
 
-// Mirror of the rail's per-project folders on disk, next to the Notebook
-// folder the same project already owns. Same sanitizer as the notebook side so
-// both land in one `Project/<Name>` folder rather than two near-identical ones.
+// Mirror of the rail's per-project folders on disk, inside the same shared
+// `Project/<Name>` folder that holds the project's Notebook pages.
 function resolveProjectSequenceDir(paths, projectName) {
-  return path.join(
-    paths.storageRoot,
-    PROJECT_ROOT_FOLDER_NAME,
-    sanitizeFolderName(projectName, 'Untitled_Project'),
-    PROJECT_SEQUENCE_FOLDER_NAME
-  );
+  return path.join(paths.storageRoot, projectFolderPath(projectName), PROJECT_SEQUENCE_FOLDER_NAME);
 }
 
 async function ensureProjectSequenceDirectories(paths, projects) {

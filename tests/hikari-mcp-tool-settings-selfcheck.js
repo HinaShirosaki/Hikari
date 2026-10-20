@@ -36,7 +36,7 @@ const {
   createAgentSkillRuntime
 } = require('../src/main/agent/skills/agent-skill-runtime.js');
 const {
-  ensureCodexCliProjectSkillFolder
+  ensureCodexCliSkillFolder
 } = require('../src/main/lib/codex-cli-provider/guidance.js');
 const {
   syncBundleFromSnapshot
@@ -287,14 +287,21 @@ async function run() {
     await releaseOfficialMcpSkills(skillRoot, disabledProtocolContext);
     assert.equal(fs.existsSync(protocolSkillPath), false, 'Codex filesystem discovery cannot see a disabled official skill');
     assert.equal(fs.existsSync(notebookSkillPath), true, 'unrelated official skills stay released');
-    await ensureCodexCliProjectSkillFolder(path.join(tempDir, 'workspace'), {
-      envOverrides: {
-        HIKARI_AGENT_MCP_REQUEST_CONTEXT: JSON.stringify(disabledProtocolContext)
-      }
+    const runtimeHome = path.join(tempDir, 'codex-home');
+    const runtimeProtocolSkillPath = path.join(runtimeHome, 'skills', 'hikari-protocol-generation', 'SKILL.md');
+    const preflight = (context) => ensureCodexCliSkillFolder(path.join(tempDir, 'workspace'), {
+      env: { HIKARI_CODEX_HOME: runtimeHome, HIKARI_AGENT_MCP_REQUEST_CONTEXT: JSON.stringify(context) }
     });
-    assert.equal(fs.existsSync(protocolSkillPath), false, 'Codex preflight keeps disabled skills out of the working directory');
-    await ensureCodexCliProjectSkillFolder(path.join(tempDir, 'workspace'));
-    assert.equal(fs.existsSync(protocolSkillPath), true, 're-enabling the tool restores its official skill');
+    await preflight(disabledProtocolContext);
+    assert.equal(fs.existsSync(runtimeProtocolSkillPath), false, 'Codex preflight keeps disabled skills out of the runtime home');
+    assert.equal(fs.existsSync(path.join(runtimeHome, 'skills', 'hikari-notebook-draft', 'SKILL.md')), true);
+    await preflight({});
+    assert.equal(fs.existsSync(runtimeProtocolSkillPath), true, 're-enabling the tool restores its official skill');
+    assert.equal(
+      await ensureCodexCliSkillFolder(path.join(tempDir, 'workspace'), { env: { HIKARI_CODEX_HOME: runtimeHome } }),
+      '',
+      'CLI commands without agent tool settings leave the released skills alone'
+    );
 
     const storageRoot = path.join(tempDir, 'storage');
     await syncBundleFromSnapshot({

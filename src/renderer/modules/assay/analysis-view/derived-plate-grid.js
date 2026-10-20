@@ -187,12 +187,21 @@ function createDerivedPlateGrid({
         options.height = height;
       }
       transformGrid = new TabulatorLib(host, options);
-      transformGrid?.on?.('tableBuilt', () => transformGrid?.redraw?.(true));
+      const createdGrid = transformGrid;
+      createdGrid?.on?.('tableBuilt', () => {
+        if (createdGrid !== transformGrid) return;
+        // Loading an assay can refresh analysis before Tabulator finishes building.
+        // Apply the latest formulas once its row renderer is ready.
+        createdGrid.replaceData?.(buildResultGridData(getCurrentDefinition(), transformFormulas));
+        createdGrid.redraw?.(true);
+      });
       transformGrid?.on?.('cellEdited', onTransformGridCellEdited);
       transformGridSignature = signature;
       return true;
     }
-    transformGrid.replaceData?.(buildResultGridData(def, transformFormulas));
+    if (transformGrid.initialized !== false) {
+      transformGrid.replaceData?.(buildResultGridData(def, transformFormulas));
+    }
     return true;
   }
 
@@ -224,11 +233,11 @@ function createDerivedPlateGrid({
     return result;
   }
 
-  function collectNumericObservations() {
+  function collectNumericObservations(dataSource = 'transformed') {
     const layoutMap = layoutToMap(runtime.currentLayout);
-    // A derived plate replaces the raw values wherever a transform is active; its map
-    // is already numeric, so nothing is re-parsed.
-    const derived = derivedPlate ? derivedPlate.numericResults : null;
+    // Only the selected plate supplies responses. A partial or empty transformed
+    // plate never fills its missing cells from Table1.
+    const derived = dataSource === 'transformed' && derivedPlate ? derivedPlate.numericResults : null;
     const observations = [];
     let nonNumericCount = 0;
 

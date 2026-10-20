@@ -79,6 +79,13 @@ edited or deleted. Copies get fresh IDs and a 15-pixel cascading offset; each
 paste can be undone in one step. Text-field shortcuts retain normal text editing.
 Native clipboard events carry editable Figura data. When a browser clipboard
 command is unavailable, the editor keeps a private copy buffer until reload.
+Right-click the canvas or a layer row to open **Copy**, **Paste**, **Group**,
+**Ungroup**, and **Save as an asset…**. A selected member keeps the current
+multi-selection; an unselected component or group is selected first. Alt-right-click
+targets an individual group member. Empty space keeps the current selection,
+so you can paste there or act on selected components. Unavailable actions are
+disabled. Shift+F10 or the Menu key opens the same menu from the focused canvas
+or layer; use arrow keys to navigate, Enter to choose, and Escape to dismiss.
 Use **− / +** to zoom and **Fit** to show the whole canvas. Scroll to pan when
 zoomed, or hold **⌘ / Ctrl** while scrolling to zoom at the pointer. Zoom applies
 to the canvas. Saved geometry,
@@ -150,7 +157,7 @@ guides the next request; it does not redraw existing artwork automatically.
 Existing figures default to Standard. The canvas surround has no separate fill.
 
 Build complex components as editable groups on the canvas, or save them as reusable assets. Layer ordering, visibility, duplication, deletion, undo/redo,
-canvas sizes and background colors are available. **Export → SVG** keeps artwork
+and canvas sizes are available. **Export → SVG** keeps artwork
 and text in separate SVG groups; **Export → PNG** exports the assembled main canvas.
 **Export → PowerPoint** creates one slide matching the main canvas. Every visible
 component remains a separate object you can move, resize, rotate, or delete in
@@ -187,15 +194,34 @@ still require the corresponding system font on the machine displaying an SVG.
 The plugin reads Inter from its own local asset server when exporting; it
 does not contact an external font service.
 
+Data plots use Hikari's locally vendored Plotly.js. Ask the agent to plot the
+data you provide, calculate derived values when needed, or revise an existing
+plot's axes, labels, colors or error bars. Each **Plot** layer saves its exact
+Plotly traces, layout and optional provenance/processing description alongside
+its rendered SVG. Histogram, box and violin traces can process raw observations
+directly. Other calculations supply computed arrays; specify units, sample sizes
+and the intended error-bar definition (SD, SEM or confidence interval).
+
+Plots can move, resize, rotate, group, copy, save as reusable assets, undo/redo,
+reopen and export with the illustration. Changing data or layer size rerenders
+the chart from its source. Axes, ticks, legend and chart annotations are edited
+through the plot's data/layout by the agent; figure captions and panel letters
+remain independent text layers. SVG/PowerPoint export keeps each plot as its
+own SVG component; PNG export renders the full figure. The image-generation
+percentage and image style do not apply to data plots. No image generation,
+CDN or extra plotting provider is needed. This requires a Hikari build with
+the public `plotly.render` plugin API.
+
 Codex chooses the renderer separately for each component:
 
 | Appearance or requirement | Renderer |
 | --- | --- |
 | Schematic cells, membranes, receptors, vesicles, DNA cartoons, abstract protein shapes | SVG |
 | Arrows, connectors, panels; exact counts, positions and connections | SVG |
-| Quantitative charts, scale bars, precise atom/bond geometry | SVG from known values or verified structure |
+| Quantitative charts | Plotly layer from supplied data and documented calculations |
+| Scale bars, precise atom/bond geometry | SVG from known values or verified structure |
 | Realistic anatomy, organic surface detail, dense textures, photographic lighting | Codex `image_gen` when simple SVG cannot express the required appearance clearly |
-| Labels, titles and annotations | Separate editable text objects |
+| Figure labels, titles and annotations | Separate editable text objects; chart labels use Plotly data/layout |
 
 A detailed schematic mitochondrion can remain SVG. A realistic textured
 mitochondrion portrait can use image generation, with its labels and arrows
@@ -207,7 +233,7 @@ Open **Figure options (⋯)** and turn on **Image generation** to choose
 image generation. The percentage describes the approximate visual area of
 eligible illustrative artwork, excluding boxes, arrows, connectors, panel
 frames, charts, scale bars, exact scientific geometry and text. Those always
-remain separate SVG or text objects, even at 100%. It is a preference, not
+remain separate plot, SVG or text objects, even at 100%. It is a preference, not
 an exact pixel measurement or a quota of components/calls. A fully schematic
 request stays SVG rather than adding unnecessary texture to reach a target.
 The setting belongs to this illustration, survives reload and duplication,
@@ -229,6 +255,17 @@ independent raster and SVG layers. Any part requiring its own movement or
 restyling must have its own layer; pixels inside a raster object cannot be
 edited individually. Generated artwork cannot establish measured data or exact
 molecular structure.
+
+**Figure options → Image style** controls the appearance of generated components:
+Automatic, Scientific illustration, Flat illustration, 3D render,
+Photorealistic, Watercolor or Pen and ink. Add optional **Style notes** for a
+palette, lighting, materials or other art direction (up to 1000 characters).
+Both controls save with the figure, including duplicated figures and undo/redo.
+The agent includes the selected style and notes in each new image-generation
+prompt and checks reusable assets for a compatible appearance. These controls
+apply to new or requested artwork; existing layers keep their current appearance.
+Complexity still sets the amount of scientific detail, and the image-generation
+percentage still controls renderer use. Choosing a style does not enable generation.
 
 Generated components are text-free and use transparency where appropriate.
 These rules are included in the submitted drawing prompt and the full canvas
@@ -260,9 +297,9 @@ or scientific uncertainty.
 
 ### Reusable components
 
-Select one layer, a group, or several layers on one canvas. Choose **Save as
-asset…** in Layers, or **Figure options → Save selection as asset…**, and give
-it a name. The **Layers / Assets** buttons in the right toolbar open either panel;
+Select one layer, a group, or several layers on one canvas. Right-click the
+selection, choose **Save as an asset…**, and give it a name. The
+**Layers / Assets** buttons in the right toolbar open either panel;
 clicking its active button again closes the rail. Only one panel is visible
 at a time. **Assets** provides searchable
 previews. Click an asset to place an editable
@@ -282,8 +319,8 @@ then choose **Apply crop**. No crop dialog opens. **Reset** restores the full so
 crop. Cropping preserves transparency and saves embedded PNG bytes. It keeps
 the retained pixels in place, including on stretched or
 rotated layers. Undo restores the original image and geometry; Cancel or Escape
-discards the crop. The original saved asset stays intact; use **Save as asset…**
-to save the cropped selection as a new reusable component. Imported assets and
+discards the crop. The original saved asset stays intact; to keep the cropped image as a new
+reusable component, right-click it and choose **Save as an asset…**. Imported assets and
 cropped images survive plugin reloads.
 
 Saved assets are shared across this plugin's illustrations and survive reloads.
@@ -365,11 +402,23 @@ to pin the target; selection changes return `illustration_changed` without
 editing another figure. List and reopen the intended illustration to continue.
 
 
+`apply` accepts `upsert` with `object:{id,type:"plot",x,y,width,height,plotly:{data,layout,source}}`.
+Omit `svg`; the host generates it from the data with vendored Plotly.js.
+`read` returns the exact source specification and the cached SVG. For agent
+edits, use `update` with `patch:{plotly:{data,layout,source}}`, replacing the
+complete specification. The layer's box controls the plot dimensions.
+
 `read` returns `imageGenerationPercent` (`null` for Automatic) and matching
 renderer instructions. To change it when requested by the user, apply
 `{op:"image_generation",imageGenerationPercent:75}`; use `null` to restore
 Automatic. Changes use the same revision, persistence and inspection rules
 as all other document edits.
+
+`read` also returns `imageGenerationStyle:{preset,prompt}` and its art-direction
+instructions. On user request, apply
+`{op:"image_generation_style",imageGenerationStyle:{preset:"watercolor",prompt:"Pale teal and gold"}}`.
+The schema lists supported preset IDs; `automatic` with empty notes restores the
+default. The style is independent of the percentage and existing artwork.
 
 Shift-click on the canvas or in Layers to select multiple components on the
 same canvas. Use the **Group** button in the right toolbar (⌘G / Ctrl+G);
@@ -441,7 +490,7 @@ apply the edit twice, including after undo or reload (last 64 request IDs).
 
 ## Persistence and verification
 
-The canonical library index is `Plugins/scientific-illustration/library.json`
+The canonical library index is `Plugins/Figura/library.json`
 under Hikari storage. It points to the committed scene and embedded assets
 for each illustration under `illustrations/<id>/scene-a.json` or `scene-b.json`.
 Saves alternate between these files, then atomically replace the index using
@@ -451,7 +500,11 @@ preserved during migration. Plugin settings contain only the library pointer.
 The library holds up to 100 illustrations, each with up to 200 objects and
 12 million serialized characters; the host file-size ceiling is also enforced.
 Undo/redo keeps the last 25 edits of the active figure and resets on selection.
-Storage changes reload the library from the newly selected root.
+Storage changes reload the library from the newly selected root. Hikari migrates
+the previous `Plugins/scientific-illustration` folder to `Plugins/Figura` on first
+file access. The installed plugin id and per-illustration chats stay the same.
+Saved scratch-canvas objects from older versions move onto the main canvas when
+opened; migration commits to the alternate scene file before updating the index.
 Inspection receipts and observations are temporary and scoped to one agent
 run and revision; they do not survive reloads or travel with exported figures.
 

@@ -75,7 +75,7 @@ async function writeRecordDocument(input) {
   const rendered = await renderRecordMarkdown({ ...input, payload, checkpoint, canonical: true, expectedSource: source });
   await fs.mkdir(path.dirname(markdownPath), { recursive: true });
   try {
-    await commitRecordMarkdown(rendered, { kind: input.kind, canonical: true });
+    await commitRecordMarkdown(rendered, { kind: input.kind, canonical: true, warnings: input.warnings });
   } catch (error) {
     // Image-manifest cleanup can fail after the document already committed.
     // That is a saved record, not an unsaved edit with an obsolete baseline.
@@ -93,7 +93,7 @@ async function writeRecordDocument(input) {
 }
 
 async function writeRecordDocumentSafely(input, warnings, skipped) {
-  try { return await writeRecordDocument(input); }
+  try { return await writeRecordDocument({ ...input, warnings }); }
   catch (error) {
     const record = input.payload[recordKey(input.kind)];
     // A failed record retains its input for retry, so

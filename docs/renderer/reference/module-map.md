@@ -47,7 +47,6 @@ Every user-facing feature is a **folder module** (`modules/<feature>/index.js`) 
 | `services/history-patches.js` | Main path | field/record changes, conflict checks, and linked-record protection for history restoration |
 | `core/module-history-runtime.js` | Main path | active module/rail routing and targeted, draft-aware restore hooks |
 | `services/unsavedChangesService.js` | Main path | the quit-time unsaved-changes dialog |
-| `services/notebook-page-log.js` | Cross-cutting | append-only `page.log` per notebook page |
 | `services/notebook-record-compat.js` | Cross-cutting | reads persisted Sequence Viewer cloning records inside notebook entries |
 
 ## Feature modules (manifest-registered)

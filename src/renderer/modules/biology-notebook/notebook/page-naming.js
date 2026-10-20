@@ -1,7 +1,6 @@
 import { showTransientNotice } from '../../../lib/notify.js';
 import { isAgentAvailable } from '../../../lib/agent-availability.js';
 import { mergeNotebookValues, pruneNotebookValuesForProtocol } from '../entry/entry-helpers.js';
-import { logNotebookPageEvent } from '../../../services/notebook-page-log.js';
 import {
   areAllNotebookPlaceholdersFilled,
   generateNotebookPageName,
@@ -107,16 +106,6 @@ function createNotebookPageNaming({
     if (!nextEntry) {
       return null;
     }
-    logNotebookPageEvent({
-      entry: nextEntry,
-      storagePath: state.settings?.storagePath,
-      action: 'name-generate',
-      summary: `Generated notebook page name "${name}"`,
-      details: {
-        model: getExperimentNameGeneratedModelDraft(),
-        provider: String(generated?.provider || '').trim()
-      }
-    });
     entryListRenderer.renderEntries();
     if (typeof onNotebookEntriesChanged === 'function') {
       onNotebookEntriesChanged();

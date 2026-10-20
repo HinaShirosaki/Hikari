@@ -13,7 +13,7 @@ const {
 
 const PROTOCOL_GENERATION_MCP_TOOL = Object.freeze({
   name: 'protocol_generation',
-  description: 'Normalize supplied protocol JSON into Hikari import-ready protocol format without an internal LLM call. When save is true, Hikari queues the generated protocol for user approval before adding it to Protocols.',
+  description: 'Prepare a reviewable Hikari protocol for practical wet-lab how-to, buffer/reagent recipes, solution preparation, and experimental procedure requests, even when the user does not say "generate a protocol" (for example, "How to make 1L 10x PBS"). Author the complete protocol JSON yourself, then call this tool; it normalizes the JSON without an internal LLM call. Use save: true to queue user approval before adding it to Protocols, or save: false for a requested unsaved preview. Pure conceptual questions or explicit text-only requests do not require this tool. If complete generated JSON already exists and the user asks to save it, submit it once with save: true.',
   annotations: buildWriteToolAnnotations('Protocol generation'),
   inputSchema: {
     type: 'object',

@@ -3,6 +3,7 @@
 const path = require('node:path');
 const { asArray: defaultAsArray } = require('../../../lib/normalize.js');
 const { ensurePathWithinRoot, pathExists } = require('../../../lib/path-safety.js');
+const { paperFolderPath, sanitizeFolderName: sanitizeStorageName } = require('../../../../shared/storage-layout.mjs');
 
 function defaultCleanText(value) {
   const text = String(value || '');
@@ -14,16 +15,6 @@ function defaultCleanText(value) {
 
 function createDownloadId() {
   return `paper-download-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
-}
-
-function sanitizeStorageName(value, fallback = 'item') {
-  const cleaned = String(value || '')
-    .trim()
-    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
-    .replace(/\s+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 180);
-  return cleaned || fallback;
 }
 
 function sanitizeImportedFileName(fileName, fallback = 'paper.pdf') {
@@ -49,15 +40,7 @@ function resolvePaperCollectionName(source = {}) {
 }
 
 function buildPaperStorageFolder({ rootPath, linkedType, linkedName }) {
-  const normalizedType = String(linkedType || '')
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_]+/g, '-');
-  const safeLinkedName = sanitizeStorageName(linkedName, 'Uncategorized');
-  if (normalizedType === 'journal-club' || normalizedType === 'literature-search') {
-    return `${String(rootPath || '').trim()}/Papers/${safeLinkedName}`;
-  }
-  return `${String(rootPath || '').trim()}/Project/${safeLinkedName}/Papers`;
+  return `${String(rootPath || '').trim()}/${paperFolderPath({ linkedType, linkedName })}`;
 }
 
 async function getUniqueFilePath(folderPath, fileName, reservedPaths = null) {

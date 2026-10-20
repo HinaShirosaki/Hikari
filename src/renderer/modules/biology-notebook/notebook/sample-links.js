@@ -6,11 +6,6 @@ import {
   normalizeNotebookState,
   pruneNotebookValuesForProtocol
 } from '../entry/entry-helpers.js';
-import {
-  changedFieldList,
-  describeNotebookEntryChanges,
-  logNotebookPageEvent
-} from '../../../services/notebook-page-log.js';
 
 // Marking a page executed and keeping its sample links in step with the
 // placeholders the page actually uses.
@@ -59,13 +54,6 @@ function createNotebookSampleLinks({
     };
     state.notebookEntries[index] = nextEntry;
     persist();
-    logNotebookPageEvent({
-      entry: nextEntry,
-      storagePath: state.settings?.storagePath,
-      action: 'execute',
-      summary: 'Marked notebook page as executed',
-      details: { executedAt: timestamp }
-    });
     entryListRenderer.renderEntries();
 
     const project = getEntryProject(nextEntry);
@@ -113,27 +101,8 @@ function createNotebookSampleLinks({
       sampleLinks: collectNotebookSampleLinks(state.notebookEntries[index], protocol),
       updatedAt: timestamp
     };
-    const previousEntrySnapshot = { ...state.notebookEntries[index] };
     state.notebookEntries[index] = nextEntry;
     persist();
-    const changes = describeNotebookEntryChanges(previousEntrySnapshot, nextEntry, [
-      'values',
-      'result',
-      'resultTable',
-      'resultTables',
-      'sampleLinks'
-    ]);
-    const changedFields = changedFieldList(changes);
-    if (changedFields.length) {
-      const sampleLinkCount = Array.isArray(nextEntry.sampleLinks) ? nextEntry.sampleLinks.length : 0;
-      logNotebookPageEvent({
-        entry: nextEntry,
-        storagePath: state.settings?.storagePath,
-        action: 'sample-link-update',
-        summary: `Updated linked samples (${changedFields.join(', ')})`,
-        details: { changedFields, changes, sampleLinkCount }
-      });
-    }
     entryListRenderer.renderEntries();
     if (notebookProtocolMeta) {
       notebookProtocolMeta.textContent = buildViewerMeta({ entry: nextEntry });

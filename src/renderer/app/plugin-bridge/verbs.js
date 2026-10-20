@@ -1,6 +1,7 @@
 import { normalizeNotebookResultTable, normalizeNotebookResultTables } from '../../lib/notebook-result-tables.js';
 import { MAX_PLUGIN_STORAGE_CHARS, measurePluginStorageValue } from '../../lib/plugin-storage.js';
 import { LAYOUT_VERBS } from './layout-verbs.js';
+import { renderPluginPlot } from './plotly-render.js';
 import { asArray } from '../../lib/normalize.js';
 import { buildBufferCandidates } from '../../lib/bench-calculations/buffer-candidates.js';
 import { MAX_FILE_BASE64_CHARS, MAX_LIST_SIZE, MAX_PYTHON_CODE_CHARS, MAX_PYTHON_INPUT_CHARS, MAX_PYTHON_INPUT_FILES, MAX_PYTHON_OUTPUT_CHARS, asObject, buildPluginAppContext, isCanonicalBase64, migrateLegacyGelRecords, readPluginStorage, resolvePluginFilePath, text } from './helpers.js';
@@ -15,6 +16,10 @@ const NOTIFICATION_TYPES = Object.freeze(['success', 'error']);
 // permission is unreachable, so adding a handler is not enough to expose data.
 const VERBS = {
   ...LAYOUT_VERBS,
+  'plotly.render': {
+    permission: 'agent:canvas',
+    handler: (params, { windowObject }) => renderPluginPlot(params, windowObject)
+  },
   'agent.respond': {
     permission: 'agent:canvas',
     handler: (params, { respondCanvas, frameWindow }) => respondCanvas(params, frameWindow)

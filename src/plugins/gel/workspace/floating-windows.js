@@ -9,11 +9,9 @@ export function createFloatingWindows({ documentObject, onOpen = {}, onClose = {
   const layer = documentObject.createElement('div');
   layer.className = 'gel-floating-layer';
   main.append(layer);
-  const triggers = {
-    tools: 'gel-open-tools-btn', profile: 'gel-open-profile-btn',
-    peak: 'gel-open-peak-editor-btn',
-    intensity: 'gel-open-cell-table-btn'
-  };
+  // The peak editor needs ~780 px, so it is the one tool that stays a window;
+  // everything else lives in the rail's sections.
+  const triggers = { peak: 'gel-open-peak-editor-btn' };
   const windows = new Map();
   const disposers = [];
   let order = 0;
@@ -122,19 +120,16 @@ export function createFloatingWindows({ documentObject, onOpen = {}, onClose = {
     const viewport = stage.getBoundingClientRect();
     const tablePanel = documentObject.getElementById('gel-lane-table-panel');
     const imageBounds = documentObject.getElementById('gel-image-row')?.getBoundingClientRect();
-    const height = tablePanel && !tablePanel.hidden && imageBounds
-      ? Math.max(0, imageBounds.bottom - viewport.top) : viewport.height;
+    const imageRegion = tablePanel && !tablePanel.hidden && imageBounds;
+    const top = imageRegion ? imageBounds.top : viewport.top;
+    const height = imageRegion ? imageBounds.height : viewport.height;
     layer.style.left = `${Math.max(0, viewport.left - bounds.left)}px`;
-    layer.style.top = `${Math.max(0, viewport.top - bounds.top)}px`;
+    layer.style.top = `${Math.max(0, top - bounds.top)}px`;
     layer.style.width = `${Math.max(0, viewport.width)}px`;
     layer.style.height = `${Math.max(0, height)}px`;
     windows.forEach((entry) => { sync(entry); clamp(entry); });
   }
 
-  listen(documentObject.getElementById('gel-hide-windows-btn'), 'click', () => {
-    windows.forEach((entry, key) => close(key, false));
-    documentObject.getElementById('gel-hide-windows-btn')?.focus({ preventScroll: true });
-  });
   listen(main, 'keydown', (event) => {
     if (event.key !== 'Escape' || event.defaultPrevented) return;
     const visible = [...windows.entries()].filter(([, entry]) => !entry.node.hidden);
@@ -144,19 +139,6 @@ export function createFloatingWindows({ documentObject, onOpen = {}, onClose = {
       close(visible[0][0]);
     }
   });
-  listen(main, 'click', (event) => {
-    const button = event.target.closest('[data-gel-tool-group]');
-    if (!button) return;
-    main.querySelectorAll('[data-gel-tool-group]').forEach((tab) => {
-      tab.setAttribute('aria-pressed', String(tab === button));
-    });
-    main.querySelectorAll('[data-gel-tool-panel]').forEach((panel) => {
-      panel.hidden = panel.dataset.gelToolPanel !== button.dataset.gelToolGroup;
-    });
-    const entry = windows.get('tools');
-    if (entry) clamp(entry);
-  });
-
   const mutationObserver = view?.MutationObserver ? new view.MutationObserver(() => {
     windows.forEach(sync);
   }) : null;
@@ -166,6 +148,10 @@ export function createFloatingWindows({ documentObject, onOpen = {}, onClose = {
   resizeObserver?.observe(main);
   const imageRow = documentObject.getElementById('gel-image-row');
   if (imageRow) resizeObserver?.observe(imageRow);
+  // A growing lane table pushes the image row down without resizing it, and
+  // a resize observer misses pure moves; watch the table itself as well.
+  const tablePanel = documentObject.getElementById('gel-lane-table-panel');
+  if (tablePanel) resizeObserver?.observe(tablePanel);
   windows.forEach(({ node }) => resizeObserver?.observe(node));
   listen(view, 'resize', layout);
   layout();

@@ -120,6 +120,25 @@ async function releaseOfficialMcpSkills(skillRootPath = '', context = {}) {
   return releases.filter(Boolean);
 }
 
+// Drops Hikari-released copies (SKILL.md carries the marker) from a skill
+// root, including skills Hikari no longer ships; user-authored skills stay.
+async function removeOfficialMcpSkills(skillRootPath = '') {
+  const root = String(skillRootPath || '').trim();
+  const entries = root ? await fs.readdir(root, { withFileTypes: true }).catch(() => []) : [];
+  const removed = [];
+  for (const entry of entries) {
+    const skillDir = path.join(root, entry.name);
+    const content = entry.isDirectory()
+      ? await fs.readFile(path.join(skillDir, 'SKILL.md'), 'utf8').catch(() => '')
+      : '';
+    if (content.includes(OFFICIAL_MCP_SKILL_MARKER)) {
+      await fs.rm(skillDir, { recursive: true, force: true });
+      removed.push({ path: skillDir, status: 'removed' });
+    }
+  }
+  return removed;
+}
+
 async function disableOfficialMcpSkill(skillRootPath, skill, context = {}) {
   const skillPath = path.join(skillRootPath, skill.directory, 'SKILL.md');
   const existing = await fs.readFile(skillPath, 'utf8').catch(() => '');
@@ -175,5 +194,6 @@ module.exports = {
   getOfficialMcpSkillToolRequirements,
   isOfficialMcpSkillEnabled,
   releaseOfficialMcpSkills,
-  releaseOfficialMcpSkillsForWorkspace
+  releaseOfficialMcpSkillsForWorkspace,
+  removeOfficialMcpSkills
 };

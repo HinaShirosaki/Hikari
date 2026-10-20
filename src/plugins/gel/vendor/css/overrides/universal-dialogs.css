@@ -30,6 +30,11 @@
   display: none !important;
 }
 
+/* A native modal <dialog> is its own full-screen overlay; the top layer stacks it. */
+dialog.app-dialog-overlay { width: auto; height: auto; max-width: none; max-height: none; margin: 0; border: 0; color: inherit; }
+dialog.app-dialog-overlay:not([open]) { display: none; }
+dialog.app-dialog-overlay::backdrop { background: transparent; }
+
 .app-dialog-surface {
   --app-dialog-width: 920px;
   --app-dialog-max-height: calc(100svh - 36px);

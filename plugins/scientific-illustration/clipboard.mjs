@@ -5,9 +5,7 @@ export const CLIPBOARD_FORMAT = 'hikari.figura.components';
 export function normalizeClipboard(raw, validateSvg) {
   record(raw, 'Copied components'); fields(raw, ['format', 'version', 'objects', 'groups']);
   if (raw.format !== CLIPBOARD_FORMAT || raw.version !== 1 || !Array.isArray(raw.objects) || !raw.objects.length) throw new Error('Invalid copied components.');
-  if (new Set(raw.objects.map(object => object.canvas ?? 'main')).size !== 1) throw new Error('Copy components from one canvas at a time.');
   const scene = normalizeDocument({ ...createDocument(), objects: raw.objects, groups: raw.groups }, validateSvg);
-  if (new Set(scene.objects.map(object => object.canvas)).size !== 1) throw new Error('Copy components from one canvas at a time.');
   return { format: CLIPBOARD_FORMAT, version: 1, objects: scene.objects, groups: scene.groups };
 }
 
@@ -72,18 +70,31 @@ export function installCanvasClipboard({ document, canHandle, getSelection, past
     if (JSON.stringify(value) !== JSON.stringify(snapshot)) { snapshot = value; pasted = 0; }
     event.preventDefault(); insert(snapshot);
   });
+  function copy() {
+    if (!canHandle({ target: document.activeElement })) return false;
+    try {
+      if (!capture()) return false;
+      command('copy'); status('Components copied'); return true;
+    } catch (error) { status(error.message); return false; }
+  }
+  function pasteSelection() {
+    if (!canHandle({ target: document.activeElement })) return false;
+    pasteEventSeen = false;
+    command('paste');
+    if (!pasteEventSeen) insert(snapshot);
+    return true;
+  }
   return {
+    copy, paste: pasteSelection,
     handleKey(event) {
       if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey || !canHandle(event)) return false;
       const key = event.key.toLowerCase(); if (!['c', 'v'].includes(key)) return false;
       try {
         if (key === 'c') {
-          if (!capture()) return false;
-          event.preventDefault(); command('copy'); status('Components copied');
+          if (!copy()) return false;
+          event.preventDefault();
         } else {
-          pasteEventSeen = false;
-          command('paste');
-          if (!pasteEventSeen) insert(snapshot);
+          pasteSelection();
           event.preventDefault();
         }
       } catch (error) { event.preventDefault(); status(error.message); }

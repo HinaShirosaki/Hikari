@@ -100,10 +100,11 @@ The rest of the folder is shared adapters rather than fan-out services:
 | --- | --- |
 | `direct-llm.js` | builds LLM settings from state and sends one-shot requests over `llm:direct-generate` |
 | `notebook-note-tools.js` | LLM-clarified notebook notes (used by Notebook and the Home notes widget) |
-| `notebook-page-log.js` | appends one JSONL line per user action to a notebook page's `page.log` |
 | `notebook-record-compat.js` | reads persisted Sequence Viewer cloning records in notebook entries, so app-state hydration and Notebook display do not import Sequence Viewer internals |
 
 The key design choice is that services do not own separate stores. They usually translate "feature X changed" into "which other views need to refresh?", and when they do mutate state, such as the protocol service merging an externally saved protocol, they use the shared renderer state plus `persist()` callback injected by the core.
+
+Notebook `page.log` is written by `main/storage/record-markdown/notebook-log.js` after successful Markdown commits. It records the actual `page.md` line numbers and full before/after text, so renderer actions need no separate logging calls.
 
 ## Search pipeline
 

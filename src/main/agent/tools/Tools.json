@@ -9,7 +9,7 @@
   },
   {
     "name": "notebook-list",
-    "description": "List notebook page titles and compact metadata, with optional project, protocol, state, title substring, and date-range filters. No filters lists all pages. Follow pagination.next_cursor with unchanged filters until null; access.complete reports storage coverage. Dates use created, updated (default), or executed timestamps; YYYY-MM-DD bounds include the entire UTC day. Results sort newest first, then by entry id. A stale_cursor requires restarting the list."
+    "description": "List notebook page titles and compact metadata, with optional project, protocol, state, title substring, and date-range filters. No filters lists all pages. Follow pagination.next_offset with unchanged filters until null; access.complete reports storage coverage. Dates use created, updated (default), or executed timestamps; YYYY-MM-DD bounds include the entire UTC day. Results sort newest first, then by entry id."
   },
   {
     "name": "protocol-matching",
@@ -45,15 +45,15 @@
   },
   {
     "name": "container",
-    "description": "Store, name, list, read, update, and position-edit temporary string or number containers with short runtime IDs and optional source provenance."
+    "description": "Use when exact strings or numbers should be held, copied or edited during this run; physical samples and durable user memory are different resources. Store, name, list, read, update, and position-edit temporary string or number containers with short runtime IDs and optional source provenance."
   },
   {
     "name": "assay-table",
-    "description": "Create scratch assay tables, derive calculated tables with +, -, *, /, max, min, avg, sd, and run Python-backed table transforms."
+    "description": "Use for calculations over supplied or active Assay data, including replicate means, blank correction, normalization, curve fitting and grouped statistics. Create scratch assay tables, derive calculated tables with +, -, *, /, max, min, avg, sd, and run Python-backed table transforms."
   },
   {
     "name": "plotly-graph",
-    "description": "Create, update, read, and inspect scratch Plotly.js graph specifications using canonical data, layout, and optional config arguments."
+    "description": "Use for a custom chart, dose-response graph, heatmap, error bars, or revisions to an existing chat figure; native Assay plot styling uses assay_plot. Create, update, read, and inspect scratch Plotly.js graph specifications using canonical data, layout, and optional config arguments."
   },
   {
     "name": "literature-search",
@@ -61,7 +61,7 @@
   },
   {
     "name": "purchase-recommendation",
-    "description": "Search the web for purchasable products, extract vendor page metadata such as image and price, hard-filter explicit product requirements, and rank valid items for chat recommendation cards."
+    "description": "Use for product sourcing, where-to-buy, vendor options, price comparisons, cheaper alternatives, and in-stock availability requests. Search vendor products and rank results for structured recommendation cards; native web search may supplement missing details."
   },
   {
     "name": "paper-download",

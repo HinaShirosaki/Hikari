@@ -1,8 +1,17 @@
 # Figura
 
-An installable Hikari plugin for editable scientific figures. This folder is the
+An installable Hikari plugin for editable scientific figures and data plots. This folder is the
 complete plugin: no npm install, build step, or application-source imports.
 Copy it anywhere while keeping the folder name `scientific-illustration`.
+
+For data plots, the agent can create a **Plot** layer from Plotly `data` and
+`layout` through the normal canvas API. Hikari renders its existing vendored
+Plotly.js locally through `plotly.render`; no CDN or extra plotting dependency
+is bundled in Figura. Source values, layout and optional processing notes stay
+with each plot for later agent edits. Charts move, resize, group, copy, save as
+assets and export with the figure. Chart axes, ticks and legend are editable
+through the Plotly specification; surrounding figure labels remain text layers.
+Use a Hikari build exposing the public `plotly.render` plugin verb.
 
 The dock icon combines a cell diagram with a drawing pen. `icon.svg` is a
 text-free vector asset with the same 24-unit view box and 1.5-unit stroke as
@@ -23,13 +32,18 @@ intact. Source context remains available on canvas read and after reopening.
 Missing or truncated paper context is explicit. No broad protocol/paper read
 permission is needed: Hikari grants only the source selected by the user click.
 
-The canvas assembles the final figure. Vector, raster, and text layers remain
-independently editable by you and Codex. SVG artwork is text-free; labels are separate text objects.
+The canvas assembles the final figure. Vector, raster, plot, and text layers remain
+independently editable by you and Codex. Illustrative SVG artwork is text-free;
+figure labels are separate text objects, while plot labels belong to the plot specification.
 Shift-click components to select several, then use the toolbar's Group button
 (⌘G / Ctrl+G). The adjacent Ungroup button uses ⌘⇧G / Ctrl+Shift+G. Groups move and resize
 proportionally together; child layers remain editable in Layers. Alt-click
 on the canvas selects an individual group member. Groups persist with each
 illustration and are available through the agent's canvas API.
+Right-click a component or layer row for **Copy**, **Paste**, **Group**,
+**Ungroup**, and **Save as an asset…**. Right-clicking a selected member keeps
+the whole selection; an unselected component becomes the menu's target.
+The menu also opens on empty canvas space and with Shift+F10 or the Menu key.
 The compact right toolbar offers **Select & move (V)** and **Freehand (L)**,
 adding layers, cropping, grouping, alignment, Layers, Assets, and zoom controls.
 **Align and distribute** aligns two or more selected items to the left, right,
@@ -54,8 +68,8 @@ selected components to move them. Resize handles work in both tools. Shift
 adds to the selection; Alt selects group members individually. Escape cancels a selection gesture.
 Selection respects rotated bounds and zoom, without changing saved artwork.
 Each selected component has its own outline inside one shared move/resize frame.
-Select a component, several layers or a group and choose **Save as asset…**
-in Layers. **Assets** in the toolbar provides search and previews; click an asset
+Right-click a component, several layers or a group and choose **Save as an
+asset…**. **Assets** in the toolbar provides search and previews; click an asset
 to insert an independent editable copy on the active canvas. Saved components
 are shared across all illustrations in this plugin's current Hikari storage.
 **Assets → Import asset…** saves SVG, PNG, JPEG, or WebP files directly to that
@@ -143,7 +157,15 @@ generation. The target saves per illustration and applies to new or requested
 changes. Boxes, arrows, connectors, panel frames, charts, exact scientific
 geometry and separate text labels are excluded; they remain SVG or text even
 at 100%. A target never adds unnecessary detail or rasterizes schematic symbols.
-These presets supply explicit agent guidance: SVG only, mostly SVG, balanced,
+
+**Image style** in the same menu offers Automatic, Scientific illustration,
+Flat illustration, 3D render, Photorealistic, Watercolor and Pen and ink.
+Optional **Style notes** add palette, lighting or material direction. The style
+and notes save per figure and guide every new image-generation prompt. They
+survive duplication, reopening and undo/redo. Changing them does not regenerate
+existing artwork or enable image generation; the percentage still controls its use.
+
+The percentage presets supply explicit agent guidance: SVG only, mostly SVG, balanced,
 mostly image generation, and image generation for all eligible artwork.
 There is no per-request asset-count or aggregate-import-byte quota, and no
 plugin quota on image-generation calls. Individual images still require valid

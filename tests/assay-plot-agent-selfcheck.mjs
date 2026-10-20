@@ -45,7 +45,6 @@ assert.throws(() => preparePlotStylePatch(original, { xColumn: 'different' }, co
 assert.throws(() => preparePlotStylePatch(original, { textStyles: { title: { imaginary: 1 } } }, context), /Unsupported/);
 assert.throws(() => preparePlotStylePatch(original, { seriesStyles: { missing: { color: '#aaaaaa' } } }, context), /Unknown series/);
 assert.throws(() => preparePlotStylePatch(original, { yScale: 'log10', plotElements: [{ id: 'zero', type: 'line', axis: 'y', value: 0 }] }, context), /positive/);
-assert.throws(() => preparePlotStylePatch(original, { chartType: 'bar' }, context), /fitted/);
 assert.equal(await plotRevision({ a: 1, b: 2 }), await plotRevision({ b: 2, a: 1 }));
 
 // Actual controller with a deterministic renderer: persistence and rendering

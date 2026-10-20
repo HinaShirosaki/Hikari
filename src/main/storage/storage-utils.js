@@ -4,23 +4,7 @@ const fs = require('fs/promises');
 const path = require('path');
 const { SQLJS_WASM_JS_PATH, loadSqlJs } = require('../lib/sqlite.js');
 const { asArray } = require('../lib/normalize.js');
-
-
-function sanitizeFolderName(value, fallback = 'item') {
-  const cleaned = String(value || '')
-    .trim()
-    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
-    .replace(/\s+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 180);
-  // Separators are already gone, but a name of nothing but dots survives them
-  // and still walks: path.join(root, 'Project', '..') is the storage root, and
-  // every caller here joins this onto a trusted base.
-  if (!cleaned || /^\.+$/.test(cleaned)) {
-    return fallback;
-  }
-  return cleaned;
-}
+const { sanitizeFolderName } = require('../../shared/storage-layout.mjs');
 
 function toPosixRelative(rootPath, targetPath) {
   return path.relative(rootPath, targetPath).split(path.sep).join('/');

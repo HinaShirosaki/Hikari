@@ -113,23 +113,12 @@ function createChartSurface({
     return Boolean(model?.series?.some((series) => Array.isArray(series.markers)));
   }
 
-  // The chart-type override applies to plain category/series models. A fitted curve is
-  // a densely sampled line plus its observed markers, so drawing it as bars would be
-  // meaningless and the override is ignored (and disabled in the Data Series tab).
-  function applyChartTypeOverride(model, style) {
-    if (!model || style.chartType === 'auto' || hasFittedCurve(model)) {
-      return model;
-    }
-    return { ...model, chartType: style.chartType };
-  }
-
   function renderAnalysisChart(model) {
     const target = assayAnalysisTable?.querySelector('[data-assay-analysis-chart]');
     if (!target || !model) {
       return { seriesLabels: [] };
     }
-    const style = chartStyleStore.getStyle();
-    const info = plotlyRenderer.render(target, applyChartTypeOverride(model, style), style);
+    const info = plotlyRenderer.render(target, model, chartStyleStore.getStyle());
     return { ...info, hasFittedCurve: hasFittedCurve(model) };
   }
 
@@ -303,7 +292,6 @@ function createChartSurface({
     applyChartContext,
     unmountAnalysisChart,
     hasFittedCurve,
-    applyChartTypeOverride,
     renderAnalysisChart,
     exportChartImage,
     getChartStyle,

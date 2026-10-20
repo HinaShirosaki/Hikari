@@ -1,5 +1,4 @@
 import {
-  createEmptyManualOverrides,
   hasCompleteLaneBandWindow,
   isPerLaneBandMode,
   normalizeLaneBandWindows,
@@ -16,7 +15,6 @@ function createManualStepNavigation({
   finishLaneDividers,
   getLaneBandProgress,
   getManualStep,
-  renderManualProgress,
   renderOverrideStatus,
   updateLaneSegmentation
 } = {}) {
@@ -39,8 +37,8 @@ function createManualStepNavigation({
         deps.setStatus(`Ladder MW skipped (${ladderCount} point${ladderCount === 1 ? '' : 's'}). MW calibration disabled. ${isPerLaneBandMode(normalized.laneSegmentation) ? 'Click the top line of the target band in each lane.' : 'Click the top line of target band.'}`);
       } else {
         deps.setStatus(isPerLaneBandMode(normalized.laneSegmentation)
-          ? 'Ladder MW completed. Click the top line of the target band in each lane.'
-          : 'Ladder MW completed. Click the top line of target band.');
+          ? 'Click the top edge of the target band in each lane.'
+          : 'Click the top edge of the target band.');
       }
       deps.onRunAnalysis();
       return;
@@ -51,7 +49,7 @@ function createManualStepNavigation({
       renderOverrideStatus();
       // Renders commit undo steps; without one this merges into the next edit.
       deps.renderCanvas();
-      deps.setStatus('Quantification confirmed. (Optional) click additional band points in lanes.');
+      deps.setStatus('To measure another band, click it in its lane.');
     }
   }
 
@@ -109,7 +107,7 @@ function createManualStepNavigation({
     runtime.currentReport = null;
     renderOverrideStatus();
     deps.renderCanvas();
-    deps.setStatus('Moved back to previous step.');
+    deps.setStatus('');
   }
 
   function rewindPerLaneBandStep(step, normalized) {
@@ -182,21 +180,9 @@ function createManualStepNavigation({
     };
   }
 
-  function onManualResetSteps() {
-    runtime.manualOverrides = createEmptyManualOverrides();
-    runtime.manualDividerConfirmed = false;
-    clearCanvasInteractionState();
-    runtime.currentReport = null;
-    renderOverrideStatus();
-    renderManualProgress();
-    deps.renderCanvas();
-    deps.setStatus('Gel tool selections reset.');
-  }
-
   return {
     onManualNextStep,
-    onManualPrevStep,
-    onManualResetSteps
+    onManualPrevStep
   };
 }
 

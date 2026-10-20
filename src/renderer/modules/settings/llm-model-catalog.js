@@ -9,8 +9,8 @@ export function normalizeCodexCatalog(rawCatalog) {
   return {
     defaultModel: String(source.defaultModel || '').trim(),
     defaultReasoningEffort: String(source.defaultReasoningEffort || '').trim().toLowerCase(),
-    availableModelIds: (Array.isArray(source.availableModelIds) ? source.availableModelIds : Array.isArray(source.models) ? source.models : [])
-      .map(entry => String(typeof entry === 'string' ? entry : entry?.id || '').trim()).filter(Boolean),
+    availableModelIds: (Array.isArray(source.availableModelIds) ? source.availableModelIds : [])
+      .map(id => String(id || '').trim()).filter(Boolean),
     models: (Array.isArray(source.models) ? source.models : []).map((entry) => ({
       id: String(entry?.id || '').trim(),
       label: String(entry?.label || entry?.id || '').trim(),

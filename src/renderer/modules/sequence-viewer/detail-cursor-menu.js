@@ -1,4 +1,3 @@
-import { escapeHtml } from '../../lib/html.js';
 import { normalizeTopology } from './shared.js';
 import { positionFloatingUi } from './detail-feature-editing/feature-ranges.js';
 
@@ -24,11 +23,7 @@ export function createSequenceCursorMenuController(config = {}) {
     activeContext = { record, boundary };
     const circular = normalizeTopology(record.topology) === 'circular';
     const atStart = boundary === 0 || boundary === record.sequence.length;
-    const label = boundary === record.sequence.length
-      ? `After base ${boundary.toLocaleString()}`
-      : `Before base ${(boundary + 1).toLocaleString()}`;
     menu.innerHTML = `
-      <p class="small-note">${escapeHtml(label)}</p>
       <button type="button" class="sequence-viewer-context-item" data-sequence-cursor-action="insert">Insert Sequence…</button>
       ${circular ? `<button type="button" class="sequence-viewer-context-item" data-sequence-cursor-action="set-origin"${atStart ? ' disabled' : ''}>Set Sequence Start Here</button>` : ''}
     `;
@@ -42,12 +37,12 @@ export function createSequenceCursorMenuController(config = {}) {
       hideFeatureContextMenu();
       return;
     }
-    const { record, boundary } = context;
+    const { boundary } = context;
     hideFeatureContextMenu();
     if (action === 'insert') {
       openSequenceEditDialog('insert', { range: { start: boundary, end: boundary } });
-    } else if (action === 'set-origin' && normalizeTopology(record.topology) === 'circular'
-      && boundary > 0 && boundary < record.sequence.length) {
+    } else if (action === 'set-origin') {
+      // rotateCircularSequenceRecord rejects linear records and ignores the current start.
       try {
         await onSetSequenceOrigin(boundary);
       } catch (error) {

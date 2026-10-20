@@ -215,3 +215,68 @@ test('undo in another module preserves an actual unsaved notebook editor', () =>
   assert.equal(service.undo(), false, 'dirty editor must retain its draft and saved history');
   assert.equal(state.notebookEntries[0].result, 'Another saved change');
 });
+
+test('redo survives render-time state that the restore re-render recreates', () => {
+  const f = fixture({ records: [], rail: {} }, { onRestore: () => { f.state.rail.scope ??= { sessions: [] }; } });
+  f.state.rail.scope = { sessions: [] }; // An agent rail normalizes its scope on read, without persisting.
+  f.state.records.push({ id: 'r', value: 1 }); f.a.persist();
+  assert.equal(f.service.undo(), true);
+  assert.deepEqual(f.state, { records: [], rail: { scope: { sessions: [] } } });
+  assert.equal(f.service.redo(), true);
+  assert.deepEqual(f.state.records, [{ id: 'r', value: 1 }]);
+});
+
+test('undo and redo invalidate changed assay previews before persistence without adding a step', () => {
+  const saved = [];
+  const f = fixture({ assays: [{ id: 'x', resultValues: { A1: 1 } }] }, {
+    persistState: () => saved.push(structuredClone(f.state))
+  });
+  f.state.assays[0].resultValues.A1 = 2; f.a.persist();
+  f.state.assays[0].latestAnalysis = { rows: [2] }; f.a.persist();
+  assert.equal(f.service.getHistoryState('a').undoDepth, 1);
+  assert.equal(f.service.undo(), true);
+  assert.deepEqual(f.state.assays[0], { id: 'x', resultValues: { A1: 1 }, latestAnalysis: null });
+  assert.equal(saved.at(-1).assays[0].latestAnalysis, null, 'autosave cannot capture a stale analysis');
+  f.state.assays[0].latestAnalysis = { rows: [1] }; f.a.persist();
+  assert.equal(f.service.redo(), true);
+  assert.deepEqual(f.state.assays[0], { id: 'x', resultValues: { A1: 2 }, latestAnalysis: null });
+});
+
+test('undoing an unrelated record preserves the current analysis cache', () => {
+  const f = fixture({ assays: [{ id: 'x', resultValues: { A1: 1 } }], settings: { value: 0 } });
+  f.state.settings.value = 1; f.a.persist();
+  f.state.assays[0].latestAnalysis = { rows: [1] }; f.a.persist();
+  assert.equal(f.a.undo(), true);
+  assert.deepEqual(f.state.assays[0].latestAnalysis, { rows: [1] });
+});
+
+test('assay collection restoration preserves only unchanged records caches by ID', () => {
+  const f = fixture({ assays: [
+    { id: 'x', transformSpec: { formula: 'x' }, latestAnalysis: { rows: [1] } },
+    { id: 'y', resultValues: { A1: 3 }, latestAnalysis: { rows: [3] } }
+  ] });
+  f.state.assays.reverse();
+  f.state.assays[1].transformSpec = { formula: 'x * 2' }; f.a.persist();
+  f.state.assays[1].latestAnalysis = { rows: [2] }; f.a.persist();
+  assert.equal(f.a.undo(), true);
+  assert.deepEqual(f.state.assays.map(assay => [assay.id, assay.latestAnalysis]), [['x', null], ['y', { rows: [3] }]]);
+  f.state.assays[0].latestAnalysis = { rows: [1] }; f.a.persist();
+  assert.equal(f.a.redo(), true);
+  assert.deepEqual(f.state.assays.map(assay => [assay.id, assay.latestAnalysis]), [['y', { rows: [3] }], ['x', null]]);
+});
+
+test('reordering assays alone retains valid cached analysis', () => {
+  const f = fixture({ assays: ['x', 'y'].map(id => ({ id, latestAnalysis: { summary: id } })) });
+  f.state.assays.reverse(); f.a.persist();
+  assert.equal(f.a.undo(), true);
+  assert.deepEqual(f.state.assays.map(assay => [assay.id, assay.latestAnalysis.summary]), [['x', 'x'], ['y', 'y']]);
+});
+
+test('redoing creation never resurrects analysis from a deleted assay', () => {
+  const f = fixture({ assays: [] });
+  f.state.assays.push({ id: 'x', resultValues: { A1: 1 } }); f.a.persist();
+  f.state.assays[0].latestAnalysis = { rows: [1] }; f.a.persist();
+  assert.equal(f.a.undo(), true);
+  assert.equal(f.a.redo(), true);
+  assert.equal(f.state.assays[0].latestAnalysis, undefined);
+});

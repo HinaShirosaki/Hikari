@@ -22,7 +22,6 @@ export const protocolManifest = {
     createId,
     safeText,
     onProtocolsChanged: rendererServices.protocol.handleProtocolsChanged,
-    logNotebookPageEvent: rendererServices.notebook.logPageEvent,
     selectionInsightsController,
     contextActions: rendererServices.contextActions,
     __globals: {

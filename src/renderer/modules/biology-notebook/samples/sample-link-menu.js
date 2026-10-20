@@ -1,3 +1,5 @@
+import { positionContextMenu } from '../../../lib/context-menu.js';
+
 export function createSampleLinkMenuController({
   doc = (typeof document !== 'undefined' ? document : null),
   win = (typeof window !== 'undefined' ? window : null),
@@ -25,20 +27,6 @@ export function createSampleLinkMenuController({
       menu.innerHTML = '';
     }
     menuState = null;
-  }
-
-  function position(x, y) {
-    if (!menu) {
-      return;
-    }
-    const menuWidth = 132;
-    const menuHeight = 40;
-    const viewportWidth = win?.innerWidth || doc?.documentElement?.clientWidth || menuWidth;
-    const viewportHeight = win?.innerHeight || doc?.documentElement?.clientHeight || menuHeight;
-    const left = Math.max(8, Math.min(Number(x) || 8, viewportWidth - menuWidth - 8));
-    const top = Math.max(8, Math.min(Number(y) || 8, viewportHeight - menuHeight - 8));
-    menu.style.left = `${left}px`;
-    menu.style.top = `${top}px`;
   }
 
   function onMenuClick(event) {
@@ -73,8 +61,7 @@ export function createSampleLinkMenuController({
         Add Table
       </button>
     `;
-    position(x, y);
-    menuEl.hidden = false;
+    positionContextMenu(menuEl, x, y, win);
     menuEl.querySelector('[data-placeholder-add-table]')?.focus?.();
   }
 

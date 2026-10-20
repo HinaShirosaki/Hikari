@@ -64,16 +64,10 @@ function createCodexUsageSettings({ settingCodexUsage, settingCodexUsageStatus,
           clear(result?.error || 'Account usage is unavailable. Try refreshing.');
           return;
         }
-        const windows = Array.isArray(result.windows) ? result.windows : [];
-        if (windows.length) {
-          renderWindow('fiveHour', windows[0], { label: windowLabel(windows[0].windowDurationMins) });
-          renderWindow('weekly', windows[1], windows[1]
-            ? { label: windowLabel(windows[1].windowDurationMins) } : { hidden: true });
-        } else {
-          renderWindow('fiveHour', result.fiveHour);
-          renderWindow('weekly', result.weekly);
-        }
-        if (settingCodexUsageStatus) settingCodexUsageStatus.textContent = windows.length || result.fiveHour || result.weekly
+        const [first, second] = Array.isArray(result.windows) ? result.windows : [];
+        renderWindow('fiveHour', first, first ? { label: windowLabel(first.windowDurationMins) } : {});
+        renderWindow('weekly', second, second ? { label: windowLabel(second.windowDurationMins) } : { hidden: Boolean(first) });
+        if (settingCodexUsageStatus) settingCodexUsageStatus.textContent = first
           ? `${result.planType ? `${result.planType} plan. ` : ''}Shared across Codex apps using this account.`
           : 'Codex returned no usage windows for the connected account. Refresh or sign in again.';
       } catch {

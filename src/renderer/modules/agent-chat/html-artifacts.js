@@ -46,7 +46,7 @@ export function mountAgentHtml(historyNode, messages, api) {
     }
     Promise.resolve().then(() => api.agentHtmlPreview(artifact)).then(result => {
       if (!slot.isConnected) return;
-      if (!result?.ok || !/^hikari-html:\/\/preview\/[a-f0-9-]+$/.test(result.url)) throw new Error(result?.error || 'Invalid HTML preview response.');
+      if (!result?.ok || !/^hikari-html:\/\/[a-f0-9-]+\/$/.test(result.url)) throw new Error(result?.error || 'Invalid HTML preview response.');
       const frame = slot.ownerDocument.createElement('iframe');
       frame.setAttribute('sandbox', 'allow-scripts');
       frame.setAttribute('referrerpolicy', 'no-referrer');

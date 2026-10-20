@@ -71,6 +71,11 @@ async function main() {
   await exec("window.messages.push({id:'followup',role:'user',text:'Thanks'});window.redraw();");
   assert.equal(await frame.executeJavaScript("document.querySelector('#threshold').value"), '0.8', 'new message does not reset output');
   await exec("window.messages.pop();window.redraw();");
+  // At the 40-message cap every turn drops the oldest message and shifts each index.
+  await exec("window.messages.unshift(...Array.from({length:39},(_,i)=>({id:'old'+i,role:'user',text:'Earlier'})));window.redraw();window.messages.push({id:'next',role:'user',text:'Next'});window.messages=window.messages.slice(-40);window.redraw();");
+  assert.equal(frame.routingId, routingId);
+  assert.equal(await frame.executeJavaScript("document.querySelector('#threshold').value"), '0.8', 'capped history does not reset output');
+  await exec("window.messages=window.messages.filter(m=>m.id==='final-html');window.redraw();");
   // Appending another HTML artifact must preserve the existing browsing context.
   const extra = await require('../src/main/agent/mcp-contract/gateway').createAgentMcpGateway().callGatewayTool('html_output', { title: 'Second output', html: '<!doctype html><p>Additional result</p>' });
   await exec(`window.messages[0].meta.html_artifacts.push(${JSON.stringify(extra.html_artifact)});window.redraw();`);
@@ -94,7 +99,18 @@ async function main() {
   assert.equal(blocked, true, 'self navigation prevented'); assert.equal(frame.url, originalUrl); assert.equal(requests.length, 0);
   await frame.executeJavaScript("document.querySelector('#reset').click()");
   assert.equal(await frame.executeJavaScript("document.querySelector('#summary').textContent"), '3 of 4 samples meet the threshold.');
-  console.log(`HTML Electron ${phase}: interaction, stable controls, desktop/narrow layout, reload, and sandbox/navigation isolation passed.`);
+  // A runaway script must stall only its own preview.
+  const tool = args => require('../src/main/agent/mcp-contract/gateway').createAgentMcpGateway().callGatewayTool('html_output', args);
+  const runaway = await tool({ title: 'Runaway', html: '<!doctype html><script>for(;;){}</script>' });
+  const sibling = await tool({ title: 'Sibling', html: '<!doctype html><p id="sibling">Loaded</p>' });
+  await exec(`window.messages.push({id:'runaway',role:'assistant',text:'Runaway',meta:{html_artifacts:[${JSON.stringify(runaway.html_artifact)}]}});window.redraw();`);
+  await new Promise(resolve => setTimeout(resolve, 300));
+  await exec(`window.messages.push({id:'sibling',role:'assistant',text:'Sibling',meta:{html_artifacts:[${JSON.stringify(sibling.html_artifact)}]}});window.redraw();`);
+  const hasSibling = f => Promise.race([f.executeJavaScript("Boolean(document.querySelector('#sibling'))").catch(() => false), new Promise(resolve => setTimeout(resolve, 100, false))]);
+  let siblingLoaded = false;
+  for (let i = 0; i < 50 && !siblingLoaded; i++) siblingLoaded = (await Promise.all(win.webContents.mainFrame.frames.map(hasSibling))).some(Boolean);
+  assert.equal(siblingLoaded, true, 'runaway preview does not stall other previews');
+  console.log(`HTML Electron ${phase}: interaction, stable controls, capped history, desktop/narrow layout, reload, sandbox/navigation isolation, and runaway-script isolation passed.`);
   win.destroy(); app.quit();
 }
 main().catch(error => { console.error(error); if (process.versions.electron) require('electron').app.exit(1); else process.exitCode = 1; });

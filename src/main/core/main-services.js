@@ -45,9 +45,6 @@ const {
   hydrateSnapshotFromBundle,
   importStorageRoot
 } = require('../storage/index.js');
-const {
-  releaseOfficialMcpSkillsForWorkspace
-} = require('../agent/codex-agent/official-mcp-skills.js');
 const { createPaperImportTransformer } = require('./services/create-paper-import-transformer.js');
 const {
   normalizePaperFindingRunResult
@@ -148,7 +145,6 @@ function createMainServices(context = {}) {
   let requestProjectMemoryConclusion = null;
   const syncBundleFromSnapshot = (input = {}) => syncBundleFromSnapshotBase({
     ...input,
-    releaseOfficialMcpSkillsForWorkspace,
     requestProjectMemoryConclusion,
     getAgentMemoryFilePath: appPaths.getAgentMemoryFilePath
   });
@@ -202,6 +198,8 @@ function createMainServices(context = {}) {
     ipcMain,
     getAgentPythonSandboxRoot: appPaths.getAgentPythonSandboxRoot,
     getAgentMemoryFilePath: appPaths.getAgentMemoryFilePath,
+    // Official skills are released into the Codex runtime home, not the storage root.
+    agentSkillDirs: [path.join(appPaths.getCodexCliHomePath(), 'skills')],
     getBundlePaths,
     hydrateSnapshotFromBundle,
     syncBundleFromSnapshot,

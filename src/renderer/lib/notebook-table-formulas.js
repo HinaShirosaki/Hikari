@@ -1,5 +1,6 @@
 import { FormulaError, compileFormula } from './formula.js';
 import { normalizeNotebookResultTables, solveTableCellFormula } from './notebook-result-tables.js';
+import { formatSigFig } from './numbers.js';
 import { fail, formatCellAddress, formatNotebookTableNumber, isNotebookTableFormula, notebookTableCellText, parseCellAddress } from './notebook-table-formulas/cell-address.js';
 import { simplifyFormula } from './notebook-table-formulas/formula-simplify.js';
 
@@ -177,8 +178,11 @@ export function computeNotebookResultTables(rawTables, { plateAddressing = false
           return;
         }
         try {
+          // Match the bench tools' readable precision for molarity worksheets.
+          // Only the displayed text is rounded; references keep the evaluated value.
+          const value = valueAt(tableIndex, columnIndex, rowIndex);
           cells[column.field] = {
-            text: formatNotebookTableNumber(valueAt(tableIndex, columnIndex, rowIndex)),
+            text: table.solve ? formatSigFig(value) : formatNotebookTableNumber(value),
             error: null,
             formula: true,
             source: raw

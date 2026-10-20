@@ -2,18 +2,20 @@
 
 const path = require('path');
 const { cleanText } = require('./storage-utils');
+const {
+  PAPERS_ROOT_FOLDER_NAME,
+  PLATES_ROOT_FOLDER_NAME,
+  PROJECT_ROOT_FOLDER_NAME,
+  PROTOCOL_ROOT_FOLDER_NAME
+} = require('../../shared/storage-layout.mjs');
 
-const PLATES_ROOT_FOLDER_NAME = 'Plates';
 const CHEMICALS_SQLITE_FILE_NAME = 'hikari-chemicals.index.sqlite';
 const DASHBOARD_ROOT_FOLDER_NAME = 'Dashboard';
 const EXPERIMENT_LOG_FILE_NAME = 'experiment-log.json';
 const GELS_ROOT_FOLDER_NAME = 'Gels';
 const KNOWLEDGE_BASE_ROOT_FOLDER_NAME = 'KnowledgeBase';
 const PAPER_MARKDOWN_ROOT_FOLDER_NAME = 'papers.md';
-const PAPERS_ROOT_FOLDER_NAME = 'Papers';
-const PROJECT_ROOT_FOLDER_NAME = 'Project';
 const PROJECT_SEQUENCE_FOLDER_NAME = 'DNA';
-const PROTOCOL_ROOT_FOLDER_NAME = 'Protocol';
 const ROOT_BUNDLE_BASE_NAME = 'hikari-data';
 const SAMPLES_ROOT_FOLDER_NAME = 'Samples';
 // Snapshot collections stored one JSON file per record folder, found on load by

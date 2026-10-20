@@ -15,7 +15,7 @@ This map covers the live files under `src/main/agent`. Main composition is under
 | `codex-agent/agent-instructions.js` | Codex-specific rules; the tool contract itself comes from the MCP server's `instructions` |
 | `codex-agent/session-recovery.js` | detects a Codex session that can no longer be resumed and starts a fresh one seeded with the recent conversation |
 | `codex-agent/desktop-mcp-prompt.js` | the **Connect Codex Desktop** setup prompt |
-| `codex-agent/official-mcp-skills.js` | released Hikari skill materialization into `.agents/skills/` |
+| `codex-agent/official-mcp-skills.js` | released Hikari skill materialization into the Codex runtime home's `skills/`, and removal of older `.agents/skills/` copies |
 | `codex-agent/official-skills/` | the bundled `SKILL.md` folders (assay/Plotly, container, HTML output, notebook draft, paper intake/retrieval, protocol generation, sequence viewer) |
 
 ## MCP contract

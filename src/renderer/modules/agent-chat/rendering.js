@@ -112,7 +112,7 @@ export function renderHistory({
       ? renderAssistantMessageBody(message, safeText, { hasLiveProgress })
       : `<p class="agent-chat-body agent-chat-body-plain">${safeText(message.text || '')}</p>`;
     return `
-      <div data-agent-render-key="${safeText(`${state.agentChat?.currentSessionId || ''}:${index}:${message.meta?.html_artifacts?.[0]?.id || message.id || ''}`)}" class="agent-chat-row ${rowClass}${hasLiveProgress ? ' is-live' : ''}">
+      <div data-agent-render-key="${safeText(`${state.agentChat?.currentSessionId || ''}:${message.meta?.html_artifacts?.[0]?.id || message.id || index}`)}" class="agent-chat-row ${rowClass}${hasLiveProgress ? ' is-live' : ''}">
         <article class="agent-chat-item ${cardClass}${message.meta?.parser?.clarification_reason === 'agent_error' ? ' is-error' : ''}" aria-label="${role === 'assistant' ? 'Hikari response' : 'Your message'}">
           <header class="agent-chat-header${role === 'user' ? ' sr-only' : ''}">
             <div class="agent-chat-header-copy">

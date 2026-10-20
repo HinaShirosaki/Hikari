@@ -1274,7 +1274,7 @@ module.exports = function registerCodexCliProviderSuiteSessionResumeAndMcpServer
         fs.rmSync(workspaceDir, { recursive: true, force: true });
       }
     });
-    test('Codex workspace initializer starts the MCP host, writes runtime config, and releases official skills', async () => {
+    test('Codex workspace initializer starts the MCP host, writes runtime config, and removes stale workspace skills', async () => {
       const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-mcp-init-workspace-'));
       const storageRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-mcp-init-storage-'));
       const dataFilePath = path.join(workspaceDir, 'hikari-data.json');
@@ -1290,6 +1290,20 @@ module.exports = function registerCodexCliProviderSuiteSessionResumeAndMcpServer
           name: 'Atlas Project'
         }]
       }, null, 2), 'utf8');
+      const workspaceSkillRoots = [
+        workspaceDir,
+        storageRoot,
+        path.join(storageRoot, 'Project', 'Atlas_Project')
+      ].map((folder) => path.join(folder, '.agents', 'skills'));
+      for (const skillRoot of workspaceSkillRoots) {
+        fs.mkdirSync(path.join(skillRoot, 'hikari-notebook-draft', 'references'), { recursive: true });
+        fs.writeFileSync(path.join(skillRoot, 'hikari-notebook-draft', 'SKILL.md'), '<!-- HIKARI_OFFICIAL_MCP_SKILL:notebook-draft -->');
+        fs.writeFileSync(path.join(skillRoot, 'hikari-notebook-draft', 'references', 'extra.md'), 'released reference');
+        fs.mkdirSync(path.join(skillRoot, 'hikari-paper-intake'), { recursive: true });
+        fs.writeFileSync(path.join(skillRoot, 'hikari-paper-intake', 'SKILL.md'), '<!-- HIKARI_OFFICIAL_MCP_SKILL:paper-intake -->');
+        fs.mkdirSync(path.join(skillRoot, 'my-skill'), { recursive: true });
+        fs.writeFileSync(path.join(skillRoot, 'my-skill', 'SKILL.md'), '# user-authored');
+      }
 
       try {
         const { createCodexWorkspaceInitializer } = require(path.join(
@@ -1337,11 +1351,6 @@ module.exports = function registerCodexCliProviderSuiteSessionResumeAndMcpServer
             HIKARI_AGENT_MCP_REQUEST_CONTEXT: '{"traceRequestId":"req-init"}'
           }
         });
-        const rootSkillPath = path.join(workspaceDir, '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md');
-        const storageSkillPath = path.join(storageRoot, '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md');
-        const projectSkillPath = path.join(storageRoot, 'Project', 'Atlas_Project', '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md');
-        const projectContainerSkillPath = path.join(storageRoot, 'Project', 'Atlas_Project', '.agents', 'skills', 'hikari-container', 'SKILL.md');
-        const projectAssayPlotlySkillPath = path.join(storageRoot, 'Project', 'Atlas_Project', '.agents', 'skills', 'hikari-assay-plotly', 'SKILL.md');
 
         assert.equal(result.ok, true);
         assert.equal(hostStartCount, 1);
@@ -1356,11 +1365,9 @@ module.exports = function registerCodexCliProviderSuiteSessionResumeAndMcpServer
         assert.equal(runtimeWrite.options.envOverrides.HIKARI_AGENT_MCP_HOST, 'http://127.0.0.1:49876');
         assert.equal(runtimeWrite.options.envOverrides.HIKARI_CODEX_MCP_TOKEN, 'initializer-token');
         assert.equal(runtimeWrite.options.envOverrides.HIKARI_AGENT_MCP_REQUEST_CONTEXT, '{"traceRequestId":"req-init"}');
-        assert.equal(fs.existsSync(rootSkillPath), true);
-        assert.equal(fs.existsSync(storageSkillPath), true);
-        assert.equal(fs.existsSync(projectSkillPath), true);
-        assert.equal(fs.existsSync(projectContainerSkillPath), true);
-        assert.equal(fs.existsSync(projectAssayPlotlySkillPath), true);
+        for (const skillRoot of workspaceSkillRoots) {
+          assert.deepEqual(fs.readdirSync(skillRoot), ['my-skill'], `only the user skill stays in ${skillRoot}`);
+        }
         assert.equal(result.workspace_paths.includes(workspaceDir), true);
         assert.equal(result.workspace_paths.includes(storageRoot), true);
         assert.equal(result.workspace_paths.includes(path.join(storageRoot, 'Project', 'Atlas_Project')), true);
@@ -1398,8 +1405,7 @@ module.exports = function registerCodexCliProviderSuiteSessionResumeAndMcpServer
           ensureCodexCliRuntimeHome: async (cwd, options = {}) => {
             runtimeWrite = { cwd, options };
             return path.join(workspaceDir, 'Config', 'codex-cli-home');
-          },
-          releaseOfficialMcpSkillsForWorkspace: async () => []
+          }
         });
 
         const result = await initializer.initialize({

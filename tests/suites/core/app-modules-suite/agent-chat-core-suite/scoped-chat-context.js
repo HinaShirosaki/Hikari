@@ -492,7 +492,7 @@ test('notebook-scoped agent chat stores page sessions and exposes hidden page co
   assert.equal(Object.keys(rootState.paperAgentChatSessions).join(','), 'notebook:note-1');
   assert.match(scopedState.agentChatContext.sessionPrompt, /Biology Notebook right-rail/);
   assert.match(scopedState.agentChatContext.sessionPrompt, /unsaved edits/);
-  // Enrichment policy lives in mcp-contract/instructions.js, not the per-turn rail prompt.
+  // Enrichment policy lives in the notebook_append tool description, not the per-turn rail prompt.
   assert.doesNotMatch(scopedState.agentChatContext.sessionPrompt, /reference preparation|inventory_lookup/i);
   assert.doesNotMatch(scopedState.agentChatContext.sessionPrompt, /PBS|ampicillin/i);
   assert.equal(scopedState.agentChatContext.hiddenContexts[0].kind, 'notebook-page');

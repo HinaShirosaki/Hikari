@@ -239,7 +239,6 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
     elements.gelViewerStage.classList.toggle('has-lane-table', inlineTable);
     elements.gelLaneTableSpacer.hidden = !inlineTable;
     elements.gelLaneTableShell.hidden = !hasTable;
-    if (elements.gelLaneTableEmpty) elements.gelLaneTableEmpty.hidden = hasTable;
 
     if (!hasTable || !layout) {
       elements.gelLaneTableShell.innerHTML = '';
@@ -355,7 +354,7 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
     });
     panelOpen = true;
     render();
-    deps.setStatus?.('Added a lane table. Use Add row to expand it.');
+    deps.setStatus?.('');
     requestAnimationFrame(() => {
       focusLastRowLabel();
     });
@@ -398,7 +397,7 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
         const downloadFigure = deps.downloadDataUrlFile || downloadDataUrlFile;
         const downloadResult = await downloadFigure({ dataUrl, fileName });
         if (downloadResult?.canceled) {
-          deps.setStatus?.('Image export canceled.');
+          deps.setStatus?.('');
           return downloadResult;
         }
         // Cleared, not announced: the saved file is its own confirmation, but the
@@ -468,7 +467,7 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
           mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
         });
         if (downloadResult?.canceled) {
-          deps.setStatus?.('PowerPoint export canceled.');
+          deps.setStatus?.('');
           return downloadResult;
         }
         const cropSummary = gelResult.plan.croppedToBandLines

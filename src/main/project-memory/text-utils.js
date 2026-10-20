@@ -1,23 +1,10 @@
 'use strict';
 
 const { ensureObject } = require('../lib/normalize.js');
+const { sanitizeFolderName } = require('../../shared/storage-layout.mjs');
 
 function cleanText(value) {
   return String(value || '');
-}
-
-function sanitizeFolderName(value, fallback = 'item') {
-  const cleaned = String(value || '')
-    .trim()
-    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
-    .replace(/\s+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 180);
-  return !cleaned || /^\.+$/.test(cleaned) ? fallback : cleaned;
-}
-
-function sanitizeProjectMemoryFolderName(value, fallback = 'Untitled_Project') {
-  return sanitizeFolderName(value, fallback);
 }
 
 function normalizeFolderKey(value) {
@@ -93,7 +80,6 @@ module.exports = {
   normalizeRelativePath,
   normalizeWhitespace,
   pickLatestTimestamp,
-  sanitizeProjectMemoryFolderName,
   sanitizeFolderName,
   truncateInline
 };

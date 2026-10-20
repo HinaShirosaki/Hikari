@@ -1,5 +1,6 @@
 import { cleanText } from '../shared.js';
 import { startInlineRename } from '../../../lib/folder-tree.js';
+import { positionContextMenu } from '../../../lib/context-menu.js';
 
 // Right-click menu, inline rename, and folder create/delete/move for the
 // sequence library list on the home page.
@@ -68,9 +69,7 @@ function createLibraryMenus({
     menu.querySelectorAll?.('[data-sequence-library-action]')?.forEach?.((button) => {
       button.hidden = !visibleActions.has(cleanText(button?.dataset?.sequenceLibraryAction, 40));
     });
-    menu.hidden = false;
-    menu.style.left = `${Math.max(8, Number(event?.clientX) || 0)}px`;
-    menu.style.top = `${Math.max(8, Number(event?.clientY) || 0)}px`;
+    positionContextMenu(menu, event?.clientX, event?.clientY, rootDocument?.defaultView);
   }
 
   function normalizePromptName(value) {

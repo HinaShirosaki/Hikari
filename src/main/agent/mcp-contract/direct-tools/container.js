@@ -30,7 +30,7 @@ const CONTAINER_SUCCESS_STATUSES = Object.freeze([
 
 const CONTAINER_MCP_TOOL = Object.freeze({
   name: 'container',
-  description: 'Store, name, list, read, update, and position-edit temporary string or number containers, with optional source provenance. Returns short runtime IDs such as 1, 2, or 3.',
+  description: 'Use when an exact string or number should be held for later calculations, copied, reused, or edited by position in the current run. Store, name, list, read, update, and position-edit temporary containers, with optional source provenance. Returns short runtime IDs such as 1, 2, or 3. Physical sample containers use inventory_lookup; durable cross-chat preferences use memory.',
   annotations: buildWriteToolAnnotations('Container'),
   inputSchema: cloneJson(AGENT_TOOL_CALL_CATALOG.container?.input_schema, {
     type: 'object',

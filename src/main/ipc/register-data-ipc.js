@@ -65,7 +65,6 @@ function registerDataIpc(deps = {}) {
     storeImportedFile,
     transformStoredPaperPdf,
     moveStoredFile,
-    appendNotebookPageLog,
     writeJsonStorageFile,
     mirrorStorageRoot,
     readConfiguredStorageRoot
@@ -187,15 +186,6 @@ function registerDataIpc(deps = {}) {
     try {
       const moved = await moveStoredFile(normalizeJsonPayload(payload, {}));
       return { ok: true, ...moved };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle(STORAGE.APPEND_NOTEBOOK_PAGE_LOG, async (_event, payload) => {
-    try {
-      const result = await appendNotebookPageLog(normalizeJsonPayload(payload, {}));
-      return { ok: true, ...result };
     } catch (error) {
       return { ok: false, error: String(error?.message || error) };
     }

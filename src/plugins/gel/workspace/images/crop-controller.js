@@ -22,6 +22,19 @@ function formatRotationDegrees(value) {
   return Number.isInteger(normalized) ? String(normalized) : normalized.toFixed(1);
 }
 
+function wrapDegrees(value) {
+  if (value < MIN_ROTATION_DEGREES) return value + 360;
+  if (value > MAX_ROTATION_DEGREES) return value - 360;
+  return value;
+}
+
+// Cropper.getData() is in the source image's natural pixels.
+function coversWholeImage(data, image) {
+  return Math.abs(wrapDegrees(Number(data?.rotate) || 0)) < 0.05
+    && data.x <= 0.5 && data.y <= 0.5
+    && data.width >= image.width - 1 && data.height >= image.height - 1;
+}
+
 export function createCropController({ runtime, elements, deps }) {
   function clearRotationDrag() {
     const drag = runtime.cropRotationDrag;
@@ -57,6 +70,7 @@ export function createCropController({ runtime, elements, deps }) {
     }
     runtime.cropDisplaySize = null;
     runtime.cropRotationDegrees = 0;
+    runtime.cropSource = null;
   }
 
   function captureCurrentGelDisplaySize() {
@@ -78,13 +92,16 @@ export function createCropController({ runtime, elements, deps }) {
     return null;
   }
 
-  function showCropperForCurrentImage() {
-    if (!runtime.currentImage || !elements.gelCropperImage || !window.Cropper) {
+  // The cropper shows either the current image or, after Reset, the uncropped
+  // original; Done crops whichever it is showing.
+  function showCropperForImage(image) {
+    if (!image || !elements.gelCropperImage || !window.Cropper) {
       return false;
     }
     destroyCropper();
     runtime.cropDisplaySize = captureCurrentGelDisplaySize();
-    elements.gelCropperImage.src = deps.imageDataToDataUrl(runtime.currentImage.imageData);
+    runtime.cropSource = image;
+    elements.gelCropperImage.src = deps.imageDataToDataUrl(image.imageData);
     elements.gelCropperImage.classList.add('is-active');
     if (runtime.cropDisplaySize) {
       elements.gelCropperImage.style.width = `${runtime.cropDisplaySize.width}px`;
@@ -126,20 +143,31 @@ export function createCropController({ runtime, elements, deps }) {
       elements.gelCropModeBtn.setAttribute('aria-pressed', isCropping ? 'true' : 'false');
       elements.gelCropModeBtn.setAttribute('title', cropModeLabel);
     }
+    // While cropping, the crop bar takes over the viewer toolbar, as in photo editors.
+    if (elements.gelCropBar) {
+      elements.gelCropBar.hidden = !isCropping;
+      elements.gelCropBar.parentElement?.classList?.toggle('is-cropping', isCropping);
+    }
     if (elements.gelApplyCropBtn) {
       elements.gelApplyCropBtn.disabled = !isCropping;
-      elements.gelApplyCropBtn.hidden = !isCropping;
     }
-    if (elements.gelResetCropBtn) {
-      elements.gelResetCropBtn.disabled = !runtime.originalImage;
+    syncAngleInput();
+  }
+
+  // The slider straightens within ±45°; quarter turns come from the rotate button.
+  function syncAngleInput() {
+    const total = normalizeRotationDegrees(runtime.cropRotationDegrees);
+    const straighten = normalizeRotationDegrees(total - Math.round(total / 90) * 90);
+    if (elements.gelCropAngleInput) {
+      elements.gelCropAngleInput.value = String(straighten);
+    }
+    if (elements.gelCropAngleValue) {
+      elements.gelCropAngleValue.textContent = `${formatRotationDegrees(straighten)}°`;
     }
   }
 
-  function setRotationDegrees(degrees, { announce = true } = {}) {
+  function setRotationDegrees(degrees) {
     if (!runtime.cropperActive || !runtime.cropperInstance) {
-      if (announce) {
-        deps.setStatus('Start crop mode first to rotate.');
-      }
       return false;
     }
     const current = normalizeRotationDegrees(runtime.cropRotationDegrees);
@@ -149,16 +177,20 @@ export function createCropController({ runtime, elements, deps }) {
     } else if (typeof runtime.cropperInstance.rotate === 'function') {
       runtime.cropperInstance.rotate(next - current);
     } else {
-      if (announce) {
-        deps.setStatus('Cropper rotation is unavailable.');
-      }
       return false;
     }
     runtime.cropRotationDegrees = next;
-    if (announce) {
-      deps.setStatus(`Rotated to ${formatRotationDegrees(next)} deg. Adjust selection then Apply Crop.`);
-    }
+    syncAngleInput();
     return true;
+  }
+
+  function onAngleInput(event) {
+    const quarterTurns = Math.round(normalizeRotationDegrees(runtime.cropRotationDegrees) / 90) * 90;
+    setRotationDegrees(wrapDegrees(quarterTurns + (Number(event?.target?.value) || 0)));
+  }
+
+  function onRotateQuarter() {
+    setRotationDegrees(wrapDegrees(normalizeRotationDegrees(runtime.cropRotationDegrees) - 90));
   }
 
   function onRotationDragStart(event) {
@@ -179,7 +211,6 @@ export function createCropController({ runtime, elements, deps }) {
     runtime.cropRotationDrag = {
       captureTarget: event.currentTarget || null,
       container,
-      moved: false,
       pointerId: Number.isFinite(event.pointerId) ? event.pointerId : null,
       startDegrees: normalizeRotationDegrees(runtime.cropRotationDegrees),
       startX: event.clientX
@@ -203,13 +234,7 @@ export function createCropController({ runtime, elements, deps }) {
       return;
     }
     const deltaX = event.clientX - drag.startX;
-    if (Math.abs(deltaX) >= 1) {
-      drag.moved = true;
-    }
-    setRotationDegrees(
-      drag.startDegrees + (deltaX * ROTATION_DRAG_DEGREES_PER_PIXEL),
-      { announce: false }
-    );
+    setRotationDegrees(drag.startDegrees + (deltaX * ROTATION_DRAG_DEGREES_PER_PIXEL));
     event.preventDefault?.();
     event.stopPropagation?.();
   }
@@ -219,11 +244,7 @@ export function createCropController({ runtime, elements, deps }) {
     if (!drag || (Number.isFinite(drag.pointerId) && event?.pointerId !== drag.pointerId)) {
       return;
     }
-    const moved = drag.moved;
     clearRotationDrag();
-    if (moved) {
-      deps.setStatus(`Rotated to ${formatRotationDegrees(runtime.cropRotationDegrees)} deg. Adjust selection then Apply Crop.`);
-    }
     event?.preventDefault?.();
     event?.stopPropagation?.();
   }
@@ -233,12 +254,12 @@ export function createCropController({ runtime, elements, deps }) {
     setCropUiState();
   }
 
-  function enterCropMode() {
+  function enterCropMode(image = runtime.currentImage) {
     if (!window.Cropper) {
       deps.setStatus('Cropper.js is not loaded.');
       return false;
     }
-    const started = showCropperForCurrentImage();
+    const started = showCropperForImage(image);
     setCropUiState();
     if (started) {
       // Re-render so the viewer drops its fitted height and the cropper owns the box.
@@ -265,7 +286,7 @@ export function createCropController({ runtime, elements, deps }) {
       deps.setStatus('Failed to start crop mode.');
       return;
     }
-    deps.setStatus('Crop mode: drag away from the crop border to rotate, drag the border to resize, then click Apply Crop.');
+    deps.setStatus('Drag the edges to crop. Enter applies, Esc cancels.');
   }
 
   function onCropModeAction() {
@@ -282,7 +303,7 @@ export function createCropController({ runtime, elements, deps }) {
     }
     leaveCropMode();
     deps.renderCanvas();
-    deps.setStatus('Crop cancelled.');
+    deps.setStatus('');
   }
 
   function onApplyCrop() {
@@ -294,6 +315,22 @@ export function createCropController({ runtime, elements, deps }) {
       deps.setStatus('Start crop mode first.');
       return;
     }
+    const source = runtime.cropSource || runtime.currentImage;
+    const cropData = runtime.cropperInstance.getData();
+    if (coversWholeImage(cropData, source)) {
+      // An untouched box changes nothing and keeps the lanes; after Reset it
+      // undoes the earlier crop exactly, without resampling the original.
+      const uncrop = source === runtime.originalImage && runtime.cropApplied;
+      if (uncrop) {
+        deps.setCurrentImage(deps.copyNormalizedImage(runtime.originalImage));
+        runtime.cropApplied = false;
+        resetAfterCropMutation();
+      }
+      leaveCropMode();
+      deps.renderCanvas();
+      deps.setStatus('');
+      return;
+    }
     // No min size: cropGray replays an unscaled crop, and the check below
     // rejects a small one anyway.
     const croppedCanvas = runtime.cropperInstance.getCroppedCanvas({ fillColor: '#000' });
@@ -301,34 +338,38 @@ export function createCropController({ runtime, elements, deps }) {
       deps.setStatus('Select a larger crop area first.');
       return;
     }
-    deps.setCurrentImage(deps.normalizeCurrentCanvasCrop(croppedCanvas, runtime.cropperInstance.getData()));
+    deps.setCurrentImage(deps.normalizeCurrentCanvasCrop(croppedCanvas, cropData, source));
     runtime.cropApplied = true;
     resetAfterCropMutation();
     leaveCropMode();
     deps.renderCanvas();
-    deps.setStatus(`Crop applied: ${runtime.currentImage.width}x${runtime.currentImage.height}. Ready to analyze.`);
+    deps.setStatus('');
   }
 
+  // As in photo editors, Reset lives in crop mode: back to the full original
+  // with no rotation. Nothing changes until Done.
   function onResetCrop() {
-    if (!runtime.originalImage) {
-      deps.setStatus('No original image available to reset.');
+    if (!runtime.cropperActive || !runtime.cropperInstance) {
       return;
     }
-    deps.setCurrentImage(deps.copyNormalizedImage(runtime.originalImage));
-    runtime.cropApplied = false;
-    resetAfterCropMutation();
-    leaveCropMode();
-    deps.renderCanvas();
-    deps.setStatus('Restored full image. Crop the gel before analysis.');
+    if (runtime.cropApplied && runtime.originalImage && runtime.cropSource !== runtime.originalImage) {
+      enterCropMode(runtime.originalImage);
+      return;
+    }
+    runtime.cropperInstance.reset?.();
+    runtime.cropRotationDegrees = 0;
+    syncAngleInput();
   }
 
   return {
     enterCropMode,
     leaveCropMode,
+    onAngleInput,
     onApplyCrop,
     onCancelCrop,
     onCropModeAction,
     onResetCrop,
+    onRotateQuarter,
     onRotationDragEnd,
     onRotationDragMove,
     onRotationDragStart,

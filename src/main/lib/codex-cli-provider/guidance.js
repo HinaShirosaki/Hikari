@@ -3,7 +3,8 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const {
-  releaseOfficialMcpSkills
+  releaseOfficialMcpSkills,
+  removeOfficialMcpSkills
 } = require('../../agent/codex-agent/official-mcp-skills.js');
 const {
   ensureHikariCodexAgentsFile,
@@ -11,7 +12,6 @@ const {
 } = require('../../agent/codex-agent/runtime-files.js');
 const {
   CODEX_AGENTS_FOLDER_NAME,
-  CODEX_PROJECT_MEMORY_FILE,
   CODEX_SKILLS_FOLDER_NAME
 } = require('./constants');
 const {
@@ -24,16 +24,6 @@ async function ensureCodexCliAgentsFile(cwd = '') {
   return ensureHikariCodexAgentsFile(resolveWorkingDirectory(cwd));
 }
 
-async function hasCodexProjectMemoryFile(cwd = '') {
-  const safeCwd = resolveWorkingDirectory(cwd);
-  try {
-    const stats = await fs.stat(path.join(safeCwd, CODEX_PROJECT_MEMORY_FILE));
-    return stats.isFile();
-  } catch {
-    return false;
-  }
-}
-
 function resolveSkillRequestContext(options = {}) {
   const env = options.env && typeof options.env === 'object'
     ? options.env
@@ -43,28 +33,32 @@ function resolveSkillRequestContext(options = {}) {
     || '';
   try {
     const parsed = JSON.parse(String(serialized || ''));
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
   } catch {
-    return {};
+    return null;
   }
 }
 
-async function ensureCodexCliProjectSkillFolder(cwd = '', options = {}) {
-  const safeCwd = resolveWorkingDirectory(cwd);
-  if (!safeCwd || isFilesystemRoot(safeCwd)) {
+// Codex always loads $CODEX_HOME/skills, but reads .agents/skills only from
+// the cwd up to the nearest .git, so the runtime home is the one folder every
+// run (project, no project, scheduled) sees exactly once. Only agent requests
+// carry the tool settings, so other CLI commands leave the folder alone.
+async function ensureCodexCliSkillFolder(cwd = '', options = {}) {
+  const context = resolveSkillRequestContext(options);
+  const runtimeHome = resolveCodexCliRuntimeHomeDirectory(cwd, options.env || process.env);
+  if (!context || !runtimeHome || isFilesystemRoot(runtimeHome)) {
     return '';
   }
-  const skillsPath = path.join(safeCwd, CODEX_AGENTS_FOLDER_NAME, CODEX_SKILLS_FOLDER_NAME);
-  await fs.mkdir(skillsPath, { recursive: true });
-  await releaseOfficialMcpSkills(skillsPath, resolveSkillRequestContext(options)).catch(() => []);
+  const skillsPath = path.join(runtimeHome, CODEX_SKILLS_FOLDER_NAME);
+  await releaseOfficialMcpSkills(skillsPath, context);
   return skillsPath;
 }
 
 async function ensureCodexCliWorkingDirectoryGuidance(cwd = '', options = {}) {
   const safeCwd = resolveWorkingDirectory(cwd);
-  if (await hasCodexProjectMemoryFile(safeCwd)) {
-    await ensureCodexCliProjectSkillFolder(safeCwd, options).catch(() => '');
-  }
+  await ensureCodexCliSkillFolder(safeCwd, options).catch(() => '');
+  // Older builds released skills into the cwd too; Codex listed both copies.
+  await removeOfficialMcpSkills(path.join(safeCwd, CODEX_AGENTS_FOLDER_NAME, CODEX_SKILLS_FOLDER_NAME)).catch(() => []);
   // The runtime home owns the durable contract. Remove legacy workspace copies
   // while preserving user-authored guidance and the runtime-home copy itself.
   const runtimeHome = resolveCodexCliRuntimeHomeDirectory(safeCwd);
@@ -86,8 +80,7 @@ async function ensureCodexCliGlobalAgentsFile(cwd = '') {
 module.exports = {
   ensureCodexCliAgentsFile,
   ensureCodexCliGlobalAgentsFile,
-  ensureCodexCliProjectSkillFolder,
+  ensureCodexCliSkillFolder,
   ensureCodexCliWorkingDirectoryGuidance,
-  hasCodexProjectMemoryFile,
   resolveSkillRequestContext
 };

@@ -22,9 +22,6 @@ export function alignmentOperations(state, ids, action, getBounds = object => ob
   if (!actions.includes(action)) throw new Error('Unknown alignment action.');
   const units = selectionLayoutUnits(state, ids, getBounds), distribute = action.startsWith('distribute-');
   if (units.length < (distribute ? 3 : 2)) return [];
-  if (new Set(units.flatMap(unit => unit.objects.map(object => object.canvas))).size !== 1) {
-    throw new Error('Align components on one canvas at a time.');
-  }
   const horizontal = ['left', 'right', 'horizontal-center', 'distribute-horizontal'].includes(action);
   const axis = horizontal ? 'x' : 'y', size = horizontal ? 'width' : 'height';
   const start = Math.min(...units.map(unit => unit.bounds[axis]));

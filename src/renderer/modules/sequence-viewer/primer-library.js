@@ -1,7 +1,6 @@
 import { escapeHtml } from '../../lib/html.js';
 import { showTransientNotice } from '../../lib/notify.js';
 import { addPrimersToLibrary, normalizePrimerLibrary } from '../../../shared/primer-library.mjs';
-import { createPrimerDialogFocus } from './primer-dialog-focus.js';
 
 export function createPrimerLibraryController(config = {}) {
   const elements = config.elements || {};
@@ -13,8 +12,6 @@ export function createPrimerLibraryController(config = {}) {
   const overlay = elements.primerLibraryOverlay;
   // Shared by the home and detail views: hidden workspace ancestors must not hide it.
   if (overlay && rootDocument?.body) rootDocument.body.appendChild(overlay);
-  const focus = createPrimerDialogFocus({ rootDocument, overlay, onClose: hide,
-    isTop: () => !elements.primerOrderOverlay || elements.primerOrderOverlay.hidden !== false });
 
   const entries = () => normalizePrimerLibrary(appState.primerLibrary);
   const visibleEntries = () => entries().filter(entry => !query || `${entry.name} ${entry.sequence} ${entry.sourceName}`.toLowerCase().includes(query));
@@ -78,20 +75,17 @@ export function createPrimerLibraryController(config = {}) {
   function open() {
     if (!overlay) return false;
     rootDocument?.querySelectorAll?.('[data-sequence-hover-tooltip]').forEach(node => { node.hidden = true; });
-    focus.open();
     render();
-    overlay.hidden = false;
+    if (!overlay.open) overlay.showModal();
     elements.primerLibrarySearch?.focus?.();
     return true;
   }
 
   function hide() {
-    if (overlay) overlay.hidden = true;
-    focus.restore();
+    overlay?.close();
   }
 
   function bindEvents() {
-    focus.bind();
     elements.homePrimerLibraryBtn?.addEventListener('click', open);
     elements.detailPrimerLibraryBtn?.addEventListener('click', open);
     elements.primerLibraryCloseBtn?.addEventListener('click', hide);

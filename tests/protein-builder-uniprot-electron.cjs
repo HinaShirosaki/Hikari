@@ -35,8 +35,10 @@ async function main() {
       };
   const service = createBioinformaticsService(process.env.HIKARI_UNIPROT_LIVE === '1' ? {} : {
     fetch: async (url) => ({
-      ok: true, status: 200, headers: { get: (key) => key === 'x-total-results' ? '1' : '' },
-      text: async () => JSON.stringify(url.includes('/search?') ? { results: [raw] } : raw)
+      ok: true, status: 200, headers: { get: (key) => key === 'x-total-results' ? '2' : '' },
+      text: async () => JSON.stringify(url.includes('/search?') ? { results: [
+        { ...raw, primaryAccession: 'Q9TEST', uniProtkbId: 'TEST_HUMAN' }, raw
+      ] } : raw)
     })
   });
   registerBioinformaticsIpc({ ipcMain, bioinformaticsService: service });
@@ -63,11 +65,12 @@ async function main() {
       window.until=async fn=>{const start=Date.now();while(!fn()){if(Date.now()-start>40000)throw new Error('Timed out: '+el('uniprot-status').textContent);await new Promise(r=>setTimeout(r,30));}};
       window.startSearch=async()=>{
         el('add-protein-btn').click();
-        el('add-protein-source').value='uniprot';el('add-protein-source').dispatchEvent(new Event('change',{bubbles:true}));
+        el('add-protein-source-uniprot').click();
         el('uniprot-query').value='gene:CD274 AND organism_id:9606 AND reviewed:true';
         el('uniprot-query').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));
         await until(()=>el('uniprot-results').children.length>0);
-        el('uniprot-results').firstElementChild.click();
+        window.searchResultCount=el('uniprot-results').children.length;
+        [...el('uniprot-results').children].find(button=>button.textContent.includes('Q9NZQ7')).click();
         await until(()=>!el('uniprot-detail').hidden);
         await frames();
       };
@@ -80,10 +83,27 @@ async function main() {
   const exec = (code) => win.webContents.executeJavaScript(code, true);
   await win.loadFile(fixture);
   assert.equal(await exec('Boolean(window.qaReady)'), true, errors.join('\n'));
+  await exec("el('add-protein-btn').click();el('add-protein-name').value='Draft protein';el('add-protein-sequence').value='MAKT';el('add-protein-source-manual').focus()");
+  assert.equal(await exec("el('add-protein-source-manual').checked"), true);
+  assert.equal(await exec("el('add-protein-source').tagName"), 'FIELDSET');
+  win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Right' });
+  win.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Right' });
+  await exec('frames()');
+  assert.equal(await exec("el('add-protein-source-uniprot').checked"), true);
+  assert.equal(await exec("el('uniprot-panel').hidden"), false);
+  win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Left' });
+  win.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Left' });
+  await exec('frames()');
+  assert.equal(await exec("el('add-protein-source-manual').checked"), true);
+  assert.equal(await exec("el('uniprot-panel').hidden"), true);
+  assert.equal(await exec("el('add-protein-sequence').value"), 'MAKT');
+  await exec("el('add-protein-cancel-btn').click()");
   await exec('startSearch()');
   const fullSequence = await exec("el('add-protein-sequence').value");
   assert.equal(await exec("el('add-protein-overlay').hidden"), false, 'Enter in the query must search without adding a block');
   assert.equal(await exec("el('add-protein-confirm-btn').disabled"), false);
+  assert.equal(await exec("el('uniprot-results').children.length"), 1);
+  assert.match(await exec("el('uniprot-results').textContent"), /Q9NZQ7/);
   const domainSequence = fullSequence.slice(18, 127);
   await exec(`(()=>{
     const select=el('uniprot-region');select.value=[...select.options].find(o=>o.textContent.includes('Ig-like V-type')).value;
@@ -91,6 +111,16 @@ async function main() {
   })();frames()`);
   assert.equal(await exec("el('add-protein-sequence').value"), domainSequence);
   assert.equal(domainSequence.length, 109);
+  if (await exec('searchResultCount>1')) {
+    assert.equal(await exec("el('uniprot-results-toggle-btn').getAttribute('aria-expanded')"), 'false');
+    await exec("el('uniprot-results-toggle-btn').click();frames()");
+    assert.equal(await exec("el('uniprot-results').children.length"), await exec('searchResultCount'));
+    assert.equal(await exec("el('add-protein-sequence').value"), domainSequence);
+    assert.equal(await exec("el('uniprot-results-toggle-btn').getAttribute('aria-expanded')"), 'true');
+    await exec("el('uniprot-results-toggle-btn').click();frames()");
+    assert.equal(await exec("el('uniprot-results').children.length"), 1);
+    assert.equal(await exec("el('add-protein-sequence').value"), domainSequence);
+  }
   assert.equal(await exec("el('uniprot-start')"), null);
   assert.equal(await exec("el('uniprot-end')"), null);
   assert.equal(await exec("el('uniprot-annotation-note')"), null);
@@ -128,7 +158,7 @@ async function main() {
   assert.equal(await exec("el('add-protein-overlay').hidden"), true);
   assert.deepEqual(errors, []);
   service.stop();
-  console.log(`Protein Builder UniProt Electron QA passed: ${cases} size/zoom cases, query Enter, annotation-only selection, 109-aa domain, provenance, DNA build, and manual input. Mode: ${process.env.HIKARI_UNIPROT_LIVE === '1' ? 'live UniProt' : 'fixture through real IPC'}. Screenshot: ${output}`);
+  console.log(`Protein Builder UniProt Electron QA passed: ${cases} size/zoom cases, folding results without losing the selected domain, source switch with keyboard arrows and retained drafts, query Enter, annotation-only selection, 109-aa domain, provenance, DNA build, and manual input. Mode: ${process.env.HIKARI_UNIPROT_LIVE === '1' ? 'live UniProt' : 'fixture through real IPC'}. Screenshot: ${output}`);
   win.destroy();
   await fs.promises.rm(temp, { recursive: true, force: true });
   app.quit();

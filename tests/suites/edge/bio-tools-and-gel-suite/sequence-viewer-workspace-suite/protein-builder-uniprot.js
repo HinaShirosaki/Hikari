@@ -16,9 +16,10 @@ module.exports = function registerProteinBuilderUniProtSuite(context = {}) {
   };
   function setup(bridge = {}) {
     const fields = [
-      'AddProteinSource', 'AddProteinType', 'AddProteinName', 'AddProteinSequence', 'AddProteinConfirmBtn',
+      'AddProteinSource', 'AddProteinSourceManual', 'AddProteinSourceUniProt',
+      'AddProteinType', 'AddProteinName', 'AddProteinSequence', 'AddProteinConfirmBtn',
       'AddProteinValidation', 'AddProteinOverlay', 'AddProteinTitle', 'UniProtPanel', 'UniProtQuery',
-      'UniProtSearchBtn', 'UniProtMoreBtn', 'UniProtStatus', 'UniProtResults', 'UniProtDetail',
+      'UniProtSearchBtn', 'UniProtMoreBtn', 'UniProtStatus', 'UniProtResults', 'UniProtResultsToggleBtn', 'UniProtDetail',
       'UniProtSummary', 'UniProtRegion'
     ];
     const elements = Object.fromEntries(fields.map((name) => [`proteinBuilder${name}`, { value: '', textContent: '', hidden: false }]));
@@ -29,7 +30,8 @@ module.exports = function registerProteinBuilderUniProtSuite(context = {}) {
     installProteinBuilderAddProteinDialog(ctx);
     ctx.openAddProteinDialog();
     const useUniProt = () => {
-      elements.proteinBuilderAddProteinSource.value = 'uniprot';
+      elements.proteinBuilderAddProteinSourceUniProt.checked = true;
+      elements.proteinBuilderAddProteinSourceManual.checked = false;
       ctx.setAddProteinSource();
       elements.proteinBuilderUniProtQuery.value = 'gene:TST AND organism_id:9606';
     };
@@ -89,7 +91,8 @@ module.exports = function registerProteinBuilderUniProtSuite(context = {}) {
     e.proteinBuilderAddProteinSequence.value = 'ATGGCT';
     useUniProt();
     const pending = ctx.searchUniProt();
-    e.proteinBuilderAddProteinSource.value = 'manual';
+    e.proteinBuilderAddProteinSourceManual.checked = true;
+    e.proteinBuilderAddProteinSourceUniProt.checked = false;
     ctx.setAddProteinSource();
     finish(searchResponse());
     await pending;
@@ -119,14 +122,30 @@ module.exports = function registerProteinBuilderUniProtSuite(context = {}) {
     assert.equal(e.proteinBuilderUniProtSearchBtn.disabled, false);
     await ctx.searchUniProt();
     assert.equal(e.proteinBuilderUniProtMoreBtn.hidden, false);
+    await ctx.selectUniProtResult(0);
+    assert.equal(e.proteinBuilderUniProtMoreBtn.hidden, true);
+    assert.equal(e.proteinBuilderUniProtResultsToggleBtn.hidden, false);
+    ctx.toggleUniProtResults();
+    assert.equal(e.proteinBuilderUniProtMoreBtn.hidden, false);
     await ctx.searchUniProt(true);
     assert.equal(calls[2].cursor, 'NEXT');
     assert.equal((e.proteinBuilderUniProtResults.innerHTML.match(/data-uniprot-result=/g) || []).length, 2);
     await ctx.selectUniProtResult(1);
+    assert.equal((e.proteinBuilderUniProtResults.innerHTML.match(/data-uniprot-result=/g) || []).length, 1);
+    assert.match(e.proteinBuilderUniProtResults.innerHTML, /data-uniprot-result="1"/);
+    assert.equal(e.proteinBuilderUniProtResultsToggleBtn.textContent, 'Show all results');
+    ctx.toggleUniProtResults();
+    assert.equal((e.proteinBuilderUniProtResults.innerHTML.match(/data-uniprot-result=/g) || []).length, 2);
+    assert.equal(ctx.getUniProtInput().uniprot.accession, 'P00002');
+    ctx.toggleUniProtResults();
+    assert.equal((e.proteinBuilderUniProtResults.innerHTML.match(/data-uniprot-result=/g) || []).length, 1);
     assert.equal(e.proteinBuilderUniProtRegion.innerHTML.includes('region-'), false);
     assert.equal(e.proteinBuilderUniProtRegion.innerHTML.includes('Custom residue range'), false);
     assert.equal(ctx.getUniProtInput().sequence, protein.sequence.value);
     assert.equal(e.proteinBuilderUniProtMoreBtn.hidden, true);
+    await ctx.searchUniProt();
+    assert.equal((e.proteinBuilderUniProtResults.innerHTML.match(/data-uniprot-result=/g) || []).length, 2);
+    assert.equal(e.proteinBuilderUniProtResultsToggleBtn.hidden, true);
   });
 
   test('[EDGE] protein builder UniProt ignores stale entry retrieval when a second protein is selected', async () => {

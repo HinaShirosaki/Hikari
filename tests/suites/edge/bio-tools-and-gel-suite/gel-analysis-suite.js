@@ -150,14 +150,14 @@ test('[EDGE] gel-analysis edit restores saved source images and legacy inline pr
   assert.equal(runtime.originalImage.copied, true);
   assert.equal(runtime.currentReport, sourceRecord.report);
   assert.equal(elements.gelNameInput.value, sourceRecord.name);
-  assert.equal(statuses.at(-1), `Loaded saved gel: ${sourceRecord.name}.`);
+  assert.equal(statuses.at(-1), '', 'the restored gel on screen is the confirmation');
 
   await controller.onListClick(editEvent(previewRecord.id));
   assert.equal(decodedSources[1].dataUrl, previewRecord.previewImageDataUrl);
   assert.equal(runtime.currentImage.name, previewRecord.imageName);
   assert.equal(runtime.currentReport, previewRecord.report);
   assert.equal(elements.gelTypeInput.value, 'western');
-  assert.match(statuses.at(-1), /Loaded saved gel preview/);
+  assert.match(statuses.at(-1), /saved preview only/);
   assert.ok(renderedCanvases >= 4);
 
   await controller.onListClick(editEvent(reportOnlyRecord.id));
@@ -205,6 +205,36 @@ test('[EDGE] gel-analysis peak editor fits its chart and table inside the dialog
   assert.doesNotMatch(source, /height:\s*'260px'/);
 });
 
+test('[EDGE] gel-analysis layer drags move, crop, and stretch blots through their lane anchors', () => {
+  const { dragPlacement, FIGURE_WIDTH, GUIDE_LEFT, GUIDE_RIGHT } = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'workspace', 'figure', 'model.js'));
+  const image = { width: 400, height: 100 };
+  const start = { first: 10, last: 90, top: 0, bottom: 100 };
+  // Same transform as buildBlotFigurePlan: anchors land on the guides.
+  const geometry = (placement) => {
+    const scale = FIGURE_WIDTH * (GUIDE_RIGHT - GUIDE_LEFT) / (image.width * (placement.last - placement.first) / 100);
+    const left = FIGURE_WIDTH * GUIDE_LEFT - image.width * placement.first / 100 * scale;
+    return { scale, left, right: left + image.width * scale };
+  };
+  const { scale } = geometry(start);
+
+  const moved = dragPlacement(start, image, 'move', scale * 10, 0);
+  assertClose(geometry(moved).left - geometry(start).left, scale * 10, 1e-9);
+  assertClose(moved.last - moved.first, 80, 1e-9);
+
+  const cropped = dragPlacement(start, image, 'top', 0, scale * 10);
+  assertClose(cropped.top, 10, 1e-9);
+  assert.equal(dragPlacement(start, image, 'bottom', 0, -scale * 500).bottom, 1, 'a crop keeps at least 1% of the blot');
+
+  const stretched = dragPlacement(start, image, 'right', 50, 0);
+  assertClose(geometry(stretched).left, geometry(start).left, 1e-9);
+  assertClose(geometry(stretched).right, geometry(start).right + 50, 1e-9);
+  const fromLeft = dragPlacement(start, image, 'left', -30, 0);
+  assertClose(geometry(fromLeft).right, geometry(start).right, 1e-9);
+  assertClose(geometry(fromLeft).left, geometry(start).left - 30, 1e-9);
+
+  assert.throws(() => dragPlacement(start, image, 'move', -scale * image.width * 3, 0), /anchors/);
+});
+
 test('[EDGE] gel-analysis crop rotation follows free drag away from crop borders', () => {
   const cropModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'workspace', 'images', 'crop-controller.js'));
   const rotationCalls = [];
@@ -224,7 +254,9 @@ test('[EDGE] gel-analysis crop rotation follows free drag away from crop borders
   const elements = {
     gelCropModeBtn: new MockElement('gel-crop-mode-btn'),
     gelApplyCropBtn: new MockElement('gel-apply-crop-btn'),
-    gelResetCropBtn: new MockElement('gel-reset-crop-btn')
+    gelCropBar: new MockElement('gel-crop-bar'),
+    gelCropAngleInput: new MockElement('gel-crop-angle'),
+    gelCropAngleValue: new MockElement('gel-crop-angle-value')
   };
   const controller = cropModule.createCropController({
     runtime,
@@ -240,7 +272,7 @@ test('[EDGE] gel-analysis crop rotation follows free drag away from crop borders
   assert.equal(elements.gelCropModeBtn.getAttribute('aria-label'), 'Cancel crop');
   assert.equal(elements.gelCropModeBtn.getAttribute('aria-pressed'), 'true');
   assert.equal(elements.gelApplyCropBtn.disabled, false);
-  assert.equal(elements.gelApplyCropBtn.hidden, false);
+  assert.equal(elements.gelCropBar.hidden, false, 'the crop bar shows only while cropping');
 
   const cropperContainer = new MockElement('cropper-container');
   const captureTarget = {
@@ -305,15 +337,24 @@ test('[EDGE] gel-analysis crop rotation follows free drag away from crop borders
   assert.equal(cropperContainer.classList.contains('is-gel-rotating'), false);
   assert.equal(captureTarget.releasedPointerId, 7);
   assert.equal(runtime.cropRotationDrag, null);
-  assert.match(statuses[statuses.length - 1], /12\.5 deg/);
+  // The straighten slider follows the drag instead of a status message.
+  assert.equal(elements.gelCropAngleInput.value, '12.5');
+  assert.equal(elements.gelCropAngleValue.textContent, '12.5°');
+
+  // Quarter turns stay out of the ±45° slider; it keeps showing the straighten part.
+  controller.onRotateQuarter();
+  assert.equal(runtime.cropRotationDegrees, -77.5);
+  assert.equal(elements.gelCropAngleValue.textContent, '12.5°');
+  controller.onAngleInput({ target: { value: '-3' } });
+  assert.equal(runtime.cropRotationDegrees, -93);
 
   controller.onCropModeAction();
   assert.equal(runtime.cropperActive, false);
   assert.equal(elements.gelCropModeBtn.getAttribute('aria-label'), 'Start crop');
   assert.equal(elements.gelCropModeBtn.getAttribute('aria-pressed'), 'false');
   assert.equal(elements.gelApplyCropBtn.disabled, true);
-  assert.equal(elements.gelApplyCropBtn.hidden, true);
-  assert.match(statuses[statuses.length - 1], /crop cancelled/i);
+  assert.equal(elements.gelCropBar.hidden, true);
+  assert.equal(statuses[statuses.length - 1], '', 'cancelling needs no message');
 });
 
 test('[EDGE] gel-analysis lane table render includes gel-edge offsets for divider alignment', () => {
@@ -1031,7 +1072,7 @@ test('[EDGE] gel-analysis outermost lane dividers define gel edges without separ
   assert.equal(elements.gelFinishDividersBtn.hidden, true, 'finish button lingered after dividers finished');
   assert.equal(elements.gelManualNextBtn.hidden, true);
   assert.equal(controller.getManualStep(), 'ladder');
-  assert.match(statuses[statuses.length - 1], /dividers finished/i);
+  assert.match(statuses[statuses.length - 1], /ladder lane on the gel/i);
 
   runtime.manualOverrides = {
     ...gelAnalysisInternals.normalizeManualOverrides(runtime.manualOverrides),
@@ -1470,11 +1511,10 @@ test('[EDGE] gel-analysis auto-detection identifies inferred lanes and expected-
   assert.doesNotMatch(statuses.at(-1), /inferred as blank/);
 });
 
-test('[EDGE] gel-analysis band intensity dialog shows and copies only the intensity measurement', async () => {
+test('[EDGE] gel-analysis band intensity table shows and copies only the intensity measurement', async () => {
   const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'workspace', 'rendering', 'index.js'));
   const runtime = {
     currentImage: { width: 8, height: 5, gray: new Float32Array(40), imageData: { tag: 'image-data' } },
-    cellTableDialogOpen: false,
     currentReport: {
       lanes: [
         { laneIndex: 1, targetBand: { snr: 9, correctedIntensity: 120, bandSignalSum: 200, baselineSum: 80, saturationFraction: 0 } },
@@ -1493,26 +1533,20 @@ test('[EDGE] gel-analysis band intensity dialog shows and copies only the intens
     })
   };
   const elements = {
-    gelCellTableOverlay: new MockElement('gel-cell-table-overlay'),
-    gelCellTableCloseBtn: new MockElement('gel-cell-table-close-btn'),
-    gelOpenCellTableBtn: new MockElement('gel-open-cell-table-btn'),
     gelCellTableHost: new MockElement('gel-cell-table-host'),
     gelCellTableCopyBtn: new MockElement('gel-cell-table-copy-btn'),
     gelCellTableCopyStatus: new MockElement('gel-cell-table-copy-status')
   };
-  const statuses = [];
   const copies = [];
   const controller = renderingModule.createRenderingController({
     runtime,
     elements,
     safeText: (value) => String(value ?? ''),
-    deps: { setStatus: (message) => statuses.push(message), writeClipboardText: async (value) => copies.push(value) }
+    deps: { writeClipboardText: async (value) => copies.push(value) }
   });
 
-  // Data exists, so the trigger unlocks — but the dialog stays shut until asked.
+  // The table renders inline in the rail's Results section once a band is measured.
   controller.renderCellTable();
-  assert.equal(elements.gelOpenCellTableBtn.disabled, false);
-  assert.equal(elements.gelCellTableOverlay.hidden, true);
   assert.ok(elements.gelCellTableHost.innerHTML.includes('<table class="gel-cell-table">'));
   assert.equal(elements.gelCellTableCopyBtn.disabled, false);
   assert.equal((elements.gelCellTableHost.innerHTML.match(/<th[ >]/g) || []).length, 3);
@@ -1523,34 +1557,14 @@ test('[EDGE] gel-analysis band intensity dialog shows and copies only the intens
   assert.deepEqual(copies, ['Lane\tLabel\tBand intensity\n1\t\t120.00\n2\t\t12.00']);
   assert.equal(elements.gelCellTableCopyStatus.textContent, 'Table copied.');
 
-  controller.onCellTableOpen();
-  assert.equal(elements.gelCellTableOverlay.hidden, false);
-  assert.equal(elements.gelOpenCellTableBtn.getAttribute('aria-expanded'), 'true');
-
-  // Escape closes the open band-intensity dialog.
-  let prevented = false;
-  controller.onCellTableKeyDown({ key: 'Escape', preventDefault() { prevented = true; } });
-  assert.equal(prevented, true);
-  assert.equal(runtime.cellTableDialogOpen, false);
-  assert.equal(elements.gelCellTableOverlay.hidden, true);
-
-  // An open dialog must not survive losing the measurement it reports on.
-  controller.onCellTableOpen();
-  assert.equal(elements.gelCellTableOverlay.hidden, false);
+  // Losing the measurement empties the table (its CSS shows the hint) and locks Copy.
   runtime.currentReport = { lanes: [] };
   controller.renderCellTable();
-  assert.equal(runtime.cellTableDialogOpen, false);
-  assert.equal(elements.gelCellTableOverlay.hidden, true);
-  assert.equal(elements.gelOpenCellTableBtn.disabled, true);
   assert.equal(elements.gelCellTableHost.innerHTML, '');
   assert.equal(elements.gelCellTableCopyBtn.disabled, true);
   assert.equal(elements.gelCellTableCopyStatus.textContent, '');
   await controller.onCellTableCopy();
   assert.equal(copies.length, 1, 'empty measurements must not overwrite the clipboard');
-
-  controller.onCellTableOpen();
-  assert.equal(elements.gelCellTableOverlay.hidden, true, 'a disabled trigger still opened the dialog');
-  assert.match(statuses[statuses.length - 1], /Measure a target band/);
 });
 
 test('[EDGE] gel-analysis copies all current labels and formatted intensities and reports clipboard failures', async () => {
@@ -1589,7 +1603,7 @@ test('[EDGE] gel-analysis copies all current labels and formatted intensities an
   assert.equal((elements.gelCellTableHost.innerHTML.match(/class="gel-cell-row"/g) || []).length, 3);
   runtime.currentReport.lanes[1].targetBand.correctedIntensity = 14.25;
   const pending = controller.onCellTableCopy();
-  assert.equal(elements.gelCellTableCopyBtn.disabled, true);
+  // A second click while the first copy is pending is ignored.
   await controller.onCellTableCopy();
   assert.deepEqual(copies, ['Lane\tLabel\tBand intensity\n1\tControl <A>\t1200\n2\tSample B repeat\t14.25\n3\tBlank\t-']);
   finishCopy();
@@ -1918,7 +1932,7 @@ test('[EDGE] gel-analysis Set MW tool labels and drags ladder bands outside the 
     { pixelY: 30, mw: 75 }
   ]));
   assert.equal(analysisRuns, 1);
-  assert.match(statuses[statuses.length - 1], /MW=75/);
+  assert.equal(statuses[statuses.length - 1], '', 'the MW label on the gel is the confirmation');
 
   // Reusing a MW updates its calibration point instead of duplicating the band.
   controller.onCanvasClick({ clientX: 25, clientY: 45, preventDefault() {} });
@@ -3063,7 +3077,7 @@ test('[EDGE] gel-analysis deduplicates concurrent saves and exports and restores
   assert.equal(saveButton.disabled, false);
   assert.equal(saveButton.textContent, 'Save');
   assert.equal(form.getAttribute('aria-busy'), 'false');
-  assert.match(statuses.at(-1), /Saved gel draft/);
+  assert.equal(statuses.at(-1), '', 'a save clears the hint instead of announcing itself');
 
   runtime.currentReport = { lanes: [] };
   const firstExport = manager.onExportCsv();

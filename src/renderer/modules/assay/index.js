@@ -33,7 +33,21 @@ export function initAssay({
   onActiveAssayChanged,
   onAssayModeChanged
 }) {
-  const TabulatorLib = window.Tabulator || null;
+  // Tabulator's range selection re-focuses its grid on every data load and forced
+  // redraw, without preventScroll -- so each analysis re-render scrolled the workspace
+  // down to the table and pulled focus off the control being edited. The grid keeps
+  // focus the user gave it, but never scrolls for it or takes it from another control.
+  const TabulatorLib = window.Tabulator ? class extends window.Tabulator {
+    constructor(element, options) {
+      super(element, options);
+      const holder = this.rowManager.element;
+      holder.focus = (focusOptions) => {
+        const active = document.activeElement;
+        if (active && active !== document.body && !this.element.contains(active)) return;
+        HTMLElement.prototype.focus.call(holder, { ...focusOptions, preventScroll: true });
+      };
+    }
+  } : null;
   const elements = getAssayElements(document);
   const runtime = {
     currentLayout: [],
@@ -87,10 +101,11 @@ export function initAssay({
 
   function getResultsDraftSnapshot() {
     resultsManager?.syncCurrentResultsFromGrid?.();
+    // Table2 formulas save on every edit (onTransformChanged), so they are never a
+    // draft; counting them here blocked Undo with "Save or discard" after any edit.
     return serializeDraftSnapshot({
       assayId: runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '',
-      currentResults: runtime.currentResults,
-      transformSpec: analysisView?.getTransformSpec?.() || null
+      currentResults: runtime.currentResults
     });
   }
 
@@ -265,6 +280,18 @@ export function initAssay({
     persistResultAttachment: artifactStorage.persistAssayResultAttachment,
     onResultImportApplied: onAssayResultImportApplied,
     onResultsChanged: () => {
+      // Table1 edits save like Table2 formulas, so each edit, paste or clear is
+      // one step in the assay's Undo history.
+      const assay = getActiveResultsAssay();
+      if (assay) {
+        resultsManager.syncCurrentResultsFromGrid();
+        assay.resultValues = layoutManager.filterMappedResults(
+          normalizeResults(runtime.currentResults, getPlateDefinition(assay.plateType || '96')));
+        assay.latestAnalysis = null;
+        assay.updatedAt = new Date().toISOString();
+        persist();
+        markResultsDraftSaved();
+      }
       analysisView?.onSourceResultsChanged();
       notifyActiveAssayChanged();
     }
@@ -277,7 +304,6 @@ export function initAssay({
     TabulatorLib,
     getCurrentDefinition: layoutManager.getCurrentDefinition,
     syncCurrentResultsFromGrid: resultsManager.syncCurrentResultsFromGrid,
-    getResultValueCount: resultsManager.getResultValueCount,
     buildResultGridSignature: resultsManager.buildResultGridSignature,
     buildResultGridColumns: resultsManager.buildResultGridColumns,
     buildResultGridData: resultsManager.buildResultGridData,
@@ -294,6 +320,16 @@ export function initAssay({
         activeAssay.updatedAt = new Date().toISOString();
         persist();
       }
+    },
+    onAnalysisDataSourceChanged: (source) => {
+      const activeAssay = getAssayById(runtime.activeResultsAssayId);
+      if (activeAssay) {
+        activeAssay.analysisDataSource = source;
+        activeAssay.latestAnalysis = null;
+        activeAssay.updatedAt = new Date().toISOString();
+        persist();
+      }
+      notifyActiveAssayChanged();
     },
     onTransformChanged: (spec) => {
       const activeAssay = getAssayById(runtime.activeResultsAssayId);
@@ -355,6 +391,7 @@ export function initAssay({
     resultsManager.renderResultTable();
     analysisView.loadChartStyle(assay.chartStyle);
     analysisView.loadTransformSpec(assay.transformSpec);
+    analysisView.loadAnalysisDataSource(assay.analysisDataSource);
     analysisView.clearOutput();
     markLoadedAssayDraftsSaved();
     renderList();

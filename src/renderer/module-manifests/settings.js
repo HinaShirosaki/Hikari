@@ -10,6 +10,7 @@ export const settingsManifest = {
     state,
     persist,
     onStoragePathSaved,
+    onReloadRequested,
     rendererServices,
     rootDocument,
     windowObject
@@ -17,6 +18,7 @@ export const settingsManifest = {
     state,
     persist,
     onStoragePathSaved,
+    onReloadRequested,
     onSampleInventorySettingsChanged: rendererServices.inventory.handleSampleInventorySettingsChanged,
     document: rootDocument,
     windowObject

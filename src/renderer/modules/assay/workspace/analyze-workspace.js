@@ -30,6 +30,8 @@ export function createAnalyzeWorkspace({ elements, runtime, resultsManager, anal
     const assay = getAssay();
     const info = analysisView.getWorkspaceState();
     const definition = getDefinition();
+    const resultCount = resultsManager.getResultValueCount();
+    if (elements.assayClearResultsBtn) elements.assayClearResultsBtn.disabled = !resultCount;
     if (lastAssayId !== (assay?.id || '') || options.tab) {
       activeTab = 'raw';
       root.classList.remove('is-chart-focused');
@@ -57,7 +59,7 @@ export function createAnalyzeWorkspace({ elements, runtime, resultsManager, anal
       ? `${definition.rows * definition.columns}-well plate · ${runtime.currentLayout.length} mapped wells` : 'Select an assay to analyze';
     find('assay-workspace-chart-title').textContent = info.method === 'agent_plotly' ? 'Agent chart'
       : elements.assayAnalysisKindInput?.selectedOptions?.[0]?.textContent || info.methodLabel;
-    find('assay-workspace-chart-source').textContent = info.transformActive ? 'Transformed plate · Table2' : 'Plate results · Table1';
+    find('assay-workspace-chart-source').textContent = info.dataSource === 'transformed' ? 'Transformed plate · Table2' : 'Plate results · Table1';
     find('assay-workspace-table-label').textContent = activeTab === 'summary'
       ? 'Analysis summary' : (comparing ? 'Table1 + Table2' : 'Table1');
     find('assay-show-empty-rows-field').hidden = activeTab === 'summary';
@@ -77,11 +79,6 @@ export function createAnalyzeWorkspace({ elements, runtime, resultsManager, anal
     notice.hidden = !info.errors.length;
     notice.textContent = info.errors.length
       ? `${info.errors.length} formula error${info.errors.length === 1 ? '' : 's'} · ${info.errors.slice(0,3).map(({well}) => well).join(', ')}. Select an error cell to edit.` : '';
-    const hasChart = Boolean(root.querySelector('[data-assay-analysis-chart]'));
-    root.querySelectorAll('[data-assay-chart-type]').forEach((button) => {
-      button.disabled = !hasChart || info.hasFittedCurve;
-      button.setAttribute('aria-pressed', String(button.dataset.assayChartType === info.chartType));
-    });
     if (options.tab) redraw();
   }
 
@@ -115,9 +112,6 @@ export function createAnalyzeWorkspace({ elements, runtime, resultsManager, anal
     requestAnimationFrame(() => analysisView.redrawChart());
   });
   find('assay-workspace-format-btn').addEventListener('click', () => analysisView.openChartFormat());
-  root.querySelectorAll('[data-assay-chart-type]').forEach((button) => {
-    button.addEventListener('click', () => analysisView.setChartType(button.dataset.assayChartType));
-  });
   refresh();
   return { refresh };
 }

@@ -25,8 +25,7 @@
 .assay-workspace-chart-header .small-note { margin: 4px 0 0; }
 .assay-workspace-header > div { min-width: 0; overflow-wrap: anywhere; }
 .assay-workspace-save-btn,
-.assay-workspace-chart-actions,
-.assay-workspace-chart-types { display: inline-flex; align-items: center; gap: 6px; }
+.assay-workspace-chart-actions { display: inline-flex; align-items: center; gap: 6px; }
 .assay-workspace-save-btn svg {
   width: 16px; height: 16px; fill: none; stroke: currentColor;
   stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
@@ -43,9 +42,6 @@
 #assay-analyze-workspace button { font-size: var(--text-xs); }
 .assay-workspace-chart-actions .ghost-btn,
 .assay-workspace-data-header > button { padding: 5px 8px; min-height: 30px; }
-.assay-workspace-chart-types { border: 1px solid var(--theme-border); padding: 2px; border-radius: 6px; gap: 2px; }
-.assay-workspace-chart-types button { border: 0; min-height: 26px; border-radius: 4px; }
-.assay-workspace-chart-types button[aria-pressed="true"],
 #assay-chart-focus-btn[aria-pressed="true"] {
   background: var(--theme-accent-wash);
   color: var(--theme-accent);

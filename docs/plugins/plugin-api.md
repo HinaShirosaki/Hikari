@@ -45,6 +45,7 @@ app, and use this same API; [§1.2](#12-tool-plugins) lists what differs.
 | `app.setContextActions`, `app.contextAction` event, `app.readContextAction`, `app.respondContextAction` | `layout` | Actions in the Protocol `…` menu and the PDF selection toolbar, with a one-shot handoff of the selected source | [§4](#4-layout-and-host-ui-verbs) |
 | `agent.chat`, `agent.setContext`, `app.setAgentChatExpanded` | `agent:chat` | Submit to, scope, and open or fold the plugin's chat rail | [§5](#5-agent-verbs) |
 | `agent.canvas` event, `agent.respond` | `agent:canvas` | Serve the agent's `plugin_canvas` requests | [§5](#5-agent-verbs) |
+| `plotly.render` | `agent:canvas` | Render a data plot using Hikari's local Plotly.js bundle | [§5](#5-agent-verbs) |
 
 Verbs reserved for the bundled Gel plugin are not part of this API; see
 [`src/plugins/README.md`](../../src/plugins/README.md).
@@ -921,6 +922,32 @@ Complete an `agent.canvas` request with `{id,result}`; `result.ok` is boolean,
 and the rest of `result` is returned to the agent. Only the registered frame and
 origin that received it may respond. Unknown, late, duplicate and cross-plugin
 replies are rejected. Returns `{acknowledged:true}`.
+
+### `plotly.render` — `agent:canvas`
+
+Render canonical Plotly data and layout with Hikari's existing vendored library:
+
+```js
+const plot = await hikari.call('plotly.render', {
+  figure: {
+    data: [{type:'scatter',x:[0,1,2],y:[2,4,3],mode:'lines+markers'}],
+    layout: {xaxis:{title:{text:'Time (min)'}},yaxis:{title:{text:'Response'}}}
+  },
+  width: 800, height: 500
+});
+// {svg,width,height,engine:'plotly.js',version}
+```
+
+The specification is finite JSON (at most 2 million characters, 1–100 traces).
+Dimensions default to 800 × 500 and must be 64–8000 pixels. The host renders
+offscreen, converts inline graphic CSS to SVG presentation attributes, and
+cleans up the rendering node. It does not save files, alter Assay charts or
+create chat graph artifacts. Plugins own persistence, SVG validation and
+placement. Plot SVG contains chart-owned text, unlike text-free illustrations.
+No CDN or external provider is used. Offline scientific traces include scatter,
+bar, box, violin, histogram, heatmap and contour; map services and remote images
+are unsupported. Native histogram/box/violin traces can process raw observations;
+other calculations must supply computed arrays and retain their provenance.
 
 ### 5.2 Inspection before completion
 
