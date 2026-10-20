@@ -138,7 +138,9 @@ try {
     fs.mkdirSync(work);
     const cache = path.join(work, 'node');
     const config = { version: '1.2.3', requests: path.join(work, 'requests'), nodeName, nodeFile, nodeSha: sha(nodeFile), asset, assetFile, assetSha: sha(assetFile), ...options };
-    const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^path$|^hikari_/i.test(key)));
+    // A PSModulePath inherited from the runner's pwsh points Windows PowerShell 5.1
+    // at PowerShell 7's Utility module, which hides Get-FileHash.
+    const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^path$|^psmodulepath$|^hikari_/i.test(key)));
     env.PATH = windows ? `${shim};${process.env.SystemRoot}\\System32;${process.env.SystemRoot}\\System32\\WindowsPowerShell\\v1.0` : `${shim}:/usr/bin:/bin:/usr/sbin:/sbin`;
     Object.assign(env, { HIKARI_TEST_NODE: process.execPath, HIKARI_TEST_DOWNLOADER: downloader,
       HIKARI_TEST_INSTALLER: path.join(root, 'install.ps1'), HIKARI_TEST_FIXTURE: path.join(work, 'fixture.json'),

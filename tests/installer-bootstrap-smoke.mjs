@@ -15,7 +15,7 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-bootstrap-smoke-'));
 try {
   fs.copyFileSync(tarball, path.join(tmp, 'hikari.tgz'));
   const { version } = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^path$|^hikari_|^npm_config_cache$/i.test(key)));
+  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^path$|^psmodulepath$|^hikari_|^npm_config_cache$/i.test(key)));
   const bins = process.platform === 'win32' ? ['node.exe', 'npm.cmd', 'npx.cmd'] : ['node', 'npm', 'npx'];
   env.PATH = (process.env.PATH || process.env.Path).split(path.delimiter)
     .filter((directory) => directory && !bins.some((bin) => fs.existsSync(path.join(directory, bin))))
