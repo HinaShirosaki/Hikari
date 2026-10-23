@@ -389,7 +389,7 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
         try {
           if (illustrationId !== library.activeId) return failure('illustration_changed', 'Another illustration is open. Paste into the active illustration.');
           const instance = instantiateClipboard(copied, canvas, offset, validateSvg);
-          // A single local action can contain all 200 objects plus their groups;
+          // A single local action can contain every object plus their groups;
           // scene validation still enforces the shared size and object limits.
           const result = await apply({ action: 'apply', expected_revision: documentState.revision,
             request_id: crypto.randomUUID(), operations: instance.operations });

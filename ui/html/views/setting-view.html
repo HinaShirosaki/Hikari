@@ -687,6 +687,18 @@
           </p>
         </div>
         <div class="stack-form">
+          <form id="setting-plugins-github-form" class="stack-form">
+            <label for="setting-plugins-github-url">
+              GitHub repository URL
+              <input type="url" id="setting-plugins-github-url" placeholder="https://github.com/owner/plugin-repo" required autocomplete="off" spellcheck="false" aria-describedby="setting-plugins-github-help" />
+            </label>
+            <p id="setting-plugins-github-help" class="small-note">
+              Clone and install a ready-to-use plugin from its default branch. Requires Git and a plugin.json at the repository root.
+            </p>
+            <div class="form-actions">
+              <button type="submit" id="setting-plugins-github-install-btn" class="primary-btn">Install from GitHub</button>
+            </div>
+          </form>
           <div class="form-actions">
             <button type="button" id="setting-plugins-add-btn" class="primary-btn">
               Add Plugin Folder

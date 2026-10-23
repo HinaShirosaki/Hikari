@@ -78,6 +78,7 @@ export function initPapersManagement({
     mergeDiscoveredPapers
   } = createDiscoveryMerge({ state });
 
+  let readingPageSaveTimer = 0;
   const context = {
     state,
     persist,
@@ -205,6 +206,17 @@ export function initPapersManagement({
       }
       paper.pdfBookmarks = Array.isArray(bookmarks) ? bookmarks : [];
       context.comments?.renderBookmarkSection?.();
+    },
+    // The next open starts at this page. lastReadPage is unversioned (never an
+    // undo step); the save waits for scrolling to settle.
+    rememberReadingPage(pageNumber) {
+      const paper = context.getActivePaper();
+      if (!paper || paper.lastReadPage === pageNumber) {
+        return;
+      }
+      paper.lastReadPage = pageNumber;
+      windowRef?.clearTimeout?.(readingPageSaveTimer);
+      readingPageSaveTimer = windowRef?.setTimeout?.(() => persist(), 1000);
     }
   };
 
@@ -254,7 +266,10 @@ export function initPapersManagement({
     highlightCommentPopover: elements.paperHighlightCommentPopover,
     onMetadataResolved: (...args) => context.applyResolvedPdfMetadata(...args),
     onBookmarksResolved: (...args) => context.applyResolvedPdfBookmarks(...args),
-    onPageChange: (...args) => context.comments?.onViewerPageChange(...args),
+    onPageChange: (pageNumber) => {
+      context.rememberReadingPage(pageNumber);
+      context.comments?.onViewerPageChange(pageNumber);
+    },
     onPinSelect: (...args) => context.comments?.onViewerPinSelect(...args),
     onHighlightSelection: (...args) => context.createPaperHighlight?.(...args),
     onSelectionComment: (...args) => context.createPaperTextComment?.(...args),

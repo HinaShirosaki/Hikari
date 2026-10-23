@@ -12,25 +12,25 @@ export async function createBlotFigurePowerPoint({ plan, blotCanvases, title }) 
   const scale = Math.min(12.3 / plan.width, 6.5 / plan.height);
   const left = (13.333333 - plan.width * scale) / 2;
   const top = (7.5 - plan.height * scale) / 2;
-  if (plan.table) {
+  for (const table of plan.tables) {
     // Each lane is a native single-column table. Independent placement keeps
     // its center exactly over a lane even with uneven widths or tilted lanes.
-    plan.table.columns.forEach((column, index) => {
-      slide.addTable(plan.table.rows.map(row => [{ text: row.values[index].join('\n') }]), {
-        x: left + (plan.imageLeft + column.x) * scale, y: top + plan.table.y * scale,
-        w: column.width * scale, h: plan.table.height * scale,
-        colW: [column.width * scale], rowH: plan.table.rows.map(row => row.height * scale),
+    table.columns.forEach((column, index) => {
+      slide.addTable(table.rows.map(row => [{ text: row.values[index].join('\n') }]), {
+        x: left + (plan.imageLeft + column.x) * scale, y: top + table.y * scale,
+        w: column.width * scale, h: table.height * scale,
+        colW: [column.width * scale], rowH: table.rows.map(row => row.height * scale),
         fontFace: 'Arial', fontSize: FIGURE_FONT_SIZE * scale * 72,
         align: 'center', valign: 'mid', margin: 0, color: '000000',
         border: { type: 'none' }, fill: { color: 'FFFFFF', transparency: 100 },
-        autoPage: false, objectName: `Lane ${column.laneIndex} table`
+        autoPage: false, objectName: `${table.label} lane ${column.laneIndex} table`
       });
     });
-    plan.table.rows.forEach((row, index) => slide.addText(row.labelLines.join('\n'), {
+    table.rows.forEach((row, index) => slide.addText(row.labelLines.join('\n'), {
       x: left + FIGURE_MARGIN * scale, y: top + row.y * scale,
       w: (LABEL_WIDTH - 20) * scale, h: row.height * scale,
       fontFace: 'Arial', fontSize: FIGURE_FONT_SIZE * scale * 72,
-      align: 'right', valign: 'middle', margin: 0, color: '000000', objectName: `Lane table label ${index + 1}`
+      align: 'right', valign: 'middle', margin: 0, color: '000000', objectName: `${table.label} lane table label ${index + 1}`
     }));
   }
   plan.rows.forEach((row, index) => {

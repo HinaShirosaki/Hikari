@@ -1,12 +1,15 @@
 import { complexityInstructions } from '../complexity.mjs';
 import { imageGenerationInstructions } from '../image-generation.mjs';
 import { imageStyleInstructions } from '../image-style.mjs';
+import { MAX_OBJECTS, MAX_GROUPS } from '../model.mjs';
 
 // Workflow only: ids, revisions and inspection. Artwork rules live in
 // RENDERER_INSTRUCTIONS; field mechanics live in the request schema.
 export const AGENT_INSTRUCTIONS = 'Pin the returned illustration_id on every canvas request; on illustration_changed, list and reopen the intended figure, and never edit a different figure silently. Preserve existing user edits and unrelated objects. Keep the current canvas dimensions, complexity, image-generation target and image style unless the user asks to change them; fit and arrange the artwork within the selected canvas. Build and assemble all components on the canvas. Apply requires expected_revision and a unique request_id; retry uncertain edits with identical arguments and request_id. Give every component and group a short human-readable name (for example "Mitochondrion" or "ATP export arrow"); the user sees it in the Layers panel. Use component ids for individual rotation and styling, and group ids to move, resize, transfer or delete a set together.\n\nCompletion requires visual inspection. After the last edit, render the canvas, and critique it as a demanding reviewer of a textbook figure: compare the render item by item with your brief and the request, and check the depiction, label targets and composition. Fix every problem you can and render again, then call action:"inspect" with expected_revision, the render\'s inspection_id and review:{layout,labels,artwork,science}. The review must name remaining weaknesses, not only confirm requirements. A render alone is not a review; Hikari blocks completion until inspect succeeds for the latest revision in this run.';
 
 export const RENDERER_INSTRUCTIONS = `Artwork: figure labels must be independent text objects, and illustrative SVG and raster artwork must be text-free. Data plots are separate Plotly layers; their axes, ticks, legend and chart annotations remain editable through the stored Plotly specification.
+
+Limits: a figure holds at most ${MAX_OBJECTS} objects and ${MAX_GROUPS} groups, and one invalid operation rejects the whole apply batch. Groups do not nest: grouping members of existing groups replaces those groups with one flat group, so save a component group with asset_save before folding it into a larger one. SVG has no marker, text, style, filter, pattern or use: draw arrowheads as path or polygon shapes. Text objects never wrap; break lines with \\n, and treat their width/height as an alignment box, not the ink bounds. Object fill, stroke and text color take hex only (#rrggbb or #rrggbbaa; fill and stroke also accept none).
 
 Figure quality:
 - Depict the process the request names, not only its parts: budding shows the membrane curving inward and pinching off; transmembrane proteins cross the whole membrane; arrows follow the real direction of movement or reaction. Add no unrequested decoration, such as cargo dots, extra icons or background shapes.

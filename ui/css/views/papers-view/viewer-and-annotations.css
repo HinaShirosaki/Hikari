@@ -159,7 +159,7 @@
 .papers-viewer-toolbar-icon-btn:focus-visible,
 .papers-viewer-zoom-step-btn:hover,
 .papers-viewer-zoom-step-btn:focus-visible {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 .papers-viewer-toolbar button:focus-visible {
@@ -781,5 +781,5 @@
 }
 
 .papers-highlight-comment-popover .ghost-btn.is-copied {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }

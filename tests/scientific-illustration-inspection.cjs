@@ -69,7 +69,7 @@ test('missing inspection blocks success after exactly one continuation and hides
   assert.equal(result.ok, false); assert.equal(result.status, 'inspection_required');
   assert.equal(fixture.calls.length, 2);
   assert.equal(fixture.calls[1].resumeSessionId, 'codex-session');
-  assert.match(fixture.calls[1].prompt, /Render BOTH canvases/);
+  assert.match(fixture.calls[1].prompt, /Render the canvas after the last edit/);
   assert.equal(fixture.lifecycle.some(event => event.stage === 'codex_agent_completed'), false);
   assert.equal(JSON.stringify(fixture.progress).includes('Premature done'), false);
   assert.equal(JSON.stringify(fixture.lifecycle).includes('Premature done'), false);

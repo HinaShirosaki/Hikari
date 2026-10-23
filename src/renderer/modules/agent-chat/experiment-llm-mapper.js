@@ -110,8 +110,7 @@ function summarizeGelManualOverrides(analysis) {
       ladder_lane_override: Number.isFinite(reportSummary.ladderLaneOverride)
         ? reportSummary.ladderLaneOverride
         : null,
-      ladder_bands: Number.isFinite(reportSummary.ladderBands) ? reportSummary.ladderBands : 0,
-      ladder_bands_done: Boolean(reportSummary.ladderBandsDone)
+      ladder_bands: Number.isFinite(reportSummary.ladderBands) ? reportSummary.ladderBands : 0
     };
   }
 
@@ -130,8 +129,7 @@ function summarizeGelManualOverrides(analysis) {
     lane_segmentation_band_bottom: Number.isFinite(laneSegmentation.bandBottom) ? laneSegmentation.bandBottom : null,
     added_bands: asArray(manualOverrides.addedBands).length,
     ladder_lane_override: Number.isFinite(manualOverrides.ladderLane) ? manualOverrides.ladderLane : null,
-    ladder_bands: asArray(manualOverrides.ladderBands).length,
-    ladder_bands_done: Boolean(manualOverrides.ladderBandsDone)
+    ladder_bands: asArray(manualOverrides.ladderBands).length
   };
 }
 

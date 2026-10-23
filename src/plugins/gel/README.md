@@ -10,69 +10,148 @@ and PowerPoint export keeps the lane table as an editable native table.
 
 ## Gel layers and Stack
 
-Open **Layers** and choose **Add → Current gel** to capture the gel you are
-editing, or **Add → Image files…** to import images (up to 16 layers). New layers are named Gel 1,
-Gel 2, and so on. Select a layer and edit **Layer name** to name it after the
-antibody; double-clicking its name focuses the rename field. That name is
-also the antibody caption in the figure. **Process gel** returns to the
-existing crop, rotation, enhancement, and lane tools with that layer's settings.
+The left rail lists each gel once, either outside the stacks or nested inside one.
+Its Gels header and add buttons stay fixed while the entries scroll, matching
+the DNA and Notebook file trees. The shared compact rows truncate long names;
+the scroll region reaches the rail's right and bottom edges.
+New workspaces start without a Stack. **Add stack** creates an empty Stack
+immediately. Drag gels into it when ready. Each click
+creates a new stack without replacing the existing ones. Every stack has its own
+name, Layout name, and trim. Empty Stacks can be
+renamed, saved, reopened, and filled by dragging gels into them;
+an existing Stack remains available if you move all of its gels out.
+Drag a gel onto any stack to move it there, or into the top-level gel area to move it out.
+The tree scrolls when a drag approaches its top or bottom edge.
+Drop before or after another gel to reorder. Alt+Right moves a focused gel into
+the most recently opened stack; Alt+Left moves it out. Moves preserve processing, placement, and image
+data, and support undo/redo and project saving. The rail has no image previews.
+The header’s **Add gel** and **Add stack** icon buttons have hover labels. Choose
+**Add gel → Current gel** to capture the gel you are editing, or **Add gel → Image files…** to import images (up to 16 layers). You can
+also drop one or more image files onto the layer list or preview to add layers.
+Dropping onto the processing canvas or using its image picker also adds each
+gel to the navigator. Canvas drops open the first valid image for processing
+and keep earlier gels and their settings available in the rail.
+Image imports automatically use the configured Gel storage to save the original
+file, decoded source, preview, metadata, and record index. Processing and saving
+an imported gel updates that record. If storage fails, the image stays in the
+workspace and the import reports the error.
+In **Lanes → Dividers**, drag anywhere along an existing divider to reposition it.
+The grab zone extends 12 screen pixels to either side, regardless of image scale;
+the nearest divider wins in crowded lanes. A drag preserves its initial pointer
+offset, stops before neighboring dividers, and forms one undo step. Right-click
+uses the same grab zone for **Remove divider**.
+The empty preview includes a file picker. **Add stack** needs just one click. The rail has
+no selection checkboxes. The canvas stays in the
+center. The far-right vertical icon toolbar groups Image, Crop, Lanes, Ladder, Bands,
+and Results; a Layout icon joins them only while a Stack is open, because a
+single gel has no layout. One category panel opens to its left; click its icon again
+or close the panel to give the canvas more space. Processed, Export, Save,
+and record actions remain directly available as icons. Each icon has a short
+caption under it, and arrow keys move through the toolbar. Stack selection shows Layout; select a gel to use
+its processing tools. Cropping keeps its controls visible until Done or Cancel.
+New layers are named Gel 1,
+Gel 2, and so on. Rename a gel with **Gel Name** in its Image tools, or
+double-click a Gel, Stack, or Layout entry to rename it directly in
+the rail (F2 also works). Enter or clicking away saves; Escape cancels; a blank
+name keeps the previous name. Names support undo/redo and project saving. The gel name is
+also the antibody caption in the figure. Drag gels in the rail to reorder them.
+**More → Remove gel** in the toolbar removes the gel being edited from the
+project and opens the next one; undo brings it back.
 
-Check the gel layers to combine and click **Stack**. The **Stack** entry
-previews those gels in layer order inside the current Gel viewer. The rail and
-the viewer toolbar stay visible. Clicking a gel previews it on its own.
-The **Export** menu's image and PowerPoint entries use the active layer or Stack;
-using an individual processing control resumes that gel in the same viewer.
-Changing the checkboxes or adding gels leaves the existing Stack intact until
-Stack is clicked again. Excluded layers remain available for individual editing.
+Create a stack with **Add stack**, then drag gel entries into it. The **Stack** entry
+previews those gels in layer order inside the current Gel viewer. Its nested
+entries open each gel for processing, while **Layout** returns to the Stack.
+The navigator and right-side actions stay visible. Clicking any gel entry
+opens its analysis tools; without a Stack, imports and opened projects go
+straight to the gel editor. In the Stack, the **Export** menu's image and
+PowerPoint entries export the Stack. Click a blot in the Stack to show its
+placement in Layout; **Process gel** there opens that gel’s analysis tools.
+Drag gels between stacks to change their membership.
+Dragging changes membership immediately. Gels moved out remain available at the
+top level; new imports also appear there until moved into Stack.
 
-In Stack, **Trim excess** crops every blot to their shared horizontal area so
-the left and right image edges match. Adjust **Left edge (%)** and
-**Right edge (%)** to refine the crop, or use **Reset trim** to restore the
-full margins. The crop shifts the shared lane table and guides together with
-the blots, preserving their alignment. Automatic trim follows later changes
-to the Stack's gels and alignment. Trim is included in PNG/PPTX exports and
-saved projects; individual gel images and their processing remain available.
+In Stack, **Set trim edges** opens the full canvas with two vertical handles.
+Drag the left and right edges to choose the area to keep; the discarded margins
+are shaded. You can also click near an edge to place it, or use arrow keys on a
+focused handle (Shift moves farther). **Apply trim** or Enter keeps the area;
+**Cancel** or Escape leaves the previous trim intact. **Adjust trim edges**
+reopens both handles, and **Reset trim** restores the full image. The same edges
+trim every blot and its individual lane table. Projects, PNG/PPTX exports, and
+undo/redo preserve the chosen edges; individual gel images remain available.
 
-Arrange blots directly in the preview, in a single layer or the Stack: drag
+Arrange blots directly in the Stack preview: drag
 a blot to slide it (in the Stack, drag it up or down past another blot to
 reorder), drag its top or bottom edge to crop it, and drag a side
-to stretch it (uniformly, the other side fixed) until its lanes line up with
-the guides and the other blots. Lane detection or existing dividers give the
+to resize it (the other side fixed) until its lanes line up with
+the other blots. Resize an individual gel directly with its canvas
+side grips. Width and height scale together, preserving its aspect ratio and crop.
+Resizing supports undo/redo, project saving, and both exports.
+Saved records appear in the same navigation tree, with images loaded when opened
+or dragged into Stack. Records already open are matched by their saved ID so they
+appear once. Unopened records do not consume the figure's layer allowance.
+Opening a saved gel keeps its place in the rail and does not create unsaved work.
+Renaming, processing edits, and deliberate layer moves still participate in
+project saving and undo/redo; switching the processed preview is view state.
+Use **Add gel → Recover saved gels** to recover artifact folders missing from the
+record index. Recovery keeps existing records, adds each missing ID once, and
+leaves the saved files intact. It runs only when requested, so normal startup
+does not bring back records removed from the index.
+Lane detection or existing dividers give the
 starting position; **Reset alignment** returns to it, and **Exact values**
 shows the same first/last lane anchors and crop as numbers. The figure
 translates and uniformly scales each intact blot; it does not rearrange lanes
-or warp individual bands. The shared lane guides help check alignment and
-never appear in exports.
+or warp individual bands. Use **Lanes → Auto-detect** to detect lanes in the
+individual gel.
 
 **Export → Image (PNG)** produces a white figure at up to 3× density.
 **Export → PowerPoint (PPTX)** exports the active gel or Stack to one slide
 with separate blot images and editable antibody labels on the left.
-**Save project** downloads a `.gel-figure.json` file containing all layers,
-their names, Stack membership, selection, normalized original images,
+**Save project** in the toolbar downloads a `.gel-figure.json` file containing all layers,
+their names, all stacks and their layout settings, selection, normalized original images,
 processing settings, and placement; it preserves 16-bit intensity data.
-**Add → Project…** appends its layers so existing work is retained.
-Projects are saved explicitly through the native file dialog, separately
-from Existing Gels.
+**Add gel → Project…** merges its layers and stacks while retaining current edits.
+Reopening the same project reuses existing entries; library records are reconnected
+only when the saved image agrees. Version 4 retains stable identities and record
+references; versions 1–3 still open.
+
+The workspace automatically saves stacks (including empty stacks), membership,
+order, names, layout settings, images, processing and individual tables to the
+configured storage folder. It restores on startup without opening a project
+file. Undo and redo are also saved. Browsing alone stays clean. Quit's Save
+flushes pending workspace changes without a download dialog; **Save project**
+remains a portable backup. Failed writes remain unsaved and can be retried.
 
 The editable lane table sits above the image in the individual editor, with
-columns aligned to the gel lanes. In Stack, **Lane table** selects the
-included gel whose table forms a shared header above the entire stack (the first
-available table by default). Its columns follow that blot's alignment transform
-in the preview and both exports. PowerPoint retains editable table cells.
+columns aligned to the gel lanes. In Stack, each gel keeps its own table directly
+above its image. Each table follows its gel when moved, resized, cropped, or
+reordered, in the preview and both exports. Edit a table in its gel's processing
+view. Gels without a table have no table header. PowerPoint retains editable
+table cells. Older projects keep every gel's table; obsolete shared-header
+selection settings are ignored.
 
-The main workspace stays on the gel image. The rail groups every tool by
-function in collapsible sections: **Image** (file, analysis type, crop,
-denoise, contrast), **Lanes**, **Ladder**, **Bands**, and **Results** (the band
+The main workspace stays on the gel image. The right editing panel groups tools by
+function: **Image** (name and analysis type), **Processed** (denoise and contrast),
+**Lanes**, **Ladder**, **Bands**, and **Results** (the band
 intensity table with Copy, the lane profile, and the peak editor). Sections are
-not steps; open whichever you need. Nothing sits above the gel: a small card
-at its top right holds the pending finish action (**Finish dividers**, **Done
-Ladder MW**, **Done Quantify**), the **Processed** switch, an **Export** menu
-(PNG, PPTX, CSV), and **Layers** with its layer count. Status text goes to
-screen readers only. **Crop** opens crop mode, as in photo editors: drag the
-edges on the image, and the card holds **Straighten** (±45°), **90°**,
+not steps; open whichever you need. The **Processed** icon opens both enhancement
+sliders and previews their effect. Its **Processed view** switch compares the
+result with the original; closing the panel keeps the chosen preview and settings.
+Clicking the gel only does something while
+a tool is pressed (Dividers, Vertices, Pick lane, Set MW, Top, Bottom); with no
+tool pressed a click does nothing. Pick lane releases after its click, Top
+hands off to Bottom, and in **Per lane** mode Bottom hands back to Top until
+every lane has a window. The ladder is optional: **Detect** and **Set MW** stay
+disabled until a ladder lane is picked, and results appear as soon as the band
+window is set. Right-click a divider while placing dividers and choose
+**Remove divider** to delete it; undo restores it. While dividers are being placed, **Finish dividers** leads the
+tools panel. Completion and error messages use Hikari's overall notifications.
+Progress does not create a notification. A failed operation with a retry action
+adds **Try again** to the **Add gel** menu. The **Crop** icon opens crop mode, as in photo editors: drag the
+edges on the image, and the Crop panel holds **Straighten** (±45°), **90°**,
 **Reset**, **Cancel**, and **Done** (Enter keeps the crop, Esc cancels). Reset shows the full original image again; nothing
-changes until Done. **Save** stays at the bottom of the rail beside
-a menu with **New gel** and **Reset lanes and bands**. The peak editor is the
+changes until Done. **Reset** is a toolbar icon that clears lane and band
+selections and supports undo. **Save** and the gel actions menu stay below the tools.
+The peak editor is the
 only floating window: drag its title bar, or focus the title bar and use the
 arrow keys (Shift moves farther); Escape closes it. The lane table scrolls
 within its panel above the gel.
@@ -93,6 +172,7 @@ Its public permissions are intentionally small:
 | `files` | Source/preview images, report JSON, and record metadata under the plugin's own folder. |
 | `downloads` | Native save dialog for CSV, generated PNG, and editable-table PowerPoint exports. |
 | `layout` | Commits the in-frame left rail's settled width to Hikari's shared layout preference. |
+| `notifications` | Sends completion and error messages through Hikari's shared notification system. |
 
 Gel does not request notebook, project, sample, or protocol access, so the
 plugin cannot open or mutate those host features. Host-owned readers may still
@@ -135,6 +215,13 @@ Saved artifacts live under:
 ├── analysis-result.json
 └── gel-record.json
 ```
+
+Workspace snapshots live separately in `Plugins/gel/Workspace/`. Two rotating
+chunk slots keep writes within the host file limit and bound disk use. The atomic
+`current.json` manifest commits only after every chunk succeeds; `previous.json`
+retains the prior snapshot. Restore checks hashes and falls back to that snapshot
+if necessary. Failed restoration preserves the saved files and blocks autosave
+from replacing them with an empty workspace.
 
 The `storage` blob keeps only the fields needed to list and locate each record.
 On load, `main.js` hydrates metadata and report content from the JSON files. A

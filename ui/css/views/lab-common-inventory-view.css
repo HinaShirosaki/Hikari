@@ -132,7 +132,7 @@
 .chemical-import-btn.ghost-btn:hover,
 .chemical-import-btn.ghost-btn:focus-visible {
   border-color: transparent;
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
   color: var(--theme-text-strong);
 }
 

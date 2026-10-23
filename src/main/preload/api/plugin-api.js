@@ -5,8 +5,10 @@ const { PLUGINS } = require('../../../shared/ipc/channels');
 function createPluginApi(ipcRenderer) {
   return {
     inspectPluginFolder: (path) => ipcRenderer.invoke(PLUGINS.INSPECT_FOLDER, { path }),
+    installPluginFromGitHub: (url, installedPluginIds) => ipcRenderer.invoke(PLUGINS.INSTALL_GITHUB, { url, installedPluginIds }),
     servePluginFolder: (id, path) => ipcRenderer.invoke(PLUGINS.SERVE_FOLDER, { id, path }),
     readPluginFile: (payload) => ipcRenderer.invoke(PLUGINS.READ_FILE, payload),
+    discoverGelRecords: (payload) => ipcRenderer.invoke(PLUGINS.DISCOVER_GELS, payload),
     writePluginFile: (payload) => ipcRenderer.invoke(PLUGINS.WRITE_FILE, payload),
     exportPluginFile: (payload) => ipcRenderer.invoke(PLUGINS.EXPORT_FILE, payload),
     onPluginCanvasRequest: (handler) => {

@@ -10,7 +10,7 @@ export const DRAFT_CONTROL_IDS = [
 ];
 
 export function serializeBlotProject(rows, title, imageDataToDataUrl, {
-  tableSource = 'auto', stackTrim, stackIds = [], checkedIds = rows.map(row => row.id), selectedId = rows[0]?.id, nextLayerNumber = rows.length + 1
+  stackTrim, stackIds = [], hasStack = stackIds.length > 0, stackName = 'Stack', layoutName = 'Layout', stacks, activeStackId, checkedIds = rows.map(row => row.id), selectedId = rows[0]?.id, nextLayerNumber = rows.length + 1
 } = {}) {
   function packImage(image) {
     return {
@@ -21,27 +21,37 @@ export function serializeBlotProject(rows, title, imageDataToDataUrl, {
       tiffPageIndex: image.tiffPageIndex, tiffPageCount: image.tiffPageCount
     };
   }
-  const tableSourceIndex = rows.findIndex(row => row.id === tableSource);
   const indices = ids => rows.flatMap((row, index) => ids.includes(row.id) ? [index] : []);
-  return JSON.stringify({ format: 'hikari-blot-figure', version: 2, title,
-    stack: indices(stackIds), checked: indices(checkedIds), nextLayerNumber, stackTrim: normalizeStackTrim(stackTrim),
+  const groups = stacks ?? (hasStack ? [{ id: 'stack', name: stackName, layoutName, layerIds: stackIds, trim: stackTrim }] : []);
+  const activeStack = Math.max(0, groups.findIndex(stack => stack.id === activeStackId));
+  const current = groups[activeStack];
+  return JSON.stringify({ format: 'hikari-blot-figure', version: 4, title,
+    stacks: groups.map(stack => ({ id: stack.id, name: stack.name, layoutName: stack.layoutName, layers: indices(stack.layerIds),
+      trim: normalizeStackTrim(stack.trim) })), activeStack,
+    // Keep the active-stack fields readable by older project tools.
+    stack: indices(current?.layerIds ?? stackIds), hasStack: groups.length > 0, stackName: current?.name ?? stackName,
+    layoutName: current?.layoutName ?? layoutName, checked: indices(checkedIds), nextLayerNumber,
+    stackTrim: normalizeStackTrim(current?.trim ?? stackTrim),
     view: selectedId === 'stack' ? 'stack' : Math.max(0, rows.findIndex(row => row.id === selectedId)),
-    tableSource: tableSourceIndex >= 0 ? tableSourceIndex : tableSource === 'none' ? 'none' : 'auto', rows: rows.map(row => ({
-    label: row.label, placement: row.placement,
+    rows: rows.map(row => ({
+    id: row.id, recordId: row.draft.controls['gel-id'] || row.recordId || '', label: row.label, placement: row.placement,
     draft: {
-      controls: row.draft.controls, manualOverrides: row.draft.manualOverrides,
+      controls: { ...row.draft.controls, 'gel-id': '' }, manualOverrides: row.draft.manualOverrides,
       viewerMode: row.draft.viewerMode, cropApplied: row.draft.cropApplied,
+      currentReport: row.draft.currentReport, pendingNotebookLink: row.draft.pendingNotebookLink,
       currentImage: packImage(row.draft.currentImage),
       originalImage: row.draft.cropApplied ? packImage(row.draft.originalImage) : null
     }
   })) });
 }
 
-export async function parseBlotProject(content, createId) {
+export async function parseBlotProject(content, createId, { local = false } = {}) {
   if (content.length > 180000000) throw new Error('The figure project is too large to open.');
   const project = JSON.parse(content);
-  if (project?.format !== 'hikari-blot-figure' || ![1, 2].includes(project.version)
-    || !Array.isArray(project.rows) || !project.rows.length || project.rows.length > MAX_BLOTS) {
+  if (project?.format !== 'hikari-blot-figure' || ![1, 2, 3, 4].includes(project.version)
+    || !Array.isArray(project.rows) || project.rows.length > MAX_BLOTS
+    || (!project.rows.length && project.version !== 4 && !(project.version === 2 && project.hasStack === true)
+      && !(project.version === 3 && Array.isArray(project.stacks) && project.stacks.length > 0))) {
     throw new Error('Choose a supported Hikari blot figure project.');
   }
   function layerIndices(value, fallback) {
@@ -51,8 +61,19 @@ export async function parseBlotProject(content, createId) {
     return value;
   }
   const allIndices = project.rows.map((_, index) => index);
-  const stackTrim = normalizeStackTrim(project.stackTrim);
-  const stackIndices = layerIndices(project.stack, project.version === 1 ? allIndices : []);
+  const legacyIndices = layerIndices(project.stack, project.version === 1 ? allIndices : []);
+  const groups = project.version >= 3 ? project.stacks : legacyIndices.length || project.hasStack === true
+    ? [{ name: project.stackName, layoutName: project.layoutName, layers: legacyIndices, trim: project.stackTrim }] : [];
+  if (!Array.isArray(groups) || groups.length > 1000 || groups.some(stack => !stack || typeof stack !== 'object')) {
+    throw new Error('The project contains an invalid stack list.');
+  }
+  const assigned = new Set();
+  const packedStacks = groups.map(stack => {
+    const layers = layerIndices(stack.layers, []);
+    if (layers.some(index => assigned.has(index))) throw new Error('A gel cannot belong to more than one stack.');
+    layers.forEach(index => assigned.add(index));
+    return { ...stack, layers, trim: normalizeStackTrim(stack.trim) };
+  });
   const checkedIndices = layerIndices(project.checked, allIndices);
   async function unpackImage(value) {
     if (!value || !/^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(value.png || '')
@@ -74,26 +95,40 @@ export async function parseBlotProject(content, createId) {
     image.tiffPageCount = value.tiffPageCount;
     return image;
   }
+  // Legacy files have no IDs. Derive repeatable identities from the file so
+  // opening the same backup twice is idempotent.
+  const fileKey = project.version < 4 ? [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(content)))].map(value => value.toString(16).padStart(2, '0')).join('') : '';
+  const usedIds = new Set();
+  function identity(value, fallback) {
+    const id = typeof value === 'string' && value.length > 0 && value.length <= 200 ? value : fallback;
+    if (usedIds.has(id)) throw new Error('The project contains duplicate identities.');
+    usedIds.add(id); return id;
+  }
   const rows = [];
   for (const row of project.rows) {
     const draft = row.draft || {};
     const currentImage = await unpackImage(draft.currentImage);
     const originalImage = draft.originalImage ? await unpackImage(draft.originalImage) : currentImage;
     const controls = Object.fromEntries(DRAFT_CONTROL_IDS.map(id => [id, String(draft.controls?.[id] || '')]));
-    controls['gel-id'] = '';
-    rows.push({ id: createId(), label: String(row.label || '').slice(0, 120),
+    controls['gel-id'] = local && typeof row.recordId === 'string' ? row.recordId : '';
+    rows.push({ id: identity(row.id, fileKey ? `project:${fileKey}:${rows.length}` : createId()), recordId: typeof row.recordId === 'string' ? row.recordId : '', label: String(row.label || '').slice(0, 120),
       placement: validatePlacement(row.placement),
       draft: { currentImage, originalImage, originalFile: null, controls,
-        manualOverrides: normalizeManualOverrides(draft.manualOverrides), currentReport: null,
+        manualOverrides: normalizeManualOverrides(draft.manualOverrides), currentReport: draft.currentReport && typeof draft.currentReport === 'object' ? draft.currentReport : null,
         viewerMode: draft.viewerMode === 'processed' ? 'processed' : 'original',
-        cropApplied: Boolean(draft.cropApplied), pendingNotebookLink: null }
+        cropApplied: Boolean(draft.cropApplied), pendingNotebookLink: draft.pendingNotebookLink && typeof draft.pendingNotebookLink === 'object' ? draft.pendingNotebookLink : null }
     });
   }
-  const tableSource = Number.isInteger(project.tableSource) && rows[project.tableSource]
-    ? rows[project.tableSource].id : project.tableSource === 'none' ? 'none' : 'auto';
-  const selectedId = project.version === 1 || project.view === 'stack' ? 'stack'
-    : Number.isInteger(project.view) && rows[project.view] ? rows[project.view].id : rows[0].id;
-  return { rows, tableSource, stackTrim, stackIds: stackIndices.map(index => rows[index].id),
+  const stacks = packedStacks.map((stack, index) => ({ id: identity(stack.id, fileKey ? `project:${fileKey}:stack:${index}` : `stack-${createId()}`), name: String(stack.name || '').trim().slice(0, 120) || (index ? `Stack ${index + 1}` : 'Stack'),
+    layoutName: String(stack.layoutName || '').trim().slice(0, 120) || 'Layout', layerIds: stack.layers.map(index => rows[index].id),
+    trim: stack.trim }));
+  const active = stacks[Number.isInteger(project.activeStack) ? project.activeStack : 0] || stacks[0];
+  const hasStack = stacks.length > 0;
+  const stackTrim = active?.trim ?? normalizeStackTrim(project.stackTrim);
+  const selectedId = hasStack && (!rows.length || project.version === 1 || project.view === 'stack') ? 'stack'
+    : Number.isInteger(project.view) && rows[project.view] ? rows[project.view].id : rows[0]?.id || '';
+  return { rows, stacks, activeStackId: active?.id || '', stackTrim, stackIds: active?.layerIds || [], hasStack,
+    stackName: active?.name || 'Stack', layoutName: active?.layoutName || 'Layout',
     checkedIds: checkedIndices.map(index => rows[index].id), selectedId,
     nextLayerNumber: Number.isSafeInteger(project.nextLayerNumber) && project.nextLayerNumber > 0 ? project.nextLayerNumber : rows.length + 1,
     title: String(project.title || 'Gel layers').slice(0, 120) };

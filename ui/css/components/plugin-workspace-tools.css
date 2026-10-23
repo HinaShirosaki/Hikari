@@ -7,7 +7,7 @@
 }
 .plugin-workspace-tool svg { width: 1.125rem; height: 1.125rem; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
 .plugin-workspace-tool.is-group-start { margin-top: .5rem; }
-.plugin-workspace-tool:is(:hover, [aria-pressed="true"], [aria-expanded="true"]) { background: var(--theme-surface-subtle); color: var(--theme-text); }
+.plugin-workspace-tool:is(:hover, [aria-pressed="true"], [aria-expanded="true"]) { background: var(--theme-highlight); color: var(--theme-text); }
 .plugin-workspace-tool:focus-visible { outline: .125rem solid var(--theme-focus); outline-offset: .125rem; }
 .plugin-workspace-tool:disabled { opacity: .35; cursor: default; }
 output.plugin-workspace-tool { font-size: .625rem; font-variant-numeric: tabular-nums; height: 1.1rem; flex-basis: 1.1rem; cursor: default; }

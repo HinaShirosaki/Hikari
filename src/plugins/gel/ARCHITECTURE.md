@@ -16,7 +16,7 @@ Each is a `createXController({ runtime, elements, deps })` factory returning a s
 
 - `images/image-controller.js`: file load, decode, enhancement settings (denoise/contrast), and the preprocessed-image cache (`getPreprocessedImageForCurrentSettings`).
 - `images/crop-controller.js`: interactive crop and rotate, normalizing the canvas back into a working image.
-- `manual/manual-workflow.js`: the largest controller. Owns the guided manual segmentation workflow, the viewer-tool toolbar, canvas pointer interaction (clicks, context menu, vertex dragging), auto-detect-lanes, and override status. See the workflow breakdown below.
+- `manual/manual-workflow.js`: the largest controller. Owns the manual segmentation tools, the viewer-tool toolbar, canvas pointer interaction (clicks, context menu, vertex dragging), auto-detect-lanes, and override status. See the workflow breakdown below.
 - `rendering/lane-table.js`: the editable lane/sample table docked above the gel, with columns aligned to the image lanes. The viewer fits into the remaining space; long tables scroll within the dock. The Lane table button in the rail's Lanes section shows or hides it, and exports compose the saved table with the gel.
 - `rendering/index.js`: canvas drawing, the per-lane intensity-profile chart and the band intensity (cell) table shown inline in the rail's Results section, and hover overlays. `selectViewerBaseImageData(...)` (also re-exported from `index.js`) picks original vs. processed pixels for display.
 - `floating-windows.js`: owns the one nonmodal window, the peak editor, opened from the rail's Results section (it needs ~780 px, so it is the only tool that is not inline). It is bounded to the image stage, supports pointer dragging and arrow-key movement from its title bar, and Escape closes it. Rendering remains owned by the existing controllers; opening or dismissing it does not resize the gel. Observers and pointer listeners are disposed with the workspace.
@@ -34,24 +34,29 @@ Each is a `createXController({ runtime, elements, deps })` factory returning a s
 - `manual/manual-ui.js`: small presentational helpers for the viewer toolbar and step classes.
 - `dom.js`, `constants.js`: element lookups and tiny constants.
 
-### Guided manual segmentation workflow
+### Manual segmentation tools
 
-The headline feature is a step-by-step manual override flow driven by `manual/manual-workflow.js`; the pending finish action shows in the action card at the gel's top right, and its next-step hint is announced to screen readers. A viewer tool is selected, the user clicks on the canvas to place geometry, and `runtime.manualOverrides` accumulates:
+The headline feature is a set of manual override tools driven by `manual/manual-workflow.js`. A canvas click acts only for the pressed viewer tool (`runtime.selectedViewerTool`); with none pressed it does nothing, so there are no hidden steps. Each click places geometry, and `runtime.manualOverrides` accumulates. The pieces are independent; the order below is the usual one:
 
 1. **Set dividers** — lane boundaries, with the outermost dividers also defining
    the gel edges. The green **Dividers** tool (rail → Lanes) means editing is
-   active and the canvas shows a column-resize cursor; **Finish dividers** in the
-   action card, or clicking the tool again, finishes the step.
-2. **Set ladder lane** — which lane is the MW ladder (rail → Ladder → Pick lane).
+   active and the canvas shows a column-resize cursor; **Finish dividers** at the
+   top of the tools panel, or clicking the tool again, finishes it.
+2. **Set ladder lane** — which lane is the MW ladder (rail → Ladder → Pick lane;
+   the tool releases after one click). Optional: **Detect** and **Set MW** stay
+   disabled until a ladder lane exists.
 3. **Ladder MW** — toggle **Set MW** in the Ladder section, then click a band in the
    ladder lane to enter its MW in a single inline number field (Enter saves,
    Escape dismisses). The cursor becomes a
    crosshair while the tool is on. Clicking an existing label edits its value;
-   dragging it moves the calibration row. Confirm via "Done Ladder MW".
-4. **Top** / 5. **Bottom** (rail → Bands) — the quantification band window; supports
-   a per-lane band mode where each lane gets its own top/bottom (progress shows
-   `n/total` lanes).
-- **Quantify** confirmation and freeform **added bands** rounds.
+   dragging it moves the calibration row.
+4. **Top** / 5. **Bottom** (rail → Bands) — the quantification band window. Top
+   hands off to Bottom after its click. Per-lane band mode gives each lane its own
+   top/bottom; Bottom hands back to Top until every lane has a window (progress
+   shows `n/total` lanes). Analysis runs as soon as a window is complete.
+
+Saved `addedBands` (single-row bands from older records) are still measured, but
+no tool adds new ones.
 
 Additional viewer tools include **lane-vertices** (drag the four corners of a lane to correct tilt/skew, with glued shared edges between adjacent lanes). `renderOverrideStatus()` prints a compact summary line (`gel … | div … | bandY … | tilt … | add … | ladderMW … | ladder …`).
 
@@ -59,7 +64,7 @@ Additional viewer tools include **lane-vertices** (drag the four corners of a la
 
 1. Load an image (file picker or drag-and-drop onto the viewer stage).
 2. Optionally crop/rotate and tune denoise/contrast; toggle **original vs. processed** view.
-3. Auto-detect lanes, or run the guided manual segmentation steps.
+3. Auto-detect lanes, or place them with the manual tools.
 4. Run analysis (`onRunAnalysis` → `analyzeGelImage`), which produces lanes, band groups, calibration, and confidence.
 5. Inspect the report, lane table, and per-lane intensity profiles.
 6. Save the normalized plugin-owned record and/or export CSV.

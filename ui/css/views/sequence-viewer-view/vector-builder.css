@@ -594,7 +594,7 @@
 
 .sequence-viewer-protein-picker .sequence-viewer-protein-builder-feature-item:hover,
 .sequence-viewer-protein-picker .sequence-viewer-feature-source-item:hover {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 .sequence-viewer-protein-picker .sequence-viewer-protein-builder-feature-item.is-selected,

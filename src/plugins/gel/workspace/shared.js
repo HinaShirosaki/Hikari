@@ -29,13 +29,11 @@ export function createEmptyManualOverrides() {
       bandBottom: null,
       perLaneBandEnabled: false,
       laneBandWindows: [],
-      laneVertices: [],
-      quantifyConfirmed: false
+      laneVertices: []
     },
     addedBands: [],
     ladderLane: null,
     ladderBands: [],
-    ladderBandsDone: false,
     peakIntegrations: [],
     laneTable: {
       rows: []
@@ -326,8 +324,7 @@ export function normalizeManualOverrides(raw) {
     bandBottom: Number.isFinite(bandBottom) ? Math.max(0, Math.floor(bandBottom)) : null,
     perLaneBandEnabled: isPerLaneBandMode(rawSegmentation),
     laneBandWindows: normalizeLaneBandWindows(rawSegmentation.laneBandWindows),
-    laneVertices: normalizeLaneVertices(rawSegmentation.laneVertices),
-    quantifyConfirmed: Boolean(rawSegmentation.quantifyConfirmed)
+    laneVertices: normalizeLaneVertices(rawSegmentation.laneVertices)
   };
 
   normalized.addedBands = (Array.isArray(input.addedBands) ? input.addedBands : [])
@@ -356,7 +353,6 @@ export function normalizeManualOverrides(raw) {
       return true;
     })
     .sort((a, b) => a.pixelY - b.pixelY);
-  normalized.ladderBandsDone = Boolean(input.ladderBandsDone);
   normalized.peakIntegrations = normalizePeakIntegrations(input.peakIntegrations);
   const rawLaneTable = input.laneTable && typeof input.laneTable === 'object'
     ? input.laneTable

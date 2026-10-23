@@ -127,4 +127,37 @@ async function writePluginFile(payload) {
   return { path: target.relative };
 }
 
-module.exports = { readPluginFile, writePluginFile };
+// Explicit recovery for the bundled Gel library. Only inspect its own artifact
+// folders; normal startup must not resurrect records the user removed.
+async function discoverGelRecords({ storagePath } = {}) {
+  let root;
+  try { root = await resolvePluginFile({ storagePath, pluginId: 'gel', path: 'Gels/.recovery' }); }
+  catch (error) {
+    if (error.message === 'Plugin file not found.') return { records: [], warnings: [] };
+    throw error;
+  }
+  const records = [], warnings = [];
+  for (const entry of await fs.readdir(root.folder, { withFileTypes: true })) {
+    if (!entry.isDirectory() || entry.isSymbolicLink()) continue;
+    const folder = `Gels/${entry.name}`;
+    try {
+      const metadataPath = `${folder}/gel-record.json`;
+      const result = await readPluginFile({ storagePath, pluginId: 'gel', path: metadataPath });
+      const record = JSON.parse(Buffer.from(result.dataBase64, 'base64').toString('utf8'));
+      if (!record || typeof record !== 'object' || Array.isArray(record) || typeof record.id !== 'string' || !record.id.trim()) {
+        throw new Error('Invalid saved gel metadata.');
+      }
+      record.storageFolder = folder;
+      record.recordJsonPath = record.recordJsonRelativePath = metadataPath;
+      for (const [name, file] of [['sourceImage', 'source.png'], ['previewImage', 'preview.png'], ['analysisResult', 'analysis-result.json']]) {
+        const relative = `${folder}/${file}`;
+        const target = await resolvePluginFile({ storagePath, pluginId: 'gel', path: relative });
+        if (await statIfPresent(target.absolute)) record[`${name}Path`] = record[`${name}RelativePath`] = relative;
+      }
+      records.push(record);
+    } catch (error) { warnings.push(`${entry.name}: ${error.message}`); }
+  }
+  return { records, warnings };
+}
+
+module.exports = { readPluginFile, writePluginFile, discoverGelRecords };

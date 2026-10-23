@@ -187,7 +187,7 @@
 
 .tool-box-sheet-add-btn:hover,
 .tool-box-sheet-add-btn:focus-visible {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 .tool-box-sheet-add-row td {
@@ -445,7 +445,7 @@
 
 .tool-box-buffer-suggestion:hover,
 .tool-box-buffer-suggestion:focus-visible {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 .tool-box-buffer-suggestion span {
@@ -674,7 +674,7 @@
 
 .colony-crop-menu-btn.ghost-btn:hover:not(:disabled),
 .colony-crop-menu-btn.ghost-btn[aria-expanded="true"] {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 .colony-crop-menu-btn.ghost-btn:focus-visible {
@@ -724,7 +724,7 @@
 }
 
 .colony-crop-menu-option:hover:not(:disabled) {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 .colony-crop-menu-option:focus-visible {

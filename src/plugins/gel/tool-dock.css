@@ -1,0 +1,120 @@
+/* Match Figura and Papers: one vertical icon strip, inspector on its left.
+   Each icon carries a short caption, so the strip is 64px wide. */
+#gel-view .gel-viewer-panel.has-gel-tool-dock {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 12px;
+}
+#gel-view .has-gel-tool-dock .gel-inspector {
+  position: relative;
+  display: grid;
+  grid-template-columns: 280px 64px;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 12px;
+  width: 356px;
+  height: 100%;
+  min-height: 0;
+  overflow: visible;
+}
+#gel-view .has-gel-tool-dock.is-tools-collapsed .gel-inspector { grid-template-columns: 64px; width: 64px; gap: 0; }
+#gel-view .has-gel-tool-dock .gel-viewer-card {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  width: 64px;
+  max-height: 100%;
+  min-height: 0;
+  padding: 3px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+#gel-view .has-gel-tool-dock.is-tools-collapsed .gel-viewer-card { grid-column: 1; }
+#gel-view .has-gel-tool-dock .gel-viewer-toolbar { align-items: center; gap: 8px; }
+#gel-view .has-gel-tool-dock .gel-tool-categories { display: flex; flex-direction: column; gap: 4px; }
+#gel-view .has-gel-tool-dock .gel-viewer-toolbar > .gel-card-row,
+#gel-view .has-gel-tool-dock .gel-tool-icon-btn,
+#gel-view .has-gel-tool-dock #gel-open-figure-btn,
+#gel-view .has-gel-tool-dock .gel-record-actions > button {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  flex: 0 0 42px;
+  width: 58px;
+  min-width: 58px;
+  height: 42px;
+  min-height: 42px;
+  margin: 0;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--theme-text-muted);
+  background: transparent;
+}
+#gel-view .has-gel-tool-dock .gel-viewer-toolbar button:hover:not(:disabled),
+#gel-view .has-gel-tool-dock .gel-viewer-toolbar button[aria-pressed='true'] { color: var(--theme-text-strong); background: var(--theme-fill); }
+#gel-view .has-gel-tool-dock .gel-viewer-toolbar button:focus-visible { outline: 2px solid var(--theme-focus); outline-offset: -2px; }
+#gel-view .has-gel-tool-dock .gel-viewer-toolbar button:disabled,
+#gel-view .has-gel-tool-dock .gel-viewer-toolbar button[inert] { opacity: .35; }
+#gel-view .has-gel-tool-dock .gel-viewer-toolbar button > .gel-card-icon { width: 18px; height: 18px; color: inherit; }
+#gel-view .has-gel-tool-dock .gel-viewer-toolbar .gel-card-value,
+#gel-view .has-gel-tool-dock .gel-viewer-toolbar .gel-switch,
+#gel-view .has-gel-tool-dock #gel-export-menu-btn > svg:last-child { display: none; }
+#gel-view .has-gel-tool-dock .gel-viewer-toolbar .gel-card-label,
+#gel-view .has-gel-tool-dock .gel-viewer-toolbar [data-gel-action-label] {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 0.625rem;
+  font-weight: 500;
+  line-height: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: inherit;
+}
+#gel-view .has-gel-tool-dock .gel-record-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 8px;
+  margin: 0;
+  border-top: 1px solid var(--theme-border-soft);
+}
+#gel-view .has-gel-tool-dock .gel-record-actions > button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+#gel-view .has-gel-tool-dock .gel-tools-panel { grid-column: 1; grid-row: 1; align-self: start; flex: none; max-height: 100%; }
+#gel-view .has-gel-tool-dock .gel-tools-panel[hidden],
+#gel-view .has-gel-tool-dock [data-gel-tool-panel][hidden],
+#gel-view .has-gel-tool-dock .gel-name-field[hidden] { display: none; }
+#gel-view .gel-tool-panel-head { display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--theme-border-soft); }
+#gel-view .gel-tool-panel-head h3 { margin: 0; font-size: .875rem; }
+#gel-view .gel-tool-panel-close { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; min-height: 26px; padding: 5px; border: 0; border-radius: 6px; background: transparent; color: var(--theme-text-muted); }
+#gel-view .gel-tool-panel-close:hover { background: var(--theme-fill); }
+#gel-view .gel-tool-context { display: grid; flex: 0 0 auto; gap: 8px; padding: 12px; border-bottom: 1px solid var(--theme-border-soft); }
+#gel-view .gel-tool-context:not(:has(> :not([hidden]))) { display: none; }
+#gel-view .has-gel-tool-dock #gel-form { padding: 14px 12px; }
+#gel-view .has-gel-tool-dock .gel-form-fields { padding-bottom: 0; }
+#gel-view .has-gel-tool-dock .gel-tool-groups,
+#gel-view .has-gel-tool-dock .gel-tool-group { border: 0; }
+#gel-view .has-gel-tool-dock .gel-tool-body { padding: 0; }
+#gel-view .has-gel-tool-dock .gel-figure-tools-head h3 { display: none; }
+#gel-view .has-gel-tool-dock .gel-figure-tools-head { justify-content: flex-end; }
+/* Menus open toward the canvas, clear of the icon strip. */
+#gel-view .has-gel-tool-dock #gel-export-menu { top: anchor(top); right: calc(anchor(left) + 10px); margin: 0; }
+#gel-view .has-gel-tool-dock #gel-record-menu { bottom: anchor(bottom); right: calc(anchor(left) + 10px); margin: 0; }
+
+@media (max-width: 1100px) {
+  #gel-view .has-gel-tool-dock .gel-inspector { grid-template-columns: 250px 64px; width: 326px; }
+}
+@media (max-width: 760px) {
+  #gel-view .gel-main:has(.has-gel-tool-dock) { height: 100%; overflow: hidden; }
+  #gel-view .gel-main-stack:has(.has-gel-tool-dock),
+  #gel-view .gel-main-grid:has(.has-gel-tool-dock) { height: 100%; min-height: 0; overflow: hidden; }
+  #gel-view .gel-viewer-panel.has-gel-tool-dock { height: 100%; min-height: 0; overflow: visible; }
+  #gel-view .has-gel-tool-dock .gel-viewer-stage { min-height: 0; max-height: none; }
+  #gel-view .has-gel-tool-dock .gel-inspector { grid-template-columns: 64px; width: 64px; height: 100%; }
+  #gel-view .has-gel-tool-dock .gel-viewer-card { grid-column: 1; }
+  #gel-view .has-gel-tool-dock .gel-tools-panel { position: absolute; z-index: 6; top: 0; right: 76px; width: min(280px, calc(100vw - 254px)); max-height: 100%; box-shadow: var(--theme-shadow-medium); }
+  #gel-view .has-gel-tool-dock #gel-form,
+  #gel-view .has-gel-tool-dock #gel-figure-inspector { max-height: none; }
+}

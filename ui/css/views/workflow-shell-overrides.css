@@ -1,7 +1,7 @@
 /* Late-load Workflow graph refinements. */
 
 #workflow-management-view .workflow-context-item:hover {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 #workflow-management-view .workflow-context-item {

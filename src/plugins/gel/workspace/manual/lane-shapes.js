@@ -130,10 +130,7 @@ function createManualLaneShapes({
     }
     const laneVertices = [...verticesByLane.values()]
       .sort((a, b) => a.laneIndex - b.laneIndex);
-    updateLaneSegmentation({
-      laneVertices,
-      quantifyConfirmed: false
-    });
+    updateLaneSegmentation({ laneVertices });
     runtime.manualOverrides = {
       ...normalizeManualOverrides(runtime.manualOverrides),
       addedBands: []
@@ -169,8 +166,7 @@ function createManualLaneShapes({
       laneBandWindows: [
         ...windows.filter((window) => window.laneIndex !== laneIndex),
         nextWindow
-      ],
-      quantifyConfirmed: false
+      ]
     });
   }
 
@@ -178,24 +174,24 @@ function createManualLaneShapes({
     const normalized = normalizeManualOverrides(runtime.manualOverrides);
     clearCanvasInteractionState();
     const lanesReady = Boolean(enabled) && getSegmentationLanes(normalized).length > 0;
-    if (lanesReady) {
-      runtime.manualDividerConfirmed = true;
-    }
     updateLaneSegmentation({
       perLaneBandEnabled: Boolean(enabled),
-      dividerDone: lanesReady ? true : normalized.laneSegmentation?.dividerDone,
-      quantifyConfirmed: false
+      dividerDone: lanesReady ? true : normalized.laneSegmentation?.dividerDone
     });
     runtime.manualOverrides = {
       ...normalizeManualOverrides(runtime.manualOverrides),
       addedBands: []
     };
     runtime.currentReport = null;
+    const nextMode = isPerLaneBandMode(runtime.manualOverrides.laneSegmentation);
+    const progress = getLaneBandProgress();
+    // Per lane starts with a top edge, so Top is pressed for the first lane.
+    if (nextMode && progress.totalLanes) {
+      runtime.selectedViewerTool = 'band-top';
+    }
     renderOverrideStatus();
     deps.renderCanvas();
-    const nextMode = isPerLaneBandMode(runtime.manualOverrides.laneSegmentation);
     if (nextMode) {
-      const progress = getLaneBandProgress();
       deps.setStatus(progress.totalLanes
         ? `Click the top edge of the band in lane ${progress.missingCompleteLaneIndex || 1}.`
         : 'Finish the lane dividers first.');

@@ -276,7 +276,8 @@ function createPaperAnalysisActions({
         paper,
         summary: buildPaperViewerSummary(paper),
         resolveBytes: resolvePaperPdfBytes,
-        onOpenExternal: openPaperPdf
+        onOpenExternal: openPaperPdf,
+        pageNumber: paper.lastReadPage
       });
       context.onActivePaperChanged?.(paper);
       // openPaper already switched the viewer to this paper synchronously, so push the

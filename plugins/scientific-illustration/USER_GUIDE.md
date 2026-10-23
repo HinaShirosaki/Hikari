@@ -47,6 +47,8 @@ library index, leaving the original file recoverable.
 Select objects on a canvas or in the layer list; drag to move and use the
 eight handles to resize. Vector and raster artwork stretches with the box:
 corners adjust both dimensions, edge midpoints adjust one dimension.
+Clicks on transparent pixels in images and vector artwork pass through to
+visible components underneath. On empty canvas they begin area selection.
 Text keeps a fixed aspect ratio with every handle; its box and font scale together.
 Changing a text layer's Width or Height also scales both dimensions and its font.
 The font-size control remains independently editable.
@@ -103,8 +105,9 @@ member of a selection moves all its selected components together.
 Drag to outline components on the canvas; a freehand path
 closes automatically on release. Components whose boxes touch the region are
 selected, including rotated components. Hidden standalone layers are excluded.
-Groups select together; hold Alt to select only the touched members. Each selected
-component has its own outline; the outer frame moves and resizes the full selection.
+Groups select together; hold Alt to select only the touched members. A selected
+group shows only its outer frame. Ungrouped selections also show individual
+component outlines; the outer frame moves and resizes the full selection.
 Shift adds to the current selection. Escape cancels a gesture and keeps the
 previous selection.
 Freehand selection also allows dragging selected components to move them.
@@ -374,7 +377,7 @@ size, and omit x/y to center the copy. `apply.inserted_assets` returns component
 IDs, group ID (null for a single component), and final bounds. Insertions are
 atomic with other operations, undoable, and require a new canvas inspection.
 Asset save/delete use a separate library revision and retain the last 64 request
-receipts for retry safety. Each asset holds up to 200 layers and 12 million
+receipts for retry safety. Each asset holds up to 500 layers and 12 million
 serialized characters. The shared index is limited by its serialized size,
 with no fixed asset-count quota. The canonical `reusable-assets.json`
 index commits immutable `assets/<id>/component.json` snapshots only after they
@@ -395,7 +398,7 @@ and drawing instructions. It operates on the same objects as the user interface.
 | `render` | A native MCP PNG image of `main` (default), bounded to 1600 pixels per dimension. This works while the plugin's view is inactive. |
 | `inspect` | Record observations after reviewing the rendered canvas. Requires `expected_revision`, the render's `inspection.inspection_id`, and `review` with nonempty `layout`, `labels`, `artwork`, and `science` strings. |
 | `inspection_status` | Whether the current revision has a completed review in this agent run. Does not return an inspection receipt. |
-| `apply` | An atomic batch of 1–200 operations, acknowledged after durable file persistence. Requires `expected_revision` and unique `request_id`. |
+| `apply` | An atomic batch of 1–500 operations, acknowledged after durable file persistence. Requires `expected_revision` and unique `request_id`. |
 
 Read/render/apply/inspect/inspection_status act on the open illustration. Include its `illustration_id`
 to pin the target; selection changes return `illustration_changed` without
@@ -497,7 +500,7 @@ Saves alternate between these files, then atomically replace the index using
 the existing plugin-confined `files` API. If the index write fails, the prior
 scene remains committed and usable after reload. Legacy `workspace.json` is
 preserved during migration. Plugin settings contain only the library pointer.
-The library holds up to 100 illustrations, each with up to 200 objects and
+The library holds up to 100 illustrations, each with up to 500 objects and
 12 million serialized characters; the host file-size ceiling is also enforced.
 Undo/redo keeps the last 25 edits of the active figure and resets on selection.
 Storage changes reload the library from the newly selected root. Hikari migrates

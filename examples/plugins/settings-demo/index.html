@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Settings Demo</title>
+<style>
+  body { font: 16px system-ui, sans-serif; margin: 24px; color: CanvasText; background: Canvas; }
+  pre { padding: 16px; border: 1px solid GrayText; border-radius: 6px; white-space: pre-wrap; }
+  button { padding: 8px 12px; font: inherit; }
+</style></head>
+<body>
+  <p>Edit preferences in Hikari’s Settings → Plugins → Settings Demo → Preferences.</p>
+  <pre id="values" aria-live="polite">Loading preferences…</pre>
+  <button id="toggle-format" type="button" disabled>Switch export format</button>
+  <p id="status" role="status"></p>
+  <script src="hikari.js"></script><script src="main.js"></script>
+</body></html>

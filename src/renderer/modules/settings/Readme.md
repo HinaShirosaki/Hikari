@@ -9,7 +9,8 @@
 - `llm-model-catalog.js`: provider/Codex model and reasoning-option normalization.
 - `mcp-tools-controller.js`: the **Tool access** panel (per-tool on/off switches).
 - `external-skills-controller.js`: the **External skills** panel's catalog loading, rendering, and enable/disable state.
-- `plugins-controller.js`: the **Plugins** panel (add, enable/disable, remove, reload).
+- `plugins-controller.js`: the **Plugins** panel (install from GitHub or a local folder, enable/disable, remove, reload).
+- `plugin-preferences-controller.js`: manifest-declared plugin preference forms, validation, save/discard/reset, and live synchronization through the plugin `settings` API. See [plugin settings](../../../../docs/plugins/plugin-settings.md).
 - `sample-inventory-controller.js`: location and sample-type vocabulary settings (**Locations & samples**), including location migration and custom sample types.
 - `preferred-journals.js`: the preferred-journal list (**Papers**).
 - `notebook-pdf-controller.js`: notebook PDF export defaults (**Notebook PDF**).

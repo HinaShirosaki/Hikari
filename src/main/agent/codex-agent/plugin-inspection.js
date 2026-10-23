@@ -29,7 +29,7 @@ async function beginPluginInspection(input, requestCanvas) {
         error: result?.error || 'The latest illustration revision has not been inspected.' };
       } catch (error) { return { ok: false, error: error.message }; }
     },
-    followUp: `Completion is blocked until the current illustration is inspected. Use plugin_canvas with plugin_id:${JSON.stringify(pluginId)} and illustration_id:${JSON.stringify(illustrationId)}. Read its current schema. Render BOTH canvases after the last edit, visually inspect the returned images, then submit action:"inspect" with expected_revision, inspection_id from the render and the required review observations. Check placement/clipping, label readability/overlap, text-free artwork, and scientific relationships. If you correct anything, render and inspect again. Preserve saved work; do not redraw the figure just to satisfy this step. Finish only after inspect succeeds.`
+    followUp: `Completion is blocked until the current illustration is inspected. Use plugin_canvas with plugin_id:${JSON.stringify(pluginId)} and illustration_id:${JSON.stringify(illustrationId)}. Read its current schema. Render the canvas after the last edit, visually inspect the returned images, then submit action:"inspect" with expected_revision, inspection_id from the render and the required review observations. Check placement/clipping, label readability/overlap, text-free artwork, and scientific relationships. If you correct anything, render and inspect again. Preserve saved work; do not redraw the figure just to satisfy this step. Finish only after inspect succeeds.`
   };
 }
 

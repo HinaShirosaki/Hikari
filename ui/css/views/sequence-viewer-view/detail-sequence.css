@@ -914,7 +914,7 @@
 
 .sequence-viewer-context-item:hover:not(:disabled),
 .sequence-viewer-context-item:focus-visible:not(:disabled) {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 .sequence-viewer-context-item:disabled {
@@ -958,7 +958,7 @@
 .sequence-viewer-aa-replacement-option:hover,
 .sequence-viewer-aa-replacement-option:focus-visible {
   border-color: var(--theme-border);
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 .sequence-viewer-aa-replacement-code {

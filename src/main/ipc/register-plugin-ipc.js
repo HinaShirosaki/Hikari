@@ -3,7 +3,8 @@
 const path = require('node:path');
 const { PLUGINS } = require('../../shared/ipc/channels');
 const { inspectPluginFolder } = require('../lib/inspect-plugin-folder');
-const { readPluginFile, writePluginFile } = require('../lib/plugin-files');
+const { createGitHubPluginInstaller } = require('../lib/install-github-plugin');
+const { readPluginFile, writePluginFile, discoverGelRecords } = require('../lib/plugin-files');
 const { createPluginServerRegistry } = require('../lib/plugin-server');
 
 const MAX_PLUGIN_EXPORT_BASE64_CHARS = 24_000_000;
@@ -60,6 +61,11 @@ function registerPluginIpc(deps = {}) {
   const getBundledPluginPath = typeof deps.getBundledPluginPath === 'function'
     ? deps.getBundledPluginPath
     : (() => '');
+  const installGitHubPlugin = createGitHubPluginInstaller({
+    fs,
+    getInstallRoot: () => path.join(deps.app.getPath('userData'), 'plugin-repositories'),
+    runGit: deps.runGit
+  });
 
   const pluginServers = createPluginServerRegistry({
     prepareOrigin: async (baseUrl) => {
@@ -73,6 +79,14 @@ function registerPluginIpc(deps = {}) {
   ipcMain.handle(PLUGINS.INSPECT_FOLDER, async (_event, payload) => {
     try {
       return await inspectPluginFolder({ fs, folderPath: normalizePayload(payload).path });
+    } catch (error) {
+      return { ok: false, error: String(error?.message || error) };
+    }
+  });
+
+  ipcMain.handle(PLUGINS.INSTALL_GITHUB, async (_event, payload) => {
+    try {
+      return await installGitHubPlugin(normalizePayload(payload));
     } catch (error) {
       return { ok: false, error: String(error?.message || error) };
     }
@@ -95,6 +109,7 @@ function registerPluginIpc(deps = {}) {
 
   for (const [channel, operation] of [
     [PLUGINS.READ_FILE, readPluginFile],
+    [PLUGINS.DISCOVER_GELS, discoverGelRecords],
     [PLUGINS.WRITE_FILE, writePluginFile]
   ]) {
     ipcMain.handle(channel, async (_event, payload) => {

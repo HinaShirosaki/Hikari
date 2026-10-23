@@ -9,6 +9,8 @@ import { selectionBounds, transformSelection } from './grouping.mjs';
 import { rotateComponents } from './rotation.mjs';
 export const CANVASES = ['main'];
 export const MAX_DOCUMENT_CHARS = 12000000;
+// Every group owns at least two objects, so the group cap follows the object cap.
+export const MAX_OBJECTS = 500, MAX_GROUPS = MAX_OBJECTS / 2;
 export const OBJECT_FIELDS = ['id', 'name', 'type', 'canvas', 'x', 'y', 'width', 'height', 'rotation', 'opacity', 'visible', 'svg', 'plotly', 'dataUrl', 'textFree', 'text', 'fontFamily', 'fontSize', 'fontWeight', 'color', 'align', 'anchor', 'italic', 'underline', 'fill', 'stroke', 'strokeWidth'];
 export const TEXT_FIELDS = ['text', 'fontFamily', 'fontSize', 'fontWeight', 'color', 'align', 'anchor', 'italic', 'underline'];
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -88,10 +90,10 @@ export function normalizeCanvas(raw) {
 }
 export function normalizeDocument(raw, validateSvg) {
   record(raw, 'Document');
-  if (raw.version !== 1 || !Array.isArray(raw.objects) || raw.objects.length > 200) throw new Error('Unsupported document or too many objects (maximum 200).');
+  if (raw.version !== 1 || !Array.isArray(raw.objects) || raw.objects.length > MAX_OBJECTS) throw new Error(`Unsupported document or too many objects (maximum ${MAX_OBJECTS}).`);
   const objects = raw.objects.map(obj => normalizeObject(obj, validateSvg));
   if (new Set(objects.map(obj => obj.id)).size !== objects.length) throw new Error('Object IDs must be unique.');
-  if (raw.groups !== undefined && (!Array.isArray(raw.groups) || raw.groups.length > 100)) throw new Error('Use at most 100 groups.');
+  if (raw.groups !== undefined && (!Array.isArray(raw.groups) || raw.groups.length > MAX_GROUPS)) throw new Error(`Use at most ${MAX_GROUPS} groups.`);
   const used = new Set(objects.map(object => object.id)), members = new Set();
   const groups = (raw.groups || []).map(group => {
     record(group, 'Group'); fields(group, ['id', 'name', 'canvas', 'ids']);
@@ -113,7 +115,7 @@ export function normalizeDocument(raw, validateSvg) {
     canvases: Object.fromEntries(CANVASES.map(key => [key, normalizeCanvas(raw.canvases?.[key])])), objects, groups, receipts: (raw.receipts || []).slice(-64) };
   if (raw.source !== undefined) result.source = normalizeSourceContext(raw.source);
   if (raw.pendingAssetGroups !== undefined) {
-    if (!Array.isArray(raw.pendingAssetGroups) || raw.pendingAssetGroups.length > 100 || raw.pendingAssetGroups.some(id => !validId(id))
+    if (!Array.isArray(raw.pendingAssetGroups) || raw.pendingAssetGroups.length > MAX_GROUPS || raw.pendingAssetGroups.some(id => !validId(id))
       || new Set(raw.pendingAssetGroups).size !== raw.pendingAssetGroups.length) throw new Error('Invalid pending asset groups.');
     result.pendingAssetGroups = raw.pendingAssetGroups.filter(id => groups.some(group => group.id === id));
   }
@@ -148,7 +150,8 @@ export function validateRequest(args) {
   if (args.action === 'apply') {
     if (!args.expected_revision || !args.request_id) throw new Error('Apply requires expected_revision and request_id. Read the canvas first.');
     string(args.expected_revision, 'expected_revision', 100); string(args.request_id, 'request_id', 100);
-    if (!Array.isArray(args.operations) || !args.operations.length || args.operations.length > 200) throw new Error('Apply needs 1–200 operations.');
+    // One batch can align or restyle every object in a full figure.
+    if (!Array.isArray(args.operations) || !args.operations.length || args.operations.length > MAX_OBJECTS) throw new Error(`Apply needs 1–${MAX_OBJECTS} operations.`);
   } else if (args.operations !== undefined || args.request_id !== undefined || args.expected_revision !== undefined) throw new Error('Read/render do not accept mutation fields.');
   return args;
 }

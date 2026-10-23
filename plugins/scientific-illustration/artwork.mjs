@@ -209,9 +209,11 @@ export function scene(documentState, canvas, { interactive = false, selectedId =
   }
   if (interactive) {
     const members = documentState.objects.filter(object => selectedIds.includes(object.id) && object.canvas === canvas).map(interactionBox);
-    if (members.length > 1) {
+    const groupedIds = new Set(groups.filter(group => group.ids.every(id => selectedIds.includes(id))).flatMap(group => group.ids));
+    const outlinedMembers = members.filter(object => object.visible && !groupedIds.has(object.id));
+    if (members.length > 1 && outlinedMembers.length) {
       const outlines = element('g', { class: 'selection-members', 'pointer-events': 'none', 'aria-hidden': 'true' });
-      for (const object of members.filter(object => object.visible)) {
+      for (const object of outlinedMembers) {
         outlines.append(element('rect', { width: object.width, height: object.height,
           transform: `translate(${object.x} ${object.y}) rotate(${object.rotation} ${object.width / 2} ${object.height / 2})`,
           fill: 'none', stroke: '#3977c3', 'stroke-width': 1, 'vector-effect': 'non-scaling-stroke',

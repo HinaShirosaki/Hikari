@@ -40,6 +40,8 @@ Shift-click components to select several, then use the toolbar's Group button
 proportionally together; child layers remain editable in Layers. Alt-click
 on the canvas selects an individual group member. Groups persist with each
 illustration and are available through the agent's canvas API.
+Canvas clicks pass through transparent pixels in images and vector artwork to
+the visible component underneath, or start an area selection on empty space.
 Right-click a component or layer row for **Copy**, **Paste**, **Group**,
 **Ungroup**, and **Save as an asset…**. Right-clicking a selected member keeps
 the whole selection; an unselected component becomes the menu's target.
@@ -67,7 +69,8 @@ to move the whole selection. Freehand draws a lasso and also lets you drag
 selected components to move them. Resize handles work in both tools. Shift
 adds to the selection; Alt selects group members individually. Escape cancels a selection gesture.
 Selection respects rotated bounds and zoom, without changing saved artwork.
-Each selected component has its own outline inside one shared move/resize frame.
+Ungrouped selections show each component's outline inside one shared move/resize
+frame. Selected groups show only the outer frame, without internal outlines.
 Right-click a component, several layers or a group and choose **Save as an
 asset…**. **Assets** in the toolbar provides search and previews; click an asset
 to insert an independent editable copy on the active canvas. Saved components

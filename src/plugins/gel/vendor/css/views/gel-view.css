@@ -313,8 +313,7 @@
 .gel-peak-editor-chart .peak-editor-axis-label,
 .gel-peak-editor-chart .peak-editor-baseline-label,
 .gel-peak-editor-chart .peak-editor-divider-label,
-.gel-peak-editor-chart .peak-editor-hover-label,
-.gel-peak-editor-chart .peak-editor-empty {
+.gel-peak-editor-chart .peak-editor-hover-label {
   fill: var(--theme-text-muted);
   font-size: 12px;
   font-family: var(--font-app);
@@ -661,25 +660,6 @@
   border-color: var(--theme-success-line);
   background: var(--theme-success-soft);
   color: var(--theme-success-ink);
-}
-
-.gel-viewer-button-icon {
-  width: 17px;
-  height: 17px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.gel-crop-mode-icon--cancel,
-.gel-crop-mode-btn[aria-pressed="true"] .gel-crop-mode-icon--start {
-  display: none;
-}
-
-.gel-crop-mode-btn[aria-pressed="true"] .gel-crop-mode-icon--cancel {
-  display: block;
 }
 
 .gel-viewer-stage .cropper-face,
@@ -1176,8 +1156,7 @@ body.theme-night .gel-peak-editor-chart .peak-editor-apex {
 body.theme-night .gel-peak-editor-chart .peak-editor-axis-label,
 body.theme-night .gel-peak-editor-chart .peak-editor-baseline-label,
 body.theme-night .gel-peak-editor-chart .peak-editor-divider-label,
-body.theme-night .gel-peak-editor-chart .peak-editor-hover-label,
-body.theme-night .gel-peak-editor-chart .peak-editor-empty {
+body.theme-night .gel-peak-editor-chart .peak-editor-hover-label {
   fill: var(--theme-text-muted);
 }
 

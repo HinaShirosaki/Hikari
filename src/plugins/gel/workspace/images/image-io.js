@@ -212,7 +212,7 @@ export function encodeSourceGray16(image, sourcePngBase64) {
 // sidecar was saved with that exact PNG; otherwise it comes back unchanged.
 export async function applySourceGray16(image, sidecarBase64, sourcePngBase64) {
   await loadUtifScript();
-  const { buffer } = Uint8Array.fromBase64(sidecarBase64);
+  const { buffer } = Uint8Array.from(atob(sidecarBase64), char => char.charCodeAt(0));
   const [page] = window.UTIF.decode(buffer) || [];
   if (!page || page.t270?.[0] !== `${SOURCE_GRAY16_TAG}${fingerprintBase64(sourcePngBase64)}`
     || Number(page.t256) !== image.width || Number(page.t257) !== image.height) {

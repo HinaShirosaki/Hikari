@@ -4,7 +4,7 @@ body {
   --hikari-left-rail-list-radius: 8px;
   /* Hover stays well under selected so a hovered row never reads as a second selection. */
   --hikari-left-rail-list-hover: color-mix(in srgb, var(--theme-surface-subtle) 28%, transparent);
-  --hikari-left-rail-list-selected: color-mix(in srgb, var(--theme-surface-subtle) 78%, transparent);
+  --hikari-left-rail-list-selected: color-mix(in srgb, var(--theme-surface-subtle) 55%, transparent);
   --hikari-left-rail-list-focus: color-mix(in srgb, var(--theme-focus) 22%, transparent);
 }
 

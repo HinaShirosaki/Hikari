@@ -271,7 +271,6 @@ export function createCropController({ runtime, elements, deps }) {
   function resetAfterCropMutation() {
     runtime.currentReport = null;
     runtime.manualOverrides = createEmptyManualOverrides();
-    runtime.manualDividerConfirmed = false;
     runtime.selectedViewerTool = '';
     deps.renderOverrideStatus();
   }

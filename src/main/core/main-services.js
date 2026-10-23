@@ -305,6 +305,7 @@ function createMainServices(context = {}) {
 
   // IPC registration (before app ready).
   registerPluginIpc({
+    app,
     ipcMain,
     session,
     dialog,

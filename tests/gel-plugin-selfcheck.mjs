@@ -47,7 +47,9 @@ async function checkHostHelperSnapshots() {
     ['src/plugins/gel/lib/search-field-lens.js', 'src/renderer/lib/search-field-lens.js'],
     ['src/plugins/gel/lib/unsaved-draft.js', 'src/renderer/lib/unsaved-draft.js'],
     ['src/plugins/gel/lib/app-utils.js', 'src/renderer/lib/app-utils.js'],
-    ['src/plugins/gel/lib/html.js', 'src/renderer/lib/html.js']
+    ['src/plugins/gel/lib/html.js', 'src/renderer/lib/html.js'],
+    ['src/plugins/gel/vendor/css/overrides/folder-tree-template.css', 'ui/css/overrides/folder-tree-template.css'],
+    ['src/plugins/gel/vendor/css/overrides/universal-left-rail-lists.css', 'ui/css/overrides/universal-left-rail-lists.css']
   ];
   for (const [snapshotPath, ownerPath] of pairs) {
     const [snapshot, owner] = await Promise.all([
@@ -92,7 +94,7 @@ async function checkFolderContract() {
   assert.equal(result.id, 'gel');
   assert.equal(result.serve, true, 'must stay served — main.js uses ES modules, which an opaque origin cannot load');
   // `layout` covers app.setLeftRailWidth, which the in-frame rail commits on pointer-up.
-  assert.deepEqual(result.permissions, ['storage', 'files', 'downloads', 'layout']);
+  assert.deepEqual(result.permissions, ['storage', 'files', 'downloads', 'layout', 'notifications']);
 
   // A permission the README does not explain is one nobody reviews.
   const readme = await fs.readFile(path.join(pluginDir, 'README.md'), 'utf8');
@@ -263,6 +265,7 @@ async function checkAdapterContract() {
   assert.match(viewSource, /id="gel-save-btn"/, 'the save action has a stable busy-state target');
   [
     ['gel-save-btn', 'Save'],
+    ['gel-reset-overrides-btn', 'Reset lanes and bands'],
     ['gel-record-menu-btn', 'More gel actions']
   ].forEach(([id, caption]) => {
     assert.match(
@@ -273,9 +276,11 @@ async function checkAdapterContract() {
   });
   assert.match(
     viewSource,
-    /<div class="form-actions gel-record-actions">[\s\S]*id="gel-save-btn"[\s\S]*id="gel-record-menu"[^>]*popover[\s\S]*id="gel-cancel-btn"[\s\S]*id="gel-reset-overrides-btn"[\s\S]*<\/div>/,
-    'New gel and the lane/band reset stay in the record menu beside Save at the bottom of the Gel rail'
+    /class="gel-viewer-toolbar"[\s\S]*id="gel-reset-overrides-btn"[^>]*class="gel-card-row"[\s\S]*<svg[\s\S]*class="gel-card-label">Reset<\/span>/,
+    'lane/band reset is an icon action in the viewer toolbar'
   );
+  assert.doesNotMatch(viewSource, /id="gel-cancel-btn"/, 'New gel is removed from the record menu');
+  assert.doesNotMatch(viewSource.match(/<div id="gel-record-menu"[\s\S]*?<\/div>/)?.[0] || '', /gel-reset-overrides-btn/, 'reset is no longer in the record menu');
   assert.match(
     viewSource,
     /id="gel-export-menu"[^>]*popover[\s\S]*id="gel-export-image-btn"[\s\S]*id="gel-export-pptx-btn"[\s\S]*id="gel-export-csv-btn"/,
@@ -285,7 +290,9 @@ async function checkAdapterContract() {
   assert.match(viewSource, /id="gel-ladder-preset"/, 'the ladder preset select is present for records-manager to read');
   assert.match(viewSource, /id="gel-ladder-band-mw"[^>]+aria-label="Ladder MW \(kDa\)"/, 'the inline MW field has an accessible label');
   assert.match(viewSource, /id="gel-status"[^>]+aria-live="polite"/, 'workspace status updates are announced');
-  assert.doesNotMatch(htmlSource, /universal-left-rail-lists\.css|universal-menus\.css/, 'unrelated shell styles are not loaded');
+  assert.match(htmlSource, /folder-tree-template\.css/, 'Gel uses the shared file-tree structure styles');
+  assert.match(htmlSource, /universal-left-rail-lists\.css/, 'Gel uses the shared tree-row treatment');
+  assert.doesNotMatch(htmlSource, /universal-menus\.css/, 'unrelated shell menus are not loaded');
   assert.doesNotMatch(coreCss, /assets\/fonts/, 'the plugin CSS has no missing external font dependency');
 }
 
@@ -624,10 +631,10 @@ function checkHistoryController() {
   // The ladder pick renders first; its analysis lands on a later, unchanged commit.
   reportRuntime.currentReport = { lanes: [] };
   reportHistory.commit();
-  // Done Ladder MW never renders, so nothing committed it.
-  reportRuntime.manualOverrides = { dividers: [10, 40], ladderLane: 1, ladderBandsDone: true };
+  // An edit that never renders is never committed.
+  reportRuntime.manualOverrides = { dividers: [10, 40], ladderLane: 1, uncommittedEdit: true };
   reportHistory.undo();
-  assert.equal(reportRuntime.manualOverrides.ladderBandsDone, undefined, 'undo skipped the uncommitted edit');
+  assert.equal(reportRuntime.manualOverrides.uncommittedEdit, undefined, 'undo skipped the uncommitted edit');
   assert.equal(reportRuntime.manualOverrides.ladderLane, 1);
   reportHistory.undo();
   reportHistory.undo();
@@ -635,7 +642,7 @@ function checkHistoryController() {
   reportHistory.redo();
   reportHistory.redo();
   reportHistory.redo();
-  assert.equal(reportRuntime.manualOverrides.ladderBandsDone, true, 'redo lost the uncommitted edit');
+  assert.equal(reportRuntime.manualOverrides.uncommittedEdit, true, 'redo lost the uncommitted edit');
   assert.deepEqual(restored, [true, false, false, false, true, true]);
 }
 

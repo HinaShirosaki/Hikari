@@ -2,6 +2,7 @@ import { analyzeGelImage } from './analysis/analysis-core.js';
 import { createCropController } from './images/crop-controller.js';
 import { getGelElements } from './dom.js';
 import { createFloatingWindows } from './floating-windows.js';
+import { createGelToolDock } from './tool-dock.js';
 import { createBlotFigureController } from './figure/controller.js';
 import { createImageController } from './images/image-controller.js';
 import { createLaneTableController } from './rendering/lane-table.js';
@@ -22,6 +23,9 @@ export function initGelAnalysis({
   createId,
   safeText,
   onGelAnalysesChanged,
+  onRecoverSavedGels,
+  onNotify,
+  workspacePersistence = null,
   onHistoryChanged = null,
   document: rootDocument = globalThis?.document || null
 }) {
@@ -42,8 +46,7 @@ export function initGelAnalysis({
     'gelStatus',
     'gelSaveBtn',
     'gelViewerStage',
-    'gelCanvas',
-    'gelList'
+    'gelCanvas'
   ];
   const missingElementKeys = requiredElementKeys.filter((key) => !elements[key]);
   if (missingElementKeys.length) {
@@ -64,7 +67,8 @@ export function initGelAnalysis({
     imageRevision: 0,
     figureExportIncludeLadder: true,
     ladderBandDrag: null,
-    manualDividerConfirmed: false,
+    laneDividerDrag: null,
+    suppressNextLaneDividerClick: false,
     manualOverrides: createEmptyManualOverrides(),
     onGelAnalysesChanged,
     originalImage: null,
@@ -85,10 +89,10 @@ export function initGelAnalysis({
 
   function getCurrentDraftSnapshot() {
     return serializeDraftSnapshot({
-      // The tool sections live in #gel-form too; these two fields are view
+      // The tool sections live in #gel-form too; these fields are view
       // state, not record data, so editing them is not an unsaved change.
       controls: snapshotFormControls(elements.gelForm, {
-        excludeIds: ['gel-expected-lane-count', 'gel-lane-profile-select']
+        excludeIds: ['gel-expected-lane-count', 'gel-lane-profile-select', 'gel-processed-preview']
       }),
       currentImage: runtime.currentImage
         ? {
@@ -114,7 +118,9 @@ export function initGelAnalysis({
   function setStatus(message) {
     if (elements.gelStatus) {
       elements.gelStatus.textContent = message || '';
+      elements.gelStatus.hidden = true;
     }
+    onNotify?.(message);
   }
 
   let rendering;
@@ -125,7 +131,7 @@ export function initGelAnalysis({
     // committing those would push dozens of entries and shove every earlier edit
     // off the end of the stack. Both drags clear their flag before the mouseup
     // render, so the settled position is what gets committed.
-    if (runtime.laneVertexDrag || runtime.ladderBandDrag) {
+    if (runtime.laneVertexDrag || runtime.ladderBandDrag || runtime.laneDividerDrag) {
       return;
     }
     history.commit();
@@ -135,12 +141,11 @@ export function initGelAnalysis({
     runtime,
     deps: {
       onHistoryChanged: (historyState) => {
-        if (!blotFigure?.isOpen()) onHistoryChanged?.(historyState);
+        if (!blotFigure?.ownsHistory()) onHistoryChanged?.(historyState);
       },
       renderAll: ({ analyzed }) => {
         const segmentation = runtime.manualOverrides?.laneSegmentation || {};
         runtime.currentReport = null;
-        runtime.manualDividerConfirmed = Boolean(segmentation.dividerDone);
         // Unfinished dividers are edited with the divider tool, so undoing
         // Finish reopens it and redoing Finish closes it, as the clicks did.
         if (!segmentation.dividerDone && Number.isFinite(segmentation.gelLeft)) {
@@ -259,6 +264,13 @@ export function initGelAnalysis({
     runtime, elements, documentObject: rootDocument,
     deps: {
       imageDataToDataUrl: imageController.imageDataToDataUrl,
+      saveImportedGel: recordsManager.saveImportedGel,
+      restoreRecordImage: recordsManager.restoreRecordImage,
+      openSavedAnalysis: recordsManager.fillFromRecord,
+      recoverSavedGels: onRecoverSavedGels,
+      notify: onNotify,
+      workspacePersistence,
+      resetEditor: recordsManager.resetForm,
       leaveCropMode: () => cropController.leaveCropMode(),
       hideWindows: () => floatingWindows.close('peak'),
       onHistoryChanged,
@@ -273,12 +285,12 @@ export function initGelAnalysis({
         imageController.setCurrentImage(draft.currentImage);
         runtime.originalImage = draft.originalImage;
         runtime.originalFile = draft.originalFile;
+        cropController.setCropUiState();
         runtime.manualOverrides = JSON.parse(JSON.stringify(draft.manualOverrides));
         runtime.currentReport = draft.currentReport ? JSON.parse(JSON.stringify(draft.currentReport)) : null;
         runtime.cropApplied = draft.cropApplied;
         runtime.viewerMode = draft.viewerMode;
         runtime.pendingNotebookLink = draft.pendingNotebookLink;
-        runtime.manualDividerConfirmed = Boolean(runtime.manualOverrides.laneSegmentation?.dividerDone);
         runtime.selectedViewerTool = '';
         runtime.selectedLaneProfileLane = null;
         runtime.laneProfileHoverY = null;
@@ -292,15 +304,29 @@ export function initGelAnalysis({
     }
   });
 
-  elements.gelImageFileInput?.addEventListener('change', imageController.onImageFileChange);
+  const toolDock = createGelToolDock({
+    documentObject: rootDocument,
+    onProcess: () => blotFigure.processSelected(),
+    onSelect: category => { if (category === 'results') { rendering.renderCellTable(); rendering.renderLaneProfile(); } }
+  });
+
+  elements.gelImageFileInput?.addEventListener('change', (event) => {
+    const files = [...(event.target.files || [])];
+    event.target.value = '';
+    if (!files.length || blotFigure?.handleFileDrop(files)) return;
+    return imageController.loadImageFile(files[0]);
+  });
   const unbindFileDrop = bindFileDropTarget({
     target: elements.gelViewerStage || elements.gelImageRow || elements.gelForm,
     accept: elements.gelImageFileInput?.getAttribute?.('accept') || 'image/*',
-    onFiles: ([file]) => {
+    multiple: true,
+    onFiles: (files) => {
+      if (blotFigure?.handleFileDrop(files)) return;
       blotFigure?.detachEditor();
-      return imageController.loadImageFile(file);
+      return imageController.loadImageFile(files[0]);
     },
     onRejected: () => {
+      if (blotFigure?.handleFileDrop([])) return;
       setStatus('Drop an image file to load it into Gel.');
     },
     onError: (error) => {
@@ -378,12 +404,11 @@ export function initGelAnalysis({
   // Export and record actions are popover menus. Close one before its item
   // runs: the exports disable their own button while working, and a disabled
   // button skips the popovertargetaction hide, which left the menu open.
-  rootDocument.querySelectorAll('.gel-menu').forEach((menu) => {
+  rootDocument.querySelectorAll('.gel-menu:not(.gel-divider-menu)').forEach((menu) => {
     menu.addEventListener('click', (event) => {
       if (event.target.closest('button')) menu.hidePopover?.();
     }, true);
   });
-  elements.gelManualNextBtn?.addEventListener('click', manualWorkflow.onManualNextStep);
   elements.gelAutoDetectLanesBtn?.addEventListener('click', manualWorkflow.onAutoDetectLanes);
   // The lane count sits inside #gel-form, where Enter would submit (save) the
   // record. Enter here means "detect with this count".
@@ -393,18 +418,24 @@ export function initGelAnalysis({
     manualWorkflow.onAutoDetectLanes();
   });
   function updateViewerModeButtons() {
-    elements.gelProcessImageBtn?.setAttribute('aria-pressed', String(runtime.viewerMode === 'processed'));
+    if (elements.gelProcessedPreviewInput) elements.gelProcessedPreviewInput.checked = runtime.viewerMode === 'processed';
   }
-  // One switch: on shows the image with denoise and contrast applied.
-  elements.gelProcessImageBtn?.addEventListener('click', () => {
-    if (runtime.viewerMode !== 'processed' && !runtime.currentImage) {
+  function setViewerMode(mode) {
+    if (mode === 'processed' && !runtime.currentImage) {
+      updateViewerModeButtons();
       setStatus('Load a gel image before processing.');
       return;
     }
-    runtime.viewerMode = runtime.viewerMode === 'processed' ? 'original' : 'processed';
+    runtime.viewerMode = mode;
     updateViewerModeButtons();
     rendering.renderCanvas();
+  }
+  // Opening enhancement tools previews their effect; the panel switch compares
+  // it with the original without changing the saved enhancement settings.
+  elements.gelProcessImageBtn?.addEventListener('click', () => {
+    if (elements.gelProcessImageBtn.getAttribute('aria-expanded') === 'true') setViewerMode('processed');
   });
+  elements.gelProcessedPreviewInput?.addEventListener('change', () => setViewerMode(elements.gelProcessedPreviewInput.checked ? 'processed' : 'original'));
   updateViewerModeButtons();
   elements.gelLaneProfileSelect?.addEventListener('change', (event) => {
     const nextLane = Number(event?.target?.value);
@@ -439,6 +470,7 @@ export function initGelAnalysis({
     manualWorkflow.renderViewerToolbar();
     laneTable.render();
     recordsManager.renderList();
+    blotFigure?.refreshSavedRecords();
     if (!runtime.currentImage) {
       rendering.renderCanvas();
     }
@@ -474,6 +506,7 @@ export function initGelAnalysis({
   }
 
   function destroy() {
+    toolDock.destroy();
     blotFigure?.destroy();
     manualWorkflow.destroy();
     floatingWindows.destroy();
@@ -495,17 +528,19 @@ export function initGelAnalysis({
   }
 
   return {
+    ready: blotFigure?.ready,
+    suspendWorkspace: () => blotFigure?.suspendWorkspace(),
     destroy,
-    getHistoryState: () => blotFigure?.isOpen() ? blotFigure.getHistoryState() : history.getHistoryState(),
-    redo: () => blotFigure?.isOpen() ? blotFigure.redo() : history.redo(),
+    getHistoryState: () => blotFigure?.ownsHistory() ? blotFigure.getHistoryState() : history.getHistoryState(),
+    redo: () => blotFigure?.ownsHistory() ? blotFigure.redo() : history.redo(),
     resetHistory: history.reset,
-    undo: () => blotFigure?.isOpen() ? blotFigure.undo() : history.undo(),
+    undo: () => blotFigure?.ownsHistory() ? blotFigure.undo() : history.undo(),
     hasUnsavedChanges: () => Boolean(blotFigure?.hasUnsavedChanges()
       || (!blotFigure?.ownsEditor() && savedDraftSnapshot && getCurrentDraftSnapshot() !== savedDraftSnapshot)),
     render,
-    renderList: recordsManager.renderList,
+    renderList: () => { recordsManager.renderList(); blotFigure?.refreshSavedRecords(); },
     saveUnsavedChanges: async () => {
-      if (blotFigure?.hasUnsavedChanges() && !await blotFigure.saveProject()) return false;
+      if (blotFigure?.hasUnsavedChanges() && !await blotFigure.saveWorkspace()) return false;
       if (blotFigure?.ownsEditor()) { markDraftSaved(); return true; }
       if (getCurrentDraftSnapshot() === savedDraftSnapshot) return true;
       const record = await recordsManager.onSaveAnalysis({ preventDefault() {} });

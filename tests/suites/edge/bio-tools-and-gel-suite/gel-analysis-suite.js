@@ -373,7 +373,6 @@ test('[EDGE] gel-analysis lane table render includes gel-edge offsets for divide
       addedBands: [],
       ladderLane: null,
       ladderBands: [],
-      ladderBandsDone: false,
       laneTable: {
         rows: [
           { label: 'Samples', values: ['A', 'B', 'C'] }
@@ -496,7 +495,6 @@ test('[EDGE] gel-analysis lane table hides the ladder column and restores its sa
       addedBands: [],
       ladderLane: 1,
       ladderBands: [],
-      ladderBandsDone: false,
       laneTable: {
         rows: [
           { label: 'Samples', values: ['Ladder', 'WT', 'Mutant'] }
@@ -1006,7 +1004,6 @@ test('[EDGE] gel-analysis outermost lane dividers define gel edges without separ
     },
     cropperActive: false,
     currentReport: null,
-    manualDividerConfirmed: false,
     manualOverrides: gelAnalysisInternals.normalizeManualOverrides({}),
     selectedViewerTool: ''
   };
@@ -1014,7 +1011,9 @@ test('[EDGE] gel-analysis outermost lane dividers define gel edges without separ
     gelCanvas,
     gelToolDividersBtn: new MockElement('gel-tool-dividers-btn'),
     gelFinishDividersBtn: new MockElement('gel-finish-dividers-btn'),
-    gelManualNextBtn: new MockElement('gel-manual-next-btn'),
+    gelToolLadderLaneBtn: new MockElement('gel-tool-ladder-lane-btn'),
+    gelDetectLadderBtn: new MockElement('gel-detect-ladder-btn'),
+    gelToolLadderMwBtn: new MockElement('gel-tool-ladder-mw-btn'),
     gelOverrideStatus: new MockElement('gel-override-status')
   };
   const statuses = [];
@@ -1029,10 +1028,10 @@ test('[EDGE] gel-analysis outermost lane dividers define gel edges without separ
     }
   });
 
-  assert.equal(controller.getManualStep(), 'dividers');
   controller.renderManualProgress();
-  assert.equal(elements.gelManualNextBtn.hidden, true);
   assert.equal(elements.gelFinishDividersBtn.hidden, true, 'finish button showed before divider mode started');
+  assert.equal(elements.gelDetectLadderBtn.disabled, true, 'Detect waits for a ladder lane');
+  assert.equal(elements.gelToolLadderMwBtn.disabled, true, 'Set MW waits for a ladder lane');
 
   controller.onCanvasClick({ clientX: 40, clientY: 50 });
   assert.equal(runtime.manualOverrides.laneSegmentation.gelLeft, null, 'inactive divider tool accepted a canvas click');
@@ -1041,7 +1040,6 @@ test('[EDGE] gel-analysis outermost lane dividers define gel edges without separ
   assert.equal(runtime.selectedViewerTool, 'dividers');
   assert.equal(elements.gelToolDividersBtn.classList.contains('is-active'), true);
   assert.equal(elements.gelToolDividersBtn.getAttribute('aria-pressed'), 'true');
-  assert.equal(elements.gelManualNextBtn.hidden, true);
   assert.equal(elements.gelFinishDividersBtn.hidden, false, 'finish button stayed hidden in divider mode');
 
   controller.onCanvasClick({ clientX: 60, clientY: 50 });
@@ -1070,18 +1068,19 @@ test('[EDGE] gel-analysis outermost lane dividers define gel edges without separ
   assert.equal(elements.gelToolDividersBtn.classList.contains('is-active'), false);
   assert.equal(elements.gelToolDividersBtn.getAttribute('aria-pressed'), 'false');
   assert.equal(elements.gelFinishDividersBtn.hidden, true, 'finish button lingered after dividers finished');
-  assert.equal(elements.gelManualNextBtn.hidden, true);
-  assert.equal(controller.getManualStep(), 'ladder');
-  assert.match(statuses[statuses.length - 1], /ladder lane on the gel/i);
 
-  runtime.manualOverrides = {
-    ...gelAnalysisInternals.normalizeManualOverrides(runtime.manualOverrides),
-    ladderLane: 1
-  };
-  controller.renderManualProgress();
-  assert.equal(controller.getManualStep(), 'ladder-mw');
-  assert.equal(elements.gelManualNextBtn.hidden, false, 'Done Ladder MW should remain available');
-  assert.equal(elements.gelManualNextBtn.textContent, 'Done Ladder MW');
+  // With no tool pressed the gel ignores clicks; it used to pick the ladder lane.
+  controller.onCanvasClick({ clientX: 30, clientY: 50 });
+  assert.equal(runtime.manualOverrides.ladderLane, null, 'a click with no tool pressed picked a ladder lane');
+
+  controller.onViewerToolSelected('ladder');
+  assert.equal(elements.gelToolLadderLaneBtn.getAttribute('aria-pressed'), 'true');
+  controller.onCanvasClick({ clientX: 30, clientY: 50 });
+  assert.equal(runtime.manualOverrides.ladderLane, 1);
+  assert.equal(runtime.selectedViewerTool, '', 'Pick lane releases after its click');
+  assert.equal(elements.gelToolLadderLaneBtn.getAttribute('aria-pressed'), 'false');
+  assert.equal(elements.gelDetectLadderBtn.disabled, false);
+  assert.equal(elements.gelToolLadderMwBtn.disabled, false);
 });
 
 test('[EDGE] gel-analysis lane-by-lane band mode clears tools and records top and bottom per clicked lane', () => {
@@ -1101,7 +1100,6 @@ test('[EDGE] gel-analysis lane-by-lane band mode clears tools and records top an
     },
     cropperActive: false,
     currentReport: null,
-    manualDividerConfirmed: false,
     manualOverrides: gelAnalysisInternals.normalizeManualOverrides({
       laneSegmentation: {
         gelLeft: 0,
@@ -1110,7 +1108,6 @@ test('[EDGE] gel-analysis lane-by-lane band mode clears tools and records top an
         dividerDone: false
       },
       ladderLane: 1,
-      ladderBandsDone: true
     }),
     selectedViewerTool: 'dividers'
   };
@@ -1129,7 +1126,6 @@ test('[EDGE] gel-analysis lane-by-lane band mode clears tools and records top an
     gelStepQuantify: new MockElement('gel-step-quantify'),
     gelStepBands: new MockElement('gel-step-bands'),
     gelManualPrevBtn: new MockElement('gel-manual-prev-btn'),
-    gelManualNextBtn: new MockElement('gel-manual-next-btn')
   };
   const statuses = [];
   let analysisRuns = 0;
@@ -1149,12 +1145,10 @@ test('[EDGE] gel-analysis lane-by-lane band mode clears tools and records top an
   controller.onLaneBandModeToggle();
   assert.equal(runtime.manualOverrides.laneSegmentation.perLaneBandEnabled, true);
   assert.equal(runtime.manualOverrides.laneSegmentation.dividerDone, true);
-  assert.equal(runtime.manualDividerConfirmed, true);
-  assert.equal(runtime.selectedViewerTool, '');
-  assert.equal(controller.getManualStep(), 'band-top');
+  assert.equal(runtime.selectedViewerTool, 'band-top', 'Per lane starts with Top pressed');
 
   controller.onCanvasClick({ clientX: 25, clientY: 12 });
-  assert.equal(controller.getManualStep(), 'band-bottom');
+  assert.equal(runtime.selectedViewerTool, 'band-bottom', 'Top hands off to Bottom');
   assert.equal(JSON.stringify(runtime.manualOverrides.laneSegmentation.dividers), JSON.stringify([50]));
   assert.equal(JSON.stringify(runtime.manualOverrides.laneSegmentation.laneBandWindows), JSON.stringify([
     { laneIndex: 1, bandTop: 12, bandBottom: null }
@@ -1165,12 +1159,12 @@ test('[EDGE] gel-analysis lane-by-lane band mode clears tools and records top an
   assert.equal(runtime.manualOverrides.laneSegmentation.laneBandWindows[0].bandBottom, null);
 
   controller.onCanvasClick({ clientX: 25, clientY: 22 });
-  assert.equal(controller.getManualStep(), 'band-top');
+  assert.equal(runtime.selectedViewerTool, 'band-top', 'Top comes back for the next lane');
   assert.equal(runtime.manualOverrides.laneSegmentation.laneBandWindows[0].bandBottom, 22);
 
   controller.onCanvasClick({ clientX: 75, clientY: 40 });
   controller.onCanvasClick({ clientX: 75, clientY: 55 });
-  assert.equal(controller.getManualStep(), 'quantify');
+  assert.equal(runtime.selectedViewerTool, '', 'the tool releases once every lane has a window');
   assert.equal(JSON.stringify(runtime.manualOverrides.laneSegmentation.laneBandWindows), JSON.stringify([
     { laneIndex: 1, bandTop: 12, bandBottom: 22 },
     { laneIndex: 2, bandTop: 40, bandBottom: 55 }
@@ -1195,7 +1189,6 @@ test('[EDGE] gel-analysis stale per-lane mode bypasses unfinished divider manual
     },
     cropperActive: false,
     currentReport: null,
-    manualDividerConfirmed: false,
     manualOverrides: gelAnalysisInternals.normalizeManualOverrides({
       laneSegmentation: {
         gelLeft: 0,
@@ -1204,10 +1197,9 @@ test('[EDGE] gel-analysis stale per-lane mode bypasses unfinished divider manual
         dividerDone: false,
         perLaneBandEnabled: true
       },
-      ladderLane: 1,
-      ladderBandsDone: true
+      ladderLane: 1
     }),
-    selectedViewerTool: ''
+    selectedViewerTool: 'band-top'
   };
   const elements = {
     gelCanvas,
@@ -1224,7 +1216,6 @@ test('[EDGE] gel-analysis stale per-lane mode bypasses unfinished divider manual
     gelStepQuantify: new MockElement('gel-step-quantify'),
     gelStepBands: new MockElement('gel-step-bands'),
     gelManualPrevBtn: new MockElement('gel-manual-prev-btn'),
-    gelManualNextBtn: new MockElement('gel-manual-next-btn')
   };
   const controller = manualModule.createManualWorkflowController({
     runtime,
@@ -1237,14 +1228,13 @@ test('[EDGE] gel-analysis stale per-lane mode bypasses unfinished divider manual
     }
   });
 
-  assert.equal(controller.getManualStep(), 'band-top');
   controller.onCanvasClick({ clientX: 25, clientY: 12 });
 
   assert.equal(JSON.stringify(runtime.manualOverrides.laneSegmentation.dividers), JSON.stringify([50]));
   assert.equal(JSON.stringify(runtime.manualOverrides.laneSegmentation.laneBandWindows), JSON.stringify([
     { laneIndex: 1, bandTop: 12, bandBottom: null }
   ]));
-  assert.equal(controller.getManualStep(), 'band-bottom');
+  assert.equal(runtime.selectedViewerTool, 'band-bottom');
 });
 
 test('[EDGE] gel-analysis lane tools display one current layout when switching from adjusted vertices to dividers', () => {
@@ -1417,18 +1407,17 @@ test('[EDGE] gel-analysis auto-detection replaces adjusted lanes and clears stal
     selectedViewerTool: 'lane-vertices',
     laneVertexDrag: { laneIndex: 1, vertexKey: 'topLeft' },
     suppressNextLaneVertexClick: true,
-    manualDividerConfirmed: true,
     manualOverrides: gelAnalysisInternals.normalizeManualOverrides({
       laneSegmentation: {
         gelLeft: 0, gelRight: 99, dividers: [50], dividerDone: true,
-        bandTop: 10, bandBottom: 49, quantifyConfirmed: true,
+        bandTop: 10, bandBottom: 49,
         laneVertices: [{
           laneIndex: 1,
           topLeft: { x: 4, y: 0 }, topRight: { x: 48, y: 0 },
           bottomRight: { x: 42, y: 59 }, bottomLeft: { x: 0, y: 59 }
         }]
       },
-      ladderLane: 1, ladderBandsDone: true, ladderBands: [{ pixelY: 20, mw: 50 }],
+      ladderLane: 1, ladderBands: [{ pixelY: 20, mw: 50 }],
       addedBands: [{ laneIndex: 1, pixelY: 30 }]
     })
   };
@@ -1452,7 +1441,6 @@ test('[EDGE] gel-analysis auto-detection replaces adjusted lanes and clears stal
   assert.deepEqual(rendered, [{ report: null, tool: 'dividers' }]);
   assert.equal(runtime.manualOverrides.laneSegmentation.laneVertices.length, 0);
   assert.equal(runtime.manualOverrides.laneSegmentation.dividers.length, 1);
-  assert.equal(runtime.manualOverrides.laneSegmentation.quantifyConfirmed, false);
   assert.equal(runtime.manualOverrides.laneSegmentation.bandTop, 10);
   assert.equal(runtime.manualOverrides.laneSegmentation.bandBottom, 49);
   assert.equal(runtime.manualOverrides.ladderLane, null);
@@ -1862,7 +1850,6 @@ test('[EDGE] gel-analysis Set MW tool labels and drags ladder bands outside the 
     },
     cropperActive: false,
     currentReport: null,
-    manualDividerConfirmed: true,
     manualOverrides: gelAnalysisInternals.normalizeManualOverrides({
       laneSegmentation: {
         gelLeft: 0,
@@ -1874,7 +1861,6 @@ test('[EDGE] gel-analysis Set MW tool labels and drags ladder bands outside the 
       },
       ladderLane: 1,
       ladderBands: [{ pixelY: 12, mw: 50 }],
-      ladderBandsDone: true
     }),
     selectedViewerTool: ''
   };
@@ -1882,7 +1868,6 @@ test('[EDGE] gel-analysis Set MW tool labels and drags ladder bands outside the 
     gelCanvas,
     gelLaneBandModeBtn: new MockElement('gel-lane-band-mode-btn'),
     gelOverrideStatus: new MockElement('gel-override-status'),
-    gelManualNextBtn: new MockElement('gel-manual-next-btn'),
     gelToolLadderMwBtn: new MockElement('gel-tool-ladder-mw-btn'),
     gelLadderMwEditor: new MockElement('gel-ladder-mw-editor'),
     gelLadderBandMwInput: new MockElement('gel-ladder-band-mw')
@@ -1904,8 +1889,6 @@ test('[EDGE] gel-analysis Set MW tool labels and drags ladder bands outside the 
     }
   });
 
-  // The guided flow is past the ladder, so the tool is the only way in.
-  assert.equal(controller.getManualStep(), 'quantify');
   controller.onViewerToolSelected('ladder-mw');
   assert.equal(runtime.selectedViewerTool, 'ladder-mw');
   assert.equal(elements.gelToolLadderMwBtn.getAttribute('aria-pressed'), 'true');
@@ -1989,9 +1972,8 @@ test('[EDGE] gel-analysis Set MW tool labels and drags ladder bands outside the 
   assert.equal(elements.gelLadderMwEditor.hidden, true);
   assert.equal(elements.gelToolLadderMwBtn.getAttribute('aria-pressed'), 'false');
   assert.equal(gelCanvas.classList.contains('is-setting-ladder-mw'), false);
-  runtime.manualOverrides.ladderBandsDone = false;
   controller.onCanvasClick({ clientX: 25, clientY: 80 });
-  assert.equal(elements.gelLadderMwEditor.hidden, true, 'guided ladder step must respect the off switch');
+  assert.equal(elements.gelLadderMwEditor.hidden, true, 'a click with Set MW off must not open MW entry');
 
   controller.onViewerToolSelected('ladder-mw');
   controller.onCanvasClick({ clientX: 25, clientY: 80 });
@@ -2107,7 +2089,6 @@ test('[EDGE] gel-analysis tilted lane vertices define target-band area in report
           laneVertices: [vertices]
         },
         ladderLane: 1,
-        ladderBandsDone: true
       }
     }
   });
@@ -2137,7 +2118,6 @@ test('[EDGE] gel-analysis lane vertex tool drag updates one lane quadrilateral',
     },
     cropperActive: false,
     currentReport: { lanes: [] },
-    manualDividerConfirmed: true,
     manualOverrides: gelAnalysisInternals.normalizeManualOverrides({
       laneSegmentation: {
         gelLeft: 0,
@@ -2148,7 +2128,6 @@ test('[EDGE] gel-analysis lane vertex tool drag updates one lane quadrilateral',
         bandBottom: 20
       },
       ladderLane: 1,
-      ladderBandsDone: true
     }),
     selectedViewerTool: ''
   };
@@ -2168,7 +2147,6 @@ test('[EDGE] gel-analysis lane vertex tool drag updates one lane quadrilateral',
     gelStepQuantify: new MockElement('gel-step-quantify'),
     gelStepBands: new MockElement('gel-step-bands'),
     gelManualPrevBtn: new MockElement('gel-manual-prev-btn'),
-    gelManualNextBtn: new MockElement('gel-manual-next-btn')
   };
   let analysisRuns = 0;
   const controller = manualModule.createManualWorkflowController({
@@ -2215,7 +2193,6 @@ test('[EDGE] gel-analysis lane vertex tool glues shared neighbor vertices', () =
     },
     cropperActive: false,
     currentReport: { lanes: [] },
-    manualDividerConfirmed: true,
     manualOverrides: gelAnalysisInternals.normalizeManualOverrides({
       laneSegmentation: {
         gelLeft: 0,
@@ -2226,7 +2203,6 @@ test('[EDGE] gel-analysis lane vertex tool glues shared neighbor vertices', () =
         bandBottom: 20
       },
       ladderLane: 1,
-      ladderBandsDone: true
     }),
     selectedViewerTool: ''
   };
@@ -2246,7 +2222,6 @@ test('[EDGE] gel-analysis lane vertex tool glues shared neighbor vertices', () =
     gelStepQuantify: new MockElement('gel-step-quantify'),
     gelStepBands: new MockElement('gel-step-bands'),
     gelManualPrevBtn: new MockElement('gel-manual-prev-btn'),
-    gelManualNextBtn: new MockElement('gel-manual-next-btn')
   };
   const controller = manualModule.createManualWorkflowController({
     runtime,
@@ -2331,7 +2306,7 @@ test('[EDGE] gel-analysis lane vertex tool glues shared neighbor vertices', () =
 
 test('[EDGE] gel-analysis createEmptyManualOverrides baseline shape', () => {
   const value = gelAnalysisInternals.createEmptyManualOverrides();
-  assert.equal(JSON.stringify(Object.keys(value).sort()), JSON.stringify(['addedBands', 'ladderBands', 'ladderBandsDone', 'ladderLane', 'laneSegmentation', 'laneTable', 'peakIntegrations']));
+  assert.equal(JSON.stringify(Object.keys(value).sort()), JSON.stringify(['addedBands', 'ladderBands', 'ladderLane', 'laneSegmentation', 'laneTable', 'peakIntegrations']));
   assert.equal(Array.isArray(value.laneSegmentation.dividers), true);
   assert.equal(value.laneSegmentation.dividers.length, 0);
   assert.equal(Array.isArray(value.peakIntegrations), true);
@@ -2365,7 +2340,6 @@ test('[EDGE] gel-analysis createEmptyManualOverrides baseline shape', () => {
         { pixelY: 99.2, mw: 50 },
         { pixelY: 2, mw: 0 }
       ],
-      ladderBandsDone: 1,
       peakIntegrations: [
         {
           lane: '2',
@@ -2396,7 +2370,6 @@ test('[EDGE] gel-analysis createEmptyManualOverrides baseline shape', () => {
       assert.equal(value.ladderLane, 3);
       assert.equal(JSON.stringify(value.ladderBands.map((item) => item.mw)), JSON.stringify([150, 50]));
       assert.equal(JSON.stringify(value.ladderBands.map((item) => item.pixelY)), JSON.stringify([10, 80]));
-      assert.equal(value.ladderBandsDone, true);
       assert.equal(JSON.stringify(value.peakIntegrations), JSON.stringify([
         {
           laneIndex: 2,
@@ -2492,10 +2465,9 @@ test('[EDGE] gel-analysis clicked band is measured like the target band window',
       manualOverrides: {
         laneSegmentation: {
           gelLeft: 0, gelRight: 59, dividers: [], dividerDone: true,
-          bandTop: 42, bandBottom: 78, quantifyConfirmed: true
+          bandTop: 42, bandBottom: 78
         },
         ladderLane: 1,
-        ladderBandsDone: true,
         addedBands: [{ laneIndex: 1, pixelY: 150 }]
       }
     }
@@ -2648,7 +2620,6 @@ test('[EDGE] gel-analysis manual per-lane target windows feed lane-specific repo
           ]
         },
         ladderLane: 1,
-        ladderBandsDone: true
       }
     }
   });
@@ -2702,7 +2673,6 @@ test('[EDGE] gel-analysis target-band baseline comes only from guarded flanking 
             bandBottom: 34
           },
           ladderLane: 1,
-          ladderBandsDone: true
         }
       }
     }).report.lanes[0].targetBand;

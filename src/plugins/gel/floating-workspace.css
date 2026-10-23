@@ -1,6 +1,6 @@
-/* The viewer owns the main workspace: the gel, with a small action card on its
- * right (view, export, layers). Tools live in the rail's sections; the peak
- * editor is the only window, out of flow and bounded to the image stage. */
+@import url('./tool-dock.css');
+
+/* Navigation on the left, canvas in the center, actions and editing tools on the right. */
 body.plugin-gel,
 body.plugin-gel #gel-host,
 body.plugin-gel #gel-view.is-active {
@@ -33,7 +33,7 @@ body.plugin-gel #gel-view.is-active {
 
 #gel-view .gel-viewer-panel {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) 280px;
   grid-template-rows: minmax(0, 1fr);
   gap: 16px;
   height: 100%;
@@ -46,7 +46,7 @@ body.plugin-gel #gel-view.is-active {
  * row, icon on the left, value or switch on the right. */
 #gel-view .gel-viewer-card {
   align-self: start;
-  width: 188px;
+  width: 100%;
   padding: 6px;
   border: 1px solid var(--theme-border-soft);
   border-radius: 12px;
@@ -116,18 +116,20 @@ body.plugin-gel #gel-view.is-active {
 #gel-view [aria-pressed='true'] > .gel-switch { background: var(--theme-accent); }
 #gel-view [aria-pressed='true'] > .gel-switch::after { transform: translateX(12px); }
 
-/* Finish dividers / Done: the pending step leads the card. */
-#gel-view .gel-viewer-card .gel-step-btn {
+/* Finish dividers and crop Done: the pending action leads the tools panel. */
+#gel-view .gel-tools-panel .gel-step-btn {
   justify-content: center;
   color: var(--theme-accent-ink);
   background: var(--theme-accent-wash);
   font-weight: 600;
 }
 
-#gel-view .gel-viewer-card .gel-step-btn:hover:not(:disabled) { background: var(--theme-accent-soft); }
+#gel-view .gel-tools-panel .gel-step-btn:hover:not(:disabled) { background: var(--theme-accent-soft); }
 
-/* Crop mode: the card holds only the crop controls. */
-#gel-view .gel-viewer-toolbar.is-cropping > :not(.gel-crop-bar) { display: none; }
+/* Crop mode: the tools panel holds only the crop controls. */
+#gel-view .gel-tool-context.is-cropping > :not(.gel-crop-bar),
+#gel-view .gel-tools-panel:has(.gel-tool-context.is-cropping) #gel-form { display: none; }
+#gel-view .gel-tool-context.is-cropping { border-bottom: 0; }
 #gel-view .gel-crop-bar { display: grid; gap: 10px; padding: 4px; }
 #gel-view .gel-crop-bar[hidden] { display: none; }
 #gel-view .gel-crop-angle { display: grid; gap: 6px; color: var(--theme-text-muted); font-size: 0.78rem; }
@@ -203,6 +205,36 @@ body.plugin-gel #gel-view.is-active {
 
 #gel-view .gel-menu button:hover:not(:disabled) { background: var(--theme-fill); }
 #gel-view .gel-menu button:disabled { opacity: 0.5; cursor: default; }
+
+#gel-view .gel-divider-menu { position: fixed; margin: 0; border-radius: 10px; }
+#gel-view .gel-divider-menu button { display: flex; align-items: center; gap: 8px; color: var(--theme-danger); }
+#gel-view .gel-divider-menu button:focus-visible { outline: 2px solid var(--theme-focus); outline-offset: -2px; }
+#gel-view .gel-divider-menu svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+#gel-view .gel-tool-body > label:has(> #gel-processed-preview) {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 8px;
+  min-height: 28px;
+  padding-inline: 4px;
+  cursor: pointer;
+}
+#gel-view #gel-processed-preview {
+  flex: 0 0 16px;
+  width: 16px;
+  min-width: 16px;
+  max-width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--theme-accent);
+  cursor: pointer;
+}
+#gel-view #gel-processed-preview:focus-visible {
+  outline: 2px solid var(--theme-focus);
+  outline-offset: 2px;
+}
 
 #gel-view .gel-viewer-stage {
   display: flex;
@@ -345,7 +377,7 @@ body.plugin-gel #gel-view.is-active {
 
 #gel-view #gel-cell-table-copy-btn { flex-shrink: 0; }
 
-#gel-view #gel-peak-editor-overlay { inset: 12px auto auto 12px; width: 780px; height: 540px; }
+#gel-view #gel-peak-editor-overlay { inset: 12px auto auto 12px; width: 780px; max-width: calc(100% - 32px); height: 540px; }
 #gel-view .gel-peak-editor-dialog {
   display: grid;
   grid-template-rows: auto auto minmax(80px, 2fr) minmax(60px, 1fr);
@@ -382,18 +414,56 @@ body.plugin-gel #gel-view.is-active {
   #gel-view .gel-main { padding: 12px; }
 }
 
-@media (max-width: 900px) {
-  #gel-view .gel-viewer-panel { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 10px; }
-  #gel-view .gel-viewer-card { order: -1; align-self: stretch; width: auto; }
-  #gel-view .gel-viewer-toolbar { flex-direction: row; flex-wrap: wrap; }
-  #gel-view .gel-card-row { width: auto; flex: 1 1 140px; }
+#gel-view .gel-inspector {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
+#gel-view .gel-viewer-card { box-sizing: border-box; flex: 0 0 auto; }
+#gel-view .gel-tools-panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 12px;
+  background: var(--theme-surface);
+}
+#gel-view #gel-form {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+  padding: 14px;
+  overflow: hidden;
+}
+#gel-view #gel-figure-inspector { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+#gel-view #gel-figure-inspector[hidden],
+#gel-view .is-showing-layout #gel-form { display: none; }
+#gel-view .is-showing-layout #gel-process-image-btn,
+#gel-view .is-showing-layout .gel-step-btn { display: none; }
+#gel-view #gel-navigation.is-file-drop-active { outline: none; box-shadow: none; }
 
-/* Keep the desktop canvas usable in narrow plugin frames. The rail's
- * controls and ordering are unchanged; only its width contracts. */
-@media (max-width: 720px) {
-  #gel-view .gel-workspace { grid-template-columns: minmax(160px, 30%) minmax(0, 1fr); }
-  #gel-view .gel-workspace > .gel-setup-panel { min-height: 0; height: 100%; }
-  #gel-view .gel-viewer-panel { gap: 8px; }
+@media (max-width: 1100px) {
+  #gel-view .gel-workspace { grid-template-columns: 210px minmax(0, 1fr); }
+  #gel-view .gel-viewer-panel { grid-template-columns: minmax(0, 1fr) 250px; gap: 12px; }
+  #gel-view .app-left-rail-handle { display: none; }
+}
+@media (max-width: 760px) {
+  #gel-view .gel-workspace { grid-template-columns: 160px minmax(0, 1fr); }
+  #gel-view .gel-main { padding: 10px; overflow-y: auto; }
+  #gel-view .gel-main-stack, #gel-view .gel-main-grid { height: auto; min-height: 100%; overflow: visible; }
+  #gel-view .gel-viewer-panel { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(300px, 1fr) auto; height: auto; min-height: 100%; overflow: visible; }
+  #gel-view .gel-viewer-stage { min-height: 300px; max-height: 65vh; }
+  #gel-view .gel-inspector { height: auto; overflow: visible; }
+  #gel-view #gel-form { max-height: 500px; }
+  #gel-view #gel-figure-inspector { max-height: 500px; }
   #gel-view .gel-floating-head { padding: 6px 8px; flex-wrap: wrap; }
 }

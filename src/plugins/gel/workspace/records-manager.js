@@ -9,6 +9,7 @@ import { createGelRecordList } from './records/record-list.js';
 export function createRecordsManager({ runtime, elements, deps }) {
   let recordLoadRequest = 0;
   let savePromise = null;
+  let recordSaveQueue = Promise.resolve();
   let exportPromise = null;
   let saveLockedControls = [];
   const deleteRequests = new Set();
@@ -21,9 +22,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
 
   const {
     getStorageRoot,
-    syncNotebookGelLinks,
-    persistNotebookPreviewImage,
-    persistGelRecordArtifacts
+    syncNotebookGelLinks
   } = createGelRecordArtifacts({
     runtime,
     elements,
@@ -45,52 +44,95 @@ export function createRecordsManager({ runtime, elements, deps }) {
     }
   }
 
-  function readParams() {
-    const rawType = elements.gelTypeInput?.value;
+  function readParams(source = runtime, controls = null) {
+    const rawType = controls ? controls['gel-type'] : elements.gelTypeInput?.value;
     const analysisType = rawType === 'western' || rawType === 'agarose' ? rawType : 'sds-page';
-    const enhancement = deps.readEnhancementSettingsFromUi();
-    const ladderPreset = elements.gelLadderPresetSelect?.value || DEFAULT_LADDER_PRESET_ID;
+    const enhancement = controls ? normalizeEnhancementSettings({
+      denoiseStrength: controls['gel-denoise-strength'], contrastBoost: controls['gel-contrast-strength']
+    }) : deps.readEnhancementSettingsFromUi();
+    const ladderPreset = (controls ? controls['gel-ladder-preset'] : elements.gelLadderPresetSelect?.value) || DEFAULT_LADDER_PRESET_ID;
 
     return {
       analysisType,
       analysisMode: 'manual',
       ladderPreset,
       ladderStandards: getLadderPresetBands(ladderPreset),
-      ladderLane: clamp(Math.floor(Number(runtime.manualOverrides?.ladderLane) || 1), 1, 999),
+      ladderLane: clamp(Math.floor(Number(source.manualOverrides?.ladderLane) || 1), 1, 999),
       normalization: 'none',
-      cropApplied: runtime.cropApplied,
-      tiffPage: Number.isFinite(runtime.currentImage?.tiffPageIndex) ? runtime.currentImage.tiffPageIndex : null,
-      tiffPageCount: Number.isFinite(runtime.currentImage?.tiffPageCount) ? runtime.currentImage.tiffPageCount : null,
+      cropApplied: source.cropApplied,
+      tiffPage: Number.isFinite(source.currentImage?.tiffPageIndex) ? source.currentImage.tiffPageIndex : null,
+      tiffPageCount: Number.isFinite(source.currentImage?.tiffPageCount) ? source.currentImage.tiffPageCount : null,
       enhancement,
-      manualOverrides: normalizeManualOverrides(runtime.manualOverrides)
+      manualOverrides: normalizeManualOverrides(source.manualOverrides)
     };
   }
 
-  function buildRecordFromCurrentReport(existingId = '') {
-    const pendingLink = runtime.pendingNotebookLink || {};
+  function buildRecordFromCurrentReport(existingId = '', source = runtime, params = readParams(), name = elements.gelNameInput?.value.trim()) {
+    const pendingLink = source.pendingNotebookLink || {};
     const notebookEntryId = String(pendingLink.notebookEntryId || '').trim();
     const projectId = String(pendingLink.projectId || '').trim();
     const project = (runtime.state.projects || []).find((item) => item.id === projectId);
     const notebookEntry = (runtime.state.notebookEntries || []).find((entry) => entry.id === notebookEntryId);
-    const report = runtime.currentReport;
-    const params = readParams();
-    const sourceImageName = String(runtime.currentImage?.name || '').trim();
+    const report = source.currentReport;
+    const sourceImageName = String(source.currentImage?.name || '').trim();
 
     return {
       id: existingId || runtime.createId(),
-      name: elements.gelNameInput?.value.trim() || `Gel-${Date.now()}`,
+      name: name || `Gel-${Date.now()}`,
       projectId: projectId || project?.id || '',
       projectName: project?.name || notebookEntry?.projectName || '',
       notebookEntryId,
       notebookEntryProtocolName: notebookEntry?.experimentName || notebookEntry?.protocolName || '',
       notebookEntryType: notebookEntry?.notebookType || '',
       imageName: report?.image?.name || sourceImageName,
-      analysisType: report?.analysisType || (elements.gelTypeInput?.value || 'sds-page'),
+      analysisType: report?.analysisType || params.analysisType,
       parameters: report?.parameters || params,
-      manualOverrides: normalizeManualOverrides(runtime.manualOverrides),
+      manualOverrides: normalizeManualOverrides(source.manualOverrides),
       report,
       updatedAt: new Date().toISOString()
     };
+  }
+
+  // Imports save their own image snapshot, without replacing the active editor.
+  // Serialize artifact/index writes with manual saves so a multi-file drop cannot
+  // race an analysis save or leave the durable index pointing at the wrong gel.
+  function persistRecord(record, artifactRuntime = runtime, artifactElements = elements) {
+    const operation = recordSaveQueue.then(async () => {
+      ensureState();
+      const existing = runtime.state.gelAnalyses.find(item => item.id === record.id);
+      record = { ...existing, ...record };
+      const artifacts = createGelRecordArtifacts({ runtime: artifactRuntime, elements: artifactElements, deps });
+      Object.assign(record, await artifacts.persistNotebookPreviewImage(record, existing));
+      Object.assign(record, await artifacts.persistGelRecordArtifacts(record, existing));
+
+      const index = runtime.state.gelAnalyses.findIndex(item => item.id === record.id);
+      const previousRecord = index >= 0 ? runtime.state.gelAnalyses[index] : null;
+      if (index >= 0) runtime.state.gelAnalyses[index] = record;
+      else runtime.state.gelAnalyses.push(record);
+      syncNotebookGelLinks();
+      try {
+        await runtime.persist();
+      } catch (error) {
+        if (index >= 0) runtime.state.gelAnalyses[index] = previousRecord;
+        else runtime.state.gelAnalyses = runtime.state.gelAnalyses.filter(item => item.id !== record.id);
+        syncNotebookGelLinks();
+        throw error;
+      }
+      renderList();
+      runtime.onGelAnalysesChanged?.();
+      return record;
+    });
+    recordSaveQueue = operation.catch(() => {});
+    return operation;
+  }
+
+  async function saveImportedGel(draft, name) {
+    const source = { ...runtime, ...draft };
+    const record = await persistRecord(buildRecordFromCurrentReport(
+      draft.controls['gel-id'], source, readParams(source, draft.controls), name
+    ), source, {});
+    draft.controls['gel-id'] = record.id;
+    return record;
   }
 
   async function performSaveAnalysis() {
@@ -104,43 +146,15 @@ export function createRecordsManager({ runtime, elements, deps }) {
 
     const editingId = elements.gelIdInput?.value || '';
     const existing = runtime.state.gelAnalyses.find((item) => item.id === editingId);
-    const record = buildRecordFromCurrentReport(existing?.id || '');
-    record.name = name;
+    let record = buildRecordFromCurrentReport(existing?.id || '');
     try {
-      Object.assign(record, await persistNotebookPreviewImage(record, existing));
-      Object.assign(record, await persistGelRecordArtifacts(record, existing));
+      record = await persistRecord(record);
     } catch (error) {
-      deps.setStatus(error instanceof Error ? error.message : 'Could not save gel artifacts.');
-      return null;
-    }
-
-    const index = runtime.state.gelAnalyses.findIndex((item) => item.id === record.id);
-    const previousRecord = index >= 0 ? runtime.state.gelAnalyses[index] : null;
-    if (index >= 0) {
-      runtime.state.gelAnalyses[index] = record;
-    } else {
-      runtime.state.gelAnalyses.push(record);
-    }
-
-    syncNotebookGelLinks();
-    try {
-      await runtime.persist();
-    } catch (error) {
-      if (index >= 0) {
-        runtime.state.gelAnalyses[index] = previousRecord;
-      } else {
-        runtime.state.gelAnalyses = runtime.state.gelAnalyses.filter((item) => item.id !== record.id);
-      }
-      syncNotebookGelLinks();
       deps.setStatus(`Could not save gel: ${error?.message || error}`);
       return null;
     }
-    renderList();
-    if (typeof runtime.onGelAnalysesChanged === 'function') {
-      runtime.onGelAnalysesChanged();
-    }
-    // Cleared, not announced: the record appears in Existing Gels, but the
-    // previous status must not linger as if it were the result of this save.
+    if (elements.gelIdInput) elements.gelIdInput.value = record.id;
+    // The previous status must not linger as if it were the result of this save.
     deps.setStatus('');
     runtime.markDraftSaved?.();
     return record;
@@ -278,7 +292,6 @@ export function createRecordsManager({ runtime, elements, deps }) {
     runtime.cropApplied = false;
     runtime.pendingNotebookLink = null;
     deps.leaveCropMode();
-    runtime.manualDividerConfirmed = false;
     runtime.selectedViewerTool = '';
 
     deps.renderOverrideStatus();
@@ -324,7 +337,6 @@ export function createRecordsManager({ runtime, elements, deps }) {
     }
     deps.renderEnhancementValues();
     runtime.manualOverrides = normalizeManualOverrides(record.manualOverrides || parameters.manualOverrides);
-    runtime.manualDividerConfirmed = Boolean(runtime.manualOverrides.laneSegmentation?.dividerDone);
     runtime.selectedViewerTool = '';
     deps.renderOverrideStatus();
 
@@ -462,6 +474,9 @@ export function createRecordsManager({ runtime, elements, deps }) {
     onExportCsv,
     onListClick,
     onSaveAnalysis,
+    saveImportedGel,
+    restoreRecordImage,
+    fillFromRecord,
     readParams,
     renderList,
     resetForm,

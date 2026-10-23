@@ -7,11 +7,12 @@ const recordArray = value => Array.isArray(value)
   && value.every(item => object(item) && typeof item.id === 'string' && item.id)
   && new Set(value.map(item => item.id)).size === value.length;
 
-// Save acknowledgments (markdownRevision) advance asynchronously, and an assay's
-// cached analysis preview (latestAnalysis) is re-rendered output. Neither is an
-// edit: they never become a step. Revisions survive restoration, while a cached
-// preview survives only when its containing record has not changed.
-const UNVERSIONED_KEYS = ['markdownRevision', 'latestAnalysis'];
+// Save acknowledgments (markdownRevision) advance asynchronously, an assay's
+// cached analysis preview (latestAnalysis) is re-rendered output, and a paper's
+// reading position (lastReadPage) follows scrolling. None is an edit: they never
+// become a step. Revisions and reading positions survive restoration, while a
+// cached preview survives only when its containing record has not changed.
+const UNVERSIONED_KEYS = ['markdownRevision', 'latestAnalysis', 'lastReadPage'];
 
 export function captureHistoryState(state) {
   return JSON.parse(JSON.stringify(state, (key, value) => UNVERSIONED_KEYS.includes(key) ? undefined : value));

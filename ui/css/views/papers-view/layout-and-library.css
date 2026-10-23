@@ -261,12 +261,12 @@
 
 .papers-paper-row:hover,
 .papers-paper-row:focus-visible {
-  background: var(--theme-surface-muted);
+  background: var(--theme-highlight);
   color: var(--theme-text-strong);
 }
 
 .papers-paper-row.is-active {
-  background: var(--theme-surface-muted);
+  background: var(--theme-highlight);
   color: var(--theme-text-strong);
 }
 

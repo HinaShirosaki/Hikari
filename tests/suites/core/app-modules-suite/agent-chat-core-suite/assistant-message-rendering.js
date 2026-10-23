@@ -256,8 +256,7 @@ test('agent-chat maps gel experiment data with confidence, calibration, and warn
               laneSegmentationBandBottom: 44,
               addedBands: 2,
               ladderLaneOverride: 2,
-              ladderBands: 3,
-              ladderBandsDone: true
+              ladderBands: 3
             }
           }
         }
@@ -285,7 +284,6 @@ test('agent-chat maps gel experiment data with confidence, calibration, and warn
   assert.equal(gelRun.calibration.ladder_lane, 2);
   assert.equal(gelRun.warnings.length, 10);
   assert.equal(gelRun.manual_override_summary.lane_segmentation_dividers, 7);
-  assert.equal(gelRun.manual_override_summary.ladder_bands_done, true);
 });
 test('agent-chat renders assistant markdown with emphasis, tables, and escaped HTML', () => {
   const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'rendering.js'));

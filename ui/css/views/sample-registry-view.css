@@ -100,7 +100,7 @@
 .inventory-location-btn:hover,
 .inventory-location-btn:focus-visible,
 .inventory-location-btn.active {
-  background: var(--theme-surface-muted);
+  background: var(--theme-highlight);
 }
 
 .inventory-location-group {
@@ -180,7 +180,7 @@
 }
 
 .inventory-container-btn.active {
-  background: var(--theme-surface-muted);
+  background: var(--theme-highlight);
 }
 
 .inventory-container-glyph {

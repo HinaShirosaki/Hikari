@@ -260,6 +260,7 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
           class="gel-lane-table-input gel-lane-table-input-label"
           data-gel-table-role="label"
           data-gel-table-row="${rowIndex}"
+          aria-label="Row ${rowIndex + 1} label"
           value="${safeText(row.label || '')}"
           placeholder="Label"
           autocomplete="off"
@@ -313,7 +314,6 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
         </div>
       </div>
       <div class="gel-lane-table-labels">
-        <div class="gel-lane-table-label-head">Label</div>
         ${labelMarkup}
       </div>
       <div class="gel-lane-table-grid-shell">
@@ -324,7 +324,7 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
           <div class="gel-lane-table-wrap">
             <table class="gel-lane-table">
               <colgroup>${colMarkup}</colgroup>
-              <thead>
+              <thead class="sr-only">
                 <tr>
                   ${headerMarkup}
                 </tr>

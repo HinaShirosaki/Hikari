@@ -7,8 +7,8 @@ import {
 } from '../shared.js';
 import { renderViewerToolbar } from './manual-ui.js';
 
-// Which manual step the workflow is on, how far the per-lane band pass has got,
-// and the progress and status copy both are reported through.
+// How far the per-lane band pass has got, and the tool state and status copy
+// it is reported through.
 
 function createManualProgress({
   runtime,
@@ -16,101 +16,14 @@ function createManualProgress({
   deps,
   getSegmentationLanes
 } = {}) {
-  function getManualStep(overrides = normalizeManualOverrides(runtime.manualOverrides)) {
-    const segmentation = overrides.laneSegmentation || {};
-    if (!hasEffectiveDividerLayout(overrides)) {
-      return 'dividers';
-    }
-    if (!Number.isFinite(overrides.ladderLane) || overrides.ladderLane < 1) {
-      return 'ladder';
-    }
-    if (!Boolean(overrides.ladderBandsDone)) {
-      return 'ladder-mw';
-    }
-    if (isPerLaneBandMode(segmentation)) {
-      const progress = getLaneBandProgress(overrides);
-      if (progress.pendingBottomLaneIndex) {
-        return 'band-bottom';
-      }
-      if (!progress.totalLanes || progress.completeCount < progress.totalLanes) {
-        return 'band-top';
-      }
-      if (!Boolean(segmentation.quantifyConfirmed)) {
-        return 'quantify';
-      }
-      return 'bands';
-    }
-    if (!Number.isFinite(segmentation.bandTop)) {
-      return 'band-top';
-    }
-    if (!Number.isFinite(segmentation.bandBottom)) {
-      return 'band-bottom';
-    }
-    if (!Boolean(segmentation.quantifyConfirmed)) {
-      return 'quantify';
-    }
-    return 'bands';
-  }
-
-  function getCanvasInteractionStep() {
-    if (runtime.selectedViewerTool) {
-      return runtime.selectedViewerTool;
-    }
-    const laneBandStep = getLaneBandInteractionStep();
-    const manualStep = laneBandStep || getManualStep();
-    return manualStep === 'dividers' || manualStep === 'ladder-mw' ? '' : manualStep;
-  }
-
-  function getLaneBandInteractionStep(overrides = normalizeManualOverrides(runtime.manualOverrides)) {
-    if (!isPerLaneBandMode(overrides.laneSegmentation)) {
-      return null;
-    }
-    const progress = getLaneBandProgress(overrides);
-    if (!progress.totalLanes) {
-      return null;
-    }
-    if (progress.pendingBottomLaneIndex) {
-      return 'band-bottom';
-    }
-    if (progress.completeCount < progress.totalLanes) {
-      return 'band-top';
-    }
-    return null;
-  }
-
-  function hasEffectiveDividerLayout(overrides = normalizeManualOverrides(runtime.manualOverrides)) {
-    const segmentation = overrides.laneSegmentation || {};
-    const hasLaneBoundaries = Number.isFinite(segmentation.gelLeft)
-      && Number.isFinite(segmentation.gelRight)
-      && segmentation.gelRight > segmentation.gelLeft + 2;
-    if (!hasLaneBoundaries) {
-      return false;
-    }
-    if (Boolean(segmentation.dividerDone) || runtime.manualDividerConfirmed) {
-      return true;
-    }
-    return isPerLaneBandMode(segmentation) && getSegmentationLanes(overrides).length > 0;
-  }
-
   function renderManualProgress() {
     deps.syncLadderMwEditor?.();
     const overrides = normalizeManualOverrides(runtime.manualOverrides);
-    const activeStep = getManualStep(overrides);
-    const laneBandMode = isPerLaneBandMode(overrides.laneSegmentation);
-
-    if (elements.gelManualNextBtn) {
-      const showsCompletionAction = activeStep === 'ladder-mw' || activeStep === 'quantify';
-      elements.gelManualNextBtn.hidden = !showsCompletionAction;
-      elements.gelManualNextBtn.disabled = !showsCompletionAction;
-      if (activeStep === 'ladder-mw') {
-        elements.gelManualNextBtn.textContent = 'Done Ladder MW';
-      } else if (activeStep === 'quantify') {
-        elements.gelManualNextBtn.textContent = 'Done Quantify';
-      } else {
-        elements.gelManualNextBtn.textContent = 'Done';
-      }
+    // Ladder tools act on the ladder lane, so they wait until one is picked.
+    for (const button of [elements.gelDetectLadderBtn, elements.gelToolLadderMwBtn]) {
+      if (button) button.disabled = !overrides.ladderLane;
     }
-    renderViewerToolbar(elements, runtime.selectedViewerTool, laneBandMode);
+    renderViewerToolbar(elements, runtime.selectedViewerTool, isPerLaneBandMode(overrides.laneSegmentation));
   }
 
   function renderOverrideStatus() {
@@ -164,9 +77,7 @@ function createManualProgress({
   }
 
   return {
-    getCanvasInteractionStep,
     getLaneBandProgress,
-    getManualStep,
     renderManualProgress,
     renderOverrideStatus
   };

@@ -78,8 +78,7 @@ function createManualLadderBands({
     // Set MW are for; detecting per-band MW from spacing would need a real fit.
     runtime.manualOverrides = {
       ...overrides,
-      ladderBands: rows.map((row, index) => ({ pixelY: row, mw: standards[index] })),
-      ladderBandsDone: true
+      ladderBands: rows.map((row, index) => ({ pixelY: row, mw: standards[index] }))
     };
     renderOverrideStatus();
     deps.renderCanvas();

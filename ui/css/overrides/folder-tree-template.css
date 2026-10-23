@@ -29,7 +29,7 @@
 
 .folder-tree-template__row:hover,
 .folder-tree-template__row:focus-within {
-  background: var(--hikari-left-rail-list-hover, var(--theme-surface-muted));
+  background: var(--hikari-left-rail-list-hover, var(--theme-highlight));
   color: var(--theme-text-strong);
 }
 

@@ -2,10 +2,10 @@ import { buildLanesFromManualSegmentation } from '../analysis/analysis-core.js';
 import { detectLanes } from '../analysis/auto-lanes.js';
 import { getViewerToolLabel, renderViewerToolbar } from './manual-ui.js';
 import { createManualCanvasInteraction } from './canvas-interaction.js';
-import { createManualStepNavigation } from './step-navigation.js';
 import { createManualLaneShapes } from './lane-shapes.js';
 import { createManualLadderBands } from './ladder-bands.js';
 import { createLadderMwEditor } from './ladder-mw-editor.js';
+import { createDividerMenu } from './divider-menu.js';
 import { createManualProgress } from './manual-progress.js';
 import {
   clamp,
@@ -20,6 +20,7 @@ import {
 
 
 export function createManualWorkflowController({ runtime, elements, deps }) {
+  const dividerMenu = createDividerMenu({ runtime, elements, onRemove: removeLaneDivider });
   const ladderMwEditor = createLadderMwEditor({
     runtime,
     elements,
@@ -32,12 +33,15 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     }
   });
   function clearCanvasInteractionState({ clearTool = true } = {}) {
+    dividerMenu.close();
     ladderMwEditor.close();
     if (clearTool) {
       runtime.selectedViewerTool = '';
     }
     runtime.laneVertexDrag = null;
     runtime.suppressNextLaneVertexClick = false;
+    runtime.laneDividerDrag = null;
+    runtime.suppressNextLaneDividerClick = false;
     runtime.ladderBandDrag = null;
     runtime.suppressNextLadderBandClick = false;
   }
@@ -61,7 +65,6 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     clearCanvasInteractionState({ clearTool: false });
     runtime.selectedViewerTool = runtime.selectedViewerTool === tool ? '' : tool;
     if (runtime.selectedViewerTool === 'dividers') {
-      runtime.manualDividerConfirmed = false;
       updateLaneSegmentation({ dividerDone: false });
     }
     renderManualProgress();
@@ -69,7 +72,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     const label = getViewerToolLabel(runtime.selectedViewerTool);
     if (label) {
       if (runtime.selectedViewerTool === 'dividers') {
-        deps.setStatus('Click each lane boundary; the outermost dividers mark the gel edges.');
+        deps.setStatus('Click to add lane boundaries, or drag an existing divider to move it. The outermost dividers mark the gel edges.');
         return;
       }
       if (runtime.selectedViewerTool === 'lane-vertices') {
@@ -87,15 +90,13 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
   }
 
   const {
-    getCanvasInteractionStep,
     getLaneBandProgress,
-    getManualStep,
     renderManualProgress,
     renderOverrideStatus
   } = createManualProgress({
     runtime,
     elements,
-    deps: { ...deps, syncLadderMwEditor: ladderMwEditor.sync },
+    deps: { ...deps, syncLadderMwEditor: () => { ladderMwEditor.sync(); dividerMenu.sync(); } },
     getSegmentationLanes: (...args) => getSegmentationLanes(...args)
   });
 
@@ -113,8 +114,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       dividers: [],
       dividerDone: false,
       bandTop: null,
-      bandBottom: null,
-      quantifyConfirmed: false
+      bandBottom: null
     };
     const next = {
       gelLeft: current.gelLeft,
@@ -126,7 +126,6 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       perLaneBandEnabled: isPerLaneBandMode(current),
       laneBandWindows: normalizeLaneBandWindows(current.laneBandWindows),
       laneVertices: normalizeLaneVertices(current.laneVertices),
-      quantifyConfirmed: Boolean(current.quantifyConfirmed),
       ...patch
     };
     next.dividers = next.dividers
@@ -161,12 +160,11 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       deps.setStatus('Add at least two lane dividers to define the gel edges before finishing.');
       return false;
     }
-    runtime.manualDividerConfirmed = true;
     updateLaneSegmentation({ dividerDone: true });
     clearCanvasTool('dividers');
     renderOverrideStatus();
     deps.renderCanvas();
-    deps.setStatus('Click the ladder lane on the gel.');
+    deps.setStatus('Lanes set. Next: Ladder or Bands.');
     return true;
   }
 
@@ -263,24 +261,6 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
 
 
 
-  const {
-    onManualNextStep,
-    onManualPrevStep
-  } = createManualStepNavigation({
-    runtime,
-    deps,
-    clearCanvasInteractionState: (...args) => clearCanvasInteractionState(...args),
-    finishLaneDividers: (...args) => finishLaneDividers(...args),
-    getLaneBandProgress: (...args) => getLaneBandProgress(...args),
-    getManualStep: (...args) => getManualStep(...args),
-    renderOverrideStatus: (...args) => renderOverrideStatus(...args),
-    updateLaneSegmentation: (...args) => updateLaneSegmentation(...args)
-  });
-
-
-
-
-
   function addLaneDivider(x) {
     const normalized = normalizeManualOverrides(runtime.manualOverrides);
     const segmentation = normalized.laneSegmentation || {
@@ -311,22 +291,54 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       dividers: boundaries.length > 2 ? boundaries.slice(1, -1) : [],
       dividerDone: false,
       laneBandWindows: [],
-      laneVertices: [],
-      quantifyConfirmed: false
+      laneVertices: []
     });
     runtime.currentReport = null;
     return true;
   }
 
-  function appendBandOverride(laneIndex, pixelY) {
-    const overrides = normalizeManualOverrides(runtime.manualOverrides);
-    const current = overrides.addedBands
-      .filter((item) => !(item.laneIndex === laneIndex && Math.abs(item.pixelY - pixelY) <= 8));
-    current.push({ laneIndex, pixelY });
-    runtime.manualOverrides = {
-      ...overrides,
-      addedBands: current
-    };
+  function removeLaneDivider(x) {
+    if (!runtime.currentImage || runtime.cropperActive || runtime.selectedViewerTool !== 'dividers') return;
+    const normalized = normalizeManualOverrides(runtime.manualOverrides);
+    const segmentation = normalized.laneSegmentation;
+    const boundaries = [...new Set([segmentation.gelLeft, ...segmentation.dividers, segmentation.gelRight]
+      .filter(Number.isFinite))].sort((a, b) => a - b);
+    if (!boundaries.includes(x)) return;
+    const remaining = boundaries.filter(value => value !== x);
+    updateLaneSegmentation({
+      gelLeft: remaining[0] ?? null,
+      gelRight: remaining.length > 1 ? remaining[remaining.length - 1] : null,
+      dividers: remaining.length > 2 ? remaining.slice(1, -1) : [],
+      dividerDone: false, laneVertices: [], laneBandWindows: []
+    });
+    resetDownstreamManualSelections();
+    runtime.manualOverrides.peakIntegrations = [];
+    runtime.currentReport = null;
+    renderOverrideStatus();
+    deps.renderCanvas();
+    deps.setStatus('');
+  }
+
+  function moveLaneDivider(from, x) {
+    if (!runtime.currentImage || runtime.cropperActive || runtime.selectedViewerTool !== 'dividers' || !Number.isFinite(x)) return null;
+    const segmentation = normalizeManualOverrides(runtime.manualOverrides).laneSegmentation;
+    const boundaries = [...new Set([segmentation.gelLeft, ...segmentation.dividers, segmentation.gelRight]
+      .filter(Number.isFinite))].sort((a, b) => a - b);
+    const index = boundaries.indexOf(from);
+    if (index < 0) return null;
+    const position = clamp(Math.round(x), index ? boundaries[index - 1] + 1 : 0,
+      index < boundaries.length - 1 ? boundaries[index + 1] - 1 : runtime.currentImage.width - 1);
+    if (position === from) return from;
+    boundaries[index] = position;
+    updateLaneSegmentation({
+      gelLeft: boundaries[0], gelRight: boundaries.length > 1 ? boundaries[boundaries.length - 1] : null,
+      dividers: boundaries.length > 2 ? boundaries.slice(1, -1) : [],
+      dividerDone: false, laneVertices: [], laneBandWindows: []
+    });
+    resetDownstreamManualSelections();
+    runtime.manualOverrides.peakIntegrations = [];
+    runtime.currentReport = null;
+    return position;
   }
 
   const {
@@ -340,15 +352,14 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     elements,
     deps,
     addLaneDivider: (...args) => addLaneDivider(...args),
-    appendBandOverride: (...args) => appendBandOverride(...args),
     clearCanvasTool: (...args) => clearCanvasTool(...args),
     findLadderBandNearPoint: (...args) => findLadderBandNearPoint(...args),
     isPointInLadderLane: (...args) => isPointInLadderLane(...args),
-    getCanvasInteractionStep: (...args) => getCanvasInteractionStep(...args),
     getLaneBandProgress: (...args) => getLaneBandProgress(...args),
     getRectifiedLaneRowFromPoint: (...args) => getRectifiedLaneRowFromPoint(...args),
     inferLaneIndexFromSegmentationPoint: (...args) => inferLaneIndexFromSegmentationPoint(...args),
     moveLadderBand: (...args) => moveLadderBand(...args),
+    moveLaneDivider,
     renderOverrideStatus: (...args) => renderOverrideStatus(...args),
     updateLaneSegmentation: (...args) => updateLaneSegmentation(...args),
     updateLaneVertexFromPoint: (...args) => updateLaneVertexFromPoint(...args),
@@ -394,13 +405,11 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       bandTop: segmentation.bandTop,
       bandBottom: segmentation.bandBottom,
       laneBandWindows: [],
-      laneVertices: [],
-      quantifyConfirmed: false
+      laneVertices: []
     });
     runtime.currentReport = null;
     runtime.laneProfileHoverY = null;
     resetDownstreamManualSelections();
-    runtime.manualDividerConfirmed = false;
     clearCanvasInteractionState();
     runtime.selectedViewerTool = 'dividers';
     renderOverrideStatus();
@@ -416,7 +425,6 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
 
   function onResetManualOverrides() {
     runtime.manualOverrides = createEmptyManualOverrides();
-    runtime.manualDividerConfirmed = false;
     clearCanvasInteractionState();
     runtime.currentReport = null;
     renderOverrideStatus();
@@ -426,8 +434,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
   }
 
   return {
-    destroy: ladderMwEditor.destroy,
-    getManualStep,
+    destroy() { dividerMenu.destroy(); ladderMwEditor.destroy(); },
     onAutoDetectLanes,
     onCanvasClick,
     onDetectLadderBands,
@@ -435,8 +442,6 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     onCanvasMouseMove,
     onCanvasMouseUp,
     onLaneBandModeToggle,
-    onManualNextStep,
-    onManualPrevStep,
     onResetManualOverrides,
     onViewerToolSelected,
     renderManualProgress,

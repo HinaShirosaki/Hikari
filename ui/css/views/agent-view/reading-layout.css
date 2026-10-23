@@ -148,7 +148,7 @@
   width: 1rem;
   height: 1rem;
 }
-.agent-message-copy:hover { background: var(--theme-surface-subtle); color: var(--theme-text-strong); }
+.agent-message-copy:hover { background: var(--theme-highlight); color: var(--theme-text-strong); }
 
 .agent-chat-item .agent-meta-grid { gap: .85rem; margin-top: 1rem; }
 .agent-chat-item .agent-output-card {
