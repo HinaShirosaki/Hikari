@@ -42,13 +42,17 @@ export const prepareAndSwapPageRecords = async (ctx, { pdfDocument, activeLoadTo
 
   const isLoadStale = () => activeLoadToken !== state.loadToken;
   const outputScale = Math.max(ctx.getWindowRef()?.devicePixelRatio || 1, 1);
-  const firstRecord = newPageRecords[0] || null;
-  let prerenderedFirst = null;
-  if (firstRecord) {
+  // Open at the requested page: prerender it and scroll there before the first
+  // visible-page render, so page 1 never flashes first.
+  const startRecord = newPageRecords.find((record) => record.pageNumber === state.pageNumber)
+    || newPageRecords[0]
+    || null;
+  let prerenderedStart = null;
+  if (startRecord) {
     try {
-      prerenderedFirst = await renderPageCanvasToOffscreen({
+      prerenderedStart = await renderPageCanvasToOffscreen({
         pdfDocument,
-        record: firstRecord,
+        record: startRecord,
         scale: swapScale,
         outputScale,
         isStale: isLoadStale
@@ -62,18 +66,18 @@ export const prepareAndSwapPageRecords = async (ctx, { pdfDocument, activeLoadTo
       await ctx.destroyPdfDocument(pdfDocument);
       return false;
     }
-    if (prerenderedFirst) {
+    if (prerenderedStart) {
       commitOffscreenToVisibleCanvas({
-        record: firstRecord,
-        offscreen: prerenderedFirst.offscreen,
-        cssWidth: prerenderedFirst.cssWidth,
-        cssHeight: prerenderedFirst.cssHeight,
-        bitmapWidth: prerenderedFirst.bitmapWidth,
-        bitmapHeight: prerenderedFirst.bitmapHeight
+        record: startRecord,
+        offscreen: prerenderedStart.offscreen,
+        cssWidth: prerenderedStart.cssWidth,
+        cssHeight: prerenderedStart.cssHeight,
+        bitmapWidth: prerenderedStart.bitmapWidth,
+        bitmapHeight: prerenderedStart.bitmapHeight
       });
-      firstRecord.renderedScale = swapScale;
+      startRecord.renderedScale = swapScale;
       try {
-        prerenderedFirst.page?.cleanup?.();
+        prerenderedStart.page?.cleanup?.();
       } catch {}
     }
   }
@@ -81,7 +85,7 @@ export const prepareAndSwapPageRecords = async (ctx, { pdfDocument, activeLoadTo
   releasePageRecords({ pageLayer, pageRecords: previousPageRecords });
   state.pageRecords = newPageRecords;
   attachPageRecords({ pageLayer, pageRecords: newPageRecords });
-  ctx.setStageScrollTop(0);
+  ctx.setStageScrollTop((startRecord?.element?.offsetTop || 0) - 8);
   await ctx.renderDocumentPages({ resetScroll: false, preserveScroll: false });
   return true;
 };

@@ -1,4 +1,5 @@
 import { hasPaperPdfMetadata } from '../pdf-metadata.js';
+import { clamp } from './pdf-viewer-anchors.js';
 import {
   buildViewerAssetUrl,
   loadPdfJsModule
@@ -42,7 +43,7 @@ export const installPdfViewerDocumentOpenController = (ctx) => {
     return loadingTask.promise;
   }
 
-  async function openPaper({ paper, summary = '', resolveBytes, onOpenExternal }) {
+  async function openPaper({ paper, summary = '', resolveBytes, onOpenExternal, pageNumber = 1 }) {
     if (!paper?.id || typeof resolveBytes !== 'function') {
       return false;
     }
@@ -95,8 +96,8 @@ export const installPdfViewerDocumentOpenController = (ctx) => {
       }
 
       state.pdfDocument = pdfDocument;
-      state.pageNumber = 1;
       state.pageCount = Number(pdfDocument.numPages) || 1;
+      state.pageNumber = clamp(Math.round(Number(pageNumber) || 1), 1, state.pageCount);
       state.pageMetrics = pageMetrics.metrics;
       state.maxBasePageWidth = pageMetrics.maxBasePageWidth;
       state.hasFormFields = hasFormFields;

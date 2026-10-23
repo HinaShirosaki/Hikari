@@ -76,14 +76,14 @@ function buildFakePapersViewerFactory() {
         onClose: elements.onClose
       };
       return {
-        async openPaper({ paper }) {
+        async openPaper({ paper, pageNumber = 1 }) {
           controller.activePaperId = paper.id;
-          controller.currentPageNumber = 1;
+          controller.currentPageNumber = pageNumber;
           await Promise.resolve(controller.callbacks.onMetadataResolved?.({
             paperId: paper.id,
             metadata: controller.metadataOnOpen
           }));
-          controller.callbacks.onPageChange?.(1);
+          controller.callbacks.onPageChange?.(pageNumber);
           return true;
         },
         async resetViewer() {
@@ -320,6 +320,16 @@ async function openPaperInHarness(harness) {
   await flushAsync();
   await flushAsync();
 }
+test('papers module reopens a paper at the page it was left on', async () => {
+  const harness = buildPapersManagementHarness();
+  harness.state.papers[0].lastReadPage = 4;
+
+  await openPaperInHarness(harness);
+  assert.equal(harness.viewerFactory.controller.currentPageNumber, 4);
+
+  harness.viewerFactory.emitPageChange(7);
+  assert.equal(harness.state.papers[0].lastReadPage, 7);
+});
 test('papers module syncs stored highlights into the PDF viewer when a paper opens', async () => {
   const harness = buildPapersManagementHarness();
   harness.state.papers[0].highlights = [
