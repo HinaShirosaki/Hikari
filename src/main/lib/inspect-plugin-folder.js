@@ -3,6 +3,7 @@
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { readPluginIcon } = require('./plugin-icon');
+const { normalizePluginSettingsSchema } = require('../../shared/plugin-settings.mjs');
 
 const PLUGIN_ENTRY_FILE = 'index.html';
 const PLUGIN_MANIFEST_FILE = 'plugin.json';
@@ -24,6 +25,7 @@ const PLUGIN_PERMISSIONS = Object.freeze([
   'notebook:read',
   'notebook:write',
   'storage',
+  'settings',
   'files',
   'downloads',
   'python',
@@ -234,6 +236,16 @@ async function inspectPluginFolder({ fs, folderPath }) {
     };
   }
 
+  let settings;
+  try {
+    settings = normalizePluginSettingsSchema(manifest.settings);
+    if (settings.length && (embedUrl || !permissions.includes('settings'))) {
+      throw new Error('Plugin settings require the "settings" permission and local plugin code.');
+    }
+  } catch (error) {
+    return { ok: false, error: `${PLUGIN_MANIFEST_FILE} ${error.message}` };
+  }
+
   let iconDataUrl = '';
   try {
     iconDataUrl = await readPluginIcon({ fs, folderPath: cleanPath, icon: manifest.icon });
@@ -249,6 +261,7 @@ async function inspectPluginFolder({ fs, folderPath }) {
     description: cleanText(manifest.description),
     iconDataUrl,
     permissions,
+    settings,
     path: cleanPath,
     entryUrl,
     embedUrl,

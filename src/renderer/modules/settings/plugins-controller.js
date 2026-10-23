@@ -1,7 +1,8 @@
-// Settings > Plugins panel: add, enable/disable, and remove plugin folders.
+// Settings > Plugins panel: install from folders/GitHub, enable, and remove.
 // Entries live in state.settings.plugins and are booted by
 // src/renderer/app/plugin-loader.js on the next app reload.
 import { showTransientNotice } from '../../lib/notify.js';
+import { createPluginPreferencesController } from './plugin-preferences-controller.js';
 
 export function createPluginsController({
   state,
@@ -9,9 +10,16 @@ export function createPluginsController({
   api,
   statusElement,
   listElement,
-  escapeHtml
+  githubUrlInput,
+  githubInstallButton,
+  addButton,
+  reloadButton,
+  escapeHtml,
+  windowObject = globalThis.window
 }) {
   let statusMessage = '';
+  let installing = false;
+  const preferences = createPluginPreferencesController({ state, persist, windowObject, escapeHtml });
 
   function getPlugins() {
     if (!Array.isArray(state.settings.plugins)) {
@@ -33,6 +41,7 @@ export function createPluginsController({
   }
 
   async function onAddPlugin() {
+    if (installing) return;
     if (!api?.pickStorageDirectory || !api?.inspectPluginFolder) {
       setErrorStatus('Plugin management is unavailable in this environment.');
       return;
@@ -46,10 +55,14 @@ export function createPluginsController({
       setErrorStatus(inspected?.error || 'Selected folder is not a valid plugin.');
       return;
     }
+    registerPlugin(inspected);
+  }
+
+  function registerPlugin(inspected) {
     const plugins = getPlugins();
     if (plugins.some((plugin) => plugin.id === inspected.id)) {
       setErrorStatus(`A plugin named "${inspected.name}" is already installed.`);
-      return;
+      return false;
     }
     plugins.push({
       id: inspected.id,
@@ -57,16 +70,54 @@ export function createPluginsController({
       version: inspected.version,
       description: inspected.description,
       permissions: Array.isArray(inspected.permissions) ? inspected.permissions : [],
+      settings: inspected.settings || [],
       path: inspected.path,
       entryUrl: inspected.entryUrl,
       embedUrl: inspected.embedUrl || '',
       serve: inspected.serve === true,
       service: inspected.service || null,
       tool: inspected.tool === true,
-      enabled: true
+      // A pasted URL is code the user has not read: its host access starts
+      // off until they review the row and turn it on.
+      enabled: !inspected.repositoryUrl || !inspected.permissions?.length
     });
     persist();
     setStatus('');
+    return true;
+  }
+
+  async function onInstallFromGitHub() {
+    if (installing) return;
+    const url = githubUrlInput?.value.trim() || '';
+    if (!url) {
+      setErrorStatus('Paste a GitHub repository URL to install a plugin.');
+      githubUrlInput?.focus();
+      return;
+    }
+    if (!api?.installPluginFromGitHub) {
+      setErrorStatus('GitHub plugin installation is unavailable in this environment.');
+      return;
+    }
+    installing = true;
+    setStatus('Cloning and validating the plugin…');
+    try {
+      const inspected = await api.installPluginFromGitHub(url, getPlugins().map((plugin) => plugin.id));
+      if (!inspected?.ok) {
+        setErrorStatus(inspected?.error || 'Could not install the plugin from GitHub.');
+        return;
+      }
+      if (registerPlugin(inspected)) {
+        githubUrlInput.value = '';
+        setStatus(inspected.permissions?.length
+          ? `Installed "${inspected.name}" turned off. Review its host access, turn it on, then Reload App.`
+          : `Installed "${inspected.name}". Reload App to activate it.`);
+      }
+    } catch (error) {
+      setErrorStatus(error?.message || 'Could not install the plugin from GitHub.');
+    } finally {
+      installing = false;
+      render();
+    }
   }
 
   function setPluginEnabled(pluginId, enabled) {
@@ -95,6 +146,13 @@ export function createPluginsController({
   }
 
   function render() {
+    if (githubUrlInput) githubUrlInput.disabled = installing;
+    if (githubInstallButton) {
+      githubInstallButton.disabled = installing;
+      githubInstallButton.textContent = installing ? 'Installing…' : 'Install from GitHub';
+    }
+    if (addButton) addButton.disabled = installing;
+    if (reloadButton) reloadButton.disabled = installing;
     if (!statusElement || !listElement) {
       return;
     }
@@ -103,7 +161,7 @@ export function createPluginsController({
       || `${plugins.length} plugin${plugins.length === 1 ? '' : 's'} installed.`;
 
     if (!plugins.length) {
-      listElement.innerHTML = '<p class="small-note">No plugins installed. Click "Add Plugin Folder" to install one.</p>';
+      listElement.innerHTML = '<p class="small-note">No plugins installed. Install from GitHub or add a plugin folder.</p>';
       return;
     }
 
@@ -130,8 +188,10 @@ export function createPluginsController({
         ${plugin.bundled
           ? ''
           : `<button type="button" class="danger-btn" data-plugin-remove data-plugin-id="${escapeHtml(plugin.id)}">Remove</button>`}
+        ${preferences.markup(plugin)}
       </div>
     `).join('');
+    preferences.bind(listElement);
 
     listElement.querySelectorAll('[data-plugin-toggle]').forEach((input) => {
       input.addEventListener('change', () => {
@@ -145,5 +205,5 @@ export function createPluginsController({
     });
   }
 
-  return { onAddPlugin, render };
+  return { onAddPlugin, onInstallFromGitHub, render };
 }

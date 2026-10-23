@@ -24,6 +24,7 @@ export function getGelElements(root = document) {
     gelCropAngleInput: root.getElementById('gel-crop-angle'),
     gelCropAngleValue: root.getElementById('gel-crop-angle-value'),
     gelProcessImageBtn: root.getElementById('gel-process-image-btn'),
+    gelProcessedPreviewInput: root.getElementById('gel-processed-preview'),
     gelOverrideStatus: root.getElementById('gel-override-status'),
     gelStatus: root.getElementById('gel-status'),
     gelSaveBtn: root.getElementById('gel-save-btn'),
@@ -69,7 +70,6 @@ export function getGelElements(root = document) {
     gelCellTableCopyBtn: root.getElementById('gel-cell-table-copy-btn'),
     gelCellTableCopyStatus: root.getElementById('gel-cell-table-copy-status'),
     gelCellTableHost: root.getElementById('gel-cell-table-host'),
-    gelManualNextBtn: root.getElementById('gel-manual-next-btn'),
     gelAutoDetectLanesBtn: root.getElementById('gel-auto-detect-lanes-btn'),
     gelExpectedLaneCountInput: root.getElementById('gel-expected-lane-count')
   };

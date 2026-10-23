@@ -174,7 +174,7 @@
 }
 
 .protocol-list-row:hover {
-  background: var(--theme-surface-muted);
+  background: var(--theme-highlight);
 }
 
 .protocol-name-text {
@@ -223,7 +223,7 @@
 }
 
 .protocol-menu-btn.is-open {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
   color: var(--theme-text-strong);
 }
 
@@ -254,7 +254,7 @@
 
 .protocol-action-item:hover,
 .protocol-action-item:focus-visible {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
   color: var(--theme-text-strong);
 }
 
@@ -317,7 +317,7 @@
 
 .protocol-viewer-icon-btn.ghost-btn:hover,
 .protocol-viewer-icon-btn.ghost-btn:focus-visible {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
   color: var(--theme-text-strong);
 }
 

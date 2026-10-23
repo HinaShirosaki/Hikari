@@ -10,6 +10,7 @@ import {
 import { defaultState, STARTUP_DEFAULT_VIEW_IDS } from './defaults.js';
 import { normalizeAppearanceMode } from './appearance.js';
 import { normalizePluginStorage } from '../../lib/plugin-storage.js';
+import { getPluginSettingsSchema, normalizePluginSettingsStore } from '../../../shared/plugin-settings.mjs';
 import { mergeBundledPluginEntries } from '../../lib/bundled-plugins.js';
 import { normalizePreferredJournalList } from '../../lib/preferred-journals.js';
 import { normalizeNotebookPdfSettings } from '../../lib/notebook-pdf-settings.js';
@@ -95,6 +96,7 @@ function normalizePluginEntries(rawPlugins) {
         id: String(raw.id || '').trim(),
         name: String(raw.name || '').trim(),
         version: String(raw.version || '').trim(),
+        settings: getPluginSettingsSchema({ ...raw, embedUrl }),
         description: String(raw.description || '').trim(),
         // A remote embed never holds host permissions, whatever the record says.
         permissions: (!embedUrl && Array.isArray(raw.permissions))
@@ -209,7 +211,8 @@ function normalizeSettings(source) {
     preferredJournals,
     preferredJournal: preferredJournals.join('; '),
     plugins: mergeBundledPluginEntries(normalizePluginEntries(rawSettings.plugins)),
-    pluginStorage: normalizePluginStorage(rawSettings.pluginStorage)
+    pluginStorage: normalizePluginStorage(rawSettings.pluginStorage),
+    pluginSettings: normalizePluginSettingsStore(rawSettings.pluginSettings)
   };
 }
 

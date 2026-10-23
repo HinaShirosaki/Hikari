@@ -12,12 +12,12 @@
 
 #papers-view .papers-folder-item:hover,
 #papers-view .papers-folder-item:focus-visible {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 #papers-view .papers-folder-item.is-active {
   border-color: var(--theme-border);
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 #papers-view .papers-paper-row {
@@ -28,7 +28,7 @@
 
 #papers-view .papers-paper-row.is-active {
   border-color: transparent;
-  background: var(--theme-surface-muted);
+  background: var(--theme-highlight);
   padding: 7px var(--space-8);
 }
 

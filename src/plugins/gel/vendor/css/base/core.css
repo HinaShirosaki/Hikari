@@ -279,7 +279,7 @@ div {
 
 .topbar-history-btn:hover:not(:disabled),
 .topbar-history-btn:focus-visible:not(:disabled) {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
   border-color: var(--theme-border);
   color: var(--theme-text-strong);
 }
@@ -775,7 +775,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
 .app-dock-btn.is-active {
   z-index: 2;
   color: var(--theme-text-strong);
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
   border-color: var(--theme-border);
 }
 
@@ -826,7 +826,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
 }
 
 .app-dock-btn-more.is-open {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
   border-color: var(--theme-border);
   color: var(--theme-text-strong);
 }
@@ -862,7 +862,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
 .app-more-item:hover,
 .app-more-item:focus-visible,
 .app-more-item.is-active {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
   color: var(--theme-text-strong);
 }
 
@@ -1082,7 +1082,7 @@ button {
 }
 
 button:hover {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']):not([type='button']):not([type='submit']):not([type='reset']):focus-visible,
@@ -1260,7 +1260,7 @@ button:disabled {
 }
 
 .list-row-selected {
-  background: color-mix(in srgb, var(--theme-surface) 70%, var(--theme-surface-subtle));
+  background: color-mix(in srgb, var(--theme-surface) 70%, var(--theme-highlight));
 }
 
 .list-row-header {
@@ -1332,7 +1332,7 @@ button:disabled {
 }
 
 .well:hover {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 .notebook-steps {
@@ -1396,7 +1396,7 @@ button:disabled {
 
 .selection-insight-menu-item:hover,
 .selection-insight-menu-item:focus-visible {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
   color: var(--theme-text-strong);
 }
 

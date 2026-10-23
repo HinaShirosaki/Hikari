@@ -3,6 +3,7 @@ import { MAX_PLUGIN_STORAGE_CHARS, measurePluginStorageValue } from '../../lib/p
 import { LAYOUT_VERBS } from './layout-verbs.js';
 import { renderPluginPlot } from './plotly-render.js';
 import { asArray } from '../../lib/normalize.js';
+import { readPluginSettings, writePluginSettings } from '../../lib/plugin-settings.js';
 import { buildBufferCandidates } from '../../lib/bench-calculations/buffer-candidates.js';
 import { MAX_FILE_BASE64_CHARS, MAX_LIST_SIZE, MAX_PYTHON_CODE_CHARS, MAX_PYTHON_INPUT_CHARS, MAX_PYTHON_INPUT_FILES, MAX_PYTHON_OUTPUT_CHARS, asObject, buildPluginAppContext, isCanonicalBase64, migrateLegacyGelRecords, readPluginStorage, resolvePluginFilePath, text } from './helpers.js';
 
@@ -256,10 +257,20 @@ const VERBS = {
     }
   },
 
+  // Schema-defined preferences live separately from the plugin's data blob.
+  'settings.get': {
+    permission: 'settings',
+    handler: (_params, { state, plugin }) => ({ values: readPluginSettings(state, plugin) })
+  },
+  'settings.set': {
+    permission: 'settings',
+    handler: (params, { state, plugin, persist, windowObject }) => writePluginSettings({
+      state, plugin, persist, windowObject, values: params.values
+    })
+  },
+
   // A plugin's own persisted blob. This is what lets a plugin keep records of
-  // its own instead of pushing everything it produces into the notebook, and
-  // it stays inside the "no create verbs" rule — the data belongs to the
-  // plugin, not to the user's protocols, samples, or entries.
+  // its own instead of pushing everything it produces into the notebook.
   'storage.get': {
     permission: 'storage',
     handler: (_params, { state, plugin }) => ({
@@ -503,6 +514,18 @@ const VERBS = {
     internal: true,
     bundledPluginId: 'gel',
     handler: (params, context) => migrateLegacyGelRecords({ ...context, skipIds: params?.skipIds })
+  },
+  'migration.recoverStoredGel': {
+    permission: '',
+    internal: true,
+    bundledPluginId: 'gel',
+    handler: async (_params, { state, plugin, api }) => {
+      if (plugin.id !== 'gel' || !plugin.bundled || plugin.path !== '@bundled/gel') throw new Error('Saved Gel recovery is available only to the bundled Gel plugin.');
+      if (typeof api?.discoverGelRecords !== 'function') throw new Error('Saved Gel recovery is unavailable.');
+      const result = await api.discoverGelRecords({ storagePath: state.settings?.storagePath });
+      if (!result?.ok) throw new Error(result?.error || 'Could not read saved gel folders.');
+      return { records: result.records, warnings: result.warnings };
+    }
   }
 };
 

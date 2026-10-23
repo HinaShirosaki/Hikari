@@ -73,7 +73,7 @@
 
 .universal-agent-chat-rail .agent-rail-quick-prompt:hover {
   border-color: var(--theme-border);
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
   color: var(--theme-text-strong);
 }
 
@@ -113,7 +113,7 @@
 }
 
 .universal-agent-chat-rail :is(.agent-attach-btn, .agent-paper-screenshot-btn):hover {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
   color: var(--theme-text-strong);
 }
 

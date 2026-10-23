@@ -69,7 +69,9 @@ function summarizeCodexCommandFailure({ stdout = '', stderr = '' } = {}) {
           || source.data,
         2000
       );
-      if (eventText && !jsonErrorText) {
+      // Last wins: retry notices ("Reconnecting... 1/5") are also error events,
+      // and the fatal reason arrives last in turn.failed.
+      if (eventText) {
         jsonErrorText = eventText;
       }
     }
@@ -90,6 +92,22 @@ function summarizeCodexCommandFailure({ stdout = '', stderr = '' } = {}) {
     || 'Unknown error';
 }
 
+// OpenAI's safety blocks reach Hikari as these Codex error texts. Name the
+// cause in plain words so a refusal does not read as a Hikari bug.
+const CODEX_POLICY_BLOCKS = [
+  [/possible biological risk|\bbio policy:/iu, 'it was flagged for possible biological risk'],
+  [/possible cybersecurity risk|\bcyber policy:/iu, 'it was flagged for possible cybersecurity risk'],
+  [/reason: content_filter/iu, 'the response was stopped by the content filter']
+];
+
+function describeCodexPolicyBlock(text = '') {
+  const block = CODEX_POLICY_BLOCKS.find(([pattern]) => pattern.test(String(text || '')));
+  return block
+    ? `OpenAI's safety system blocked this request: ${block[1]}. Hikari cannot override this. Try rephrasing the request, or do this step without the assistant.`
+    : '';
+}
+
 module.exports = {
+  describeCodexPolicyBlock,
   summarizeCodexCommandFailure
 };

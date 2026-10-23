@@ -33,6 +33,7 @@ app, and use this same API; [§1.2](#12-tool-plugins) lists what differs.
 | `chemicals.list` | `chemicals:read` | Compound names, molecular weights, pKa values, and forms: inventory plus reference | [§2](#2-read-verbs) |
 | `notebook.list`, `notebook.get` | `notebook:read` | Notebook summaries; one entry in full | [§2](#2-read-verbs) |
 | `storage.get`, `storage.set` | `storage` | The plugin's own JSON blob | [§2](#2-read-verbs), [§3](#3-write-verbs) |
+| `settings.get`, `settings.set`, `settings.changed` event | `settings` | Schema-validated preferences shown in Settings → Plugins | [Plugin settings](plugin-settings.md) |
 | `notifications.show` | `notifications` | An attributed, transient toast | [§3](#3-write-verbs) |
 | `app.setUnsaved`, `app.save` event | — | Join the quit guard for unsaved work | [§3](#3-write-verbs) |
 | `app.setHistory`, `app.undo` / `app.redo` events | — | Drive Hikari's undo and redo buttons | [§3](#3-write-verbs) |
@@ -89,9 +90,10 @@ gave up early would report failure for work the host goes on to finish.
 `hikari.on(event, listener)` subscribes to host events and returns an
 unsubscribe function. The events are `app.context` (§2.1), `app.save` (§3.1),
 `app.undo` / `app.redo` (§3.2), `app.workspaceTool` (§4.1),
-`app.contextAction` (§4.2), and `agent.canvas` (§5.1). `app.context` and
+`app.contextAction` (§4.2), `settings.changed` ([plugin settings](plugin-settings.md)), and `agent.canvas` (§5.1). `app.context` and
 `app.save` go to every registered frame, undo and redo to the focused frame,
-and the rest only to the frame that registered the tool or action, or that
+and `settings.changed` only to frames belonging to the plugin whose preferences
+changed. The rest go to the frame that registered the tool or action, or that
 holds `agent:canvas`.
 
 ### 1.1 The raw protocol
@@ -312,6 +314,21 @@ await hikari.call('storage.get');
 hard-coding the number — showing the user how full they are is the difference
 between a save that fails and a save they saw coming.
 
+### `settings.get` — `settings`
+
+Returns `{ values }`: this plugin's declared preferences with defaults applied.
+Declare a `settings` schema in `plugin.json` to show host-rendered controls in
+**Settings → Plugins → Preferences**. See [plugin-settings.md](plugin-settings.md).
+
+```js
+const { values } = await hikari.call('settings.get');
+const unsubscribe = hikari.on('settings.changed', ({ values }) => applyPreferences(values));
+```
+
+`settings.changed` carries `{ values }` after a successful change from the host
+UI or `settings.set`. Only this plugin's registered frames with the `settings`
+permission receive it. Call `settings.get` for the initial snapshot.
+
 ---
 
 ## 3. Write verbs
@@ -461,8 +478,10 @@ Rules that matter:
 - **Removing the plugin in Settings does not erase the blob**, so re-adding a
   plugin finds its records where they were.
 
-The blob is the right place for what the plugin owns — its records, its
-settings, its cache. It is the wrong place for what the *user* owns: results
+The blob is the right place for what the plugin owns — its records and cache.
+Preferences displayed in Hikari Settings use `settings.get` / `settings.set`
+instead; their separate store cannot be overwritten by a blob save. The blob
+is the wrong place for what the *user* owns: results
 they will look for later belong in the notebook, where the rest of the app can
 see them. It is also the wrong place for anything measured in megabytes; that
 is what `files.write` is for.
@@ -470,6 +489,19 @@ is what `files.write` is for.
 If persisting `storage.set` fails (for example, the app-wide browser storage
 quota is exceeded), the previous plugin value is restored before the call
 rejects. A rejected deletion also retains the previous value.
+
+### `settings.set` — `settings`
+
+```js
+await hikari.call('settings.set', { values: { defaultFormat: 'svg' } });
+// { values: { defaultFormat: 'svg', /* other declared preferences */ } }
+```
+
+Patches only the supplied keys in this plugin's preferences. Unknown keys,
+wrong types, and values outside the schema's constraints reject the entire
+patch. A failed persistence restores the previous state and sends no event.
+Unchanged values cause no save or event. This API grants no access to global
+Hikari settings or other plugins. See [plugin-settings.md](plugin-settings.md).
 
 ### `files.write` / `files.read` — `files`
 
@@ -1010,15 +1042,17 @@ rather than a plugin.
   protocol, project, sample, or notebook entry, and cannot delete one. Writes
   only append to a record the user already created. (Its own blob is a
   different matter — see `storage.set`.)
-- **No settings, and no direct filesystem access.** A plugin cannot read or
-  write the app's settings, cannot learn the storage root, and cannot reach a
+- **No general app settings, and no direct filesystem access.** A plugin's
+  `settings` permission exposes only its own declared preferences. It cannot
+  read or write general app settings, cannot learn the storage root, and cannot reach a
   file outside `<storage root>/Plugins/<its id>/`. `downloads.save` can write
   elsewhere only after the user chooses the exact destination in a save dialog,
   and a context action hands over only the protocol or paper passage the user
   clicked.
 - **No plugin markup in host UI.** Workspace tools and context actions are
-  declarative: Hikari draws text labels and its own icons, in the two places
-  §4 describes and nowhere else.
+  declarative: Hikari draws text labels and its own icons in the places §4
+  describes. Plugin preferences are also declarative: Hikari draws the controls
+  from the validated manifest schema; plugin HTML and scripts stay in the frame.
 - **No raw model or network proxy.** `agent.chat` uses the normal chat workflow;
   `agent.canvas` exposes the plugin's own scene. Provider credentials stay in
   Hikari. The host provides no arbitrary network proxy. `python.run` is compute, not a

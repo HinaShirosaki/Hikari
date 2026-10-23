@@ -130,7 +130,8 @@ export const defaultState = {
       rememberLastView: false
     },
     plugins: mergeBundledPluginEntries(),
-    pluginStorage: {}
+    pluginStorage: {},
+    pluginSettings: {}
   },
   inventory: {
     'Room Temp': [],

@@ -16,8 +16,11 @@
   --theme-surface-subtle: #f1e9de;
   --theme-surface-elevated: #ffffff;
   --theme-surface-muted: color-mix(in srgb, var(--theme-surface-subtle) 78%, var(--theme-surface-elevated) 22%);
-  --theme-surface-hover: color-mix(in srgb, var(--theme-accent) 8%, var(--theme-surface));
-  --theme-surface-active: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface));
+  --theme-surface-hover: color-mix(in srgb, var(--theme-accent) 5%, var(--theme-surface));
+  --theme-surface-active: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-surface));
+  /* Hover/selected fill for rows, menu items and icon buttons: half a step of
+     surface-subtle, so a highlight reads lighter than a resting card. */
+  --theme-highlight: color-mix(in srgb, var(--theme-surface-subtle) 55%, var(--theme-surface-elevated));
 
   /* Borders */
   --theme-border: #d8cec1;
@@ -87,6 +90,7 @@ body.theme-night,
   --theme-surface-muted: color-mix(in srgb, var(--theme-surface-subtle) 78%, var(--theme-surface));
   --theme-surface-hover: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-surface));
   --theme-surface-active: color-mix(in srgb, var(--theme-accent) 18%, var(--theme-surface));
+  --theme-highlight: var(--theme-surface-subtle);
 
   --theme-border: #767a86;
   --theme-border-soft: #383a42;

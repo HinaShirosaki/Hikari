@@ -5,10 +5,15 @@ import { MAX_BLOTS, buildBlotFigurePlan, dragPlacement, inferBlotPlacement, vali
 import { createBlotFigureCanvas } from './render.js';
 import { createBlotFigurePowerPoint } from './powerpoint.js';
 import { DRAFT_CONTROL_IDS, parseBlotProject, serializeBlotProject } from './project.js';
-import { blotFigureMarkup } from './markup.js';
-import { renderGelLayers, rowsInStack, STACK_VIEW } from './layers.js';
-import { DEFAULT_STACK_TRIM, normalizeStackTrim } from './trim.js';
+import { blotFigureMarkup, blotNavigationMarkup, blotToolsMarkup } from './markup.js';
+import { bindFileDropTarget } from '../../lib/file-drop.js';
+import { bindGelLayerDrag, renderGelLayers, rowsInStack, STACK_VIEW, startGelNavigationRename } from './layers.js';
+import { DEFAULT_STACK_TRIM } from './trim.js';
+import { createCanvasTrimEditor } from './trim-editor.js';
 import { bindFigureWorkspaceActions } from './workspace-actions.js';
+import { createSavedGelNavigation } from './saved-gels.js';
+import { createWorkspaceAutosave } from './autosave.js';
+import { mergeBlotProject, reconnectProjectRecords } from './project-merge.js';
 
 const clone = value => JSON.parse(JSON.stringify(value));
 
@@ -16,25 +21,40 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
   const main = documentObject.querySelector('.gel-main');
   if (!main) return null;
   const stage = elements.gelViewerStage;
+  const workspace = documentObject.querySelector('.gel-workspace');
+  const navigation = documentObject.getElementById('gel-navigation');
+  const inspector = documentObject.getElementById('gel-figure-inspector');
   stage.insertAdjacentHTML('beforeend', blotFigureMarkup);
+  navigation.insertAdjacentHTML('beforeend', blotNavigationMarkup);
+  inspector.insertAdjacentHTML('beforeend', blotToolsMarkup);
   const panel = documentObject.getElementById('gel-blot-figure');
   const get = id => documentObject.getElementById(`gel-figure-${id}`);
   const launcher = documentObject.getElementById('gel-open-figure-btn');
   const hoverBox = documentObject.createElement('div');
   hoverBox.className = 'gel-figure-hover-box'; hoverBox.hidden = true;
   let rows = [];
+  let navigationOrder = [];
+  const savedLayerCache = new Map();
   let selectedId = '';
-  let checkedIds = new Set();
-  let stackIds = [];
+  // The blot last clicked in the Stack preview; its placement fields show in Layout.
+  let focusedId = '';
+  let stacks = [];
+  let activeStackId = '';
+  const emptyStack = { layerIds: [], name: 'Stack', layoutName: 'Layout', trim: { ...DEFAULT_STACK_TRIM } };
+  const currentStack = () => stacks.find(stack => stack.id === activeStackId) || stacks[0] || emptyStack;
+  const stackForLayer = id => stacks.find(stack => stack.layerIds.includes(id));
+  let renderedListKey = '';
+  let finishRename = null;
   let nextLayerNumber = 1;
-  let tableSource = 'auto';
-  let stackTrim = { ...DEFAULT_STACK_TRIM };
   let previewPlan = null;
   let activeId = '';
   let activeSignature = '';
   let busy = false;
   let disposed = false;
   let savedFingerprint = '';
+  let autosave = null;
+  let restoring = Boolean(deps.workspacePersistence);
+  let restoreFailed = false;
   let history = [];
   let historyIndex = -1;
   const disposers = [];
@@ -43,13 +63,39 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
     disposers.push(() => node?.removeEventListener(event, handler, options));
   }
   const selected = () => rows.find(row => row.id === selectedId);
-  const previewRows = () => selectedId === STACK_VIEW ? rowsInStack(rows, stackIds) : rows.filter(row => row.id === selectedId);
+  // Layout composes the Stack; a single gel has no layout of its own.
+  const previewRows = () => rowsInStack(rows, currentStack().layerIds);
+  const previewOptions = () => ({ trim: currentStack().trim });
+  const focused = () => previewRows().find(row => row.id === focusedId);
   const isOpen = () => !panel.hidden;
-  const status = message => { get('status').textContent = message; };
+  const ownsHistory = () => isOpen() || navigation.contains(documentObject.activeElement);
+  const status = (message, options) => { get('status').textContent = message; get('status').hidden = true; deps.notify?.(message, options); };
+  const savedGels = createSavedGelNavigation({
+    getRecords: () => runtime.state.gelAnalyses || [], getRows: () => rows,
+    restoreImage: deps.restoreRecordImage, createId: runtime.createId
+  });
+  function navigationRows() {
+    const available = new Map([...rows, ...savedGels.entries()].map(row => [row.id, row]));
+    // Image loading is lazy. Keep its existing slot when a library entry
+    // becomes an editor row, instead of moving opened gels ahead of the rest.
+    for (const id of available.keys()) {
+      if (navigationOrder.includes(id)) continue;
+      navigationOrder.push(id);
+      for (const entry of history) if (!entry.navigationOrder.includes(id)) entry.navigationOrder.push(id);
+    }
+    return navigationOrder.map(id => available.get(id)).filter(Boolean);
+  }
   const controls = () => Object.fromEntries(DRAFT_CONTROL_IDS.map(id => [id, documentObject.getElementById(id)?.value || '']));
+  const trimEditor = createCanvasTrimEditor({
+    container: get('preview'), getPlan: () => previewPlan, onRender: renderFocusedView,
+    onApply(trim) {
+      buildBlotFigurePlan(previewRows(), { trim });
+      currentStack().trim = trim; commit(); status('Stack trimmed to the two canvas edges.');
+    }
+  });
   function editorSignature() {
     return JSON.stringify({ controls: controls(), revision: runtime.imageRevision,
-      overrides: runtime.manualOverrides, crop: runtime.cropApplied, mode: runtime.viewerMode, report: runtime.currentReport });
+      overrides: runtime.manualOverrides, crop: runtime.cropApplied, report: runtime.currentReport });
   }
   function captureDraft() {
     return {
@@ -61,25 +107,33 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
       pendingNotebookLink: runtime.pendingNotebookLink ? clone(runtime.pendingNotebookLink) : null
     };
   }
+  const rowState = row => ({ id: row.id, label: row.label, placement: row.placement, token: row.draft.token });
   function fingerprint() {
-    return JSON.stringify({ title: get('name').value, tableSource, stackTrim, checkedIds: [...checkedIds].sort(), stackIds, rows: rows.map(row => ({
-      id: row.id, label: row.label, placement: row.placement, token: row.draft.token
-    })) });
+    navigationRows();
+    // Restoring an already saved image is browsing, not a project edit. Once
+    // edited, stacked, or deliberately moved, it belongs to the
+    // project's change tracking just like an imported layer.
+    const changedRows = rows.filter(row => !row.libraryBaseline || row.navigationMoved || stackForLayer(row.id)
+      || JSON.stringify(rowState(row)) !== row.libraryBaseline);
+    return JSON.stringify({ title: get('name').value, stacks,
+      rows: changedRows.map(row => ({ ...rowState(row), order: navigationOrder.indexOf(row.id) })) });
   }
   function getHistoryState() {
     return { canUndo: historyIndex > 0, canRedo: historyIndex < history.length - 1,
       undoCount: Math.max(0, historyIndex), redoCount: Math.max(0, history.length - historyIndex - 1) };
   }
-  function announceHistory() { if (isOpen()) deps.onHistoryChanged?.(getHistoryState()); }
+  function announceHistory() { if (ownsHistory()) deps.onHistoryChanged?.(getHistoryState()); }
   function commit() {
     const key = fingerprint();
     if (history[historyIndex]?.key === key) return;
     history = history.slice(0, historyIndex + 1);
-    history.push({ key, title: get('name').value, tableSource, stackTrim: { ...stackTrim }, checkedIds: [...checkedIds], stackIds: [...stackIds], selectedId,
+    history.push({ key, title: get('name').value, stacks: clone(stacks), activeStackId, selectedId,
+      navigationOrder: [...navigationOrder],
       rows: rows.map(row => ({ ...row, placement: { ...row.placement } })) });
     if (history.length > 60) history.shift();
     historyIndex = history.length - 1;
     announceHistory();
+    if (!restoring) autosave?.schedule();
   }
   function syncActive() {
     const row = rows.find(row => row.id === activeId);
@@ -91,7 +145,7 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
     const nextSegmentation = runtime.manualOverrides?.laneSegmentation || {};
     const editorName = elements.gelNameInput?.value.trim();
     if (editorName && editorName !== row.draft.controls['gel-name']) row.label = editorName;
-    row.draft = captureDraft(); row.displayData = null; row.thumbnailDataUrl = null;
+    row.draft = captureDraft(); row.displayData = null;
     // A new crop changes coordinates. Updated lane dividers and band windows
     // should also be reflected when returning from the individual editor.
     const horizontal = segmentation => [segmentation.gelLeft, segmentation.gelRight, segmentation.dividers, segmentation.laneVertices];
@@ -112,101 +166,113 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
     previewPlan = null;
     const preview = get('preview');
     const visibleRows = previewRows();
-    get('preview-title').textContent = selectedId === STACK_VIEW ? 'Stack' : selected()?.label || 'Gel layers';
-    get('preview-detail').textContent = selectedId === STACK_VIEW
-      ? `${visibleRows.length} gel${visibleRows.length === 1 ? '' : 's'}` : selected()?.draft.currentImage.name || '';
-    get('preview-options').hidden = !visibleRows.length;
+    get('preview-title').textContent = currentStack().name;
+    get('preview-detail').textContent = `${visibleRows.length} gel${visibleRows.length === 1 ? '' : 's'}`;
     preview.replaceChildren();
-    if (!visibleRows.length) return;
+    if (!visibleRows.length) {
+      if (!rows.length) preview.insertAdjacentHTML('beforeend', '<div class="gel-figure-empty"><button type="button" class="ghost-btn" data-figure-action="import">Choose images…</button></div>');
+      return;
+    }
     try {
       const { canvas, plan } = createBlotFigureCanvas(visibleRows, documentObject, {
-        tableSource,
-        trim: selectedId === STACK_VIEW ? stackTrim : undefined,
-        rasterScale: 1, guides: get('guides').checked ? Math.max(2, Math.min(40, Number(get('lane-count').value) || 6)) : 0
+        trim: trimEditor.isActive() ? undefined : currentStack().trim,
+        rasterScale: 1
       });
       previewPlan = plan;
-      canvas.setAttribute('role', 'img'); canvas.setAttribute('aria-label', selectedId === STACK_VIEW ? 'Stack of selected gel layers with antibody labels' : `${selected()?.label} layer`);
-      canvas.title = 'Drag a blot to move it, or up and down to reorder the Stack. Drag its top or bottom edge to crop, or a side to stretch it.';
+      canvas.setAttribute('role', 'img'); canvas.setAttribute('aria-label', 'Stack of selected gel layers with antibody labels');
+      canvas.title = 'Drag a blot to move it, or up and down to reorder the Stack. Drag its top or bottom edge to crop, or a side grip to resize with proportions locked.';
       preview.append(canvas, hoverBox);
-    } catch (error) { status(error.message); }
+      if (trimEditor.isActive()) {
+        hoverBox.hidden = true; canvas.title = 'Drag the left and right trim edges, or click near an edge to place it.';
+        trimEditor.render();
+      }
+    } catch (error) { status(error.message, { type: 'error' }); }
   }
   function renderStackTrim() {
-    const available = selectedId === STACK_VIEW && previewRows().length > 0;
+    const available = previewRows().length > 0;
     get('stack-trim').hidden = !available;
-    const effective = previewPlan?.crop || stackTrim;
-    get('trim-left').value = String(Number(effective.left.toFixed(2)));
-    get('trim-right').value = String(Number(effective.right.toFixed(2)));
-    panel.querySelector('[data-figure-action="trim"]').setAttribute('aria-pressed', String(stackTrim.mode === 'auto'));
-    panel.querySelector('[data-figure-action="trim"]').disabled = !available;
-    panel.querySelector('[data-figure-action="reset-trim"]').disabled = !available || stackTrim.mode === 'none';
+    const editing = trimEditor.isActive();
+    const button = workspace.querySelector('[data-figure-action="trim"]');
+    button.setAttribute('aria-pressed', String(editing));
+    button.textContent = editing ? 'Adjusting trim edges' : currentStack().trim.mode === 'none' ? 'Set trim edges' : 'Adjust trim edges';
+    button.disabled = !available || editing;
+    get('trim-actions').hidden = !editing;
+    workspace.querySelector('[data-figure-action="reset-trim"]').disabled = !available || editing || currentStack().trim.mode === 'none';
   }
   function renderList() {
-    renderGelLayers({ list: get('rows'), rows, checkedIds, focusedId: selectedId, stackIds, documentObject });
-    const count = rows.filter(row => checkedIds.has(row.id)).length;
-    get('select-all').checked = Boolean(rows.length && count === rows.length);
-    get('select-all').indeterminate = count > 0 && count < rows.length;
-    get('select-all').disabled = !rows.length;
-    panel.querySelector('[data-figure-action="stack"]').disabled = count < 2;
+    // Keep row nodes stable when a click only changes selection, so the browser
+    // can recognize the second click as a double-click on the same entry.
+    const available = navigationRows();
+    const key = JSON.stringify([available.map(row => [row.id, row.label]), stacks.map(stack => [stack.id, stack.name, stack.layoutName, stack.layerIds])]);
+    if (key === renderedListKey) { renderNavigationSelection(); return; }
+    renderedListKey = key;
+    renderGelLayers({ list: get('rows'), rows: available, focusedId: selectedId, stacks, activeStackId, documentObject });
   }
   function renderSelection() {
-    const row = selected();
+    const row = focused();
     get('placement').hidden = !row;
     if (!row) return;
-    get('antibody').value = row.label;
-    panel.querySelectorAll('[data-figure-field]').forEach(input => { input.value = String(Math.round(row.placement[input.dataset.figureField] * 10) / 10); });
-    panel.querySelector('[data-figure-action="up"]').disabled = rows.indexOf(row) === 0;
-    panel.querySelector('[data-figure-action="down"]').disabled = rows.indexOf(row) === rows.length - 1;
+    get('placement-title').textContent = row.label;
+    workspace.querySelectorAll('[data-figure-field]').forEach(input => { input.value = String(Math.round(row.placement[input.dataset.figureField] * 10) / 10); });
+  }
+  function renderNavigationSelection() {
+    get('rows').querySelectorAll('[data-figure-row],[data-figure-stack-view],[data-figure-layout-view]').forEach(button => {
+      if (rows.some(row => row.id === button.dataset.figureRow)) delete button.dataset.figureSavedRecord;
+      const active = button.hasAttribute('data-figure-row') ? button.dataset.figureRow === selectedId
+        : selectedId === STACK_VIEW && (button.dataset.figureStackView || button.dataset.figureLayoutView) === activeStackId;
+      button.setAttribute('aria-current', active ? 'page' : 'false'); button.classList.toggle('is-active', active);
+    });
   }
   function renderFocusedView() {
-    const sourceSelect = get('table-source');
-    sourceSelect.replaceChildren();
-    for (const [value, text] of [['auto', 'First available'], ['none', 'None'],
-      ...previewRows().filter(row => row.draft.manualOverrides?.laneTable?.rows?.length || row.id === tableSource).map(row => [row.id, row.label])]) {
-      const option = documentObject.createElement('option'); option.value = value; option.textContent = text;
-      sourceSelect.append(option);
-    }
-    sourceSelect.value = tableSource;
-    get('rows').querySelectorAll('[data-figure-row]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.figureRow === selectedId)));
-    get('rows').querySelector('[data-figure-stack-view]')?.setAttribute('aria-pressed', String(selectedId === STACK_VIEW));
+    renderNavigationSelection();
     renderSelection(); renderPreview(); renderStackTrim();
-    panel.querySelector('[data-figure-action="save"]').disabled = !rows.length;
     if (isOpen()) [elements.gelExportImageBtn, elements.gelExportPptxBtn].filter(Boolean).forEach(button => { button.disabled = !previewRows().length || busy; });
-    panel.querySelector('[data-figure-action="add"]').disabled = !runtime.currentImage || rows.length >= MAX_BLOTS;
-    panel.querySelector('[data-figure-action="import"]').disabled = rows.length >= MAX_BLOTS;
+    workspace.querySelector('[data-figure-action="add"]').disabled = !runtime.currentImage || rows.length >= MAX_BLOTS;
+    workspace.querySelector('[data-figure-action="import"]').disabled = rows.length >= MAX_BLOTS;
     launcher.querySelector('[data-layer-count]')?.replaceChildren(rows.length ? String(rows.length) : '');
   }
   function render() { renderList(); renderFocusedView(); }
-  function show() {
-    if (busy || elements.gelForm?.getAttribute('aria-busy') === 'true') return;
+  function show(stackId = activeStackId) {
+    if (!stacks.length || busy || elements.gelForm?.getAttribute('aria-busy') === 'true') return;
+    if (typeof stackId !== 'string' || !stacks.some(stack => stack.id === stackId)) stackId = currentStack().id;
+    trimEditor.cancel(false);
+    activeStackId = stackId;
+    selectedId = STACK_VIEW; focusedId = '';
     syncActive(); deps.leaveCropMode(); deps.hideWindows();
-    panel.hidden = false; stage.classList.add('is-showing-layers'); launcher.setAttribute('aria-expanded', 'true');
+    panel.hidden = false; inspector.hidden = false; workspace.classList.add('is-showing-layout'); stage.classList.add('is-showing-layers'); launcher.setAttribute('aria-expanded', 'true');
     [elements.gelImageRow, elements.gelLaneTablePanel].filter(Boolean).forEach(node => { node.inert = true; });
     render(); announceHistory();
-    panel.querySelector('[data-figure-action="back"]').focus();
+    workspace.querySelector('[data-figure-action="back"]').focus();
   }
   function close() {
-    panel.hidden = true; stage.classList.remove('is-showing-layers');
+    trimEditor.cancel(false);
+    panel.hidden = true; inspector.hidden = true; workspace.classList.remove('is-showing-layout'); stage.classList.remove('is-showing-layers');
     [elements.gelImageRow, elements.gelLaneTablePanel].filter(Boolean).forEach(node => { node.inert = false; });
     launcher.setAttribute('aria-expanded', 'false');
-    deps.renderEditor(); deps.onEditorHistory(); launcher.focus();
+    selectedId = activeId || '';
+    renderList();
+    deps.renderEditor(); deps.onEditorHistory();
+    // Focus stays in the rail, so Undo and Redo keep acting on the project.
+    (get('rows').querySelector(`[data-figure-row="${activeId}"]`) || get('stack-btn')).focus({ preventScroll: true });
   }
-  function addCurrent(open = true) {
+  function addCurrent() {
     if (busy || !runtime.currentImage || elements.gelForm?.getAttribute('aria-busy') === 'true') return;
     syncActive();
     const existing = rows.find(row => row.id === activeId);
-    if (existing) { selectedId = existing.id; checkedIds.add(existing.id); commit(); if (open) show(); return; }
+    if (existing) { render(); return; }
     if (rows.length >= MAX_BLOTS) throw new Error(`A project can contain up to ${MAX_BLOTS} gel layers.`);
     deps.leaveCropMode();
     const draft = captureDraft();
     const row = { id: runtime.createId(), label: `Gel ${nextLayerNumber++}`, draft, placement: inferBlotPlacement(draft) };
-    rows.push(row); checkedIds.add(row.id); selectedId = activeId = row.id; activeSignature = editorSignature();
-    commit(); if (open) show(); else render();
+    rows.push(row); activeId = row.id; activeSignature = editorSignature();
+    if (!isOpen()) selectedId = row.id;
+    commit(); render();
   }
   function editSelected() {
     const row = selected(); if (!row) return;
     syncActive();
     // Preserve an unrelated editor draft before switching to an imported blot.
-    if (runtime.currentImage && !rows.some(item => item.draft.originalImage === runtime.originalImage)) addCurrent(false);
+    if (runtime.currentImage && !rows.some(item => item.draft.originalImage === runtime.originalImage)) addCurrent();
     selectedId = row.id; activeId = row.id;
     restoreLayer(row);
     activeSignature = editorSignature();
@@ -215,20 +281,91 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
   function restoreLayer(row) {
     deps.restoreDraft({ ...row.draft, controls: { ...row.draft.controls, 'gel-name': row.label } });
   }
-  function stackSelected() {
-    const members = rows.filter(row => checkedIds.has(row.id));
-    if (members.length < 2) { status('Select at least two gel layers to Stack.'); return; }
-    stackIds = members.map(row => row.id); selectedId = STACK_VIEW;
-    commit(); render(); status(`Stacked ${members.map(row => row.label).join(', ')}.`);
+  async function loadSavedLayer(id) {
+    if (rows.some(row => row.id === id)) return id;
+    if (rows.length >= MAX_BLOTS) throw new Error(`A project can contain up to ${MAX_BLOTS} gel layers.`);
+    const row = await savedGels.load(id);
+    if (!row || disposed) return false;
+    row.libraryBaseline = JSON.stringify(rowState(row));
+    savedLayerCache.set(row.id, { ...row, placement: { ...row.placement } });
+    rows.push(row); rows.sort((a, b) => navigationOrder.indexOf(a.id) - navigationOrder.indexOf(b.id));
+    commit(); return row.id;
+  }
+  function openSavedLayer(id, rename = false) {
+    void runBusy(async () => {
+      try { return await loadSavedLayer(id); }
+      catch (error) {
+        const entry = savedGels.entries().find(row => row.id === id);
+        if (!entry || error.code !== 'GEL_IMAGE_UNAVAILABLE' || !deps.openSavedAnalysis) {
+          throw error;
+        }
+        // Older records can contain analysis without an archived image. Keep
+        // that analysis accessible even though it cannot become a Stack layer.
+        detachEditor();
+        await deps.openSavedAnalysis(entry.record);
+        selectedId = id;
+        return false;
+      }
+    }).then(loaded => {
+      if (!loaded || disposed) return;
+      selectedId = loaded; editSelected(); renderList();
+      if (rename) renameNavigationEntry([...get('rows').querySelectorAll('[data-figure-row]')].find(button => button.dataset.figureRow === loaded));
+    });
+  }
+  function createStack() {
+    if (busy || elements.gelForm?.getAttribute('aria-busy') === 'true') return;
+    syncActive();
+    let number = stacks.length + 1;
+    let name = stacks.length ? `Stack ${number}` : 'Stack';
+    while (stacks.some(stack => stack.name === name)) name = `Stack ${++number}`;
+    const stack = { id: `stack-${runtime.createId()}`, name, layoutName: 'Layout', layerIds: [],
+      trim: { ...DEFAULT_STACK_TRIM } };
+    stacks.push(stack); activeStackId = stack.id; selectedId = STACK_VIEW;
+    commit(); show(); status('Created an empty Stack.');
+  }
+  function moveLayer(id, destination, beforeId = null) {
+    if (busy || elements.gelForm?.getAttribute('aria-busy') === 'true' || beforeId === id) return;
+    if (!rows.some(row => row.id === id) && savedGels.entries().some(row => row.id === id)) {
+      void runBusy(() => loadSavedLayer(id)).then(loaded => { if (loaded && !disposed) moveLayer(loaded, destination, beforeId); });
+      return;
+    }
+    const row = rows.find(item => item.id === id);
+    const targetStack = stacks.find(stack => stack.id === (destination === 'stack' ? activeStackId : destination));
+    if (!row || (destination !== 'root' && !targetStack)) return;
+    const previousStack = stackForLayer(id);
+    const intoStack = Boolean(targetStack);
+    const available = navigationRows();
+    const nextRows = available.filter(item => item.id !== id);
+    const sameGroup = item => stackForLayer(item.id) === targetStack;
+    if (beforeId && !nextRows.some(item => item.id === beforeId && sameGroup(item))) return;
+    const peers = nextRows.filter(sameGroup);
+    const index = beforeId ? nextRows.findIndex(item => item.id === beforeId)
+      : peers.length ? nextRows.indexOf(peers[peers.length - 1]) + 1 : nextRows.length;
+    nextRows.splice(index, 0, row);
+    if (previousStack === targetStack && nextRows.every((item, offset) => item.id === available[offset].id)) return;
+    trimEditor.cancel(false); syncActive();
+    navigationOrder = nextRows.map(item => item.id);
+    row.navigationMoved = true;
+    const loadedRows = new Map(rows.map(item => [item.id, item]));
+    rows = navigationOrder.map(id => loadedRows.get(id)).filter(Boolean);
+    for (const stack of stacks) {
+      const members = new Set(stack.layerIds); members.delete(id);
+      if (stack === targetStack) members.add(id);
+      stack.layerIds = rows.filter(item => members.has(item.id)).map(item => item.id);
+    }
+    if (targetStack) activeStackId = targetStack.id;
+    commit(); if (stacks.length) show(); else render();
+    status(previousStack === targetStack ? `Reordered ${row.label}.` : `Moved ${row.label} ${intoStack ? `into ${targetStack.name}` : 'outside the stacks'}.`);
+    [...get('rows').querySelectorAll('[data-figure-row]')].find(button => button.dataset.figureRow === id)?.focus({ preventScroll: true });
   }
   async function runBusy(action) {
     if (busy) return false;
     busy = true; panel.setAttribute('aria-busy', 'true');
-    const locked = [...panel.querySelectorAll('button,input,select')].map(node => ({ node, disabled: node.disabled }));
+    const locked = [...workspace.querySelectorAll('.gel-figure-navigation button,.gel-figure-navigation input,.gel-figure-controls button,.gel-figure-controls input,.gel-figure-controls select')].map(node => ({ node, disabled: node.disabled }));
     locked.forEach(({ node }) => { node.disabled = true; });
     launcher.disabled = true;
     try { return await action(); }
-    catch (error) { status(error?.message || 'The figure operation failed.'); return false; }
+    catch (error) { status(error?.message || 'The figure operation failed.', { type: 'error' }); return false; }
     finally {
       busy = false; panel.setAttribute('aria-busy', 'false');
       locked.forEach(({ node, disabled }) => { node.disabled = disabled; });
@@ -236,29 +373,42 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
       if (!disposed) render();
     }
   }
+  function projectContent() {
+    const project = JSON.parse(serializeBlotProject(rows, get('name').value, deps.imageDataToDataUrl, {
+      stacks, activeStackId, checkedIds: [], selectedId, nextLayerNumber
+    }));
+    project.navigationOrder = [...navigationOrder];
+    return JSON.stringify(project);
+  }
+  async function saveWorkspace() {
+    trimEditor.apply(); syncActive();
+    if (!deps.workspacePersistence) return saveProject();
+    await ready;
+    return !restoreFailed && await autosave.flush();
+  }
   async function saveProject() {
+    trimEditor.apply();
     syncActive();
-    if (!rows.length) { savedFingerprint = fingerprint(); return true; }
+    if (!rows.length && !stacks.length) { savedFingerprint = fingerprint(); return true; }
     return runBusy(async () => {
       const key = fingerprint();
       status('Saving figure project…');
       const result = await downloadTextFile({
         content: serializeBlotProject(rows, get('name').value, deps.imageDataToDataUrl, {
-          tableSource, stackTrim, stackIds, checkedIds: [...checkedIds], selectedId, nextLayerNumber
+          stacks, activeStackId, checkedIds: [], selectedId, nextLayerNumber
         }),
         fileName: `${safeFilePart(get('name').value || 'Gel layers')}.gel-figure.json`, mimeType: 'application/json'
       });
-      if (result?.saved) { savedFingerprint = key; status('Figure project saved.'); return true; }
+      if (result?.saved) { if (!deps.workspacePersistence) savedFingerprint = key; status('Figure project saved.'); return true; }
       status('Save canceled.'); return false;
     });
   }
   async function exportFigure(format) {
+    trimEditor.apply();
     return runBusy(async () => {
       status(`Preparing ${format.toUpperCase()}…`);
-      const output = createBlotFigureCanvas(previewRows(), documentObject, {
-        tableSource, trim: selectedId === STACK_VIEW ? stackTrim : undefined
-      });
-      const title = selectedId === STACK_VIEW ? `${get('name').value || 'Gel layers'}-Stack` : selected()?.label || 'Gel';
+      const output = createBlotFigureCanvas(previewRows(), documentObject, previewOptions());
+      const title = `${get('name').value || 'Gel layers'}-${currentStack().name}`;
       const fileName = `${safeFilePart(title)}.${format}`;
       const result = format === 'png'
         ? await downloadDataUrlFile({ dataUrl: output.canvas.toDataURL('image/png'), fileName })
@@ -268,9 +418,13 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
       return Boolean(result?.saved);
     });
   }
-  async function importFiles(files) {
-    await runBusy(async () => {
+  async function importFiles(files, { openEditor = false } = {}) {
+    if (busy || elements.gelForm?.getAttribute('aria-busy') === 'true') return;
+    syncActive();
+    const imported = await runBusy(async () => {
       const errors = [];
+      let firstId = '';
+      const importControls = { ...controls(), 'gel-id': '', 'gel-type': openEditor ? controls()['gel-type'] : 'western' };
       for (const file of files) {
         if (rows.length >= MAX_BLOTS) { errors.push(`Layer limit: ${MAX_BLOTS} gels.`); break; }
         status(`Loading ${file.name}…`);
@@ -278,132 +432,196 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
           const image = await decodeImageFile(file);
           if (disposed) return;
           const draft = { token: runtime.createId(), currentImage: image, originalImage: image, originalFile: file,
-            controls: { ...controls(), 'gel-id': '', 'gel-name': file.name.replace(/\.[^.]+$/, ''), 'gel-type': 'western' },
+            controls: { ...importControls, 'gel-name': file.name.replace(/\.[^.]+$/, '') },
             manualOverrides: createEmptyManualOverrides(), currentReport: null, cropApplied: false,
             viewerMode: 'original', pendingNotebookLink: null };
           const row = { id: runtime.createId(), label: `Gel ${nextLayerNumber++}`, draft, placement: inferBlotPlacement(draft) };
-          rows.push(row); checkedIds.add(row.id); selectedId = row.id;
+          rows.push(row);
+          firstId ||= row.id;
+          try {
+            await deps.saveImportedGel(draft, row.label);
+          } catch (error) {
+            errors.push(`${file.name}: Could not automatically save gel: ${error.message}`);
+          }
         } catch (error) { errors.push(`${file.name}: ${error.message}`); }
       }
-      commit(); status(errors.join(' ') || `${rows.length} gel layers. Rename them, select the gels to combine, and click Stack.`);
+      if (openEditor && firstId) selectedId = firstId;
+      const error = errors.join(' ');
+      commit(); status(error || `${rows.length} gel layers. Create a stack and drag gels into it.`);
+      return { firstId, error };
     });
+    if (openEditor && !disposed && imported) {
+      if (imported.firstId) editSelected();
+      deps.setStatus(imported.error);
+    }
+  }
+  // Every workspace import creates layers, including drops while processing.
+  // Consume busy/rejected drops too so they cannot replace the active image.
+  function handleFileDrop(files) {
+    if (!busy && elements.gelForm?.getAttribute('aria-busy') !== 'true') {
+      if (files.length) void importFiles(files, { openEditor: !isOpen() });
+      else {
+        status('Drop image files to add gel layers.');
+        if (!isOpen()) deps.setStatus('Drop image files to add gel layers.');
+      }
+    }
+    return true;
   }
 
-  listen(launcher, 'click', show);
+  disposers.push(bindFileDropTarget({
+    target: navigation, accept: 'image/*,.tif,.tiff', multiple: true,
+    onFiles: handleFileDrop,
+    onRejected: () => handleFileDrop([])
+  }));
+  disposers.push(bindGelLayerDrag({ navigation,
+    isBusy: () => busy || elements.gelForm?.getAttribute('aria-busy') === 'true', onMove: moveLayer }));
+  listen(launcher, 'click', () => show(stackForLayer(activeId)?.id || activeStackId));
   disposers.push(bindFigureWorkspaceActions({ documentObject, elements, isOpen, isBusy: () => busy,
-    resumeEditor: () => selected() ? editSelected() : close(), exportFigure }));
+    resumeEditor: close, exportFigure, saveProject }));
   // These actions replace the editor's image; capture a figure row
   // first, before the existing controller clears its crop and lane settings.
+  // Removing a gel belongs to the gel being edited (the toolbar's More menu), not to Layout.
+  const removeButton = documentObject.getElementById('gel-remove-gel-btn');
+  listen(documentObject.getElementById('gel-record-menu'), 'beforetoggle', () => {
+    if (removeButton) removeButton.disabled = !rows.some(row => row.id === activeId);
+  });
+  listen(removeButton, 'click', () => {
+    if (busy || elements.gelForm?.getAttribute('aria-busy') === 'true') return;
+    const index = rows.findIndex(row => row.id === activeId); if (index < 0) return;
+    const [row] = rows.splice(index, 1);
+    for (const stack of stacks) {
+      stack.layerIds = stack.layerIds.filter(id => id !== row.id);
+    }
+    activeId = ''; activeSignature = '';
+    selectedId = rows[Math.min(index, rows.length - 1)]?.id || '';
+    commit();
+    // Clear the editor first, or opening the next gel would add the removed one back.
+    deps.resetEditor();
+    if (selectedId) editSelected(); else render();
+  });
   listen(elements.gelImageFileInput, 'change', detachEditor, true);
   listen(elements.gelCancelBtn, 'click', detachEditor, true);
   listen(elements.gelList, 'click', event => { if (event.target.closest('[data-gel-edit]')) detachEditor(); }, true);
   listen(get('files'), 'change', event => {
-    const files = [...event.target.files]; event.target.value = ''; void importFiles(files);
+    const files = [...event.target.files]; event.target.value = ''; void importFiles(files, { openEditor: !isOpen() });
   });
   listen(get('project-file'), 'change', event => {
     const file = event.target.files[0]; event.target.value = ''; if (!file) return;
     void runBusy(async () => {
       if (file.size > 180000000) throw new Error('The figure project is too large to open.');
-      // Open appends so importing a project cannot discard work already on the board.
+      // Merge by stable identity and verified library images. Reopening a
+      // backup preserves ongoing edits without duplicating its navigation.
+      syncActive();
       const project = await parseBlotProject(await file.text(), runtime.createId);
+      await reconnectProjectRecords(project, runtime.state.gelAnalyses || [], deps.restoreRecordImage);
       if (disposed) return;
-      if (rows.length + project.rows.length > MAX_BLOTS) throw new Error(`The project exceeds ${MAX_BLOTS} gel layers.`);
-      const wasEmpty = !rows.length;
-      project.rows.forEach(row => { row.draft.token = runtime.createId(); });
-      project.rows.forEach(row => {
+      const merged = mergeBlotProject(project, rows, stacks, MAX_BLOTS);
+      const wasEmpty = !rows.length && !stacks.length;
+      merged.replacements.forEach(({ existing, row }) => {
+        row.draft.token = runtime.createId(); Object.assign(existing, row); delete existing.libraryBaseline;
+      });
+      merged.rows.forEach(row => { row.draft.token = runtime.createId(); });
+      merged.rows.forEach(row => {
         if (!row.label.trim()) row.label = `Gel ${nextLayerNumber++}`;
         const number = /^Gel (\d+)$/.exec(row.label)?.[1];
         if (number) nextLayerNumber = Math.max(nextLayerNumber, Number(number) + 1);
       });
-      rows.push(...project.rows); selectedId = project.rows[0].id;
-      project.checkedIds.forEach(id => checkedIds.add(id));
-      if (wasEmpty) {
-        get('name').value = project.title; tableSource = project.tableSource;
-        stackIds = project.stackIds; selectedId = project.selectedId; stackTrim = project.stackTrim;
-      }
+      rows.push(...merged.rows);
+      if (wasEmpty) get('name').value = project.title;
+      stacks.push(...merged.stacks);
+      if (merged.activeStackId) activeStackId = merged.activeStackId;
       nextLayerNumber = Math.max(nextLayerNumber, project.nextLayerNumber);
-      commit(); if (wasEmpty) savedFingerprint = fingerprint();
+      commit(); if (wasEmpty && !deps.workspacePersistence) savedFingerprint = fingerprint();
       status('Figure project opened.');
+      return merged.firstId;
+    }).then(firstId => {
+      // A project with a Stack opens its Layout; otherwise its first gel opens for editing.
+      if (firstId === false || disposed) return;
+      if (stacks.length) show();
+      else if (firstId) { selectedId = firstId; editSelected(); }
     });
   });
-  listen(panel, 'click', event => {
+  listen(workspace, 'click', event => {
     if (busy) return;
     const target = event.target.closest('button'); if (!target) return;
     if (target.dataset.figureRow) {
-      selectedId = target.dataset.figureRow; status(''); renderFocusedView(); return;
+      if (!rows.some(row => row.id === target.dataset.figureRow)) { openSavedLayer(target.dataset.figureRow); return; }
+      if (activeId === target.dataset.figureRow && !isOpen()) return;
+      syncActive(); selectedId = target.dataset.figureRow; status(''); editSelected(); renderList(); return;
     }
-    if (target.hasAttribute('data-figure-stack-view')) { selectedId = STACK_VIEW; status(''); renderFocusedView(); return; }
-    const action = target.dataset.figureAction; const row = selected();
+    if (target.hasAttribute('data-figure-stack-view') || target.hasAttribute('data-figure-layout-view')) {
+      status(''); show(target.dataset.figureStackView || target.dataset.figureLayoutView); return;
+    }
+    const action = target.dataset.figureAction; const row = focused();
     try {
       if (action === 'back') close();
-      else if (action === 'stack') stackSelected();
-      else if ((action === 'trim' || action === 'reset-trim') && selectedId === STACK_VIEW && previewRows().length) {
-        const nextTrim = { ...DEFAULT_STACK_TRIM, mode: action === 'trim' ? 'auto' : 'none' };
-        buildBlotFigurePlan(previewRows(), { tableSource, trim: nextTrim });
-        stackTrim = nextTrim;
-        commit(); render(); status(action === 'trim' ? 'Trimmed the Stack to matching left and right edges.' : 'Stack trim reset.');
+      else if (action === 'stack') createStack();
+      else if (action === 'trim' && previewRows().length) trimEditor.start(previewPlan.crop);
+      else if (action === 'apply-trim') trimEditor.apply();
+      else if (action === 'cancel-trim') trimEditor.cancel();
+      else if (action === 'reset-trim' && previewRows().length) {
+        currentStack().trim = { ...DEFAULT_STACK_TRIM };
+        commit(); render(); status('Stack trim reset.');
       }
       else if (action === 'add') addCurrent();
       else if (action === 'import') get('files').click();
       else if (action === 'open') get('project-file').click();
-      else if (action === 'save') void saveProject();
-      else if (action === 'edit') editSelected();
-      else if (row && ['up', 'down', 'remove', 'detect'].includes(action)) {
-        const index = rows.indexOf(row);
-        if (action === 'remove') {
-          rows.splice(index, 1); checkedIds.delete(row.id); stackIds = stackIds.filter(id => id !== row.id);
-          if (activeId === row.id) activeId = ''; if (tableSource === row.id) tableSource = 'auto';
-          selectedId = rows[Math.min(index, rows.length - 1)]?.id || '';
-        }
-        if (action === 'detect') {
-          const inferred = inferBlotPlacement(row.draft);
-          row.placement = { ...row.placement, first: inferred.first, last: inferred.last };
-        }
-        const next = index + (action === 'up' ? -1 : 1);
-        if (['up', 'down'].includes(action) && next >= 0 && next < rows.length) [rows[index], rows[next]] = [rows[next], rows[index]];
+      else if (action === 'recover' && elements.gelForm?.getAttribute('aria-busy') !== 'true') void deps.recoverSavedGels?.();
+      else if (action === 'edit' && row) { selectedId = row.id; editSelected(); }
+      else if (action === 'detect' && row) {
+        const inferred = inferBlotPlacement(row.draft);
+        row.placement = { ...row.placement, first: inferred.first, last: inferred.last };
         status(''); commit(); render();
       }
-    } catch (error) { status(error.message); }
+    } catch (error) { status(error.message, { type: 'error' }); }
   });
-  listen(panel, 'dblclick', event => {
-    if (event.target.closest('[data-figure-row]')) { get('antibody').focus(); get('antibody').select(); }
+  function renameNavigationEntry(button) {
+    if (!button || busy || elements.gelForm?.getAttribute('aria-busy') === 'true') return;
+    finishRename?.(true);
+    const row = rows.find(row => row.id === button.dataset.figureRow);
+    if (button.dataset.figureRow && !row) { openSavedLayer(button.dataset.figureRow, true); return; }
+    const isStack = button.hasAttribute('data-figure-stack-view');
+    const stackId = button.dataset.figureStackView || button.dataset.figureLayoutView;
+    const stack = stacks.find(stack => stack.id === stackId);
+    if (!row && !stack) return;
+    const selector = row ? `[data-figure-row="${row.id}"]` : isStack ? `[data-figure-stack-view="${stackId}"]` : `[data-figure-layout-view="${stackId}"]`;
+    finishRename = startGelNavigationRename(button, {
+      value: row ? row.label : isStack ? stack.name : stack.layoutName,
+      label: row ? 'Rename gel' : isStack ? 'Rename stack' : 'Rename layout',
+      onFinish() { finishRename = null; },
+      onCommit(name) {
+        syncActive();
+        if (row) {
+          row.label = name;
+          row.draft = { ...row.draft, controls: { ...row.draft.controls, 'gel-name': name } };
+          if (activeId === row.id) { elements.gelNameInput.value = name; activeSignature = editorSignature(); }
+        } else if (isStack) stack.name = name;
+        else stack.layoutName = name;
+        commit(); render();
+        return get('rows').querySelector(selector);
+      }
+    });
+  }
+  listen(navigation, 'dblclick', event => {
+    const button = event.target.closest('[data-figure-row],[data-figure-stack-view],[data-figure-layout-view]');
+    if (!button) return;
+    event.preventDefault(); renameNavigationEntry(button);
   });
-  listen(get('antibody'), 'input', () => {
-    if (!selected()) return; selected().label = get('antibody').value;
-    renderList(); renderPreview();
+  listen(navigation, 'keydown', event => {
+    if (event.key !== 'F2') return;
+    const button = event.target.closest('[data-figure-row],[data-figure-stack-view],[data-figure-layout-view]');
+    if (!button) return;
+    event.preventDefault(); event.stopPropagation(); renameNavigationEntry(button);
   });
-  listen(get('antibody'), 'change', () => {
-    const row = selected();
-    if (row && !row.label.trim()) { row.label = `Gel ${nextLayerNumber++}`; get('antibody').value = row.label; renderList(); renderPreview(); }
-    commit();
-  });
+  listen(navigation, 'focusin', announceHistory);
   listen(get('name'), 'change', commit);
-  listen(panel, 'change', event => {
-    const trimEdge = event.target.dataset.figureTrim;
-    if (trimEdge && ['left', 'right'].includes(trimEdge) && selectedId === STACK_VIEW) {
-      try {
-        const current = previewPlan?.crop || stackTrim;
-        const nextTrim = normalizeStackTrim({ mode: 'manual', left: current.left, right: current.right,
-          [trimEdge]: event.target.value === '' ? NaN : Number(event.target.value) });
-        buildBlotFigurePlan(previewRows(), { tableSource, trim: nextTrim });
-        stackTrim = nextTrim;
-        status(''); commit(); renderFocusedView();
-      } catch (error) { status(error.message); renderStackTrim(); }
-      return;
-    }
-    const includeId = event.target.dataset.figureInclude;
-    if (includeId && rows.some(row => row.id === includeId)) {
-      if (event.target.checked) checkedIds.add(includeId); else checkedIds.delete(includeId);
-      commit(); renderList();
-      [...get('rows').querySelectorAll('[data-figure-include]')].find(input => input.dataset.figureInclude === includeId)?.focus();
-      return;
-    }
-    const key = event.target.dataset.figureField; if (!key || !selected()) return;
+  listen(workspace, 'change', event => {
+    const key = event.target.dataset.figureField; if (!key || !focused()) return;
     const value = event.target.value === '' ? NaN : Number(event.target.value);
     try {
-      selected().placement = validatePlacement({ ...selected().placement, [key]: value });
+      focused().placement = validatePlacement({ ...focused().placement, [key]: value });
       status(''); commit(); renderPreview();
-    } catch (error) { status(error.message); renderSelection(); }
+    } catch (error) { status(error.message, { type: 'error' }); renderSelection(); }
   });
   // Direct manipulation in the preview, as with placed images in slide and
   // design tools: drag a blot to slide it, a side to stretch it, the top or
@@ -443,6 +661,8 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
     const box = index == null ? null : blotBox(index);
     hoverBox.hidden = !box;
     if (!box) return;
+    hoverBox.dataset.resizeLeft = String(box.shownLeft === box.left);
+    hoverBox.dataset.resizeRight = String(box.shownRight === box.right);
     Object.assign(hoverBox.style, {
       left: `${box.canvas.offsetLeft + box.shownLeft * box.k}px`, top: `${box.canvas.offsetTop + box.top * box.k}px`,
       width: `${(box.shownRight - box.shownLeft) * box.k}px`, height: `${(box.bottom - box.top) * box.k}px` });
@@ -461,6 +681,9 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
     rows.splice(rows.indexOf(drag.row), 1);
     const next = others[to];
     rows.splice(next ? rows.indexOf(next) : rows.indexOf(others[others.length - 1]) + 1, 0, drag.row);
+    navigationOrder.splice(navigationOrder.indexOf(drag.row.id), 1);
+    navigationOrder.splice(next ? navigationOrder.indexOf(next.id)
+      : navigationOrder.indexOf(others[others.length - 1].id) + 1, 0, drag.row.id);
     return true;
   }
   function applyDrag() {
@@ -490,6 +713,7 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
     if (busy || event.button !== 0) return;
     const hit = hitBlot(event); if (!hit) return;
     event.preventDefault();
+    focusedId = hit.row.id; renderSelection();
     try { get('preview').setPointerCapture(event.pointerId); } catch { /* a synthetic pointer has nothing to capture */ }
     drag = { ...hit, pointerId: event.pointerId, x: event.clientX, y: event.clientY, clientY: event.clientY, dx: 0, dy: 0,
       start: { ...hit.row.placement }, changed: false };
@@ -508,44 +732,99 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
   });
   listen(get('preview'), 'pointerleave', () => { if (!drag) { showHover(null); get('preview').style.cursor = ''; } });
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) listen(get('preview'), type, endDrag);
-  listen(get('guides'), 'change', renderPreview); listen(get('lane-count'), 'input', renderPreview);
-  listen(get('select-all'), 'change', () => {
-    checkedIds = new Set(get('select-all').checked ? rows.map(row => row.id) : []); commit(); renderList();
-  });
-  listen(get('table-source'), 'change', () => { tableSource = get('table-source').value; commit(); renderPreview(); });
   function moveHistory(direction) {
     if (busy) return false;
+    const focused = documentObject.activeElement;
+    const focusSelector = navigation.contains(focused)
+      ? focused.dataset.figureRow ? `[data-figure-row="${focused.dataset.figureRow}"]`
+        : focused.hasAttribute('data-figure-stack-view') ? `[data-figure-stack-view="${focused.dataset.figureStackView}"]` : `[data-figure-layout-view="${focused.dataset.figureLayoutView}"]`
+      : null;
+    trimEditor.cancel();
     commit(); const next = historyIndex + direction;
     if (next < 0 || next >= history.length) return false;
     historyIndex = next;
     const entry = history[next];
-    tableSource = entry.tableSource; stackTrim = { ...entry.stackTrim };
-    checkedIds = new Set(entry.checkedIds); stackIds = [...entry.stackIds];
+    stacks = clone(entry.stacks); activeStackId = entry.activeStackId;
     rows = entry.rows.map(row => ({ ...row, placement: { ...row.placement } }));
+    // Browsing does not add undo steps or disappear when another edit is undone.
+    for (const [id, row] of savedLayerCache) {
+      if (!rows.some(item => item.id === id)) rows.push({ ...row, placement: { ...row.placement } });
+    }
+    navigationOrder = [...entry.navigationOrder, ...navigationOrder.filter(id => !entry.navigationOrder.includes(id))];
+    rows.sort((a, b) => navigationOrder.indexOf(a.id) - navigationOrder.indexOf(b.id));
     get('name').value = entry.title;
-    selectedId = entry.selectedId === STACK_VIEW || rows.some(row => row.id === entry.selectedId) ? entry.selectedId : rows[0]?.id || '';
+    selectedId = isOpen() ? STACK_VIEW : rows.some(row => row.id === entry.selectedId) ? entry.selectedId : rows[0]?.id || '';
     const active = rows.find(row => row.id === activeId)
       || rows.find(row => row.draft.originalImage === runtime.originalImage);
     activeId = active?.id || '';
     if (active) { restoreLayer(active); activeSignature = editorSignature(); }
-    render(); announceHistory(); return true;
+    render();
+    // Undo can remove the Stack under an open Layout; redo brings both back.
+    if (isOpen() && !stacks.length) close();
+    else if (!isOpen() && stacks.length && entry.selectedId === STACK_VIEW) show();
+    // If undo removed the focused entry, stay in the rail so redo still reaches the project.
+    if (focusSelector) (get('rows').querySelector(focusSelector) || get('stack-btn')).focus();
+    announceHistory(); autosave?.schedule(); return true;
   }
   // Escape while the Add menu is open is left to the browser, which closes just the menu.
-  listen(panel, 'keydown', event => {
+  listen(workspace, 'keydown', event => {
+    if (!ownsHistory()) return;
+    if (trimEditor.isActive() && ['Escape', 'Enter'].includes(event.key) && !event.target.closest('input,textarea,select')) {
+      event.preventDefault(); event.stopPropagation();
+      if (event.key === 'Escape') trimEditor.cancel(); else trimEditor.apply();
+      return;
+    }
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'z') {
       if (event.target.closest('input:not([type="checkbox"]),textarea')) return;
       event.preventDefault(); event.stopPropagation(); moveHistory(event.shiftKey ? 1 : -1);
-    } else if (event.key === 'Escape' && !busy && !panel.querySelector(':popover-open')) {
+    } else if (event.key === 'Escape' && !busy && !workspace.querySelector(':popover-open')) {
       event.preventDefault(); event.stopPropagation(); close();
     }
   });
-  commit(); savedFingerprint = fingerprint();
+  render(); commit(); savedFingerprint = fingerprint();
+  if (deps.workspacePersistence) autosave = createWorkspaceAutosave({
+    getKey: fingerprint, getContent: projectContent, save: deps.workspacePersistence.save,
+    onError: error => status(`Could not automatically save the Gel workspace: ${error.message}`, { type: 'error' })
+  });
+  const ready = (async () => {
+    if (!deps.workspacePersistence) return;
+    try {
+      const candidates = await deps.workspacePersistence.load();
+      let project = null, restored = null, lastError = null;
+      for (const candidate of candidates) {
+        try { project = await parseBlotProject(candidate.content, runtime.createId, { local: true }); restored = candidate; break; }
+        catch (error) { lastError = error; }
+      }
+      if (candidates.length && !project) throw lastError;
+      if (disposed) return;
+      if (project) {
+        rows = project.rows; stacks = project.stacks; activeStackId = project.activeStackId;
+        rows.forEach(row => { row.draft.token = runtime.createId(); });
+        const order = JSON.parse(restored.content).navigationOrder;
+        navigationOrder = Array.isArray(order) ? [...new Set(order.filter(id => typeof id === 'string'))] : rows.map(row => row.id);
+        nextLayerNumber = project.nextLayerNumber; get('name').value = project.title;
+        selectedId = project.selectedId;
+        restored.accept?.();
+        if (restored.previous) status('Restored the previous Gel workspace because the latest save was unavailable.', { type: 'warning' });
+      }
+      history = []; historyIndex = -1; render(); commit(); savedFingerprint = fingerprint();
+      restoring = false; autosave.enable();
+      if (stacks.length && selectedId === STACK_VIEW) show();
+      else if (selectedId) editSelected();
+    } catch (error) {
+      restoring = false; restoreFailed = true;
+      status(`Could not restore the Gel workspace: ${error.message} Your saved workspace has been kept.`, { type: 'error' });
+    }
+  })();
   return {
-    isOpen, getHistoryState, undo: () => moveHistory(-1), redo: () => moveHistory(1),
+    ready,
+    isOpen, ownsHistory, getHistoryState, processSelected: editSelected, undo: () => moveHistory(-1), redo: () => moveHistory(1),
     ownsEditor: () => rows.some(row => row.id === activeId && row.draft.originalImage === runtime.originalImage),
-    hasUnsavedChanges() { syncActive(); return fingerprint() !== savedFingerprint; },
-    saveProject, detachEditor,
-    destroy() { disposed = true; disposers.forEach(dispose => dispose()); panel.remove(); stage.classList.remove('is-showing-layers');
+    hasUnsavedChanges() { if (restoring) return false; syncActive(); return trimEditor.isChanged() || (autosave && !restoreFailed ? autosave.dirty() : fingerprint() !== savedFingerprint); },
+    saveProject, saveWorkspace, detachEditor, handleFileDrop,
+    suspendWorkspace() { autosave?.dispose(); deps.workspacePersistence?.dispose?.(); },
+    refreshSavedRecords() { syncActive(); renderList(); },
+    destroy() { disposed = true; autosave?.dispose(); deps.workspacePersistence?.dispose?.(); finishRename?.(false); trimEditor.destroy(); disposers.forEach(dispose => dispose()); panel.remove(); navigation.replaceChildren(); inspector.replaceChildren(); inspector.hidden = true; workspace.classList.remove('is-showing-layout'); stage.classList.remove('is-showing-layers');
       [elements.gelImageRow, elements.gelLaneTablePanel].filter(Boolean).forEach(node => { node.inert = false; }); }
   };
 }

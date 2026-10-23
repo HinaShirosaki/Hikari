@@ -825,7 +825,7 @@
 .assay-analysis-group-actions > .assay-analysis-group-icon-btn:hover,
 .assay-analysis-group-actions > .assay-analysis-group-icon-btn:focus-visible {
   border-color: transparent;
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 .assay-analysis-results {

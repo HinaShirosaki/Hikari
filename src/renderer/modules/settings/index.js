@@ -78,6 +78,9 @@ export function initSettings({
     settingExternalSkillsRefreshBtn,
     settingExternalSkillsList,
     pluginsAddBtn,
+    pluginsGitHubForm,
+    pluginsGitHubUrl,
+    pluginsGitHubInstallBtn,
     pluginsReloadBtn,
     pluginsStatus,
     pluginsList,
@@ -141,6 +144,11 @@ export function initSettings({
     api: window.hikariApi || null,
     statusElement: pluginsStatus,
     listElement: pluginsList,
+    githubUrlInput: pluginsGitHubUrl,
+    githubInstallButton: pluginsGitHubInstallBtn,
+    addButton: pluginsAddBtn,
+    reloadButton: pluginsReloadBtn,
+    windowObject: window,
     escapeHtml
   });
   const sampleInventoryController = createSampleInventorySettingsController({
@@ -268,6 +276,10 @@ export function initSettings({
   });
   pluginsAddBtn?.addEventListener('click', () => {
     void pluginsController.onAddPlugin();
+  });
+  pluginsGitHubForm?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void pluginsController.onInstallFromGitHub();
   });
   pluginsReloadBtn?.addEventListener('click', () => {
     onReloadRequested?.();

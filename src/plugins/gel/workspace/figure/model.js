@@ -39,6 +39,22 @@ export function validatePlacement(placement) {
   return { first, last, top, bottom };
 }
 
+export function blotSizePercent(placement, image) {
+  return FIGURE_WIDTH * (GUIDE_RIGHT - GUIDE_LEFT) / (image.width * (placement.last - placement.first) / 100) * 100;
+}
+
+// Resize around the image's horizontal center. Both axes use this same scale;
+// the source image and its crop are unchanged.
+export function resizeBlotPlacement(placement, image, sizePercent) {
+  validatePlacement(placement);
+  if (!Number.isFinite(sizePercent) || sizePercent <= 0) throw new Error('Enter a positive gel size.');
+  const factor = sizePercent / blotSizePercent(placement, image);
+  return validatePlacement({ ...placement,
+    first: 50 + (placement.first - 50) / factor,
+    last: 50 + (placement.last - 50) / factor
+  });
+}
+
 // A preview drag, in figure units, turned back into lane anchors and crop:
 // "move" slides the blot, "left"/"right" stretch it with the other side fixed,
 // "top"/"bottom" crop it. Same transform as buildBlotFigurePlan, inverted.
@@ -89,10 +105,9 @@ export function wrapAntibodyLabel(value, measureText = text => Array.from(text).
 
 // One affine horizontal transform per intact blot. The same factor is used on
 // Y, preserving band proportions; no lanes are cut apart or independently warped.
-export function buildBlotFigurePlan(rows, { measureText, tableSource = 'auto', trim } = {}) {
+export function buildBlotFigurePlan(rows, { measureText, trim } = {}) {
   if (!rows?.length) throw new Error('Add at least one blot to the figure.');
   if (rows.length > MAX_BLOTS) throw new Error(`A figure can contain up to ${MAX_BLOTS} blots.`);
-  let y = FIGURE_MARGIN;
   const plannedRows = rows.map(row => {
     const { width, height } = row.draft.currentImage;
     const placement = validatePlacement(row.placement);
@@ -102,14 +117,12 @@ export function buildBlotFigurePlan(rows, { measureText, tableSource = 'auto', t
     const imageHeight = (sourceBottom - sourceTop) * scale;
     const labelLines = wrapAntibodyLabel(row.label, measureText);
     const rowHeight = Math.max(imageHeight, labelLines.length * 28 + 12);
-    const imageY = y + (rowHeight - imageHeight) / 2;
     const result = {
-      id: row.id, labelLines, y, rowHeight, imageY, imageHeight,
+      id: row.id, labelLines, rowHeight, imageHeight,
       sourceTop, sourceHeight: sourceBottom - sourceTop,
       imageX: FIGURE_WIDTH * GUIDE_LEFT - width * placement.first / 100 * scale,
       imageWidth: width * scale
     };
-    y += rowHeight + 16;
     return result;
   });
   // Expand the shared image area to include every transformed source. In
@@ -122,12 +135,10 @@ export function buildBlotFigurePlan(rows, { measureText, tableSource = 'auto', t
   const crop = resolveStackCrop(plannedRows, fullImageWidth, trim);
   const imageWidth = crop.sourceWidth;
   plannedRows.forEach(row => { row.imageX -= crop.sourceLeft; });
-  const reference = tableSource === 'none' ? null : rows.find(row =>
-    (tableSource === 'auto' || row.id === tableSource) && row.draft.manualOverrides?.laneTable?.rows?.length);
-  let table = null;
-  let blotTop = FIGURE_MARGIN;
-  if (reference) {
-    const part = plannedRows[rows.indexOf(reference)];
+  let y = FIGURE_MARGIN;
+  const tables = [];
+  plannedRows.forEach((part, index) => {
+    const reference = rows[index];
     const image = reference.draft.currentImage;
     const lanes = buildLanesFromManualSegmentation(reference.draft.manualOverrides, image.width, image.height) || [];
     const centers = lanes.map(lane => part.imageX + lane.center / image.width * part.imageWidth);
@@ -140,8 +151,8 @@ export function buildBlotFigurePlan(rows, { measureText, tableSource = 'auto', t
       ));
       return { laneIndex: lane.index + 1, center: centers[index], width, x: centers[index] - width / 2 };
     }).filter(column => column.center >= 0 && column.center <= imageWidth);
-    if (columns.length) {
-      let tableY = FIGURE_MARGIN;
+    if (columns.length && reference.draft.manualOverrides?.laneTable?.rows?.length) {
+      let tableY = y;
       const tableRows = reference.draft.manualOverrides.laneTable.rows.map(row => {
         const labelLines = wrapAntibodyLabel(row.label, measureText);
         const values = columns.map(column => wrapAntibodyLabel(row.values?.[column.laneIndex - 1] || '', measureText, Math.max(8, column.width - 12)));
@@ -150,12 +161,15 @@ export function buildBlotFigurePlan(rows, { measureText, tableSource = 'auto', t
         tableY += height;
         return result;
       });
-      table = { sourceId: reference.id, columns, rows: tableRows, y: FIGURE_MARGIN, height: tableY - FIGURE_MARGIN };
-      const offset = table.height + 16;
-      plannedRows.forEach(row => { row.y += offset; row.imageY += offset; });
-      y += offset; blotTop += offset;
+      const table = { sourceId: reference.id, label: reference.label, columns, rows: tableRows, y, height: tableY - y };
+      tables.push(table);
+      part.table = table;
+      y = tableY + 16;
     }
-  }
+    part.y = y;
+    part.imageY = y + (part.rowHeight - part.imageHeight) / 2;
+    y += part.rowHeight + 16;
+  });
   const width = Math.ceil(FIGURE_MARGIN * 2 + LABEL_WIDTH + imageWidth);
   const height = Math.ceil(y - 16 + FIGURE_MARGIN);
   if (height > 12000 || width > 12000 || width * height > 24000000) {
@@ -163,5 +177,5 @@ export function buildBlotFigurePlan(rows, { measureText, tableSource = 'auto', t
   }
   return { width, height, imageWidth, fullImageWidth, crop, guideLeft: FIGURE_WIDTH * GUIDE_LEFT - left - crop.sourceLeft,
     guideRight: FIGURE_WIDTH * GUIDE_RIGHT - left - crop.sourceLeft, imageLeft: FIGURE_MARGIN + LABEL_WIDTH,
-    table, blotTop, rows: plannedRows };
+    tables, blotTop: plannedRows[0].imageY, rows: plannedRows };
 }

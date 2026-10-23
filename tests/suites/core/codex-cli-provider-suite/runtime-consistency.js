@@ -181,4 +181,24 @@ if (!args.includes('app-server')) {
     const mac = nativeUpdateEnvironment({ HIKARI_CODEX_HOME: '/private/home', PATH: '/usr/bin' }, 'darwin');
     assert.equal(mac.PATH, '/private/home/bin:/usr/bin');
   });
+
+  test('A Codex policy block after a retry notice fails in plain words', async () => {
+    const cwd = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-policy-block-'));
+    const failWith = (messages) => runCodexCommand({
+      args: [],
+      cwd,
+      invocation: {
+        command: process.execPath,
+        argsPrefix: ['-e', `for (const message of ${JSON.stringify(messages)}) console.log(JSON.stringify({ type: 'error', message }));
+console.log(JSON.stringify({ type: 'turn.failed', error: { message: ${JSON.stringify(messages.at(-1))} } }));
+process.exit(1);`]
+      }
+    }).then(() => assert.fail('expected Codex to fail'), (error) => error.message);
+    try {
+      const bio = await failWith(['Reconnecting... 1/5 (stream disconnected)', 'This content was flagged for possible biological risk.']);
+      assert.match(bio, /^OpenAI's safety system blocked this request: it was flagged for possible biological risk\./);
+      assert.match(await failWith(['stream error: Incomplete response returned, reason: content_filter']), /stopped by the content filter/);
+      assert.equal(await failWith(['Reconnecting... 1/5', 'unexpected status 500']), 'Codex CLI failed (exit 1): unexpected status 500');
+    } finally { fs.rmSync(cwd, { recursive: true, force: true }); }
+  });
 };

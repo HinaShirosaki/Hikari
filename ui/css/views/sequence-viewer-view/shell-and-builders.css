@@ -138,7 +138,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 .sequence-viewer-back-action-btn:hover,
 .sequence-viewer-back-action-btn:focus-visible {
   border: 0;
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 .sequence-viewer-back-action-btn svg {
@@ -168,7 +168,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 .sequence-viewer-detail-toolbar .ghost-btn.sequence-viewer-icon-btn:hover,
 .sequence-viewer-detail-toolbar .ghost-btn.sequence-viewer-icon-btn:focus-visible {
   border-color: transparent;
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 .sequence-viewer-toolbar-menu-icon-btn {
@@ -660,12 +660,12 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-cloning-design-strategy-list .sequence-viewer-mode-btn:hover {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
   color: var(--theme-text-strong);
 }
 
 .sequence-viewer-cloning-design-strategy-list .sequence-viewer-mode-btn-active {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
   color: var(--theme-text-strong);
   box-shadow: none;
   font-weight: 650;
@@ -883,7 +883,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 .sequence-viewer-primer-library-save-btn:hover,
 .sequence-viewer-primer-library-save-btn:focus-visible {
   border-color: var(--theme-border);
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 .sequence-viewer-primer-copy-btn svg,
@@ -1137,7 +1137,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
 .sequence-viewer-protein-builder-copy-btn.ghost-btn:hover,
 .sequence-viewer-protein-builder-copy-btn.ghost-btn:focus-visible {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
   color: var(--theme-text-strong);
 }
 
@@ -1430,7 +1430,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
 .sequence-viewer-protein-builder-icon-btn:hover,
 .sequence-viewer-protein-builder-icon-btn:focus-visible {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
   color: var(--theme-text-strong);
 }
 

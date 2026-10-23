@@ -64,7 +64,7 @@
 
 #workflow-management-view .workflow-entry-template-icon-btn:hover,
 #workflow-management-view .workflow-entry-template-icon-btn:focus-visible {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
   color: var(--theme-text-strong);
 }
 
@@ -83,7 +83,7 @@
   padding: 0.4375rem 38px 0.4375rem var(--space-10);
   border-color: var(--theme-border-soft);
   border-radius: 8px;
-  background: var(--theme-surface-subtle);
+  background: var(--theme-control-background);
   font-size: var(--text-sm);
   line-height: 1.5;
 }
@@ -193,7 +193,7 @@
 .workflow-entry-panel > .workflow-entry-back-icon-btn:hover,
 .workflow-entry-panel > .workflow-entry-back-icon-btn:focus-visible {
   border: 0;
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 .workflow-entry-panel > .workflow-entry-back-icon-btn svg {
@@ -237,7 +237,7 @@
 .workflow-template-actions > .ghost-btn.workflow-template-action-icon-btn:hover,
 .workflow-template-actions > .ghost-btn.workflow-template-action-icon-btn:focus-visible {
   border-color: transparent;
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 .workflow-list {
@@ -464,7 +464,7 @@
 }
 
 .workflow-template-name-item:hover {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 .workflow-template-name-item.is-active {
@@ -867,7 +867,7 @@
 }
 
 .workflow-context-item:hover {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 .workflow-card {
@@ -992,7 +992,7 @@
 }
 
 .workflow-ledger-row:hover td {
-  background: var(--theme-surface-muted);
+  background: var(--theme-highlight);
 }
 
 .workflow-ledger-row.is-selected td {
@@ -1287,7 +1287,7 @@
 }
 
 .workflow-drawer-close:hover {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
   color: var(--theme-text-strong);
 }
 
@@ -1451,7 +1451,7 @@
 }
 
 .workflow-drawer-file-btn:hover {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 .workflow-drawer-file-btn:has(input:focus-visible) {

@@ -179,7 +179,7 @@ function getPeakEditorSvgXFromEvent(svg, event) {
   return null;
 }
 
-function renderPeakEditorPlaceholder(svg, message) {
+function renderPeakEditorPlaceholder(svg) {
   const {
     width,
     height,
@@ -194,7 +194,6 @@ function renderPeakEditorPlaceholder(svg, message) {
     <rect class="peak-editor-frame" x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="10" />
     <line class="peak-editor-grid" x1="${plotLeft}" y1="${plotTop}" x2="${plotLeft}" y2="${plotBottom}" />
     <line class="peak-editor-grid" x1="${plotLeft}" y1="${plotBottom}" x2="${plotRight}" y2="${plotBottom}" />
-    <text class="peak-editor-empty" x="${width / 2}" y="${height / 2}" text-anchor="middle">${message}</text>
   `;
 }
 
@@ -240,7 +239,7 @@ function renderPeakEditorSvg(svg, profile, integrations = [], hoverRow = null, m
     plotBottom
   } = PEAK_EDITOR_VIEWBOX;
   if (!profile) {
-    renderPeakEditorPlaceholder(svg, 'Select a lane to edit peak areas.');
+    renderPeakEditorPlaceholder(svg);
     return;
   }
 

@@ -6,8 +6,11 @@ import { createId, safeText } from './lib/app-utils.js';
 import { initPluginLeftRailResizer } from './left-rail.js';
 import { installSearchFieldLens } from './lib/search-field-lens.js';
 import { createGelStorageRecords } from './storage-records.js';
+import { createGelNotifications } from './notifications.js';
+import { createGelWorkspaceStore } from './workspace-store.js';
 
 const hikari = window.HikariPlugin?.hikari;
+const notifications = createGelNotifications({ hikari });
 const PLUGIN_STORAGE_ROOT = '.';
 const SUPPORTED_STORAGE_VERSION = 2;
 const state = {
@@ -34,6 +37,8 @@ let leftRailController = null;
 let hostLayout = null;
 let pendingStorageRefresh = false;
 let notebookLinkRequest = null;
+let recoveryPromise = null;
+let readyWarningKey = '';
 
 // Notebook "Add gel" handoff, plugin side. The host's gel.notebookLink event
 // carries no data; we pull the queued page through the internal
@@ -74,19 +79,25 @@ function setHostBusy(isBusy) {
 }
 
 function showBanner(message, { kind = 'warning', retry = null, busy = false } = {}) {
-  if (!bootPanel || !bootMessage || !bootRetryButton) {
-    return;
-  }
   retryAction = typeof retry === 'function' ? retry : null;
-  bootPanel.hidden = false;
-  bootPanel.dataset.kind = kind;
-  bootPanel.classList.toggle('plugin-gel__boot--error', kind === 'error');
-  bootPanel.classList.toggle('plugin-gel__boot--warning', kind === 'warning');
-  bootPanel.classList.toggle('plugin-gel__boot--loading', kind === 'loading');
-  bootMessage.textContent = message;
-  bootRetryButton.hidden = !retryAction;
-  bootRetryButton.disabled = false;
+  const loading = kind === 'loading';
+  if (loading) readyWarningKey = '';
+  // The boot surface is only an initial loader or a retry control when the
+  // workspace cannot start. Completed operations never create an in-frame banner.
+  if (bootPanel && bootMessage && bootRetryButton) {
+    bootPanel.hidden = workspaceReady || (!loading && !retryAction);
+    bootPanel.classList.toggle('plugin-gel__boot--loading', loading);
+    bootMessage.hidden = !loading;
+    bootMessage.textContent = loading ? message : '';
+    const indicator = bootPanel.querySelector('.plugin-gel__boot-indicator');
+    if (indicator) indicator.hidden = !loading;
+    bootRetryButton.hidden = loading || !retryAction;
+    bootRetryButton.disabled = false;
+  }
+  const retryButton = document.getElementById('gel-figure-notice-retry');
+  if (retryButton) retryButton.hidden = !retryAction;
   setHostBusy(busy);
+  void notifications.show(message, { kind });
 }
 
 function hideBanner() {
@@ -94,6 +105,8 @@ function hideBanner() {
     return;
   }
   retryAction = null;
+  const retryButton = document.getElementById('gel-figure-notice-retry');
+  if (retryButton) retryButton.hidden = true;
   bootPanel.hidden = true;
   delete bootPanel.dataset.kind;
   bootPanel.classList.remove(
@@ -107,6 +120,9 @@ function hideBanner() {
 function showReadyState() {
   const { artifactWarnings, migrationError } = loadWarnings;
   setHostBusy(false);
+  const key = JSON.stringify([Boolean(state.settings.storagePath), persistFailure, artifactWarnings, migrationError]);
+  if (key === readyWarningKey) return;
+  readyWarningKey = key;
   if (!state.settings.storagePath) {
     showBanner('Choose a storage folder in Hikari Settings before saving gels.', { kind: 'warning' });
   } else if (persistFailure) {
@@ -168,6 +184,7 @@ function applyHostContext(context = {}, { snapshot = false } = {}) {
 
   const shouldRefreshStorage = Boolean(state.settings.storagePath)
     && (context.changed === 'storage' || (!storageWasConfigured && !migrationChecked));
+  if (!snapshot && context.changed === 'storage') gelController?.suspendWorkspace?.();
 
   if (!workspaceReady) {
     // A storage change that lands mid-boot has to be remembered: this early
@@ -180,37 +197,52 @@ function applyHostContext(context = {}, { snapshot = false } = {}) {
   }
   showReadyState();
   if (shouldRefreshStorage) {
-    void refreshHostData({ announce: true });
+    void start();
   }
 }
 
-async function readStoredJson(path) {
-  const normalizedPath = String(path || '').trim();
-  if (!normalizedPath) {
-    return { value: null, warning: false };
+async function readStoredJson(...paths) {
+  const candidates = [...new Set(paths.map(path => String(path || '').trim()).filter(Boolean))];
+  for (const path of candidates) {
+    try {
+      const result = await hikari.call('files.read', { path });
+      const value = fromBase64Json(result.dataBase64);
+      if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Invalid gel artifact.');
+      return { value, path, warning: false };
+    } catch { /* A migrated record can retain a stale absolute path. Try its other saved locations. */ }
   }
-  try {
-    const result = await hikari.call('files.read', { path: normalizedPath });
-    return { value: fromBase64Json(result.dataBase64), warning: false };
-  } catch {
-    return { value: null, warning: true };
-  }
+  return { value: null, path: '', warning: candidates.length > 0 };
 }
 
 async function hydrateStoredRecord(record) {
   if (record?.report || !(record?.recordJsonPath || record?.recordJsonRelativePath)) {
     return { record, warnings: 0 };
   }
-  const [metadata, report] = await Promise.all([
-    readStoredJson(record.recordJsonPath || record.recordJsonRelativePath),
-    readStoredJson(record.analysisResultPath || record.analysisResultRelativePath)
-  ]);
+  const folder = String(record.storageFolder || '').replace(/\/+$/, '');
+  const metadata = await readStoredJson(record.recordJsonRelativePath, record.recordJsonPath,
+    folder ? `${folder}/gel-record.json` : '');
+  const restoredFolder = metadata.path ? metadata.path.replace(/\/[^/]+$/, '') : folder;
+  const report = await readStoredJson(record.analysisResultRelativePath, record.analysisResultPath,
+    restoredFolder ? `${restoredFolder}/analysis-result.json` : '');
+  const restored = { ...record, ...(metadata.value || {}) };
+  // The compact index owns the current artifact locations. Migration-era
+  // metadata may still name a pre-plugin folder or a previous storage root.
+  for (const key of ['storageFolder', 'previewImageIsSource',
+    'recordJsonPath', 'recordJsonRelativePath', 'analysisResultPath', 'analysisResultRelativePath',
+    'sourceImagePath', 'sourceImageRelativePath', 'originalImagePath', 'originalImageRelativePath',
+    'previewImagePath', 'previewImageRelativePath']) {
+    if (record[key] !== undefined) restored[key] = record[key];
+  }
+  for (const name of ['sourceImage', 'originalImage', 'previewImage']) {
+    if (restored[`${name}RelativePath`]) restored[`${name}Path`] = restored[`${name}RelativePath`];
+  }
+  if (metadata.path) {
+    restored.storageFolder = restoredFolder;
+    restored.recordJsonPath = restored.recordJsonRelativePath = metadata.path;
+  }
+  if (report.path) restored.analysisResultPath = restored.analysisResultRelativePath = report.path;
   return {
-    record: {
-      ...record,
-      ...(metadata.value && typeof metadata.value === 'object' ? metadata.value : {}),
-      report: report.value && typeof report.value === 'object' ? report.value : null
-    },
+    record: { ...restored, report: report.value },
     warnings: Number(metadata.warning) + Number(report.warning)
   };
 }
@@ -310,6 +342,34 @@ async function refreshHostData({ announce = false } = {}) {
   }
 }
 
+function recoverSavedGels() {
+  if (recoveryPromise) return recoveryPromise;
+  recoveryPromise = (async () => {
+    showBanner('Checking saved gel folders…', { kind: 'loading', busy: true });
+    host.inert = true;
+    try {
+      const recovered = await hikari.call('migration.recoverStoredGel');
+      const known = new Set(state.gelAnalyses.map(record => record.id));
+      const additions = (Array.isArray(recovered.records) ? recovered.records : []).filter(record => {
+        if (!record?.id || known.has(record.id)) return false;
+        known.add(record.id); return true;
+      });
+      const hydrated = await Promise.all(additions.map(hydrateStoredRecord));
+      const addedIds = new Set(additions.map(record => record.id));
+      state.gelAnalyses.push(...hydrated.map(entry => entry.record));
+      try { if (additions.length) await persist(); }
+      catch (error) { state.gelAnalyses = state.gelAnalyses.filter(record => !addedIds.has(record.id)); throw error; }
+      gelController?.renderList?.();
+      const warnings = (recovered.warnings?.length || 0) + hydrated.reduce((sum, entry) => sum + entry.warnings, 0);
+      showBanner(`Recovered ${additions.length} saved gel${additions.length === 1 ? '' : 's'}.${warnings ? ` ${warnings} artifact${warnings === 1 ? '' : 's'} could not be read.` : ''}`, {
+        kind: warnings ? 'warning' : 'success'
+      });
+    } catch (error) { showBanner(`Could not recover saved gels: ${errorMessage(error)}`, { kind: 'error', retry: recoverSavedGels }); }
+    finally { host.inert = false; setHostBusy(false); }
+  })().finally(() => { recoveryPromise = null; });
+  return recoveryPromise;
+}
+
 async function fetchWorkspaceMarkup() {
   const response = await fetch('./vendor/gel-view.html', { cache: 'no-store' });
   if (!response.ok) {
@@ -387,8 +447,12 @@ async function start() {
       safeText,
       document,
       onGelAnalysesChanged: () => {},
+      onRecoverSavedGels: recoverSavedGels,
+      onNotify: notifications.show,
+      workspacePersistence: createGelWorkspaceStore({ hikari, isConfigured: () => Boolean(state.settings.storagePath) }),
       onHistoryChanged: reportHistoryState
     });
+    await gelController.ready;
     gelController.render();
     workspaceReady = true;
     host.hidden = false;
@@ -422,15 +486,20 @@ async function start() {
   return startPromise;
 }
 
-bootRetryButton?.addEventListener('click', () => {
+function retryLastNotification() {
   if (!retryAction) {
     return;
   }
   const action = retryAction;
+  hideBanner();
   bootRetryButton.disabled = true;
-  Promise.resolve(action()).catch((error) => {
+  return Promise.resolve().then(action).catch((error) => {
     showBanner(`Retry failed: ${errorMessage(error)}`, { kind: 'error', retry: action });
   });
+}
+bootRetryButton?.addEventListener('click', () => { void retryLastNotification(); });
+host?.addEventListener('click', event => {
+  if (event.target.closest('#gel-figure-notice-retry')) void retryLastNotification();
 });
 
 window.addEventListener('pagehide', () => {

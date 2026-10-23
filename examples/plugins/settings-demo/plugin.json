@@ -1,0 +1,13 @@
+{
+  "id": "settings-demo",
+  "name": "Settings Demo",
+  "version": "1.0.0",
+  "description": "A working example of preferences in Settings → Plugins and live changes through the host API.",
+  "permissions": ["settings"],
+  "settings": [
+    { "key": "autoSave", "type": "boolean", "label": "Automatically save", "description": "Save completed work automatically.", "default": true },
+    { "key": "author", "type": "string", "label": "Author", "default": "", "maxLength": 120 },
+    { "key": "resolution", "type": "number", "label": "Export resolution (dpi)", "default": 300, "min": 72, "max": 1200, "step": 1 },
+    { "key": "defaultFormat", "type": "select", "label": "Default export format", "default": "svg", "options": [{ "value": "svg", "label": "SVG" }, { "value": "png", "label": "PNG" }] }
+  ]
+}

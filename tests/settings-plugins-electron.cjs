@@ -19,13 +19,27 @@ app.setPath('userData', path.join(temp, 'profile'));
 app.setPath('sessionData', path.join(temp, 'session'));
 let win, servers, prevented = 0, checks = 0;
 let storageGate = null, failStorage = false, storageCalls = 0;
+let cloneGate = null, cloneCalls = 0;
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 const check = (value, message) => { assert.ok(value, message); checks += 1; };
 const url = file => pathToFileURL(path.join(root, file)).href;
 
 async function run() {
   await app.whenReady();
-  servers = registerPluginIpc({ ipcMain, session, dialog, fs });
+  servers = registerPluginIpc({ app, ipcMain, session, dialog, fs, runGit: async (command, args, options) => {
+    cloneCalls += 1;
+    assert.equal(command, 'git');
+    assert.equal(options.env.GIT_TERMINAL_PROMPT, '0');
+    if (cloneGate) await cloneGate;
+    const checkout = args.at(-1);
+    await fs.mkdir(checkout);
+    const invalid = args.at(-2).endsWith('/invalid.git');
+    await fs.writeFile(path.join(checkout, 'plugin.json'), JSON.stringify({
+      id: 'github-demo', name: 'GitHub Demo', version: '1.0.0', tool: true,
+      permissions: invalid ? ['unknown'] : ['storage']
+    }));
+    await fs.writeFile(path.join(checkout, 'index.html'), '<!doctype html><h1>GitHub Demo</h1>');
+  } });
   const storagePath = path.join(temp, 'workspace');
   await fs.mkdir(storagePath, { recursive: true });
   const helpers = createMainDataHelpers({ fs, path, syncBundleFromSnapshot, hasSupportedDataExtension: () => true,
@@ -118,9 +132,44 @@ async function run() {
   const click = id => evaluate(`document.getElementById(${JSON.stringify(id)}).click()`);
   await win.loadFile(path.join(temp, 'index.html'));
   await waitFor('window.qaReady');
+  check(await evaluate('!document.querySelector("[data-settings-panel=plugins]").hidden'), 'Plugins navigation opens the installation panel');
+  if (process.env.HIKARI_QA_SCREENSHOT) {
+    await evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+    await fs.writeFile(process.env.HIKARI_QA_SCREENSHOT, (await win.webContents.capturePage()).toPNG());
+  }
   await click('setting-plugins-add-btn');
   await waitFor('qaState.settings.plugins.length === 1');
   check(await evaluate('document.getElementById("setting-plugins-status").textContent === "1 plugin installed."'), 'Adding qPCR omits the added/reload confirmation');
+
+  const installFromGitHub = repositoryUrl => evaluate(`
+    document.getElementById('setting-plugins-github-url').value = ${JSON.stringify(repositoryUrl)};
+    document.getElementById('setting-plugins-github-form').requestSubmit();
+  `);
+  await installFromGitHub('https://example.test/owner/plugin');
+  await waitFor('document.getElementById("setting-plugins-status").textContent.includes("Enter a GitHub repository URL")');
+  check(cloneCalls === 0 && await evaluate('qaState.settings.plugins.length === 1 && !document.getElementById("setting-plugins-github-install-btn").disabled'), 'Invalid GitHub URLs fail without cloning and leave the form retryable');
+  await installFromGitHub('https://github.com/owner/invalid');
+  await waitFor('document.getElementById("setting-plugins-status").textContent.includes("Unknown permission")');
+  check(await evaluate('qaState.settings.plugins.length === 1 && document.getElementById("setting-plugins-github-url").value.endsWith("/invalid")'), 'Invalid plugin manifests preserve the URL and installed list');
+  check((await fs.readdir(path.join(temp, 'profile', 'plugin-repositories'))).length === 0, 'Invalid repositories leave no checkout behind');
+  let releaseClone;
+  cloneGate = new Promise(resolve => { releaseClone = resolve; });
+  const cloneCount = cloneCalls;
+  await installFromGitHub('https://github.com/owner/different-repo-name.git');
+  await waitFor('document.getElementById("setting-plugins-github-install-btn").disabled');
+  check(await evaluate('document.getElementById("setting-plugins-github-url").disabled && document.getElementById("setting-plugins-add-btn").disabled && document.getElementById("setting-plugins-reload-btn").disabled && document.getElementById("setting-plugins-status").textContent.includes("Cloning")'), 'Install shows progress and blocks competing add/reload actions');
+  await evaluate('document.getElementById("setting-plugins-github-form").dispatchEvent(new Event("submit", {cancelable:true}))');
+  releaseClone(); cloneGate = null;
+  await waitFor('qaState.settings.plugins.length === 2 && !document.getElementById("setting-plugins-github-install-btn").disabled');
+  check(cloneCalls === cloneCount + 1, 'Repeated submissions do not start another clone');
+  check(await evaluate('qaState.settings.plugins[1].enabled === false && qaState.settings.plugins[1].tool && qaState.settings.plugins[1].permissions.join() === "storage" && document.getElementById("setting-plugins-github-url").value === "" && document.getElementById("setting-plugins-status").textContent.includes("turned off")'), 'GitHub install with host access starts off and explains how to activate it');
+  await evaluate('document.querySelector("[data-plugin-toggle][data-plugin-id=github-demo]").click()');
+  check(await evaluate('qaState.settings.plugins[1].enabled === true'), 'The user turns the reviewed GitHub plugin on');
+  const installedPath = await evaluate('qaState.settings.plugins[1].path');
+  check(path.basename(installedPath) === 'github-demo' && installedPath.startsWith(path.join(temp, 'profile', 'plugin-repositories')), 'GitHub checkout uses managed app data and the manifest id');
+  await installFromGitHub('https://github.com/owner/different-repo-name');
+  await waitFor('document.getElementById("setting-plugins-status").textContent.includes("already installed")');
+  check(await evaluate('qaState.settings.plugins.length === 2') && (await fs.readdir(path.join(temp, 'profile', 'plugin-repositories'))).length === 1, 'Duplicate plugins retain the existing checkout without another install');
 
   await evaluate('qaDirty = true; location.reload()');
   await pause(150);
@@ -154,6 +203,8 @@ async function run() {
   check(await evaluate('qaState.protocols[0].purpose === "Saved draft 1"'), 'Reading the real Markdown record after reload preserves the edited protocol');
   await waitFor('document.querySelector("#plugin-qpcr-analysis-tool iframe")?.src.startsWith("http://127.0.0.1:")');
   check(await evaluate('qaState.settings.plugins[0].id === "qpcr-analysis"'), 'Real reload retains qPCR installation and mounts its tool frame');
+  await waitFor('document.querySelector("#plugin-github-demo-tool iframe")?.src.startsWith("http://127.0.0.1:")');
+  check(await evaluate('qaState.settings.plugins[1].id === "github-demo"'), 'Reload retains and boots the plugin installed from GitHub');
 
   await evaluate('qaDirty = true; qaPluginDirty = true');
   await click('setting-plugins-reload-btn');
@@ -178,6 +229,8 @@ async function run() {
   check(await evaluate('document.getElementById("unsaved-changes-title").textContent === "Save changes before quitting?" && document.getElementById("unsaved-changes-save-btn").textContent === "Save & Quit"'), 'Normal close retains quit wording');
   await click('unsaved-changes-cancel-btn');
   check(await evaluate('qaResponses.join(",") === "pending,cancel"'), 'Normal close retains the main-process handshake');
+  await evaluate('document.querySelector("[data-plugin-remove][data-plugin-id=github-demo]").click()');
+  check(await evaluate('qaState.settings.plugins.length === 1') && (await fs.stat(installedPath)).isDirectory(), 'Removing a GitHub plugin retains its checkout like a folder installation');
   console.log(`Settings plugins Electron: ${checks} checks passed.`);
 }
 

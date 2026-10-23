@@ -73,7 +73,7 @@
 .assay-results-actions > .ghost-btn:hover,
 .assay-results-actions > .ghost-btn:focus-visible {
   border-color: transparent;
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 .assay-results-actions > .primary-btn {
@@ -294,7 +294,7 @@
 }
 
 .assay-results-browser-list .assay-browser-item.is-active {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
   box-shadow: inset 3px 0 0 var(--theme-accent);
 }
 
@@ -496,7 +496,7 @@
 .assay-form-actions > .ghost-btn.assay-form-icon-btn:hover,
 .assay-form-actions > .ghost-btn.assay-form-icon-btn:focus-visible {
   border-color: transparent;
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 .assay-form-actions > .assay-form-save-icon-btn.primary-btn {
@@ -594,7 +594,7 @@
 
 .assay-plate-toolbar .assay-plate-clear-btn:hover {
   color: var(--theme-text-strong);
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 .assay-plate-toolbar .assay-mode-switch > .calendar-view-active {

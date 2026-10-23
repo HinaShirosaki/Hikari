@@ -1,6 +1,6 @@
 // This plugin is self-contained; the menu uses the same editor actions as the
 // toolbar and shortcuts, without requiring a host menu or clipboard permission.
-export function installCanvasContextMenu({ document, canOpen, selectTarget, getActions, status }) {
+export function installCanvasContextMenu({ document, canOpen, selectTarget, getActions, status, hitTest }) {
   const menu = document.getElementById('canvas-context-menu');
   const stage = document.getElementById('main-canvas');
   const layers = document.getElementById('layers');
@@ -15,7 +15,8 @@ export function installCanvasContextMenu({ document, canOpen, selectTarget, getA
   function open(event, surface, keyboard = false) {
     if (!canOpen() || event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])') || event.target.isContentEditable) return;
     event.preventDefault();
-    const hit = event.target.closest('[data-object-id], [data-resize-id], [data-rotate-id], [data-layer-id]');
+    const hit = surface === stage && !keyboard && hitTest ? hitTest(event)
+      : event.target.closest('[data-object-id], [data-resize-id], [data-rotate-id], [data-layer-id]');
     const id = hit?.dataset.objectId || hit?.dataset.resizeId || hit?.dataset.rotateId || hit?.dataset.layerId;
     // Read the anchor before selection redraws and replaces its SVG/layer row.
     const anchor = (hit || stage.querySelector('[data-object-id][aria-pressed="true"]') || surface).getBoundingClientRect();

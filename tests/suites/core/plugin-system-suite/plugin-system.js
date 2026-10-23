@@ -1,4 +1,6 @@
 module.exports = function registerPluginSystemSuite(context = {}) {
+  require('./github-install.js')(context);
+  require('./settings.js')(context);
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   const { pathToFileURL } = require('node:url');
@@ -648,7 +650,7 @@ test('plugin system: state normalizer strips unsafe embeds and remote permission
   assert.equal(byId.gel.path, '@bundled/gel');
   assert.equal(byId.gel.icon, 'gel-analysis');
   assert.match(byId.gel.iconMarkup, /data-hikari-icon="gel-analysis"/);
-  assert.deepEqual(byId.gel.permissions, ['storage', 'files', 'downloads', 'layout']);
+  assert.deepEqual(byId.gel.permissions, ['storage', 'files', 'downloads', 'layout', 'notifications']);
   assert.equal(byId.gel.enabled, false, 'the user can keep a bundled plugin disabled');
 
   assert.deepEqual(settings.pluginStorage.keeper, { records: [{ id: 'g1' }] });
@@ -1442,7 +1444,7 @@ test('plugin system: every public verb and host event is documented', async () =
     );
   });
   // Events have no table to enumerate them, so they are listed here.
-  ['app.context', 'app.save', 'app.undo', 'app.redo', 'app.workspaceTool', 'app.contextAction', 'agent.canvas'].forEach((event) => {
+  ['app.context', 'app.save', 'app.undo', 'app.redo', 'app.workspaceTool', 'app.contextAction', 'settings.changed', 'agent.canvas'].forEach((event) => {
     assert.ok(api.includes(`\`${event}\``), `plugin-api.md does not document the "${event}" event`);
   });
 });

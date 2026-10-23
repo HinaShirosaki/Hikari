@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createDocument, normalizeDocument, applyOperations, MAX_DOCUMENT_CHARS } from '../model.mjs';
+import { createDocument, normalizeDocument, applyOperations, MAX_DOCUMENT_CHARS, MAX_OBJECTS } from '../model.mjs';
 import { copyComponents, instantiateClipboard, parseClipboard, normalizeClipboard, CLIPBOARD_FORMAT } from '../clipboard.mjs';
 import { createWorkspace } from '../workspace.mjs';
 
@@ -90,14 +90,14 @@ test('queued pastes survive source deletion, support one-step undo, and guard il
   assert.equal((await w.paste(snapshot, options)).status, 'illustration_changed'); assert.equal(w.getDocument().objects.length, 0);
 });
 
-test('one paste action supports all 200 copied components and fails atomically when the scene is full', async () => {
+test('one paste action supports every copied component at capacity and fails atomically when the scene is full', async () => {
   const host = fixture(), w = host.workspace; await w.ready;
-  const doc = normalizeDocument({ ...createDocument(), objects: Array.from({ length: 200 }, (_, index) => ({ id: `label-${index}`, type: 'text', text: `${index}`, x: index })) });
+  const doc = normalizeDocument({ ...createDocument(), objects: Array.from({ length: MAX_OBJECTS }, (_, index) => ({ id: `label-${index}`, type: 'text', text: `${index}`, x: index })) });
   doc.groups = [{ id: 'all', canvas: 'main', name: 'All components', ids: doc.objects.map(object => object.id) }];
   const snapshot = copyComponents(doc, doc.objects.map(object => object.id));
   const options = { illustrationId: w.getLibrary().active_illustration_id, canvas: 'main' };
   const result = await w.paste(snapshot, options); assert.ok(result.ok, result.error);
-  assert.equal(result.objects.length, 200); assert.equal(result.groups[0].ids.length, 200);
+  assert.equal(result.objects.length, MAX_OBJECTS); assert.equal(result.groups[0].ids.length, MAX_OBJECTS);
   const before = structuredClone(w.getDocument());
   assert.equal((await w.paste(snapshot, options)).ok, false); assert.deepEqual(w.getDocument(), before);
   await w.history('undo'); assert.equal(w.getDocument().objects.length, 0); assert.equal(w.getDocument().groups.length, 0);

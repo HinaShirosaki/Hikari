@@ -9,9 +9,9 @@
   --hikari-menu-surface: color-mix(in srgb, var(--theme-surface-elevated) 96%, var(--theme-surface-subtle) 4%);
   --hikari-menu-border: var(--theme-border-soft);
   --hikari-menu-separator: color-mix(in srgb, var(--theme-border-soft) 88%, transparent);
-  --hikari-menu-hover: color-mix(in srgb, var(--theme-surface-subtle) 74%, var(--theme-surface-elevated) 26%);
-  --hikari-menu-pressed: color-mix(in srgb, var(--theme-surface-subtle) 88%, var(--theme-surface-elevated) 12%);
-  --hikari-menu-search: color-mix(in srgb, var(--theme-surface-subtle) 64%, var(--theme-surface-elevated) 36%);
+  --hikari-menu-hover: color-mix(in srgb, var(--theme-surface-subtle) 55%, var(--theme-surface-elevated) 45%);
+  --hikari-menu-pressed: color-mix(in srgb, var(--theme-surface-subtle) 74%, var(--theme-surface-elevated) 26%);
+  --hikari-menu-search: color-mix(in srgb, var(--theme-surface-subtle) 40%, var(--theme-surface-elevated) 60%);
   --hikari-menu-shadow: 0 16px 34px var(--theme-shadow-color), 0 2px 8px var(--theme-shadow-color-subtle);
 }
 

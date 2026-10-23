@@ -1,160 +1,6 @@
 <section id="gel-view" class="view">
       <div class="gel-workspace left-rail-template">
-        <div class="gel-setup-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <details id="gel-browser-panel" class="gel-browser-panel">
-            <summary class="gel-browser-summary">
-              <span>Existing Gels</span>
-              <span id="gel-browser-count" class="small-note">0</span>
-            </summary>
-            <div class="gel-browser-body">
-              <label>
-                <span class="sr-only">Search Gels</span>
-                <input id="gel-search" type="search" placeholder="Search saved gels" />
-              </label>
-              <div id="gel-list" class="gel-browser-list"></div>
-            </div>
-          </details>
-          <form id="gel-form" class="form-grid">
-            <input type="hidden" id="gel-id" />
-            <div class="gel-form-fields">
-              <label class="gel-name-field">
-                Gel Name
-                <input id="gel-name" required placeholder="e.g. WB_RUN_2026_02_19" />
-              </label>
-              <div class="gel-tool-groups">
-                <details class="gel-tool-group" open>
-                  <summary>Image</summary>
-                  <div class="gel-tool-body">
-                    <label>
-                      Gel Image
-                      <input id="gel-image-file" class="gel-wide-field" type="file" accept="image/*" />
-                    </label>
-                    <label>
-                      Analysis Type
-                      <select id="gel-type">
-                        <option value="sds-page">SDS-PAGE</option>
-                        <option value="western">Western Blot</option>
-                        <option value="agarose">DNA/RNA Agarose</option>
-                      </select>
-                    </label>
-                    <div class="gel-tool-actions">
-                      <button type="button" id="gel-crop-mode-btn" class="ghost-btn gel-tool-wide gel-crop-mode-btn" aria-label="Start crop" title="Start crop" aria-pressed="false">
-                        <svg class="gel-viewer-button-icon gel-crop-mode-icon gel-crop-mode-icon--start" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                          <path d="M6 3v13a2 2 0 0 0 2 2h13"></path>
-                          <path d="M18 21V8a2 2 0 0 0-2-2H3"></path>
-                        </svg>
-                        <svg class="gel-viewer-button-icon gel-crop-mode-icon gel-crop-mode-icon--cancel" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                          <path d="m7 7 10 10"></path>
-                          <path d="M17 7 7 17"></path>
-                        </svg>
-                        Crop
-                      </button>
-                    </div>
-                    <label class="gel-slider-field">
-                      <span class="gel-slider-label">Denoise Strength</span>
-                      <span id="gel-denoise-strength-value" class="small-note">35%</span>
-                      <input id="gel-denoise-strength" type="range" min="0" max="100" step="1" value="35" />
-                    </label>
-                    <label class="gel-slider-field">
-                      <span class="gel-slider-label">Contrast Boost</span>
-                      <span id="gel-contrast-strength-value" class="small-note">100%</span>
-                      <input id="gel-contrast-strength" type="range" min="0" max="220" step="1" value="100" />
-                    </label>
-                  </div>
-                </details>
-
-                <details class="gel-tool-group" open>
-                  <summary>Lanes</summary>
-                  <div class="gel-tool-body">
-                    <div class="gel-tool-actions gel-tool-actions--three">
-                      <div class="gel-tool-control-row">
-                        <label class="small-note gel-tool-field">
-                          Lanes
-                          <input type="number" id="gel-expected-lane-count" min="2" max="40" step="1" placeholder="auto" />
-                        </label>
-                        <button type="button" id="gel-auto-detect-lanes-btn" class="ghost-btn">Auto-detect</button>
-                      </div>
-                      <button type="button" id="gel-tool-dividers-btn" class="ghost-btn" aria-pressed="false" aria-label="Lane dividers" title="Click the gel to add lane boundaries; the outermost dividers define the gel edges">Dividers</button>
-                      <button type="button" id="gel-tool-lane-vertices-btn" class="ghost-btn" aria-label="Lane vertices" title="Drag a lane's corners to correct tilt">Vertices</button>
-                      <button type="button" id="gel-open-lane-table-btn" class="ghost-btn" aria-controls="gel-lane-table-panel" aria-expanded="false" aria-label="Lane table" title="Sample labels above the lanes, included in exports">Table</button>
-                    </div>
-                  </div>
-                </details>
-
-                <details class="gel-tool-group" open>
-                  <summary>Ladder</summary>
-                  <div class="gel-tool-body">
-                    <label>
-                      Ladder Preset
-                      <select id="gel-ladder-preset"></select>
-                    </label>
-                    <div class="gel-tool-actions gel-tool-actions--three">
-                      <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn" title="Click the ladder lane on the gel">Pick lane</button>
-                      <button type="button" id="gel-detect-ladder-btn" class="ghost-btn" aria-label="Detect ladder" title="Detect ladder bands and label them from the selected preset">Detect</button>
-                      <button type="button" id="gel-tool-ladder-mw-btn" class="ghost-btn" aria-pressed="false" aria-controls="gel-ladder-mw-editor" title="Toggle MW labeling: click a band in the ladder lane to enter its MW; drag a label to move it">Set MW</button>
-                    </div>
-                  </div>
-                </details>
-
-                <details class="gel-tool-group" open>
-                  <summary>Bands</summary>
-                  <div class="gel-tool-body">
-                    <div class="gel-tool-actions gel-tool-actions--three">
-                      <button type="button" id="gel-tool-band-top-btn" class="ghost-btn" aria-label="Band top" title="Click the top edge of the band">Top</button>
-                      <button type="button" id="gel-tool-band-bottom-btn" class="ghost-btn" aria-label="Band bottom" title="Click the bottom edge of the band">Bottom</button>
-                      <button type="button" id="gel-lane-band-mode-btn" class="ghost-btn" aria-pressed="false" aria-label="Per-lane band" title="Set a separate band window in each lane">Per lane</button>
-                    </div>
-                  </div>
-                </details>
-
-                <details class="gel-tool-group" open>
-                  <summary>Results</summary>
-                  <div class="gel-tool-body">
-                    <section id="gel-cell-table-panel" class="gel-result-block" aria-labelledby="gel-cell-table-title">
-                      <div class="gel-result-head">
-                        <h4 id="gel-cell-table-title">Band intensity</h4>
-                        <button type="button" id="gel-cell-table-copy-btn" class="ghost-btn" title="Copy all rows and headers for pasting into a spreadsheet" disabled>Copy</button>
-                      </div>
-                      <span id="gel-cell-table-copy-status" class="small-note" role="status" aria-live="polite"></span>
-                      <div id="gel-cell-table-host" class="gel-cell-table-host"></div>
-                    </section>
-                    <section id="gel-lane-profile-panel" class="gel-result-block gel-lane-profile-panel" aria-labelledby="gel-profile-title">
-                      <div class="gel-result-head">
-                        <h4 id="gel-profile-title">Lane intensity</h4>
-                        <label class="gel-lane-profile-picker">
-                          <span class="sr-only">Lane</span>
-                          <select id="gel-lane-profile-select" disabled>
-                            <option value="">Select lane</option>
-                          </select>
-                        </label>
-                      </div>
-                      <div class="gel-lane-profile-chart-shell">
-                        <svg id="gel-lane-profile-chart" class="gel-lane-profile-chart" viewBox="0 0 320 190" role="img" aria-label="Lane intensity profile"></svg>
-                      </div>
-                    </section>
-                    <div class="gel-tool-actions">
-                      <button type="button" id="gel-open-peak-editor-btn" class="ghost-btn gel-tool-wide" aria-controls="gel-peak-editor-overlay" aria-expanded="false">Peak editor</button>
-                    </div>
-                  </div>
-                </details>
-              </div>
-              <span id="gel-override-status" class="small-note" hidden>Manual overrides: none</span>
-            </div>
-            <div class="form-actions gel-record-actions">
-              <button type="submit" id="gel-save-btn" class="primary-btn gel-save-btn" aria-label="Save" title="Save">
-                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"></path><path d="M7 3v6h10V3M7 21v-8h10v8"></path></svg>
-                <span data-gel-action-label>Save</span>
-              </button>
-              <button type="button" id="gel-record-menu-btn" class="ghost-btn gel-record-btn" popovertarget="gel-record-menu" aria-haspopup="menu" aria-label="More gel actions" title="More gel actions">
-                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></svg>
-              </button>
-              <div id="gel-record-menu" class="gel-menu" popover role="menu" aria-label="Gel actions">
-                <button type="button" id="gel-cancel-btn" role="menuitem">New gel</button>
-                <button type="button" id="gel-reset-overrides-btn" role="menuitem">Reset lanes and bands</button>
-              </div>
-            </div>
-          </form>
-        </div>
+        <nav id="gel-navigation" class="gel-setup-panel gel-figure-navigation app-left-rail left-rail-template__rail left-rail-template__rail--pinned" aria-label="Gel project" data-sync-left-rail></nav>
 
         <div class="gel-main left-rail-template__main">
           <div class="gel-main-stack">
@@ -180,8 +26,10 @@
                     </div>
                   </div>
                 </div>
-                <aside class="gel-viewer-card" aria-label="Viewer">
+                <aside class="gel-inspector" aria-label="Gel tools">
+                <div class="gel-viewer-card" aria-label="Viewer">
                   <div class="gel-viewer-toolbar" role="toolbar" aria-label="Gel viewer tools" aria-orientation="vertical">
+                    <button type="button" id="gel-crop-mode-btn" class="gel-tool-icon-btn" aria-label="Start crop" title="Start crop" aria-pressed="false" disabled><svg class="gel-card-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 3v13a2 2 0 0 0 2 2h13"></path><path d="M18 21V8a2 2 0 0 0-2-2H3"></path></svg><span class="gel-card-label">Crop</span></button>
                     <div id="gel-crop-bar" class="gel-crop-bar" role="group" aria-label="Crop" hidden>
                       <label class="gel-crop-angle">
                         <span class="gel-crop-angle-head">Straighten <output id="gel-crop-angle-value" for="gel-crop-angle">0°</output></span>
@@ -195,11 +43,14 @@
                       </div>
                     </div>
                     <button type="button" id="gel-finish-dividers-btn" class="gel-card-row gel-step-btn" hidden title="Finish placing lane dividers (same as clicking Dividers again)">Finish dividers</button>
-                    <button type="button" id="gel-manual-next-btn" class="gel-card-row gel-step-btn" hidden>Done</button>
                     <button type="button" id="gel-process-image-btn" class="gel-card-row" aria-pressed="false" title="Show the image with denoise and contrast applied">
                       <svg class="gel-card-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"></circle><path d="M12 18a6 6 0 0 0 0-12v12z"></path></svg>
                       <span class="gel-card-label">Processed</span>
                       <span class="gel-switch" aria-hidden="true"></span>
+                    </button>
+                    <button type="button" id="gel-reset-overrides-btn" class="gel-card-row" aria-label="Reset lanes and bands" title="Reset lanes and bands" disabled>
+                      <svg class="gel-card-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11a9 9 0 1 1 2.6 6.4M3 4v7h7"></path></svg>
+                      <span class="gel-card-label">Reset</span>
                     </button>
                     <button type="button" id="gel-export-menu-btn" class="gel-card-row" popovertarget="gel-export-menu" aria-haspopup="menu">
                       <svg class="gel-card-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path><path d="M12 15V3"></path></svg>
@@ -213,10 +64,148 @@
                     </div>
                     <button type="button" id="gel-open-figure-btn" class="gel-card-row" aria-controls="gel-blot-figure" aria-expanded="false">
                       <svg class="gel-card-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"></path><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"></path><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"></path></svg>
-                      <span class="gel-card-label">Layers</span>
+                      <span class="gel-card-label">Layout</span>
                       <span class="gel-card-value" data-layer-count></span>
                     </button>
                   </div>
+                </div>
+                <section class="gel-tools-panel" aria-label="Editing tools">
+                  <div id="gel-figure-inspector" hidden></div>
+                  <form id="gel-form" class="form-grid">
+                    <input type="hidden" id="gel-id" />
+                    <input id="gel-image-file" type="file" accept="image/*,.tif,.tiff" hidden />
+                    <div class="gel-form-fields">
+                      <label class="gel-name-field">
+                        Gel Name
+                        <input id="gel-name" required placeholder="e.g. WB_RUN_2026_02_19" />
+                      </label>
+                      <div class="gel-tool-groups">
+                        <details class="gel-tool-group" open>
+                          <summary>Image</summary>
+                          <div class="gel-tool-body">
+                            <label>
+                              Analysis Type
+                              <select id="gel-type">
+                                <option value="sds-page">SDS-PAGE</option>
+                                <option value="western">Western Blot</option>
+                                <option value="agarose">DNA/RNA Agarose</option>
+                              </select>
+                            </label>
+                          </div>
+                        </details>
+
+                        <details class="gel-tool-group" open>
+                          <summary>Processed</summary>
+                          <div class="gel-tool-body">
+                            <label class="gel-lane-table-ladder-choice">
+                              <input id="gel-processed-preview" type="checkbox" />
+                              Processed view
+                            </label>
+                            <label class="gel-slider-field">
+                              <span class="gel-slider-label">Denoise Strength</span>
+                              <span id="gel-denoise-strength-value" class="small-note">35%</span>
+                              <input id="gel-denoise-strength" type="range" min="0" max="100" step="1" value="35" />
+                            </label>
+                            <label class="gel-slider-field">
+                              <span class="gel-slider-label">Contrast Boost</span>
+                              <span id="gel-contrast-strength-value" class="small-note">100%</span>
+                              <input id="gel-contrast-strength" type="range" min="0" max="220" step="1" value="100" />
+                            </label>
+                          </div>
+                        </details>
+
+                        <details class="gel-tool-group" open>
+                          <summary>Lanes</summary>
+                          <div class="gel-tool-body">
+                            <div class="gel-tool-actions gel-tool-actions--three">
+                              <div class="gel-tool-control-row">
+                                <label class="small-note gel-tool-field">
+                                  Lanes
+                                  <input type="number" id="gel-expected-lane-count" min="2" max="40" step="1" placeholder="auto" />
+                                </label>
+                                <button type="button" id="gel-auto-detect-lanes-btn" class="ghost-btn">Auto-detect</button>
+                              </div>
+                              <button type="button" id="gel-tool-dividers-btn" class="ghost-btn" aria-pressed="false" aria-label="Lane dividers" title="Click to add lane boundaries; drag an existing divider to move it. The outermost dividers define the gel edges.">Dividers</button>
+                              <button type="button" id="gel-tool-lane-vertices-btn" class="ghost-btn" aria-label="Lane vertices" title="Drag a lane's corners to correct tilt">Vertices</button>
+                              <button type="button" id="gel-open-lane-table-btn" class="ghost-btn" aria-controls="gel-lane-table-panel" aria-expanded="false" aria-label="Lane table" title="Sample labels above the lanes, included in exports">Table</button>
+                            </div>
+                          </div>
+                        </details>
+
+                        <details class="gel-tool-group" open>
+                          <summary>Ladder</summary>
+                          <div class="gel-tool-body">
+                            <label>
+                              Ladder Preset
+                              <select id="gel-ladder-preset"></select>
+                            </label>
+                            <div class="gel-tool-actions gel-tool-actions--three">
+                              <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn" title="Click the ladder lane on the gel">Pick lane</button>
+                              <button type="button" id="gel-detect-ladder-btn" class="ghost-btn" aria-label="Detect ladder" title="Detect the bands in the ladder lane (pick it first) and label them from the selected preset">Detect</button>
+                              <button type="button" id="gel-tool-ladder-mw-btn" class="ghost-btn" aria-pressed="false" aria-controls="gel-ladder-mw-editor" title="Toggle MW labeling: click a band in the ladder lane to enter its MW; drag a label to move it">Set MW</button>
+                            </div>
+                          </div>
+                        </details>
+
+                        <details class="gel-tool-group" open>
+                          <summary>Bands</summary>
+                          <div class="gel-tool-body">
+                            <div class="gel-tool-actions gel-tool-actions--three">
+                              <button type="button" id="gel-tool-band-top-btn" class="ghost-btn" aria-label="Band top" title="Click the top edge of the band">Top</button>
+                              <button type="button" id="gel-tool-band-bottom-btn" class="ghost-btn" aria-label="Band bottom" title="Click the bottom edge of the band">Bottom</button>
+                              <button type="button" id="gel-lane-band-mode-btn" class="ghost-btn" aria-pressed="false" aria-label="Per-lane band" title="Set a separate band window in each lane">Per lane</button>
+                            </div>
+                          </div>
+                        </details>
+
+                        <details class="gel-tool-group" open>
+                          <summary>Results</summary>
+                          <div class="gel-tool-body">
+                            <section id="gel-cell-table-panel" class="gel-result-block" aria-labelledby="gel-cell-table-title">
+                              <div class="gel-result-head">
+                                <h4 id="gel-cell-table-title">Band intensity</h4>
+                                <button type="button" id="gel-cell-table-copy-btn" class="ghost-btn" title="Copy all rows and headers for pasting into a spreadsheet" disabled>Copy</button>
+                              </div>
+                              <span id="gel-cell-table-copy-status" class="small-note" role="status" aria-live="polite"></span>
+                              <div id="gel-cell-table-host" class="gel-cell-table-host"></div>
+                            </section>
+                            <section id="gel-lane-profile-panel" class="gel-result-block gel-lane-profile-panel" aria-labelledby="gel-profile-title">
+                              <div class="gel-result-head">
+                                <h4 id="gel-profile-title">Lane intensity</h4>
+                                <label class="gel-lane-profile-picker">
+                                  <span class="sr-only">Lane</span>
+                                  <select id="gel-lane-profile-select" disabled>
+                                    <option value="">Select lane</option>
+                                  </select>
+                                </label>
+                              </div>
+                              <div class="gel-lane-profile-chart-shell">
+                                <svg id="gel-lane-profile-chart" class="gel-lane-profile-chart" viewBox="0 0 320 190" role="img" aria-label="Lane intensity profile"></svg>
+                              </div>
+                            </section>
+                            <div class="gel-tool-actions">
+                              <button type="button" id="gel-open-peak-editor-btn" class="ghost-btn gel-tool-wide" aria-controls="gel-peak-editor-overlay" aria-expanded="false">Peak editor</button>
+                            </div>
+                          </div>
+                        </details>
+                      </div>
+                      <span id="gel-override-status" class="small-note" hidden>Manual overrides: none</span>
+                    </div>
+                    <div class="form-actions gel-record-actions">
+                      <button type="submit" id="gel-save-btn" class="primary-btn gel-save-btn" aria-label="Save" title="Save">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"></path><path d="M7 3v6h10V3M7 21v-8h10v8"></path></svg>
+                        <span data-gel-action-label>Save</span>
+                      </button>
+                      <button type="button" id="gel-record-menu-btn" class="ghost-btn gel-record-btn" popovertarget="gel-record-menu" aria-haspopup="menu" aria-label="More gel actions" title="More gel actions">
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></svg>
+                        <span class="gel-card-label">More</span>
+                      </button>
+                      <div id="gel-record-menu" class="gel-menu" popover role="menu" aria-label="Gel actions">
+                        <button type="button" id="gel-remove-gel-btn" role="menuitem">Remove gel</button>
+                      </div>
+                    </div>
+                  </form>
+                </section>
                 </aside>
                 <form id="gel-ladder-mw-editor" class="gel-ladder-mw-editor" aria-label="Set ladder MW" hidden>
                   <input id="gel-ladder-band-mw" type="number" min="0" step="any" placeholder="MW" aria-label="Ladder MW (kDa)" required />

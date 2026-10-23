@@ -21,21 +21,23 @@ export function getViewerToolLabel(tool = '') {
 }
 
 export function renderViewerToolbar(elements, selectedViewerTool, laneBandMode = false) {
-  const dividersSelected = selectedViewerTool === 'dividers';
-  elements.gelToolDividersBtn?.classList.toggle('is-active', dividersSelected);
-  elements.gelToolDividersBtn?.setAttribute?.('aria-pressed', String(dividersSelected));
-  if (elements.gelFinishDividersBtn) {
-    elements.gelFinishDividersBtn.hidden = !dividersSelected;
+  const tools = [
+    [elements.gelToolDividersBtn, 'dividers'],
+    [elements.gelToolLadderLaneBtn, 'ladder'],
+    [elements.gelToolLadderMwBtn, 'ladder-mw'],
+    [elements.gelToolLaneVerticesBtn, 'lane-vertices'],
+    [elements.gelToolBandTopBtn, 'band-top'],
+    [elements.gelToolBandBottomBtn, 'band-bottom']
+  ];
+  for (const [button, tool] of tools) {
+    button?.classList.toggle('is-active', selectedViewerTool === tool);
+    button?.setAttribute?.('aria-pressed', String(selectedViewerTool === tool));
   }
-  elements.gelCanvas?.classList.toggle('is-setting-dividers', dividersSelected);
-  elements.gelToolLadderLaneBtn?.classList.toggle('is-active', selectedViewerTool === 'ladder');
-  const ladderMwSelected = selectedViewerTool === 'ladder-mw';
-  elements.gelToolLadderMwBtn?.classList.toggle('is-active', ladderMwSelected);
-  elements.gelToolLadderMwBtn?.setAttribute?.('aria-pressed', String(ladderMwSelected));
-  elements.gelCanvas?.classList.toggle('is-setting-ladder-mw', ladderMwSelected);
-  elements.gelToolLaneVerticesBtn?.classList.toggle('is-active', selectedViewerTool === 'lane-vertices');
-  elements.gelToolBandTopBtn?.classList.toggle('is-active', selectedViewerTool === 'band-top');
-  elements.gelToolBandBottomBtn?.classList.toggle('is-active', selectedViewerTool === 'band-bottom');
+  if (elements.gelFinishDividersBtn) {
+    elements.gelFinishDividersBtn.hidden = selectedViewerTool !== 'dividers';
+  }
+  elements.gelCanvas?.classList.toggle('is-setting-dividers', selectedViewerTool === 'dividers');
+  elements.gelCanvas?.classList.toggle('is-setting-ladder-mw', selectedViewerTool === 'ladder-mw');
   elements.gelLaneBandModeBtn?.classList.toggle('is-active', Boolean(laneBandMode));
   elements.gelLaneBandModeBtn?.setAttribute?.('aria-pressed', String(Boolean(laneBandMode)));
 }

@@ -26,14 +26,14 @@
 #sequence-viewer-detail-view .sequence-viewer-library-switch > button:focus-visible,
 #sequence-viewer-detail-view .sequence-viewer-mode-switch > button:hover,
 #sequence-viewer-detail-view .sequence-viewer-mode-switch > button:focus-visible {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
   color: var(--theme-text-strong);
 }
 
 #sequence-viewer-view .sequence-viewer-library-switch-btn-active,
 #sequence-viewer-detail-view .sequence-viewer-library-switch-btn-active,
 #sequence-viewer-detail-view .sequence-viewer-mode-btn-active {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
   color: var(--theme-text-strong);
 }
 
@@ -52,7 +52,7 @@
 
 #sequence-viewer-detail-view .sequence-viewer-context-item:hover:not(:disabled),
 #sequence-viewer-detail-view .sequence-viewer-context-item:focus-visible:not(:disabled) {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 #sequence-viewer-detail-view .sequence-viewer-context-item {
@@ -69,7 +69,7 @@
 
 #sequence-viewer-view .sequence-viewer-library-item-active {
   border-color: var(--theme-accent-line);
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
 }
 
 #sequence-viewer-view .sequence-viewer-library-item-name {

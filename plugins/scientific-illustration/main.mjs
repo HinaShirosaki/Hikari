@@ -20,10 +20,12 @@ import { exportPowerPoint } from './powerpoint.mjs';
 import { angleDelta, rotateComponents } from './rotation.mjs';
 import { installCanvasClipboard } from './clipboard.mjs';
 import { installCanvasContextMenu } from './context-menu.mjs';
+import { createArtworkHitTester } from './hit-testing.mjs';
 
 const { hikari } = window.HikariPlugin;
 const $ = id => document.getElementById(id);
 const properties = $('properties');
+const artworkHitTester = createArtworkHitTester();
 let assetsPanel, workspaceTools, artworkImport, canvasCrop, canvasContextMenu;
 const componentRail = createComponentRail({ document, focusTab: name => workspaceTools?.focus(`${name}-tab`), onChange: name => {
   if (name === 'assets') assetsPanel?.render();
@@ -162,6 +164,7 @@ function renderCanvas(canvas, documentState = state) {
   const stage = $(`${canvas}-canvas`), focusedId = document.activeElement?.dataset.objectId,
     focusedRotation = document.activeElement?.dataset.rotateId;
   const pan = { x: stage.scrollLeft, y: stage.scrollTop };
+  artworkHitTester.prepare(documentState.objects.filter(object => object.canvas === canvas));
   const selectionBox = drag?.rotating && drag.canvas === canvas && drag.objects.length > 1
     ? { ...drag.bounds, id: 'selection', rotation: drag.rotationDelta || 0 } : undefined;
   stage.replaceChildren(scene(documentState, canvas, { interactive: true, selectedId: selectedIds.length === 1 ? selectedId : '', selectedIds, selectionBox }));
@@ -552,7 +555,7 @@ setSelectionTool('pointer');
   }, { passive: false });
   stage.addEventListener('pointerdown', event => {
     if (!state || event.button !== 0 || event.ctrlKey && /Mac/i.test(navigator.platform) || drag || areaDrag || !event.isPrimary) return;
-    let hit = event.target.closest('[data-object-id], [data-resize-id], [data-rotate-id], [data-move-id]');
+    let hit = artworkHitTester.hit(stage, state.objects, event);
     if (hit?.dataset.moveId && event.shiftKey) hit = null;
     const mode = $('selection-tool').value;
     // Select & move uses a rectangle on empty space. Freehand still permits
@@ -671,6 +674,9 @@ setSelectionTool('pointer');
   stage.addEventListener('focus', () => stage.classList.toggle('pointer-focus', pointerInput));
   stage.addEventListener('pointerup', finish); stage.addEventListener('pointercancel', finish); stage.addEventListener('lostpointercapture', finish);
   stage.addEventListener('focusin', event => {
+    // Pointer selection uses painted pixels above (and in the context menu).
+    // Native right-click focus must not select a transparent rectangular target.
+    if (pointerInput) return;
     const id = event.target.dataset.objectId;
     if (id && !selectedIds.includes(id)) select(state.groups.find(group => group.ids.includes(id))?.ids || id, { reveal: false });
   });
@@ -678,21 +684,38 @@ setSelectionTool('pointer');
     if ($('selection-tool').value !== 'pointer') return;
     // Selection redraws the SVG during pointer-down. Chromium can deliver the
     // resulting double-click to the stage after that original node is replaced.
-    const hit = event.target.closest('[data-object-id]')
-      || document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-object-id]');
+    const target = event.target.closest('[data-object-id]');
+    const hit = target && state.objects.find(object => object.id === target.dataset.objectId)?.type === 'text'
+      ? target : artworkHitTester.hit(stage, state.objects, event, { handles: false });
     const id = stage.contains(hit) ? hit.dataset.objectId : '';
     if (id) editLabel(id);
   });
 }
-let keyboardRotation = Promise.resolve();
-function rotateWithKeyboard(degrees) {
+let keyboardTransform = Promise.resolve();
+function queueKeyboardTransform(operations) {
   const id = illustrationId, canvas = activeCanvas, ids = JSON.stringify(selectedIds);
-  keyboardRotation = keyboardRotation.then(async () => {
-    if (id !== illustrationId || canvas !== activeCanvas || ids !== JSON.stringify(selectedIds) || drag) return;
-    const boxes = selectedObjects().map(interactionBox), box = boxes.length === 1 ? boxes[0] : selectionBounds(boxes);
-    if (box) await edit([{ op: 'rotate', ids: [...selectedIds], degrees,
-      pivot: { x: box.x + box.width / 2, y: box.y + box.height / 2 } }]);
+  // Key repeat can outpace persistence. Build each relative edit from the last
+  // committed geometry and revision instead of reusing the first key's patch.
+  keyboardTransform = keyboardTransform.then(async () => {
+    if (id !== illustrationId || canvas !== activeCanvas || ids !== JSON.stringify(selectedIds) || drag || areaDrag) return;
+    const next = operations();
+    if (next.length) await edit(next);
   }).catch(error => status(error.message));
+}
+function rotateWithKeyboard(degrees) {
+  queueKeyboardTransform(() => {
+    const boxes = selectedObjects().map(interactionBox), box = boxes.length === 1 ? boxes[0] : selectionBounds(boxes);
+    return box ? [{ op: 'rotate', ids: [...selectedIds], degrees,
+      pivot: { x: box.x + box.width / 2, y: box.y + box.height / 2 } }] : [];
+  });
+}
+function nudgeWithKeyboard(dx, dy) {
+  queueKeyboardTransform(() => {
+    const object = selectionTarget();
+    if (!object) return [];
+    const patch = { x: object.x + dx, y: object.y + dy };
+    return [object.type === 'group' ? transformOperation(patch) : { op: 'update', id: object.id, patch }];
+  });
 }
 const canvasClipboard = installCanvasClipboard({ document, validateSvg, status,
   canHandle: event => {
@@ -711,6 +734,7 @@ const canvasClipboard = installCanvasClipboard({ document, validateSvg, status,
   }
 });
 canvasContextMenu = installCanvasContextMenu({ document, status,
+  hitTest: event => artworkHitTester.hit($('main-canvas'), state.objects, event),
   canOpen: () => Boolean(state) && !drag && !areaDrag && !document.querySelector('dialog[open], #canvas-crop-overlay'),
   selectTarget: (id, { individual, forceIndividual }) => {
     const group = state.groups.find(group => group.id === id || !individual && group.ids.includes(id));
@@ -773,8 +797,8 @@ document.addEventListener('keydown', event => {
   if (event.key === 'Delete' || event.key === 'Backspace') { event.preventDefault(); deleteSelection(); return; }
   const delta = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
   if (delta) {
-    event.preventDefault(); const amount = event.shiftKey ? 10 : 1, patch = { x: object.x + delta[0] * amount, y: object.y + delta[1] * amount };
-    void edit([object.type === 'group' ? transformOperation(patch) : { op: 'update', id: object.id, patch }]);
+    event.preventDefault(); const amount = event.shiftKey ? 10 : 1;
+    nudgeWithKeyboard(delta[0] * amount, delta[1] * amount);
   }
 });
 let exporting = false;

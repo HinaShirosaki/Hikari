@@ -133,7 +133,7 @@ body {
 
 .app-left-rail-fold-toggle:hover,
 .app-left-rail-fold-toggle:focus-visible {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
   color: var(--theme-text-strong);
   outline: none;
 }

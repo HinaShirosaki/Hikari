@@ -4,6 +4,7 @@ import { VERBS } from './plugin-bridge/verbs.js';
 import { pluginOrigin } from './plugin-origin.js';
 import { createPluginWorkspaceTools } from './plugin-workspace-tools.js';
 import { createPluginContextActions } from './plugin-context-actions.js';
+import { PLUGIN_SETTINGS_CHANGED, readPluginSettings } from '../lib/plugin-settings.js';
 
 export function createPluginBridge({
   state,
@@ -278,6 +279,13 @@ export function createPluginBridge({
   }
 
   windowObject?.addEventListener?.('message', handleMessage);
+  windowObject?.document?.addEventListener?.(PLUGIN_SETTINGS_CHANGED, event => {
+    frames.forEach(({ plugin, origin }, frameWindow) => {
+      if (plugin.id !== event.detail?.pluginId || !asArray(plugin.permissions).includes('settings')) return;
+      frameWindow.postMessage({ hikari: PROTOCOL_MARKER, event: 'settings.changed',
+        payload: { values: readPluginSettings(state, plugin) } }, origin);
+    });
+  });
   windowObject?.document?.addEventListener?.('hikari:agent-chat-rail-state', () => broadcastAppContext('layout'));
   return {
     register,

@@ -71,8 +71,10 @@ const SYSTEM = Object.freeze({
 
 const PLUGINS = Object.freeze({
   INSPECT_FOLDER: 'plugins:inspect-folder',
+  INSTALL_GITHUB: 'plugins:install-github',
   SERVE_FOLDER: 'plugins:serve-folder',
   READ_FILE: 'plugins:read-file',
+  DISCOVER_GELS: 'plugins:discover-gels',
   WRITE_FILE: 'plugins:write-file',
   EXPORT_FILE: 'plugins:export-file',
   CANVAS_REQUEST: 'plugins:canvas-request',

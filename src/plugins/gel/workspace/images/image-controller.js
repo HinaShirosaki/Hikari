@@ -117,7 +117,6 @@ export function createImageController({ runtime, elements, deps }) {
       runtime.cropApplied = false;
       runtime.currentReport = null;
       runtime.manualOverrides = createEmptyManualOverrides();
-      runtime.manualDividerConfirmed = false;
       runtime.selectedViewerTool = '';
       deps.leaveCropMode();
       deps.renderOverrideStatus();
@@ -132,7 +131,6 @@ export function createImageController({ runtime, elements, deps }) {
       runtime.cropApplied = false;
       runtime.currentReport = null;
       runtime.manualOverrides = createEmptyManualOverrides();
-      runtime.manualDividerConfirmed = false;
       runtime.selectedViewerTool = '';
       deps.leaveCropMode();
       deps.renderOverrideStatus();

@@ -31,6 +31,8 @@ const { verifySystemHistory } = require('./scientific-illustration-history.cjs')
 const { verifyAlignment } = require('./scientific-illustration-alignment.cjs');
 const { verifySingleCanvas } = require('./scientific-illustration-single-canvas.cjs');
 const { verifyLibraryNavigation } = require('./scientific-illustration-library-navigation.cjs');
+const { verifyArtworkHitTesting } = require('./scientific-illustration-hit-testing.cjs');
+const { verifyFiguraStress } = require('./scientific-illustration-stress.cjs');
 const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
 const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
 const repo = path.resolve(__dirname, '..');
@@ -171,6 +173,20 @@ async function run() {
     const result = await client.callTool({ name: 'plugin_canvas', arguments: { plugin_id: 'scientific-illustration', request, ...(assets ? { assets } : {}) } });
     return { ...result.structuredContent, content: result.content };
   };
+  if (process.env.HIKARI_FIGURA_STRESS_QA_ONLY === '1') {
+    await verifyFiguraStress({ tool, evaluate, check, win, pause, temp, reloadPlugin: async () => {
+      await evaluate('location.reload()'); await pause(350);
+      frame = win.webContents.mainFrame.frames.find(item => item.url.startsWith('http://127.0.0.1'));
+      await evaluate('illustrationWorkspace.ready.then(()=>true)');
+    } });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura stress: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
+  if (process.env.HIKARI_HIT_TESTING_QA_ONLY === '1') {
+    await verifyArtworkHitTesting({ tool, evaluate, check, win, pause });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura transparent pixel selection: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
   if (process.env.HIKARI_LIBRARY_NAVIGATION_QA_ONLY === '1') {
     await verifyLibraryNavigation({ tool, evaluate, check, win, pause, waitFor });
     check(errors.length === 0, errors.join('\n'));
@@ -236,6 +252,12 @@ async function run() {
     check(errors.length === 0, errors.join('\n'));
     console.log(`Figura system history: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
   }
+  if (process.env.HIKARI_SELECTION_QA_ONLY === '1') {
+    await verifyAreaSelection({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura area selection: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
+    return;
+  }
   await verifyImageGenerationPreference({ tool, evaluate, check, win, pause, temp });
   if (sharedToolsQA) {
     await verifySharedWorkspaceTools({ tool, evaluate, check, win, pause, temp });
@@ -253,12 +275,6 @@ async function run() {
     await verifyReusableAssets({ tool, evaluate, check, win, pause, temp });
     check(errors.length === 0, errors.join('\n'));
     console.log(`Figura reusable assets: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
-    return;
-  }
-  if (process.env.HIKARI_SELECTION_QA_ONLY === '1') {
-    await verifyAreaSelection({ tool, evaluate, check, win, pause, temp });
-    check(errors.length === 0, errors.join('\n'));
-    console.log(`Figura area selection: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
     return;
   }
   let current = await tool({ action: 'read' });
@@ -621,10 +637,11 @@ async function run() {
   delete mcpEnv.HIKARI_CODEX_REQUEST_CONTEXT;
   await verifyReusableAssets({ tool, evaluate, check, win, pause, temp });
   await verifyAreaSelection({ tool, evaluate, check, win, pause, temp });
+  await verifyArtworkHitTesting({ tool, evaluate, check, win, pause });
   check(errors.length === 0, errors.join('\n'));
   console.log(`Figura host: ${checks} checks passed. Runtime: ${runtime}. Screenshots: ${temp}`);
 }
-const timeout = setTimeout(() => { console.error('Plugin test timed out'); app.exit(1); }, 120000);
+const timeout = setTimeout(() => { console.error('Plugin test timed out'); app.exit(1); }, process.env.HIKARI_FIGURA_STRESS_QA_ONLY === '1' ? 600000 : 120000);
 run().then(() => 0, error => { console.error(error.stack || error); return 1; }).then(async code => {
   clearTimeout(timeout); await client?.close(); await server?.close(); await service?.stop(); win?.destroy(); await registry?.closeAll(); app.exit(code);
 });

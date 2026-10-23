@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { alignmentOperations, selectionLayoutUnits } from '../alignment.mjs';
-import { createDocument, applyOperations, validateRequest } from '../model.mjs';
+import { createDocument, applyOperations, validateRequest, MAX_OBJECTS } from '../model.mjs';
 import { selectionBounds } from '../grouping.mjs';
 
 const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100"/></svg>';
@@ -70,20 +70,20 @@ test('insufficient selections and already aligned items are no-ops', () => {
 });
 
 test('a maximum-size figure aligns in one accepted batch, including every child of a large group', () => {
-  const before = applyOperations(createDocument(), Array.from({ length: 200 }, (_, index) => ({ op: 'upsert', object: {
+  const before = applyOperations(createDocument(), Array.from({ length: MAX_OBJECTS }, (_, index) => ({ op: 'upsert', object: {
     id: `item-${index}`, type: 'vector', x: index * 10, y: 20, width: 20, height: 20, svg
   } })));
   const selected = before.objects.map(object => object.id);
   const operations = alignmentOperations(before, selected, 'right');
-  assert.equal(operations.length, 199);
+  assert.equal(operations.length, MAX_OBJECTS - 1);
   assert.doesNotThrow(() => validateRequest({ action: 'apply', expected_revision: before.revision, request_id: 'align', operations }));
   const after = applyOperations(before, operations);
-  assert.ok(after.objects.every(object => object.x === 1990));
-  const grouped = applyOperations(before, [{ op: 'group', id: 'large', ids: selected.slice(0, 199) }]);
+  assert.ok(after.objects.every(object => object.x === (MAX_OBJECTS - 1) * 10));
+  const grouped = applyOperations(before, [{ op: 'group', id: 'large', ids: selected.slice(0, MAX_OBJECTS - 1) }]);
   const groupedOperations = alignmentOperations(grouped, selected, 'right');
-  assert.equal(groupedOperations.length, 199);
+  assert.equal(groupedOperations.length, MAX_OBJECTS - 1);
   const moved = applyOperations(grouped, groupedOperations);
-  assert.ok(moved.objects.slice(0, 199).every((object, index) => object.x === before.objects[index].x + 10));
+  assert.ok(moved.objects.slice(0, MAX_OBJECTS - 1).every((object, index) => object.x === before.objects[index].x + 10));
   assert.deepEqual(moved.groups, grouped.groups);
-  assert.throws(() => validateRequest({ action: 'apply', expected_revision: before.revision, request_id: 'too-large', operations: Array(201).fill(operations[0]) }), /1–200/);
+  assert.throws(() => validateRequest({ action: 'apply', expected_revision: before.revision, request_id: 'too-large', operations: Array(MAX_OBJECTS + 1).fill(operations[0]) }), new RegExp(`1–${MAX_OBJECTS}`));
 });

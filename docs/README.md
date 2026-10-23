@@ -20,7 +20,7 @@ Hikari is an Electron app with two processes plus an agent backend:
 | [main-platform/](main-platform/README.md) | Main-process persistence, storage bundles, LLM runtime, IPC registrars, and links to feature-owned Node services |
 | [agent/](agent/README.md) | The Codex agent backend: request lifecycle, runtime support, tools, context/observability, and the MCP contract |
 | [module-development/](module-development/README.md) | How to add a new renderer feature module from scratch (the build pipeline, the `init*()` contract, and the wiring checklist) |
-| [plugins/](plugins/README.md) | The user plugin system: plugin folder format, Settings-based install flow, the bridge API, service plugins, sandboxing, and limitations |
+| [plugins/](plugins/README.md) | The user plugin system: building a plugin (folder format, host API, preferences, service plugins), publishing it for GitHub installation, and the host internals (boot, sandboxing, tests) |
 | [reviews/](reviews/) | Dated code reviews (cloning assembly, test suite). Snapshots of the code at the time; file names in them may have moved since |
 | [screenshots/](screenshots/README.md) | README and guide screenshots, and how they were captured |
 

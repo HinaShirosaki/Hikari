@@ -297,7 +297,7 @@
 #setting-view .settings-sample-inventory-location-row input:focus,
 #setting-view .settings-preferred-journal-row input:focus {
   outline: 0;
-  background: var(--theme-surface-muted);
+  background: var(--theme-highlight);
   box-shadow: none;
 }
 
@@ -369,7 +369,7 @@
 }
 
 #setting-view .settings-inline-icon:not(:disabled):hover {
-  background: var(--theme-surface-muted);
+  background: var(--theme-highlight);
   color: var(--theme-text-strong);
 }
 
@@ -413,7 +413,7 @@
 }
 
 #setting-view .settings-sample-type-label-input:focus {
-  background: var(--theme-surface-muted);
+  background: var(--theme-highlight);
   box-shadow: none;
 }
 
@@ -568,6 +568,8 @@
   cursor: pointer;
 }
 #setting-view .settings-disclosure[open] > summary { margin-bottom: var(--space-16); }
+#setting-view .plugin-preferences { grid-column: 1 / -1; }
+#setting-view .plugin-preferences .settings-save-bar { margin-top: var(--space-12); }
 #setting-view .settings-appearance-preview {
   margin-top: var(--space-24);
   border: 1px solid var(--theme-border-soft);

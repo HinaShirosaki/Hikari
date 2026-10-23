@@ -7,6 +7,7 @@ const { codexStandaloneRoot, codexInstallDirectory, codexReleaseTarget, compareC
 const { downloadCodexRelease, fetchCodexRelease, readCodexVersion, resolveCodexRelease } = require('./cli-update-download');
 const { runNativeCodexUpdate, isNativeUpdateUnsupported } = require('./cli-native-update');
 const { prepareStandaloneLinks, replaceSelection } = require('./cli-standalone-layout');
+const { pruneCodexCliReleases } = require('./cli-retention');
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000;
 const RETRY_INTERVAL_MS = 5 * 60 * 1000;
@@ -20,19 +21,34 @@ function createCodexCliUpdater(deps = {}) {
   const installRelease = deps.installRelease || downloadCodexRelease;
   const readVersion = deps.readVersion || readCodexVersion;
   const updateNative = deps.updateNative || runNativeCodexUpdate;
+  const pruneReleases = deps.pruneReleases || pruneCodexCliReleases;
   const now = deps.now || Date.now;
   const intervalMs = deps.intervalMs ?? CHECK_INTERVAL_MS;
   const installOptions = { platform, arch: deps.arch || process.arch };
+  const sessionBinaries = new Set();
   let pending = null;
   let timer = null;
   let controller = null;
   let stopped = false;
   let lastAttempt = null;
-  let status = { status: 'idle', currentVersion: '', latestVersion: '', error: '', checkedAt: '' };
+  let status = { status: 'idle', currentVersion: '', latestVersion: '', error: '', cleanupError: '', checkedAt: '' };
 
   function getStatus() {
     const installed = readCodexManagedInstall(env, installOptions);
     return { ...status, currentVersion: installed?.version || '' };
+  }
+
+  async function pruneInstalledReleases() {
+    const installed = readCodexManagedInstall(env, installOptions);
+    if (installed) sessionBinaries.add(installed.binary);
+    try {
+      await pruneReleases(env, { ...installOptions, readVersion, protectedBinaries: sessionBinaries });
+      status.cleanupError = '';
+    } catch (error) {
+      // Locked files (especially on Windows) can be retried next check without
+      // turning a verified, working CLI update into a failure.
+      status.cleanupError = String(error?.message || error).slice(0, 400);
+    }
   }
 
   async function check() {
@@ -50,6 +66,7 @@ function createCodexCliUpdater(deps = {}) {
     timeout.unref?.();
     try {
       const previous = readCodexManagedInstall(env, installOptions);
+      if (previous) sessionBinaries.add(previous.binary);
       // Not on Windows: Codex's install.ps1 always prepends the install
       // directory to the user's persistent PATH, exposing Hikari's private CLI.
       if (previous?.method === 'standalone' && platform !== 'win32') {
@@ -67,6 +84,7 @@ function createCodexCliUpdater(deps = {}) {
             throw new Error('Codex update did not leave a runnable selected release.');
           }
           status = { ...status, status: 'up-to-date', latestVersion: selected.version, checkedAt: new Date(now()).toISOString() };
+          await pruneInstalledReleases();
           if (selected.binary !== previous.binary || selected.version !== previous.version) deps.onUpdated?.(getStatus());
           return getStatus();
         } catch (error) {
@@ -78,7 +96,8 @@ function createCodexCliUpdater(deps = {}) {
         }
       }
       // First install, Windows updates, and existing Hikari releases that
-      // predate Codex's standalone layout (kept intact while adopting it).
+      // predate Codex's standalone layout (the old selection stays available
+      // for this app session while the remaining release history is pruned).
       const metadata = await fetchCodexRelease(fetchImpl, signal);
       clearTimeout(timeout);
       const release = resolveCodexRelease(metadata, target);
@@ -88,6 +107,7 @@ function createCodexCliUpdater(deps = {}) {
         && await readVersion(installed.binary, { env, signal }) === installed.version;
       if (reuse && installed.method === 'standalone') {
         status.status = 'up-to-date';
+        await pruneInstalledReleases();
         return getStatus();
       }
       const selectedVersion = reuse ? installed.version : release.version;
@@ -120,6 +140,7 @@ function createCodexCliUpdater(deps = {}) {
       await fs.writeFile(path.join(root, 'auto-update-version'), `${selectedVersion}-${target}`);
       await replaceSelection(root, destination, platform);
       status.status = 'up-to-date';
+      await pruneInstalledReleases();
       deps.onUpdated?.(getStatus());
     } catch (error) {
       status = { ...status, status: 'error', error: String(error?.message || error).slice(0, 400) };

@@ -110,7 +110,7 @@ button.app-dialog-close-btn {
 button.app-dialog-close-btn:hover,
 button.app-dialog-close-btn:focus-visible {
   border-color: var(--theme-border-soft);
-  background: var(--theme-surface-muted);
+  background: var(--theme-highlight);
   color: var(--theme-text-strong);
 }
 

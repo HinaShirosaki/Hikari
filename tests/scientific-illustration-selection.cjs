@@ -164,8 +164,8 @@ async function verifyAreaSelection({ tool, evaluate, check, win, pause, temp }) 
     await apply([{ op: 'group', id: 'select-group', name: 'Cell and rotated component', ids: ['select-a', 'select-rotated'] }]);
     await mode('pointer'); await rectangle('main', [90, 90], [190, 175]);
     await selected(['select-a', 'select-rotated'], 'Touching a group member selects the entire group');
-    await feedback('main', ['select-a', 'select-rotated']);
-    await fs.writeFile(path.join(temp, 'selection-rotated-component-outlines.png'), (await win.webContents.capturePage()).toPNG());
+    check(await evaluate('document.querySelectorAll("#main-canvas .selection-member").length===0 && document.querySelectorAll("#main-canvas .selection").length===1 && document.querySelectorAll("#main-canvas .resize-handle").length===8'), 'A selected group shows only its outer frame and shared resize handles');
+    await fs.writeFile(path.join(temp, 'selection-group-frame.png'), (await win.webContents.capturePage()).toPNG());
     await rectangle('main', [90, 90], [190, 175], 1);
     await selected(['select-a'], 'Alt selects only the touched group member');
     check(await evaluate('document.querySelectorAll("#main-canvas .selection-member").length===0 && document.querySelectorAll("#main-canvas .resize-handle").length===8'), 'A single selected component keeps one outline and its eight resize handles');

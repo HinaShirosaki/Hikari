@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createDocument, normalizeDocument, applyOperations, readDocument } from '../model.mjs';
+import { createDocument, normalizeDocument, applyOperations, readDocument, MAX_OBJECTS, MAX_GROUPS } from '../model.mjs';
+import { agentInstructions } from '../agent/workflow.mjs';
 import { selectionBounds, resizeSelection, transformSelection } from '../grouping.mjs';
 import { RESIZE_HANDLES } from '../geometry.mjs';
 
@@ -125,11 +126,28 @@ test('group copies and transfers preserve geometry and membership on the canvas'
 
 test('a maximum-size group moves and ungroups in single atomic operations', () => {
   const document = createDocument();
-  document.objects = Array.from({ length: 200 }, (_, i) => ({ id: `part-${i}`, type: 'vector', canvas: 'main', x: (i % 10) * 30, y: Math.floor(i / 10) * 30, width: 20, height: 20, svg }));
+  document.objects = Array.from({ length: MAX_OBJECTS }, (_, i) => ({ id: `part-${i}`, type: 'vector', canvas: 'main', x: (i % 10) * 30, y: Math.floor(i / 10) * 30, width: 20, height: 20, svg }));
   const before = normalizeDocument(document), grouped = applyOperations(before, [{ op: 'group', id: 'large', ids: before.objects.map(object => object.id) }]);
   const moved = applyOperations(grouped, [{ op: 'transform', id: 'large', patch: { x: 100, y: 120 } }]);
   assert.ok(moved.objects.every((object, i) => object.x === before.objects[i].x + 100 && object.y === before.objects[i].y + 120));
-  assert.throws(() => applyOperations(grouped, [{ op: 'transfer', id: 'large', canvas: 'main', copy: true, new_id: 'too-many' }]), /maximum 200/);
+  assert.throws(() => applyOperations(grouped, [{ op: 'transfer', id: 'large', canvas: 'main', copy: true, new_id: 'too-many' }]), new RegExp(`maximum ${MAX_OBJECTS}`));
   assert.deepEqual(applyOperations(moved, [{ op: 'ungroup', id: 'large' }]).objects, moved.objects);
   assert.deepEqual(applyOperations(moved, [{ op: 'delete', id: 'large' }]).objects, []);
+});
+
+test('agent instructions state the validator limits for every detail level', () => {
+  for (const level of ['simple', 'standard', 'detailed']) {
+    const instructions = agentInstructions(level);
+    assert.match(instructions, new RegExp(`at most ${MAX_OBJECTS} objects and ${MAX_GROUPS} groups`));
+    assert.match(instructions, /Groups do not nest/);
+    assert.match(instructions, /arrowheads as path or polygon/);
+    assert.match(instructions, /Text objects never wrap; break lines with \\n/);
+    assert.match(instructions, /hex only/);
+  }
+  const document = createDocument();
+  document.objects = Array.from({ length: MAX_OBJECTS + 1 }, (_, i) => ({ id: `part-${i}`, type: 'text', canvas: 'main' }));
+  assert.throws(() => normalizeDocument(document), new RegExp(`maximum ${MAX_OBJECTS}`));
+  // Regrouping is flat: the outer group replaces the member groups.
+  const nested = applyOperations(fixture(), [{ op: 'group', id: 'inner', ids: ['membrane', 'label'] }, { op: 'group', id: 'outer', ids: ['membrane', 'label', 'other'] }]);
+  assert.deepEqual(nested.groups.map(group => group.id), ['outer']);
 });

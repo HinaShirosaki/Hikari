@@ -1719,7 +1719,7 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   font-size: var(--text-sm);
 }
 
-.project-process-row:hover { background: var(--theme-surface-subtle); }
+.project-process-row:hover { background: var(--theme-highlight); }
 .project-process-row > span { overflow-wrap: anywhere; }
 .project-process-row progress { width: 100%; height: 6px; accent-color: var(--theme-accent); }
 .project-processes { min-width: 0; overflow-x: auto; }

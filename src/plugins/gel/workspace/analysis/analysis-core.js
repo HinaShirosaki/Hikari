@@ -297,7 +297,6 @@ export function analyzeGelImage({
         addedBands: manualOverrides.addedBands.length,
         ladderLaneOverride: manualOverrides.ladderLane || null,
         ladderBands: manualOverrides.ladderBands.length,
-        ladderBandsDone: Boolean(manualOverrides.ladderBandsDone),
         peakIntegrations: manualOverrides.peakIntegrations.length
       }
     },

@@ -149,8 +149,16 @@ AI runs through the Codex CLI, which is **covered by a ChatGPT subscription**. S
 | 📖 **[Full guide](docs/guide/README.md)** | Every workspace, AI setup, data and storage, and development |
 | 🎓 **[First experiment tutorial](docs/getting-started/first-experiment.md)** | Go from an empty folder to a saved result in 15 minutes |
 | 🏗️ **[Architecture](Architecture.md)** | How the app fits together |
-| 🧩 **[Plugin system](docs/plugins/plugin-system.md)** | Build your own sandboxed workspace |
+| 🧩 **[Plugins](docs/plugins/README.md)** | Build, share, and install sandboxed workspaces and tools |
 | 🛠️ **[Contributor docs](docs/README.md)** | Internal docs for working on the codebase |
+
+## Disclaimer
+
+Hikari is a research tool provided **as is, without warranty of any kind**. It is not a validated or regulated system (for example, it is not GLP, GMP, or 21 CFR Part 11 compliant) and is not intended for clinical or diagnostic use. Check calculator results, curve fits, band quantification, and anything the AI assistant drafts before you rely on them. You are responsible for backing up your data folder.
+
+The AI assistant runs on OpenAI models through the Codex CLI, so OpenAI's usage policies and safety systems apply. Those safeguards can refuse or cut short biology-related requests, including routine lab work, for example anything involving pathogens, toxins, or some molecular biology techniques. Hikari cannot override these refusals. Every workspace still works without the AI.
+
+Hikari is an independent project and is not affiliated with or endorsed by OpenAI. ChatGPT and Codex are trademarks of their respective owners.
 
 ## License
 

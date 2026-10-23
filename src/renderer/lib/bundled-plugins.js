@@ -16,7 +16,8 @@ export const BUNDLED_PLUGINS = Object.freeze([
       'storage',
       'files',
       'downloads',
-      'layout'
+      'layout',
+      'notifications'
     ]),
     path: '@bundled/gel',
     entryUrl: '',

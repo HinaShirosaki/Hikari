@@ -14,11 +14,11 @@ export function blotImageData(row) {
   return row.displayData;
 }
 
-export function createBlotFigureCanvas(rows, documentObject, { guides = 0, rasterScale = 3, tableSource = 'auto', trim } = {}) {
+export function createBlotFigureCanvas(rows, documentObject, { rasterScale = 3, trim } = {}) {
   const canvas = documentObject.createElement('canvas');
   const ctx = canvas.getContext('2d');
   ctx.font = `${FIGURE_FONT_SIZE}px Arial, Helvetica, sans-serif`;
-  const plan = buildBlotFigurePlan(rows, { measureText: text => ctx.measureText(text).width, tableSource, trim });
+  const plan = buildBlotFigurePlan(rows, { measureText: text => ctx.measureText(text).width, trim });
   const scale = Math.max(1, Math.min(rasterScale, 12000 / Math.max(plan.width, plan.height),
     Math.sqrt(36000000 / (plan.width * plan.height))));
   canvas.width = Math.ceil(plan.width * scale);
@@ -33,10 +33,10 @@ export function createBlotFigureCanvas(rows, documentObject, { guides = 0, raste
     ctx.fillStyle = '#000'; ctx.textAlign = align;
     lines.forEach((line, index) => ctx.fillText(line, x, y + height / 2 + (index - (lines.length - 1) / 2) * 28));
   }
-  plan.table?.rows.forEach(row => {
+  plan.tables.forEach(table => table.rows.forEach(row => {
     drawLines(row.labelLines, FIGURE_MARGIN + LABEL_WIDTH - 20, row.y, row.height, 'right');
-    plan.table.columns.forEach((column, index) => drawLines(row.values[index], plan.imageLeft + column.center, row.y, row.height, 'center'));
-  });
+    table.columns.forEach((column, index) => drawLines(row.values[index], plan.imageLeft + column.center, row.y, row.height, 'center'));
+  }));
   const blotCanvases = [];
   plan.rows.forEach((part, index) => {
     const image = rows[index].draft.currentImage;
@@ -55,13 +55,5 @@ export function createBlotFigureCanvas(rows, documentObject, { guides = 0, raste
     drawLines(part.labelLines, FIGURE_MARGIN + LABEL_WIDTH - 20, part.y, part.rowHeight, 'right');
     blotCanvases.push(blot);
   });
-  if (guides >= 2) {
-    ctx.strokeStyle = '#009ca6'; ctx.lineWidth = 1; ctx.setLineDash([5, 5]);
-    for (let i = 0; i < guides; i++) {
-      const x = plan.imageLeft + plan.guideLeft + (plan.guideRight - plan.guideLeft) * i / (guides - 1);
-      if (x < plan.imageLeft || x > plan.imageLeft + plan.imageWidth) continue;
-      ctx.beginPath(); ctx.moveTo(x, plan.blotTop); ctx.lineTo(x, plan.height - FIGURE_MARGIN); ctx.stroke();
-    }
-  }
   return { canvas, plan, blotCanvases };
 }

@@ -129,6 +129,11 @@ Manifest and permission changes require removing and re-adding the plugin
 because grants are snapshotted at install time. HTML, CSS, and JavaScript edits
 only require a reload.
 
+To let users install by pasting a GitHub URL, publish these files at the
+repository root on its default branch. See [Publish a plugin for installation
+from GitHub](github-installation.md) for the layout, packaging rules, and a
+copyable installation section for your README.
+
 ## 4. Use the API safely
 
 Every call is a promise. Treat success as committed only after it resolves:
@@ -153,6 +158,10 @@ Important contracts:
 
 - `storage.set` requires a `value` property. Use `value: null` only when you
   intentionally want to clear the plugin's storage.
+- For preferences in **Settings → Plugins**, declare the `settings` permission
+  and a `settings` schema. Use `settings.get`, `settings.set`, and
+  `settings.changed`; see [plugin-settings.md](plugin-settings.md) and the
+  runnable [settings-demo](../../examples/plugins/settings-demo/).
 - `files.write` and `downloads.save` require canonical base64 data.
 - File paths are relative to the plugin's own folder. Save the path returned by
   `files.write`; do not reconstruct it.

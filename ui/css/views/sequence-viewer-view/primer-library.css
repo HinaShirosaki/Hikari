@@ -17,7 +17,7 @@
 
 .sequence-viewer-primer-library-open-btn:hover,
 .sequence-viewer-primer-library-open-btn:focus-visible {
-  background: var(--theme-surface-subtle);
+  background: var(--theme-highlight);
   color: var(--theme-text-strong);
 }
 

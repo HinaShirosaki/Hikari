@@ -9,7 +9,7 @@ const {
   throwIfAgentRequestAborted
 } = require('../llm/request-context.js');
 const { DEFAULT_TIMEOUT_MS } = require('./constants');
-const { summarizeCodexCommandFailure } = require('./event-failure');
+const { describeCodexPolicyBlock, summarizeCodexCommandFailure } = require('./event-failure');
 const { looksLikeJsonLine } = require('./event-values');
 const { ensureCodexCliWorkingDirectoryGuidance } = require('./guidance');
 const {
@@ -189,7 +189,8 @@ async function runCodexCommand({
       }
 
       const failureSummary = summarizeCodexCommandFailure({ stdout, stderr });
-      const error = new Error(`Codex CLI failed (exit ${code ?? 'unknown'}): ${failureSummary}`);
+      const error = new Error(describeCodexPolicyBlock(failureSummary)
+        || `Codex CLI failed (exit ${code ?? 'unknown'}): ${failureSummary}`);
       error.code = code;
       error.signal = signal;
       error.stdout = stdout;

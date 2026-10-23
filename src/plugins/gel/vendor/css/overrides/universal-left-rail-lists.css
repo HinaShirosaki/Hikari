@@ -1,0 +1,183 @@
+/* Universal selection treatment for list rows inside the shared left rail. */
+
+body {
+  --hikari-left-rail-list-radius: 8px;
+  /* Hover stays well under selected so a hovered row never reads as a second selection. */
+  --hikari-left-rail-list-hover: color-mix(in srgb, var(--theme-surface-subtle) 28%, transparent);
+  --hikari-left-rail-list-selected: color-mix(in srgb, var(--theme-surface-subtle) 55%, transparent);
+  --hikari-left-rail-list-focus: color-mix(in srgb, var(--theme-focus) 22%, transparent);
+}
+
+body.theme-night {
+  --hikari-left-rail-list-hover: color-mix(in srgb, var(--theme-surface-subtle) 32%, var(--theme-surface-elevated) 2%);
+  --hikari-left-rail-list-selected: color-mix(in srgb, var(--theme-surface-subtle) 86%, var(--theme-surface-elevated) 7%);
+  --hikari-left-rail-list-focus: color-mix(in srgb, var(--theme-focus) 28%, transparent);
+}
+
+/* One glyph for every folder/project group that appears in a left rail. */
+.left-rail-template__rail .left-rail-folder-glyph {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  display: block;
+  background: currentColor;
+  opacity: 0.74;
+  -webkit-mask: url("../../../assets/icons/folder.svg") center / contain no-repeat;
+  mask: url("../../../assets/icons/folder.svg") center / contain no-repeat;
+}
+
+.left-rail-template__rail :is(
+  .folder-tree-template__row,
+  .folder-tree-template__rail-leaf,
+  .settings-nav-item,
+  .tool-tile .label,
+  .protocol-list-row,
+  .workflow-card,
+  .workflow-template-name-item,
+  .assay-browser-item,
+  .list-row:not(.list-row-header)
+) {
+  border-radius: var(--hikari-left-rail-list-radius);
+  color: var(--theme-text);
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.left-rail-template__rail :is(
+  .folder-tree-template__row,
+  .folder-tree-template__rail-leaf,
+  .settings-nav-item,
+  .tool-tile .label,
+  .protocol-list-row,
+  .workflow-card,
+  .workflow-template-name-item,
+  .assay-browser-item,
+  .list-row:not(.list-row-header)
+):hover,
+.left-rail-template__rail :is(
+  .folder-tree-template__row,
+  .folder-tree-template__rail-leaf,
+  .settings-nav-item,
+  .tool-tile,
+  .protocol-list-row,
+  .workflow-card,
+  .workflow-template-name-item,
+  .assay-browser-item,
+  .list-row:not(.list-row-header)
+):focus-visible {
+  background: var(--hikari-left-rail-list-hover) !important;
+  color: var(--theme-text-strong) !important;
+  outline: none;
+}
+
+.left-rail-template__rail :is(
+  .folder-tree-template__row.is-active,
+  .folder-tree-template__rail-leaf.is-active,
+  .settings-nav-item.is-active,
+  .tool-tile-active .label,
+  .protocol-list-row-selected,
+  .protocol-list-row.list-row-selected,
+  .workflow-template-name-item.is-active,
+  .assay-browser-item.is-active,
+  .list-row-selected
+) {
+  background: var(--hikari-left-rail-list-selected) !important;
+  border-color: transparent !important;
+  color: var(--theme-text-strong) !important;
+  box-shadow: none !important;
+}
+
+.left-rail-template__rail :is(
+  .folder-tree-template__row,
+  .folder-tree-template__rail-leaf,
+  .settings-nav-item,
+  .tool-tile,
+  .protocol-list-row,
+  .workflow-card,
+  .workflow-template-name-item,
+  .assay-browser-item,
+  .list-row:not(.list-row-header)
+):focus-visible {
+  box-shadow: 0 0 0 2px var(--hikari-left-rail-list-focus) !important;
+}
+
+.left-rail-template__rail :is(
+  .folder-tree-template__label,
+  .folder-tree-template__leaf-label,
+  .settings-nav-item span,
+  .tool-tile .label,
+  .protocol-name-text,
+  .workflow-card h3,
+  .workflow-template-name-item,
+  .assay-browser-item-title,
+  .text-list-btn
+) {
+  font-weight: 500 !important;
+}
+
+.left-rail-template__rail :is(
+  .folder-tree-template__row.is-active .folder-tree-template__label,
+  .folder-tree-template__rail-leaf.is-active .folder-tree-template__leaf-label,
+  .settings-nav-item.is-active span,
+  .tool-tile-active .label,
+  .protocol-list-row-selected .protocol-name-text,
+  .protocol-list-row.list-row-selected .protocol-name-text,
+  .workflow-template-name-item.is-active,
+  .assay-browser-item.is-active .assay-browser-item-title,
+  .list-row-selected .text-list-btn
+) {
+  color: var(--theme-text-strong) !important;
+  font-weight: 700 !important;
+}
+
+
+.left-rail-template__rail :is(
+  .tool-tile,
+  .tool-tile .label,
+  .settings-nav-item
+) {
+  transform: none !important;
+}
+
+/* Compact density for left-rail list rows (tree-style, not card-style). */
+.left-rail-template__rail :is(
+  .folder-tree-template__rail-leaf,
+  .settings-nav-item,
+  .protocol-list-row,
+  .workflow-template-name-item,
+  .assay-browser-item,
+  .list-row:not(.list-row-header)
+) {
+  padding-top: var(--left-rail-item-padding-block, 8px) !important;
+  padding-bottom: var(--left-rail-item-padding-block, 8px) !important;
+  min-height: var(--left-rail-item-min-height, 36px) !important;
+  line-height: 1.35 !important;
+  font-size: var(--text-base) !important;
+}
+
+.left-rail-template__rail .folder-tree-template__node > .folder-tree-template__row {
+  min-height: var(--left-rail-item-min-height, 36px) !important;
+  padding: var(--space-2) var(--space-4) !important;
+  font-size: var(--text-base) !important;
+  line-height: 1.35 !important;
+}
+
+.left-rail-template__rail .agent-session-card {
+  display: grid !important;
+  min-width: 0 !important;
+  min-height: var(--left-rail-item-min-height, 36px) !important;
+  padding-top: var(--left-rail-item-padding-block, 8px) !important;
+  padding-bottom: var(--left-rail-item-padding-block, 8px) !important;
+  overflow: hidden !important;
+  align-items: center !important;
+}
+
+.left-rail-template__rail .agent-session-card strong {
+  display: block !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: var(--text-base) !important;
+  line-height: 1.25 !important;
+}

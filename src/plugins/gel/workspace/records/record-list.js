@@ -22,6 +22,7 @@ function createGelRecordList({
 
   function renderList() {
     ensureState();
+    if (!elements.gelList) return;
     const term = String(elements.gelSearchInput?.value || '').trim().toLowerCase();
     const records = (runtime.state.gelAnalyses || [])
       .slice()

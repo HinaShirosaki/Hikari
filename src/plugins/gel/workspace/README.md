@@ -4,7 +4,7 @@
 
 - `analysis/`: pure image preprocessing, lane detection, calibration, and quantification
 - `images/`: image decoding, enhancement, crop, and rotation controllers
-- `manual/`: guided segmentation workflow and its toolbar UI
+- `manual/`: manual segmentation tools and their toolbar UI
 - `rendering/`: viewer/report rendering, lane table, and presentation labels
 - root files: shared state helpers, constants, DOM collection, record storage, and export
 
