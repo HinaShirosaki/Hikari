@@ -619,6 +619,54 @@ test('workflow protocol picker clears stale selection on search and selects resu
   assert.equal(renderCount, 2);
 });
 
+test('workflow template right-click menu deletes an unused template and keeps one with processes', () => {
+  const listeners = {};
+  const on = (name) => ({ addEventListener(type, handler) { listeners[`${name}:${type}`] = handler; } });
+  const deleteBtn = { disabled: false, title: '', ...on('delete') };
+  const menu = { hidden: true, dataset: {}, style: {}, ownerDocument: on('document'), contains: (target) => target === deleteBtn };
+  const state = { workflows: [{ id: 'run', templateId: 'used', entries: [] }], workflowTemplates: [{ id: 'used' }, { id: 'unused' }] };
+  const runtime = { activeTemplateId: 'unused' };
+  let persisted = 0;
+  const actions = loadEsmStyleModule(path.join(__dirname, 'src/renderer/modules/workflow/actions.js'), { window: {} }).createWorkflowActions({
+    state, runtime, persist: () => { persisted++; },
+    elements: { workflowList: on('list'), workflowTemplateContextMenu: menu, workflowTemplateDeleteBtn: deleteBtn }
+  });
+  actions.bindEvents();
+  const rightClick = (templateId) => {
+    let prevented = false;
+    const item = { dataset: { workflowTemplateOpen: templateId } };
+    listeners['list:contextmenu']({
+      target: { closest: (selector) => (selector === '[data-workflow-template-open]' ? item : null) },
+      clientX: 40,
+      clientY: 60,
+      preventDefault() { prevented = true; }
+    });
+    return prevented;
+  };
+
+  assert.equal(rightClick('used'), true);
+  assert.equal(menu.hidden, false);
+  assert.equal(deleteBtn.disabled, true);
+  assert.equal(deleteBtn.title, 'Delete its processes first.');
+  listeners['delete:click']();
+  assert.deepEqual(state.workflowTemplates.map((template) => template.id), ['used', 'unused']);
+  assert.equal(persisted, 0);
+
+  rightClick('unused');
+  assert.equal(deleteBtn.disabled, false);
+  listeners['document:click']({ target: deleteBtn });
+  assert.equal(menu.hidden, false);
+  listeners['delete:click']();
+  assert.equal(menu.hidden, true);
+  assert.deepEqual(state.workflowTemplates.map((template) => template.id), ['used']);
+  assert.equal(runtime.activeTemplateId, '');
+  assert.equal(persisted, 1);
+
+  rightClick('used');
+  listeners['document:keydown']({ key: 'Escape' });
+  assert.equal(menu.hidden, true);
+});
+
 test('workflow block type switch synchronizes protocol and plain-text composer fields', () => {
   const rendererModule = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'workflow', 'renderer.js')

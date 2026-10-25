@@ -40,6 +40,7 @@ function registerSystemIpc(deps = {}) {
       return text;
     });
   const thirdPartyNoticesPath = cleanText(deps.thirdPartyNoticesPath, 2400);
+  const tutorialPath = cleanText(deps.tutorialPath, 2400);
 
   function normalizeJsonPayload(payload, fallback = {}) {
     if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
@@ -317,6 +318,19 @@ function registerSystemIpc(deps = {}) {
     }
     const error = await shell.openPath(thirdPartyNoticesPath);
     return error ? { ok: false, error: cleanText(error, 2400) } : { ok: true, path: thirdPartyNoticesPath };
+  });
+
+  // Settings > Tutorial: the bundled HTML guide, opened by the system's handler
+  // for .html files, which is normally the default browser.
+  ipcMain.handle(SYSTEM.OPEN_TUTORIAL, async () => {
+    if (!tutorialPath || !shell || typeof shell.openPath !== 'function') {
+      return { ok: false, error: 'The tutorial is unavailable.' };
+    }
+    if (!require('node:fs').existsSync(tutorialPath)) {
+      return { ok: false, error: 'The tutorial is not included in this build of Hikari.' };
+    }
+    const error = await shell.openPath(tutorialPath);
+    return error ? { ok: false, error: cleanText(error, 2400) } : { ok: true, path: tutorialPath };
   });
 
   // Settings > Updates. Install resolves only when the build fails (the app

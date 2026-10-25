@@ -1,0 +1,504 @@
+{
+  "sourceVersion": "1.1.0-beta.9",
+  "exampleDate": "2026-10-24",
+  "timezone": "America/Chicago",
+  "viewport": [
+    1600,
+    1000
+  ],
+  "mode": "Real Protocols renderer; fictional data; in-memory desktop and AI adapters; no live AI or downloads.",
+  "screenshots": [
+    {
+      "name": "01-protocol-workspace",
+      "title": "Open the Protocols workspace",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "targets": [
+        {
+          "selector": "#protocol-list-panel",
+          "label": "Protocol library",
+          "rect": {
+            "x": 0,
+            "y": 79,
+            "width": 280,
+            "height": 921
+          }
+        },
+        {
+          "selector": "#protocol-view-content",
+          "label": "Read the selected protocol",
+          "rect": {
+            "x": 300,
+            "y": 168,
+            "width": 1289,
+            "height": 366
+          }
+        },
+        {
+          "selector": "#protocol-view-panel .protocol-panel-head",
+          "label": "Edit, export, or print",
+          "rect": {
+            "x": 300,
+            "y": 79,
+            "width": 1289,
+            "height": 74
+          }
+        }
+      ]
+    },
+    {
+      "name": "02-find-protocol",
+      "title": "Find a protocol",
+      "crop": {
+        "x": 0,
+        "y": 61,
+        "width": 297,
+        "height": 224
+      },
+      "targets": [
+        {
+          "selector": "#protocol-search",
+          "label": "Type a search term",
+          "rect": {
+            "x": 27,
+            "y": 140,
+            "width": 217,
+            "height": 34
+          }
+        },
+        {
+          "selector": "[data-protocol-select=\"demo-labeling\"]",
+          "label": "Select the matching protocol",
+          "rect": {
+            "x": 0,
+            "y": 211,
+            "width": 268,
+            "height": 56
+          }
+        }
+      ]
+    },
+    {
+      "name": "03-create-protocol",
+      "title": "Create a protocol",
+      "crop": {
+        "x": 282,
+        "y": 150,
+        "width": 1318,
+        "height": 449
+      },
+      "targets": [
+        {
+          "selector": "#protocol-name",
+          "label": "Name the protocol",
+          "rect": {
+            "x": 300,
+            "y": 193,
+            "width": 1289,
+            "height": 47
+          }
+        },
+        {
+          "selector": "#protocol-purpose",
+          "label": "Describe its purpose",
+          "rect": {
+            "x": 300,
+            "y": 276,
+            "width": 1289,
+            "height": 120
+          }
+        },
+        {
+          "selector": "#protocol-materials",
+          "label": "List the materials",
+          "rect": {
+            "x": 300,
+            "y": 433,
+            "width": 1289,
+            "height": 148
+          }
+        }
+      ]
+    },
+    {
+      "name": "04-interactive-fields",
+      "title": "Add reusable fields to a step",
+      "crop": {
+        "x": 282,
+        "y": 378,
+        "width": 1318,
+        "height": 398
+      },
+      "targets": [
+        {
+          "selector": "#protocol-steps",
+          "label": "Write one step per line",
+          "rect": {
+            "x": 301,
+            "y": 559,
+            "width": 1287,
+            "height": 198
+          }
+        },
+        {
+          "selector": "#protocol-placeholder-presets",
+          "label": "Choose a preset",
+          "rect": {
+            "x": 313,
+            "y": 434,
+            "width": 1263,
+            "height": 66
+          }
+        },
+        {
+          "selector": ".protocol-placeholder-custom",
+          "label": "Name a field and Insert",
+          "rect": {
+            "x": 397,
+            "y": 507,
+            "width": 1179,
+            "height": 39
+          }
+        }
+      ]
+    },
+    {
+      "name": "05-save-protocol",
+      "title": "Save your protocol",
+      "crop": {
+        "x": 282,
+        "y": 751,
+        "width": 1318,
+        "height": 249
+      },
+      "targets": [
+        {
+          "selector": "#protocol-troubleshooting",
+          "label": "Add troubleshooting notes",
+          "rect": {
+            "x": 300,
+            "y": 794,
+            "width": 1289,
+            "height": 123
+          }
+        },
+        {
+          "selector": "#protocol-form button[type=\"submit\"]",
+          "label": "Save Protocol",
+          "rect": {
+            "x": 631,
+            "y": 943,
+            "width": 111,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "06-edit-protocol",
+      "title": "Edit a saved protocol",
+      "crop": {
+        "x": 282,
+        "y": 61,
+        "width": 1318,
+        "height": 180
+      },
+      "targets": [
+        {
+          "selector": "#protocol-view-title",
+          "label": "Confirm the selected protocol",
+          "rect": {
+            "x": 300,
+            "y": 115,
+            "width": 161,
+            "height": 22
+          }
+        },
+        {
+          "selector": "#protocol-view-edit-btn",
+          "label": "Open the editor",
+          "rect": {
+            "x": 1491,
+            "y": 79,
+            "width": 30,
+            "height": 30
+          }
+        }
+      ]
+    },
+    {
+      "name": "07-generate-request",
+      "title": "Describe the protocol you want",
+      "crop": {
+        "x": 332,
+        "y": 58,
+        "width": 936,
+        "height": 474
+      },
+      "targets": [
+        {
+          "selector": "#protocol-generate-prompt-input",
+          "label": "Describe the protocol",
+          "rect": {
+            "x": 414,
+            "y": 219,
+            "width": 772,
+            "height": 92
+          }
+        },
+        {
+          "selector": "#protocol-generate-attach-btn",
+          "label": "Attach supporting files",
+          "rect": {
+            "x": 414,
+            "y": 374,
+            "width": 42,
+            "height": 42
+          }
+        },
+        {
+          "selector": "#protocol-generate-send-btn",
+          "label": "Generate Protocol",
+          "rect": {
+            "x": 1018,
+            "y": 374,
+            "width": 168,
+            "height": 42
+          }
+        }
+      ]
+    },
+    {
+      "name": "08-generated-review",
+      "title": "Review the generated protocol",
+      "crop": {
+        "x": 372,
+        "y": 58,
+        "width": 856,
+        "height": 796
+      },
+      "targets": [
+        {
+          "selector": "#protocol-generate-result-preview",
+          "label": "Review every section",
+          "rect": {
+            "x": 411,
+            "y": 147,
+            "width": 778,
+            "height": 582
+          }
+        },
+        {
+          "selector": "#protocol-generate-back-btn",
+          "label": "Keep your current draft",
+          "rect": {
+            "x": 903,
+            "y": 762,
+            "width": 103,
+            "height": 37
+          }
+        },
+        {
+          "selector": "#protocol-generate-apply-btn",
+          "label": "Use Generated Protocol",
+          "rect": {
+            "x": 1016,
+            "y": 762,
+            "width": 173,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "09-polish-review",
+      "title": "Compare the original and polished wording",
+      "crop": {
+        "x": 192,
+        "y": 131,
+        "width": 1216,
+        "height": 796
+      },
+      "targets": [
+        {
+          "selector": "#protocol-polish-original-preview",
+          "label": "Read Your Input",
+          "rect": {
+            "x": 235,
+            "y": 246,
+            "width": 531,
+            "height": 571
+          }
+        },
+        {
+          "selector": "#protocol-polish-result-preview",
+          "label": "Compare Polished Protocol",
+          "rect": {
+            "x": 834,
+            "y": 246,
+            "width": 531,
+            "height": 571
+          }
+        },
+        {
+          "selector": "#protocol-polish-apply-btn",
+          "label": "Use Polished Version",
+          "rect": {
+            "x": 1116,
+            "y": 872,
+            "width": 157,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "10-import-json",
+      "title": "Import a protocol from JSON",
+      "crop": {
+        "x": 462,
+        "y": 288,
+        "width": 676,
+        "height": 481
+      },
+      "targets": [
+        {
+          "selector": "#protocol-json-import-file",
+          "label": "Choose a JSON file",
+          "rect": {
+            "x": 499,
+            "y": 425,
+            "width": 602,
+            "height": 42
+          }
+        },
+        {
+          "selector": "#protocol-json-import-input",
+          "label": "Or paste JSON",
+          "rect": {
+            "x": 499,
+            "y": 503,
+            "width": 602,
+            "height": 180
+          }
+        },
+        {
+          "selector": "#import-protocol-json-btn",
+          "label": "Import Protocol JSON",
+          "rect": {
+            "x": 499,
+            "y": 695,
+            "width": 160,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "11-export-print",
+      "title": "Export or print the open protocol",
+      "crop": {
+        "x": 282,
+        "y": 61,
+        "width": 1318,
+        "height": 180
+      },
+      "targets": [
+        {
+          "selector": "#protocol-export-pdf-btn",
+          "label": "Export PDF",
+          "rect": {
+            "x": 1525,
+            "y": 79,
+            "width": 30,
+            "height": 30
+          }
+        },
+        {
+          "selector": "#protocol-print-btn",
+          "label": "Print",
+          "rect": {
+            "x": 1559,
+            "y": 79,
+            "width": 30,
+            "height": 30
+          }
+        }
+      ]
+    },
+    {
+      "name": "12-delete-protocol",
+      "title": "Open the protocol actions menu",
+      "crop": {
+        "x": 0,
+        "y": 360,
+        "width": 286,
+        "height": 228
+      },
+      "targets": [
+        {
+          "selector": "[data-protocol-menu-trigger=\"c8cbb201-f8b8-43b7-9827-f4d7f79f3891\"]",
+          "label": "Open the actions menu",
+          "rect": {
+            "x": 216,
+            "y": 388,
+            "width": 36,
+            "height": 36
+          }
+        },
+        {
+          "selector": ".protocol-action-menu [data-protocol-action=\"delete\"]",
+          "label": "Delete this protocol",
+          "rect": {
+            "x": 81,
+            "y": 521,
+            "width": 162,
+            "height": 40
+          }
+        }
+      ]
+    },
+    {
+      "name": "13-reusable-field-preview",
+      "title": "Check the saved reusable field",
+      "crop": {
+        "x": 282,
+        "y": 349,
+        "width": 1318,
+        "height": 139
+      },
+      "targets": [
+        {
+          "selector": "#protocol-view-content .placeholder-chip",
+          "label": "Reusable sample ID field",
+          "rect": {
+            "x": 451,
+            "y": 422,
+            "width": 75,
+            "height": 21
+          }
+        }
+      ]
+    }
+  ],
+  "checks": [
+    "Selecting a library row opens the correct protocol",
+    "Search filters the protocol library",
+    "Escape clears the search",
+    "Preset and custom buttons insert reusable field markers",
+    "Save Protocol adds the record and opens its viewer",
+    "Saved reusable fields appear as chips in the viewer",
+    "Editing updates the existing record without adding a duplicate",
+    "Generation uses the attached example file and does not save a protocol",
+    "Use Generated Protocol fills the editor without saving",
+    "Save Protocol stores the accepted generated draft",
+    "Use Polished Version leaves the saved record unchanged until Save",
+    "Save Protocol stores the accepted polished wording",
+    "Import adds the protocol directly to the library and closes the dialog",
+    "Delete immediately removes the selected example protocol"
+  ]
+}

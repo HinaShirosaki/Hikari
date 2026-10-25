@@ -1,0 +1,10 @@
+{
+  "name": "Imported label check",
+  "purpose": "Check sample labels against a sample list.",
+  "materials": ["Labels", "Sample list"],
+  "steps": [
+    "Find the sample ID on each label.",
+    "Check each ID against the sample list."
+  ],
+  "troubleshooting": "Replace unclear labels and check them again."
+}

@@ -1,0 +1,435 @@
+{
+  "sourceVersion": "1.1.0-beta.9",
+  "exampleDate": "2026-10-24",
+  "timezone": "America/Chicago",
+  "viewport": [
+    1600,
+    1000
+  ],
+  "mode": "Real Workflows renderer; fictional data; in-memory desktop adapters; notebook pages created in memory only; no file writes.",
+  "screenshots": [
+    {
+      "name": "01-workflows-workspace",
+      "title": "Open Workflows",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "targets": [
+        {
+          "selector": "#workflow-list",
+          "label": "Templates",
+          "rect": {
+            "x": 16,
+            "y": 167,
+            "width": 236,
+            "height": 127
+          }
+        },
+        {
+          "selector": ".workflow-ledger",
+          "label": "Processes",
+          "rect": {
+            "x": 316,
+            "y": 133,
+            "width": 1273,
+            "height": 350
+          }
+        },
+        {
+          "selector": ".workflow-drawer",
+          "label": "Selected process",
+          "rect": {
+            "x": 1189,
+            "y": 133,
+            "width": 400,
+            "height": 863
+          }
+        }
+      ]
+    },
+    {
+      "name": "02-new-process",
+      "title": "Start a process",
+      "crop": {
+        "x": 593,
+        "y": 334,
+        "width": 414,
+        "height": 331
+      },
+      "targets": [
+        {
+          "selector": "#workflow-process-template",
+          "label": "Workflow template",
+          "rect": {
+            "x": 611,
+            "y": 411,
+            "width": 378,
+            "height": 38
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "#workflow-process-project",
+          "label": "Project",
+          "rect": {
+            "x": 611,
+            "y": 485,
+            "width": 378,
+            "height": 38
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "#workflow-process-name",
+          "label": "Process name",
+          "rect": {
+            "x": 611,
+            "y": 559,
+            "width": 378,
+            "height": 39
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "#workflow-process-form button[type=\"submit\"]",
+          "label": "Create process",
+          "rect": {
+            "x": 869,
+            "y": 610,
+            "width": 120,
+            "height": 37
+          },
+          "badge": "right"
+        }
+      ]
+    },
+    {
+      "name": "03-progress",
+      "title": "Follow each process",
+      "crop": {
+        "x": 298,
+        "y": 115,
+        "width": 1302,
+        "height": 386
+      },
+      "targets": [
+        {
+          "selector": "tr[data-workflow-run-open=\"f320c758-8469-4cec-9cee-7e62c2181c5d\"] .workflow-stepper",
+          "label": "Steps",
+          "rect": {
+            "x": 573,
+            "y": 353,
+            "width": 454,
+            "height": 50
+          }
+        },
+        {
+          "selector": "tr[data-workflow-run-open=\"f320c758-8469-4cec-9cee-7e62c2181c5d\"] .workflow-ledger-count",
+          "label": "Steps done",
+          "rect": {
+            "x": 1035,
+            "y": 369,
+            "width": 24,
+            "height": 19
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "tr[data-workflow-run-open=\"f320c758-8469-4cec-9cee-7e62c2181c5d\"] td:nth-child(3)",
+          "label": "Next step",
+          "rect": {
+            "x": 1070,
+            "y": 344,
+            "width": 391,
+            "height": 69
+          }
+        },
+        {
+          "selector": "tr[data-workflow-run-open=\"49b22bbc-bf37-49f5-b68f-2f08a64ac53c\"] .workflow-ledger-chip.is-bad",
+          "label": "Failed",
+          "rect": {
+            "x": 1269,
+            "y": 248,
+            "width": 48,
+            "height": 18
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "tr[data-workflow-run-open=\"a50426a8-835c-4967-891c-067b62c5d1a0\"] .workflow-ledger-chip.is-ok",
+          "label": "Finished",
+          "rect": {
+            "x": 1082,
+            "y": 439,
+            "width": 44,
+            "height": 18
+          },
+          "badge": "right"
+        }
+      ]
+    },
+    {
+      "name": "04-record-step",
+      "title": "Record a step",
+      "crop": {
+        "x": 1171,
+        "y": 115,
+        "width": 429,
+        "height": 885
+      },
+      "targets": [
+        {
+          "selector": "[data-workflow-drawer-toggle=\"ec48a18d-05b5-4036-a268-4bdb49780121\"] + .workflow-drawer-step-body .workflow-placeholder-table",
+          "label": "Protocol fields",
+          "rect": {
+            "x": 1228,
+            "y": 335,
+            "width": 347,
+            "height": 74
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "[data-workflow-drawer-toggle=\"ec48a18d-05b5-4036-a268-4bdb49780121\"] + .workflow-drawer-step-body .workflow-drawer-field",
+          "label": "Result",
+          "rect": {
+            "x": 1228,
+            "y": 419,
+            "width": 347,
+            "height": 107
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "[data-workflow-drawer-toggle=\"ec48a18d-05b5-4036-a268-4bdb49780121\"] + .workflow-drawer-step-body .workflow-drawer-actions",
+          "label": "Complete, Fail, Notebook, Attach",
+          "rect": {
+            "x": 1225,
+            "y": 532,
+            "width": 353,
+            "height": 34
+          }
+        }
+      ]
+    },
+    {
+      "name": "05-branch",
+      "title": "Add an optional branch",
+      "crop": {
+        "x": 1172,
+        "y": 236,
+        "width": 428,
+        "height": 214
+      },
+      "targets": [
+        {
+          "selector": ".workflow-drawer-fork-card",
+          "label": "Optional branch",
+          "rect": {
+            "x": 1228,
+            "y": 342,
+            "width": 347,
+            "height": 43
+          }
+        },
+        {
+          "selector": ".workflow-drawer-fork-card [data-workflow-branch-toggle]",
+          "label": "Activate",
+          "rect": {
+            "x": 1499,
+            "y": 349,
+            "width": 69,
+            "height": 29
+          },
+          "badge": "right"
+        }
+      ]
+    },
+    {
+      "name": "06-template-editor",
+      "title": "Create a workflow template",
+      "crop": {
+        "x": 0,
+        "y": 47,
+        "width": 298,
+        "height": 953
+      },
+      "targets": [
+        {
+          "selector": "#workflow-template-name",
+          "label": "Template name",
+          "rect": {
+            "x": 16,
+            "y": 151,
+            "width": 247,
+            "height": 38
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "#workflow-block-type",
+          "label": "Protocol or Plain Text",
+          "rect": {
+            "x": 16,
+            "y": 313,
+            "width": 247,
+            "height": 38
+          }
+        },
+        {
+          "selector": [
+            "#workflow-block-protocol-search",
+            ".workflow-block-protocol-search-result"
+          ],
+          "label": "Find and pick a protocol",
+          "rect": {
+            "x": 16,
+            "y": 361,
+            "width": 247,
+            "height": 83
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "#workflow-block-add-btn",
+          "label": "Add Protocol Block",
+          "rect": {
+            "x": 16,
+            "y": 952,
+            "width": 247,
+            "height": 40
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "#workflow-save-template-btn",
+          "label": "Save the template",
+          "rect": {
+            "x": 191,
+            "y": 79,
+            "width": 30,
+            "height": 30
+          },
+          "badge": "right"
+        }
+      ]
+    },
+    {
+      "name": "07-connect-blocks",
+      "title": "Connect blocks",
+      "crop": {
+        "x": 343,
+        "y": 156,
+        "width": 928,
+        "height": 273
+      },
+      "targets": [
+        {
+          "selector": "[data-workflow-port-in=\"89288e78-91fd-4015-a290-ed30c2b42d4f\"]",
+          "label": "Input dot",
+          "rect": {
+            "x": 634,
+            "y": 219,
+            "width": 16,
+            "height": 16
+          }
+        },
+        {
+          "selector": "[data-workflow-port-out=\"89288e78-91fd-4015-a290-ed30c2b42d4f\"]",
+          "label": "Output dot",
+          "rect": {
+            "x": 876,
+            "y": 219,
+            "width": 16,
+            "height": 16
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "[data-workflow-node=\"89288e78-91fd-4015-a290-ed30c2b42d4f\"] .workflow-node-remove",
+          "label": "Delete block",
+          "rect": {
+            "x": 632,
+            "y": 165,
+            "width": 22,
+            "height": 22
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "#workflow-graph-context-menu",
+          "label": "Right-click menu",
+          "rect": {
+            "x": 1043,
+            "y": 289,
+            "width": 210,
+            "height": 122
+          }
+        }
+      ]
+    },
+    {
+      "name": "08-delete-template",
+      "title": "Delete a template",
+      "crop": {
+        "x": 0,
+        "y": 149,
+        "width": 304,
+        "height": 227
+      },
+      "targets": [
+        {
+          "selector": "[data-tutorial-target=\"new-template\"]",
+          "label": "Right-click a template",
+          "rect": {
+            "x": 16,
+            "y": 167,
+            "width": 236,
+            "height": 63
+          }
+        },
+        {
+          "selector": "#workflow-template-delete-btn",
+          "label": "Delete Template",
+          "rect": {
+            "x": 83,
+            "y": 232,
+            "width": 196,
+            "height": 36
+          },
+          "badge": "right"
+        }
+      ]
+    }
+  ],
+  "checks": [
+    "New process starts from the selected template",
+    "Create process adds the process to its project and opens it",
+    "New process on a project heading starts in that project",
+    "Typing a new name in the drawer renames the process",
+    "Delete process removes the open process at once",
+    "Deleting the open process closes its drawer",
+    "A step is locked until the steps before it are complete",
+    "Opening a process opens its next step",
+    "Field values and the result are saved as you type",
+    "Attach copies the file into the process folder and lists it under the step",
+    "Complete records an executed notebook page, unlocks the next step, and opens it",
+    "Fail marks the step failed in the drawer and the list",
+    "Retry clears the failure",
+    "Notebook opens the step as a planned notebook page",
+    "Activate adds the branch steps to the process",
+    "Skip branch removes an untouched branch again",
+    "Plain Text switches the composer to a text step",
+    "Clicking a connection deletes it",
+    "Right-clicking a block offers Delete, Disconnect, and Clear Selection",
+    "Save Current Graph saves the blocks and connections as a template",
+    "The back arrow returns to the template list, which shows the new template",
+    "Search templates filters the template list",
+    "Delete Template is unavailable while the template has processes",
+    "Escape closes the template menu",
+    "Delete Template removes a template that has no processes"
+  ]
+}

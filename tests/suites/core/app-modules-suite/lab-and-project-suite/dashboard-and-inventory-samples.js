@@ -295,6 +295,43 @@ test('personal-inventory shows right-side sample editor and saves linked sample 
   assert.equal(state.samples[0].inventoryLink.wellIndex, 0);
   assert.ok(persistCalls >= 1);
 });
+test('personal-inventory fill wells gives each copy its own sample code', () => {
+  const document = createMockDocument(['inventory-sections']);
+  const inventorySections = document.getElementById('inventory-sections');
+  const inventoryModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'personal-inventory', 'index.js'), {
+    document
+  });
+  const at = (wellIndex) => ({ section: '-20 Degree', containerId: 'box-1', wellIndex });
+  const state = {
+    samples: [
+      { id: 'sample-1', code: 'S-001', name: 'Seed Sample', type: 'plasmid', inventoryLink: at(0), chemicalLinks: [] },
+      { id: 'sample-2', code: 'S-001-2', name: 'Already taken', type: 'plasmid', inventoryLink: at(3), chemicalLinks: [] }
+    ],
+    inventory: {
+      '-20 Degree': [{ id: 'box-1', name: 'Box A', type: 'box25', wells: Array.from({ length: 4 }, (_v, i) => ({ name: `W${i + 1}`, content: '' })) }]
+    }
+  };
+  const personalInventory = inventoryModule.initPersonalInventory({
+    state,
+    persist: () => {},
+    createId: () => 'container-x',
+    safeText: shared.safeText,
+    cssEscape: shared.cssEscape
+  });
+
+  assert.equal(personalInventory.openSample('sample-1'), true);
+  trigger(inventorySections.querySelector('[data-well-sample-clone]'), 'click');
+  const wells = inventorySections.querySelectorAll('[data-well-index]');
+  wells.forEach((well) => Object.assign(well.dataset, { section: '-20 Degree', containerId: 'box-1' }));
+  trigger(wells[1], 'mousedown', { preventDefault() {} });
+  trigger(wells[2], 'mouseenter');
+
+  const copies = state.samples.slice(2);
+  assert.deepEqual(copies.map((sample) => [sample.code, sample.name, sample.inventoryLink.wellIndex]), [
+    ['S-001-3', 'Seed Sample', 1],
+    ['S-001-4', 'Seed Sample', 2]
+  ]);
+});
 test('personal-inventory creates a linked sample from the side editor for an empty cell', () => {
   const document = createMockDocument([
     'inventory-sections',

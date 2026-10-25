@@ -660,6 +660,7 @@
 #setting-view [data-settings-target="mcp-tools"] { --settings-nav-icon: url("../../../assets/icons/tools.svg"); }
 #setting-view [data-settings-target="skills"] { --settings-nav-icon: url("../../../assets/icons/workflows.svg"); }
 #setting-view [data-settings-target="plugins"] { --settings-nav-icon: url("../../../assets/icons/tools.svg"); }
+#setting-view [data-settings-target="tutorial"] { --settings-nav-icon: url("../../../assets/icons/tutorial.svg"); }
 #setting-view .settings-nav-item.is-active {
   background: var(--hikari-left-rail-list-selected) !important;
   color: var(--theme-text-strong) !important;

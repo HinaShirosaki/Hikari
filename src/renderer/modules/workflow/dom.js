@@ -39,6 +39,8 @@ export function getWorkflowElements(rootDocument) {
     workflowTemplateList: rootDocument?.getElementById?.('workflow-template-list'),
     workflowSearchInput: rootDocument?.getElementById?.('workflow-search'),
     workflowList: rootDocument?.getElementById?.('workflow-list'),
+    workflowTemplateContextMenu: rootDocument?.getElementById?.('workflow-template-context-menu'),
+    workflowTemplateDeleteBtn: rootDocument?.getElementById?.('workflow-template-delete-btn'),
     workflowExecutionTitle: rootDocument?.getElementById?.('workflow-execution-title'),
     workflowExecutionBoard: rootDocument?.getElementById?.('workflow-execution-board'),
     workflowAddRunBtn: rootDocument?.getElementById?.('workflow-add-run-btn'),

@@ -260,7 +260,10 @@ export function createWorkflowActions(config = {}) {
     onWorkflowListClick,
     onSaveTemplate,
     onCreateFromTemplate,
-    onTemplateListClick
+    onTemplateListClick,
+    hideTemplateMenu,
+    onWorkflowListContextMenu,
+    onTemplateMenuDelete
   } = createWorkflowTemplateEditor({
     state,
     runtime,
@@ -428,6 +431,19 @@ export function createWorkflowActions(config = {}) {
     elements.workflowBlockList?.addEventListener('click', onBlockListClick);
     elements.workflowBlockList?.addEventListener('change', onBlockListChange);
     elements.workflowList?.addEventListener('click', onWorkflowListClick);
+    elements.workflowList?.addEventListener('contextmenu', onWorkflowListContextMenu);
+    elements.workflowTemplateDeleteBtn?.addEventListener('click', onTemplateMenuDelete);
+    const templateMenu = elements.workflowTemplateContextMenu;
+    templateMenu?.ownerDocument?.addEventListener('click', (event) => {
+      if (!templateMenu.contains(event.target)) {
+        hideTemplateMenu();
+      }
+    });
+    templateMenu?.ownerDocument?.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        hideTemplateMenu();
+      }
+    });
     elements.workflowSaveTemplateBtn?.addEventListener('click', onSaveTemplate);
     elements.workflowTemplateCancelBtn?.addEventListener('click', onCancelWorkflowEdit);
     elements.workflowTemplateCreateBtn?.addEventListener('click', onCreateFromTemplate);

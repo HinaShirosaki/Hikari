@@ -44,6 +44,7 @@ export function initSettings({
     startupForm,
     openLogsFolderBtn,
     openThirdPartyNoticesBtn,
+    openTutorialBtn,
     settingUpdateStatus,
     checkUpdatesBtn,
     installUpdateBtn,
@@ -256,6 +257,12 @@ export function initSettings({
     const result = await window.hikariApi?.openThirdPartyNotices?.();
     if (result && result.ok === false) {
       showTransientNotice(result.error || 'Could not open the third-party notices.', { type: 'error' });
+    }
+  });
+  openTutorialBtn?.addEventListener('click', async () => {
+    const result = await window.hikariApi?.openTutorial?.();
+    if (result && result.ok === false) {
+      showTransientNotice(result.error || 'Could not open the tutorial.', { type: 'error' });
     }
   });
   formPresentation.bind(notebookPdfForm, notebookPdfController.save);

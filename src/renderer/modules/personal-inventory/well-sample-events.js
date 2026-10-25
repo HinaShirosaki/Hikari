@@ -1,3 +1,4 @@
+import { makeCopySampleCode } from '../../lib/sample-records.js';
 import { containerToCsv, mergeContainerCsv, parseContainerCsv } from './csv-io.js';
 import { readTypeFieldsFrom } from './type-fields.js';
 
@@ -66,6 +67,7 @@ export function bindWellSampleEvents(ctx) {
     const clone = {
       ...sample,
       id: `sample-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+      code: makeCopySampleCode(sample.code, state.samples),
       inventoryLink: { section, containerId, wellIndex: index },
       location: helpers.buildAutoLocationFromLink(section, container, index),
       updatedAt: new Date().toISOString()

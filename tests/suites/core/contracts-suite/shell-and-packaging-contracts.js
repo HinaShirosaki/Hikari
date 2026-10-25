@@ -98,6 +98,53 @@ module.exports = function registerShellAndPackagingContracts(context = {}) {
       assert.match(ignoreAsText, /\\\/data\(\$\|\\\/\)/);
     });
 
+    test('forge ships the tutorial pages unpacked for the browser, without their capture tooling', () => {
+      const ignored = (file) => forgeConfig.packagerConfig.ignore.some((pattern) => pattern.test(file));
+      [
+        '/docs', '/docs/tutorial', '/docs/tutorial/index.html', '/docs/tutorial/03-notebook',
+        '/docs/tutorial/03-notebook/index.html', '/docs/tutorial/03-notebook/tutorial.css',
+        '/docs/tutorial/03-notebook/images', '/docs/tutorial/03-notebook/images/01-notebook-workspace.png',
+        '/docs/tutorial/04-papers/examples/buffer-choice-example.pdf', '/docs/tutorial/02-protocols/examples/label-checklist.json'
+      ].forEach((file) => assert.equal(ignored(file), false, `${file} should ship`));
+      [
+        '/docs/other.md', '/docs/tutorials-old/index.html', '/docs/tutorial/README.md',
+        '/docs/tutorial/03-notebook/notebook.md', '/docs/tutorial/03-notebook/capture-manifest.json',
+        '/docs/tutorial/03-notebook/tools', '/docs/tutorial/03-notebook/tools/capture.cjs',
+        '/docs/tutorial/03-notebook/images/raw/01-notebook-workspace.png',
+        '/docs/tutorial/03-notebook/images/01-notebook-workspace.svg'
+      ].forEach((file) => assert.equal(ignored(file), true, `${file} should stay out`));
+      assert.match(forgeConfig.packagerConfig.asar.unpackDir, /[{,]docs\/tutorial[,}]/);
+    });
+
+    test('Settings > Tutorial opens the bundled start page, or says it is missing', async () => {
+      const { registerSystemIpc } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-system-ipc.js'));
+      const { SYSTEM } = require(path.join(__dirname, 'src', 'shared', 'ipc', 'channels.js'));
+      const openTutorial = async (tutorialPath) => {
+        const handlers = new Map();
+        const opened = [];
+        registerSystemIpc({
+          ipcMain: { handle: (name, handler) => handlers.set(name, handler), on() {} },
+          shell: { openPath: async (target) => { opened.push(target); return ''; } },
+          tutorialPath
+        });
+        return { result: await handlers.get(SYSTEM.OPEN_TUTORIAL)(), opened };
+      };
+      const folder = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'hikari-tutorial-'));
+      const startPage = path.join(folder, 'index.html');
+      fs.writeFileSync(startPage, '<!doctype html>');
+      try {
+        const shipped = await openTutorial(startPage);
+        assert.deepEqual(shipped.result, { ok: true, path: startPage });
+        assert.deepEqual(shipped.opened, [startPage]);
+        const missing = await openTutorial(path.join(folder, 'missing', 'index.html'));
+        assert.equal(missing.result.ok, false);
+        assert.match(missing.result.error, /not included/);
+        assert.deepEqual(missing.opened, []);
+      } finally {
+        fs.rmSync(folder, { recursive: true, force: true });
+      }
+    });
+
     test('the MCP stdio server boots under plain Node from unpacked files only', async () => {
       // Codex launches the server with an external Node that cannot read
       // app.asar, so every file it loads must live in an unpacked directory.

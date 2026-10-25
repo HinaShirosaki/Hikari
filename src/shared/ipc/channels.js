@@ -64,6 +64,7 @@ const SYSTEM = Object.freeze({
   REPORT_ERROR: 'system:report-error',
   OPEN_LOGS_FOLDER: 'system:open-logs-folder',
   OPEN_THIRD_PARTY_NOTICES: 'system:open-third-party-notices',
+  OPEN_TUTORIAL: 'system:open-tutorial',
   UPDATE_STATUS: 'system:update-status',
   CHECK_FOR_UPDATES: 'system:check-for-updates',
   INSTALL_UPDATE: 'system:install-update'

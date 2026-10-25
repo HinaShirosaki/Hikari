@@ -1,0 +1,609 @@
+{
+  "sourceVersion": "1.1.0-beta.9",
+  "exampleDate": "2026-10-24",
+  "timezone": "America/Chicago",
+  "viewport": [
+    1600,
+    1000
+  ],
+  "mode": "Real Home renderer; fictional data; in-memory desktop and AI adapters; no live AI or downloads.",
+  "screenshots": [
+    {
+      "name": "01-home-map",
+      "title": "Meet your Home dashboard",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "targets": [
+        {
+          "selector": ".home-column-now",
+          "label": "Timers & reminders",
+          "rect": {
+            "x": 28,
+            "y": 79,
+            "width": 504,
+            "height": 903
+          }
+        },
+        {
+          "selector": ".home-column-capture",
+          "label": "Capture & notebook notes",
+          "rect": {
+            "x": 548,
+            "y": 79,
+            "width": 504,
+            "height": 903
+          }
+        },
+        {
+          "selector": ".home-column-read",
+          "label": "Papers & lab activity",
+          "rect": {
+            "x": 1068,
+            "y": 79,
+            "width": 504,
+            "height": 903
+          }
+        }
+      ]
+    },
+    {
+      "name": "02-experiment-log",
+      "title": "Capture an observation",
+      "crop": {
+        "x": 530,
+        "y": 61,
+        "width": 540,
+        "height": 293
+      },
+      "targets": [
+        {
+          "selector": "#dashboard-quick-log-input",
+          "label": "Write the observation",
+          "rect": {
+            "x": 565,
+            "y": 134,
+            "width": 470,
+            "height": 120
+          }
+        },
+        {
+          "selector": "#dashboard-quick-log-save-btn",
+          "label": "Save a dated log",
+          "rect": {
+            "x": 751,
+            "y": 262,
+            "width": 78,
+            "height": 32
+          }
+        },
+        {
+          "selector": "#dashboard-quick-log-agent-btn",
+          "label": "Prepare notebook page",
+          "rect": {
+            "x": 837,
+            "y": 262,
+            "width": 198,
+            "height": 32
+          }
+        }
+      ]
+    },
+    {
+      "name": "03-log-saved",
+      "title": "Confirm where your log went",
+      "crop": {
+        "x": 530,
+        "y": 61,
+        "width": 540,
+        "height": 357
+      },
+      "targets": [
+        {
+          "selector": "#dashboard-quick-log-status",
+          "label": "Look for Logged.",
+          "rect": {
+            "x": 565,
+            "y": 302,
+            "width": 470,
+            "height": 19
+          }
+        },
+        {
+          "selector": "#dashboard-quick-log-recent",
+          "label": "Read your saved observation",
+          "rect": {
+            "x": 565,
+            "y": 328,
+            "width": 470,
+            "height": 57
+          }
+        }
+      ]
+    },
+    {
+      "name": "04-notebook-review",
+      "title": "Review the notebook proposal",
+      "crop": {
+        "x": 387,
+        "y": 348,
+        "width": 814,
+        "height": 198
+      },
+      "targets": [
+        {
+          "selector": "#home-agent-review-track .draft-review-heading",
+          "label": "Check the destination",
+          "rect": {
+            "x": 405,
+            "y": 366,
+            "width": 778,
+            "height": 98
+          }
+        },
+        {
+          "selector": "#home-agent-review-track .agent-review-section",
+          "label": "Read the proposed text",
+          "rect": {
+            "x": 405,
+            "y": 480,
+            "width": 755,
+            "height": 48
+          }
+        }
+      ]
+    },
+    {
+      "name": "04b-notebook-approval",
+      "title": "Approve the content you reviewed",
+      "crop": {
+        "x": 387,
+        "y": 686,
+        "width": 814,
+        "height": 90
+      },
+      "targets": [
+        {
+          "selector": "#home-agent-review-track [data-agent-review-reject]",
+          "label": "Reject the proposal",
+          "rect": {
+            "x": 984,
+            "y": 721,
+            "width": 65,
+            "height": 37
+          }
+        },
+        {
+          "selector": "#home-agent-review-track [data-agent-review-approve]",
+          "label": "Append to this page",
+          "rect": {
+            "x": 1059,
+            "y": 721,
+            "width": 125,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "05-notebook-note",
+      "title": "Add a note to an existing page",
+      "crop": {
+        "x": 530,
+        "y": 424,
+        "width": 540,
+        "height": 576
+      },
+      "targets": [
+        {
+          "selector": "[data-dashboard-notebook-note-input]",
+          "label": "Write a follow-up",
+          "rect": {
+            "x": 565,
+            "y": 570,
+            "width": 470,
+            "height": 79
+          }
+        },
+        {
+          "selector": "[data-dashboard-notebook-note-clarify]",
+          "label": "Optional AI clarification",
+          "rect": {
+            "x": 788,
+            "y": 657,
+            "width": 153,
+            "height": 32
+          }
+        },
+        {
+          "selector": ".home-notebook-note-actions .primary-btn",
+          "label": "Save note to this page",
+          "rect": {
+            "x": 947,
+            "y": 657,
+            "width": 88,
+            "height": 32
+          }
+        }
+      ]
+    },
+    {
+      "name": "06-timer-preset",
+      "title": "Create a reusable timer preset",
+      "crop": {
+        "x": 542,
+        "y": 131,
+        "width": 516,
+        "height": 489
+      },
+      "targets": [
+        {
+          "selector": "#dashboard-timer-name-input",
+          "label": "Name the timer",
+          "rect": {
+            "x": 585,
+            "y": 476,
+            "width": 243,
+            "height": 42
+          }
+        },
+        {
+          "selector": "#dashboard-timer-minutes-input",
+          "label": "Minutes or hours",
+          "rect": {
+            "x": 842,
+            "y": 476,
+            "width": 162,
+            "height": 42
+          }
+        },
+        {
+          "selector": "#dashboard-timer-add-btn",
+          "label": "Save preset",
+          "rect": {
+            "x": 900,
+            "y": 536,
+            "width": 104,
+            "height": 40
+          }
+        }
+      ]
+    },
+    {
+      "name": "07-timer-running",
+      "title": "Use the running timer",
+      "crop": {
+        "x": 10,
+        "y": 61,
+        "width": 540,
+        "height": 317
+      },
+      "targets": [
+        {
+          "selector": ".home-timer-row:first-child .home-timer-count",
+          "label": "Time remaining",
+          "rect": {
+            "x": 45,
+            "y": 162,
+            "width": 418,
+            "height": 38
+          }
+        },
+        {
+          "selector": ".home-timer-row:first-child [data-dashboard-toggle-active-timer]",
+          "label": "Pause or resume",
+          "rect": {
+            "x": 473,
+            "y": 157,
+            "width": 42,
+            "height": 42
+          }
+        },
+        {
+          "selector": "#dashboard-timer-preset-list",
+          "label": "Start another preset",
+          "rect": {
+            "x": 45,
+            "y": 303,
+            "width": 470,
+            "height": 41
+          }
+        }
+      ]
+    },
+    {
+      "name": "08-passage-setup",
+      "title": "Add a cell passage reminder",
+      "crop": {
+        "x": 542,
+        "y": 131,
+        "width": 516,
+        "height": 546
+      },
+      "targets": [
+        {
+          "selector": "#dashboard-passage-strain-input",
+          "label": "Identify the cell strain",
+          "rect": {
+            "x": 585,
+            "y": 452,
+            "width": 419,
+            "height": 42
+          }
+        },
+        {
+          "selector": ".home-dialog-field-pair",
+          "label": "Interval & current passage",
+          "rect": {
+            "x": 585,
+            "y": 508,
+            "width": 419,
+            "height": 68
+          }
+        },
+        {
+          "selector": "#dashboard-passage-submit-btn",
+          "label": "Add reminder",
+          "rect": {
+            "x": 889,
+            "y": 593,
+            "width": 115,
+            "height": 40
+          }
+        }
+      ]
+    },
+    {
+      "name": "09-passage-actions",
+      "title": "Act on due passage reminders",
+      "crop": {
+        "x": 10,
+        "y": 357,
+        "width": 540,
+        "height": 227
+      },
+      "targets": [
+        {
+          "selector": "#dashboard-passage-list .home-row:first-child .home-status-pill",
+          "label": "Read the due status",
+          "rect": {
+            "x": 301,
+            "y": 439,
+            "width": 89,
+            "height": 22
+          }
+        },
+        {
+          "selector": "#dashboard-passage-list .home-row:first-child [data-dashboard-passage-action=\"extend\"]",
+          "label": "Remind me tomorrow",
+          "rect": {
+            "x": 399,
+            "y": 434,
+            "width": 80,
+            "height": 32
+          }
+        },
+        {
+          "selector": "#dashboard-passage-list .home-row:first-child [data-dashboard-passage-action=\"done\"]",
+          "label": "Mark passaged",
+          "rect": {
+            "x": 483,
+            "y": 434,
+            "width": 32,
+            "height": 32
+          }
+        }
+      ]
+    },
+    {
+      "name": "10-incubation-locations",
+      "title": "Manage your incubation locations",
+      "crop": {
+        "x": 542,
+        "y": 131,
+        "width": 516,
+        "height": 526
+      },
+      "targets": [
+        {
+          "selector": "#dashboard-incubation-location-list",
+          "label": "Existing locations",
+          "rect": {
+            "x": 585,
+            "y": 426,
+            "width": 419,
+            "height": 105
+          }
+        },
+        {
+          "selector": "#dashboard-incubation-location-input",
+          "label": "Name a new location",
+          "rect": {
+            "x": 585,
+            "y": 571,
+            "width": 301,
+            "height": 42
+          }
+        },
+        {
+          "selector": "#dashboard-incubation-location-submit-btn",
+          "label": "Add location",
+          "rect": {
+            "x": 895,
+            "y": 573,
+            "width": 109,
+            "height": 40
+          }
+        }
+      ]
+    },
+    {
+      "name": "11-incubation-reminder",
+      "title": "Set an incubation reminder for tomorrow",
+      "crop": {
+        "x": 10,
+        "y": 563,
+        "width": 540,
+        "height": 437
+      },
+      "targets": [
+        {
+          "selector": "#dashboard-incubation-list [data-dashboard-incubation-remind=\"2\"]",
+          "label": "Bell: remind tomorrow",
+          "rect": {
+            "x": 483,
+            "y": 681,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "selector": "#dashboard-incubation-list .home-incubation-row:nth-child(2) .home-status-pill",
+          "label": "Confirm Tomorrow",
+          "rect": {
+            "x": 397,
+            "y": 686,
+            "width": 76,
+            "height": 22
+          }
+        }
+      ]
+    },
+    {
+      "name": "12-paper-finder",
+      "title": "Read and retrieve paper recommendations",
+      "crop": {
+        "x": 1050,
+        "y": 61,
+        "width": 540,
+        "height": 625
+      },
+      "targets": [
+        {
+          "selector": "#dashboard-paper-finding-open-btn",
+          "label": "Manage in Notebook",
+          "rect": {
+            "x": 1523,
+            "y": 98,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "selector": "#dashboard-paper-finding-run-btn",
+          "label": "Run active schedules",
+          "rect": {
+            "x": 1489,
+            "y": 98,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "selector": ".home-paper-finding-details",
+          "label": "Read Summary",
+          "rect": {
+            "x": 1085,
+            "y": 253,
+            "width": 470,
+            "height": 119
+          }
+        },
+        {
+          "selector": "[data-paper-finding-download]",
+          "label": "Download the PDF",
+          "rect": {
+            "x": 1162,
+            "y": 374,
+            "width": 81,
+            "height": 19
+          }
+        }
+      ]
+    },
+    {
+      "name": "13-lab-activity",
+      "title": "Inspect a day of lab activity",
+      "crop": {
+        "x": 1050,
+        "y": 665,
+        "width": 540,
+        "height": 335
+      },
+      "targets": [
+        {
+          "selector": "[data-contribution-day=\"2026-10-24\"]",
+          "label": "Select a day",
+          "rect": {
+            "x": 1480,
+            "y": 913,
+            "width": 18,
+            "height": 18
+          }
+        },
+        {
+          "selector": "#dashboard-contribution-selected",
+          "label": "Read its breakdown",
+          "rect": {
+            "x": 1085,
+            "y": 939,
+            "width": 470,
+            "height": 28
+          }
+        }
+      ]
+    },
+    {
+      "name": "14-without-ai",
+      "title": "Use Home without an AI connection",
+      "crop": {
+        "x": 530,
+        "y": 61,
+        "width": 540,
+        "height": 939
+      },
+      "targets": [
+        {
+          "selector": "#dashboard-quick-log-save-btn",
+          "label": "Local Save stays available",
+          "rect": {
+            "x": 957,
+            "y": 262,
+            "width": 78,
+            "height": 32
+          }
+        },
+        {
+          "selector": "#dashboard-notebook-page-list",
+          "label": "Add notes to existing pages",
+          "rect": {
+            "x": 565,
+            "y": 471,
+            "width": 470,
+            "height": 147
+          }
+        }
+      ]
+    }
+  ],
+  "checks": [
+    "All seven Home widgets rendered",
+    "Save clears the draft and displays Saved today",
+    "Notebook proposal awaits approval before changing the page",
+    "The notebook approval control is visible and reachable after scrolling",
+    "Approving the illustrative proposal appends to the intended notebook page",
+    "Save note appends the text to the selected page",
+    "Saving a timer preset does not start a countdown",
+    "A preset Play button starts a countdown",
+    "Pause preserves the timer remaining time",
+    "A new passage reminder starts from today",
+    "Tomorrow defers without incrementing the passage number",
+    "Mark passaged increments the passage number",
+    "The incubation bell sets a reminder for tomorrow",
+    "Manage paper finding routes to Notebook",
+    "Disconnected mode hides AI notebook preparation and Paper finder"
+  ]
+}
