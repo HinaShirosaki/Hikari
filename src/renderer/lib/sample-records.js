@@ -4,6 +4,17 @@ export function makeDefaultSampleCode() {
   return `S-${Date.now().toString().slice(-6)}`;
 }
 
+// A copy gets the source code plus the first free -2, -3, ... suffix: Save
+// Sample and CSV import both treat codes as unique.
+export function makeCopySampleCode(code, samples = []) {
+  const taken = new Set(samples.map((sample) => sample?.code));
+  let suffix = 2;
+  while (taken.has(`${code || 'S'}-${suffix}`)) {
+    suffix += 1;
+  }
+  return `${code || 'S'}-${suffix}`;
+}
+
 export function normalizeSampleCode(value) {
   return String(value || '')
     .trim()
