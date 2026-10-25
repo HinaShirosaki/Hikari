@@ -434,7 +434,9 @@ function createMainServices(context = {}) {
     updater: npmUpdater,
     // Packaged builds ship the notices as an extraResource (see forge.config.js);
     // shell.openPath cannot open a file that lives inside app.asar.
-    thirdPartyNoticesPath: path.join(app.isPackaged ? processObject.resourcesPath : projectRoot, 'THIRD-PARTY-NOTICES.md')
+    thirdPartyNoticesPath: path.join(app.isPackaged ? processObject.resourcesPath : projectRoot, 'THIRD-PARTY-NOTICES.md'),
+    // docs/tutorial is in asar unpackDir, so the browser can read its pages and images.
+    tutorialPath: path.join(app.isPackaged ? path.join(processObject.resourcesPath, 'app.asar.unpacked') : projectRoot, 'docs', 'tutorial', 'index.html')
   });
 
   // Every startup step below is best-effort: a failed integration is logged

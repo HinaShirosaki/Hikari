@@ -12,6 +12,7 @@ export function getSettingsElements(rootDocument = globalThis?.document || null)
     startupForm: getById('startup-form'),
     openLogsFolderBtn: getById('open-logs-folder-btn'),
     openThirdPartyNoticesBtn: getById('open-third-party-notices-btn'),
+    openTutorialBtn: getById('open-tutorial-btn'),
     settingUpdateStatus: getById('setting-update-status'),
     checkUpdatesBtn: getById('check-updates-btn'),
     installUpdateBtn: getById('install-update-btn'),

@@ -43,13 +43,14 @@ module.exports = {
     // prePackage chooses a persistent certificate when one is available; forcing
     // ad hoc signing gives every rebuild a different Keychain identity.
     osxSign: {},
-    // Shipped outside app.asar so Settings can open it with the system viewer.
+    // Shipped outside app.asar so Settings can open it with the system viewer
+    // (the tutorial is unpacked through asar.unpackDir instead).
     extraResource: ['./THIRD-PARTY-NOTICES.md'],
     asar: {
       // node_modules is unpacked whole: the MCP stdio server runs under an external
       // Node that cannot read app.asar, and a hand-picked package list kept missing
       // transitive SDK deps (fast-uri, pkce-challenge, @hono/node-server, ...).
-      unpackDir: '{src/main/agent,src/main/storage,src/main/data,src/main/lib,src/main/papers,src/shared,src/renderer/lib,src/renderer/modules/sequence-viewer,vendor/pdfjs,vendor/sqljs,vendor/onnxruntime,vendor/colony-counter,node_modules}'
+      unpackDir: '{src/main/agent,src/main/storage,src/main/data,src/main/lib,src/main/papers,src/shared,src/renderer/lib,src/renderer/modules/sequence-viewer,vendor/pdfjs,vendor/sqljs,vendor/onnxruntime,vendor/colony-counter,docs/tutorial,node_modules}'
     },
     prune: true,
     ignore: [
@@ -76,7 +77,11 @@ module.exports = {
       /^\/\.github($|\/)/,
       /^\/tests($|\/)/,
       /^\/scripts($|\/)/,
-      /^\/docs($|\/)/,
+      // docs/ stays out except the tutorial's reading pages, styles, PNGs, and
+      // example files, which Settings > Tutorial opens in the browser.
+      /^\/docs\/(?!tutorial($|\/))/,
+      /^\/docs\/tutorial\/[^/]+\/(?:tools|images\/raw)($|\/)/,
+      /^\/docs\/tutorial\/.*(?:\.md|\.svg|capture-manifest\.json)$/,
       /^\/artifacts($|\/)/,
       /^\/examples($|\/)/,
       /^\/website($|\/)/,

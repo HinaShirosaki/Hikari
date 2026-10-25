@@ -73,6 +73,16 @@
               </span>
             </button>
           </div>
+          <div class="settings-nav-group">
+            <h3 class="settings-nav-heading">
+              Help
+            </h3>
+            <button type="button" class="settings-nav-item" data-settings-target="tutorial" aria-pressed="false">
+              <span>
+                Tutorial
+              </span>
+            </button>
+          </div>
         </section>
       </div>
     </aside>
@@ -711,6 +721,21 @@
           </p>
           <div id="setting-plugins-list" class="settings-skill-list" aria-live="polite">
           </div>
+        </div>
+      </section>
+      <section class="settings-section" data-settings-panel="tutorial" hidden>
+        <div class="settings-section-head">
+          <h3>
+            Tutorial
+          </h3>
+          <p class="settings-description">
+            Step-by-step guides to each part of Hikari, with annotated screenshots. They open in your web browser and work offline.
+          </p>
+        </div>
+        <div class="form-actions">
+          <button type="button" id="open-tutorial-btn" class="primary-btn">
+            Open Tutorial in Browser
+          </button>
         </div>
       </section>
     </div>
