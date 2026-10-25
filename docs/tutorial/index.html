@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Illustrated tutorials for Hikari, with step-by-step instructions and annotated screenshots of each part of the app.">
+<title>Hikari tutorials</title>
+<!-- Every chapter carries the same tutorial.css; the start page borrows the first one. -->
+<link rel="stylesheet" href="01-home-dashboard/tutorial.css">
+<style>
+  main { margin:0 auto; max-width:1200px; }
+  .chapters { list-style:none; margin:40px 0 0; padding:0; display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:22px; }
+  .chapters li { margin:0; padding:0; }
+  .chapters a { display:grid; align-content:start; gap:10px; height:100%; padding:14px 14px 18px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--fg); text-decoration:none; }
+  .chapters a:hover { border-color:var(--accent); }
+  .chapters img { display:block; width:100%; aspect-ratio:16 / 10; object-fit:cover; object-position:top left; border-radius:4px; background:var(--card); }
+  .chapters .number { font:400 11px/1.5 var(--mono); letter-spacing:.18em; color:var(--accent); }
+  .chapters .name { font:400 26px/1.15 var(--display); letter-spacing:-.02em; }
+  .chapters .summary { font-size:14px; line-height:1.6; color:var(--muted); }
+</style>
+</head>
+<body>
+<main id="chapter">
+  <div class="eyebrow">HIKARI / ILLUSTRATED TUTORIALS</div>
+  <h1>Hikari tutorials</h1>
+  <p>Step-by-step guides to each part of Hikari, with real screenshots and numbered highlights.</p>
+  <p>Start with Home dashboard, or open the part of Hikari you are working in. The screenshots use fictional example data.</p>
+  <ul class="chapters">
+    <li><a href="01-home-dashboard/index.html"><img src="01-home-dashboard/images/01-home-map.png" alt="" loading="lazy"><span class="number">CHAPTER 01</span><span class="name">Home dashboard</span><span class="summary">Save observations, prepare notebook pages, use timers and reminders, find papers, and check activity.</span></a></li>
+    <li><a href="02-protocols/index.html"><img src="02-protocols/images/01-protocol-workspace.png" alt="" loading="lazy"><span class="number">CHAPTER 02</span><span class="name">Protocols</span><span class="summary">Create and edit procedures, add reusable fields, draft with the assistant, import, export, and print.</span></a></li>
+    <li><a href="03-notebook/index.html"><img src="03-notebook/images/01-notebook-workspace.png" alt="" loading="lazy"><span class="number">CHAPTER 03</span><span class="name">Notebook</span><span class="summary">Run protocols as notebook pages, record values, notes, files, and tables, use the bench calculators, and plan experiments.</span></a></li>
+    <li><a href="04-papers/index.html"><img src="04-papers/images/01-papers-workspace.png" alt="" loading="lazy"><span class="number">CHAPTER 04</span><span class="name">Papers</span><span class="summary">Build your paper library, read and mark up PDFs, search selected text, and read each paper's details and brief.</span></a></li>
+    <li><a href="05-samples/index.html"><img src="05-samples/images/01-samples-workspace.png" alt="" loading="lazy"><span class="number">CHAPTER 05</span><span class="name">Samples</span><span class="summary">Record where each sample is stored in boxes, plates, and tubes, fill wells, and import or export containers.</span></a></li>
+    <li><a href="06-chemicals/index.html"><img src="06-chemicals/images/01-chemicals-workspace.png" alt="" loading="lazy"><span class="number">CHAPTER 06</span><span class="name">Chemicals</span><span class="summary">Keep the lab's chemical inventory, read location codes, search and sort, and import a spreadsheet.</span></a></li>
+    <li><a href="07-workflows/index.html"><img src="07-workflows/images/01-workflows-workspace.png" alt="" loading="lazy"><span class="number">CHAPTER 07</span><span class="name">Workflows</span><span class="summary">Run multi-step work from templates, record each step, add optional branches, and build templates.</span></a></li>
+  </ul>
+  <footer class="page-footer">Hikari tutorials</footer>
+</main>
+</body></html>

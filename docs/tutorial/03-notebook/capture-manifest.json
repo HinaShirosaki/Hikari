@@ -1,0 +1,707 @@
+{
+  "sourceVersion": "1.1.0-beta.9",
+  "exampleDate": "2026-10-24",
+  "timezone": "America/Chicago",
+  "viewport": [
+    1600,
+    1000
+  ],
+  "mode": "Real Notebook renderer; fictional data; in-memory desktop adapters; no live AI, file writes, or PDF export.",
+  "screenshots": [
+    {
+      "name": "01-notebook-workspace",
+      "title": "Open the Notebook",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "targets": [
+        {
+          "selector": "#biology-notebook-rail",
+          "label": "Projects and pages",
+          "rect": {
+            "x": 0,
+            "y": 65,
+            "width": 280,
+            "height": 935
+          }
+        },
+        {
+          "selector": "#biology-notebook-protocol-area",
+          "label": "Read and edit the page",
+          "rect": {
+            "x": 304,
+            "y": 65,
+            "width": 1296,
+            "height": 709
+          }
+        },
+        {
+          "selector": "#biology-notebook-tool-fold-toggle",
+          "label": "Bench toolbox",
+          "rect": {
+            "x": 1542,
+            "y": 137,
+            "width": 42,
+            "height": 42
+          }
+        }
+      ]
+    },
+    {
+      "name": "02-new-project",
+      "title": "Create a project",
+      "crop": {
+        "x": 558,
+        "y": 298,
+        "width": 484,
+        "height": 462
+      },
+      "targets": [
+        {
+          "selector": "#biology-notebook-project-name",
+          "label": "Project name",
+          "rect": {
+            "x": 601,
+            "y": 432,
+            "width": 398,
+            "height": 44
+          }
+        },
+        {
+          "selector": "#biology-notebook-project-details summary",
+          "label": "Optional description",
+          "rect": {
+            "x": 601,
+            "y": 496,
+            "width": 183,
+            "height": 19
+          }
+        },
+        {
+          "selector": "#biology-notebook-project-create-btn",
+          "label": "Create project",
+          "rect": {
+            "x": 877,
+            "y": 676,
+            "width": 122,
+            "height": 40
+          }
+        }
+      ]
+    },
+    {
+      "name": "03-new-experiment",
+      "title": "Start a new experiment",
+      "crop": {
+        "x": 522,
+        "y": 294,
+        "width": 556,
+        "height": 470
+      },
+      "targets": [
+        {
+          "selector": "#biology-notebook-project-select",
+          "label": "Choose the project",
+          "rect": {
+            "x": 559,
+            "y": 427,
+            "width": 482,
+            "height": 38
+          }
+        },
+        {
+          "selector": "#biology-notebook-experiment-kind",
+          "label": "Start from a single protocol",
+          "rect": {
+            "x": 559,
+            "y": 504,
+            "width": 482,
+            "height": 38
+          }
+        },
+        {
+          "selector": "#biology-notebook-protocol-search",
+          "label": "Search protocols",
+          "rect": {
+            "x": 559,
+            "y": 580,
+            "width": 482,
+            "height": 39
+          }
+        },
+        {
+          "selector": "[data-notebook-experiment-protocol-id=\"demo-buffer-check\"]",
+          "label": "Select the protocol",
+          "rect": {
+            "x": 563,
+            "y": 636,
+            "width": 474,
+            "height": 35
+          }
+        },
+        {
+          "selector": "#biology-notebook-experiment-start-btn",
+          "label": "Start Experiment",
+          "rect": {
+            "x": 912,
+            "y": 690,
+            "width": 129,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "04-fill-fields",
+      "title": "Fill in the protocol fields",
+      "crop": {
+        "x": 286,
+        "y": 169,
+        "width": 399,
+        "height": 293
+      },
+      "targets": [
+        {
+          "selector": "[data-inline-input][data-nb-key-ref=\"b-protein\"]",
+          "label": "Type in the field",
+          "rect": {
+            "x": 387,
+            "y": 184,
+            "width": 67,
+            "height": 21
+          }
+        },
+        {
+          "selector": ".biology-notebook-sample-suggestions [role=\"option\"]",
+          "label": "Choose a matching sample",
+          "rect": {
+            "x": 388,
+            "y": 208,
+            "width": 278,
+            "height": 55
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "[data-inline-token][data-nb-key-ref=\"b-temp\"]",
+          "label": "Suggested value: press Tab",
+          "rect": {
+            "x": 424,
+            "y": 346,
+            "width": 42,
+            "height": 21
+          }
+        }
+      ]
+    },
+    {
+      "name": "05-notes-files",
+      "title": "Record notes and result files",
+      "crop": {
+        "x": 286,
+        "y": 479,
+        "width": 1314,
+        "height": 368
+      },
+      "targets": [
+        {
+          "selector": "#biology-notebook-result",
+          "label": "Type your notes",
+          "rect": {
+            "x": 304,
+            "y": 522,
+            "width": 1285,
+            "height": 138
+          }
+        },
+        {
+          "selector": "#clarify-save-biology-notebook-btn",
+          "label": "Optional: Clarify and Save",
+          "rect": {
+            "x": 1428,
+            "y": 619,
+            "width": 153,
+            "height": 38
+          }
+        },
+        {
+          "selector": "#biology-notebook-result-file",
+          "label": "Choose result files",
+          "rect": {
+            "x": 304,
+            "y": 701,
+            "width": 1285,
+            "height": 42
+          }
+        }
+      ]
+    },
+    {
+      "name": "06-save-page",
+      "title": "Save the page",
+      "crop": {
+        "x": 286,
+        "y": 65,
+        "width": 1314,
+        "height": 79
+      },
+      "targets": [
+        {
+          "selector": "#biology-notebook-protocol-title",
+          "label": "Double-click the title to rename",
+          "rect": {
+            "x": 304,
+            "y": 83,
+            "width": 1136,
+            "height": 20
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "#save-biology-notebook-btn",
+          "label": "Save notebook page",
+          "rect": {
+            "x": 1562,
+            "y": 83,
+            "width": 30,
+            "height": 30
+          }
+        }
+      ]
+    },
+    {
+      "name": "07-bench-toolbox",
+      "title": "Open the bench toolbox",
+      "crop": {
+        "x": 1302,
+        "y": 119,
+        "width": 298,
+        "height": 300
+      },
+      "targets": [
+        {
+          "selector": ".biology-notebook-tool-tab",
+          "label": "Buffer and reaction calculators",
+          "rect": {
+            "x": 1336,
+            "y": 155,
+            "width": 152,
+            "height": 72
+          }
+        },
+        {
+          "selector": ".biology-notebook-tool-icon-action",
+          "label": "Add gel, assay, samples, or tables",
+          "rect": {
+            "x": 1336,
+            "y": 235,
+            "width": 232,
+            "height": 152
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "#biology-notebook-tool-collapse-btn",
+          "label": "Fold the toolbox",
+          "rect": {
+            "x": 1496,
+            "y": 155,
+            "width": 72,
+            "height": 72
+          },
+          "badge": "right"
+        }
+      ]
+    },
+    {
+      "name": "08-result-table",
+      "title": "Fill and shape the table",
+      "crop": {
+        "x": 286,
+        "y": 456,
+        "width": 1314,
+        "height": 271
+      },
+      "targets": [
+        {
+          "selector": "[data-tutorial-target=\"typed-cell\"]",
+          "label": "Click a cell and type",
+          "rect": {
+            "x": 760,
+            "y": 546,
+            "width": 414,
+            "height": 30
+          }
+        },
+        {
+          "selector": "#biology-notebook-table-context-menu",
+          "label": "Right-click: rows, columns, remove",
+          "rect": {
+            "x": 780,
+            "y": 587,
+            "width": 147,
+            "height": 122
+          }
+        },
+        {
+          "selector": "[data-result-table-add-row=\"0\"]",
+          "label": "Add row",
+          "rect": {
+            "x": 304,
+            "y": 615,
+            "width": 76,
+            "height": 23
+          }
+        }
+      ]
+    },
+    {
+      "name": "09-molarity-table",
+      "title": "Calculate molarity in a table",
+      "crop": {
+        "x": 286,
+        "y": 430,
+        "width": 1314,
+        "height": 247
+      },
+      "targets": [
+        {
+          "selector": "[data-tutorial-target=\"mw\"]",
+          "label": "MW",
+          "rect": {
+            "x": 594,
+            "y": 506,
+            "width": 248,
+            "height": 30
+          }
+        },
+        {
+          "selector": "[data-tutorial-target=\"weight\"]",
+          "label": "Weight",
+          "rect": {
+            "x": 842,
+            "y": 506,
+            "width": 248,
+            "height": 30
+          }
+        },
+        {
+          "selector": "[data-tutorial-target=\"volume\"]",
+          "label": "Volume",
+          "rect": {
+            "x": 1090,
+            "y": 506,
+            "width": 248,
+            "height": 30
+          }
+        },
+        {
+          "selector": "[data-tutorial-target=\"molarity\"]",
+          "label": "Calculated molarity",
+          "rect": {
+            "x": 1338,
+            "y": 506,
+            "width": 251,
+            "height": 30
+          }
+        }
+      ]
+    },
+    {
+      "name": "10-buffer-preparer",
+      "title": "Prepare a buffer",
+      "crop": {
+        "x": 286,
+        "y": 419,
+        "width": 1314,
+        "height": 270
+      },
+      "targets": [
+        {
+          "selector": ".biology-notebook-buffer-meta-row",
+          "label": "Volume and pH",
+          "rect": {
+            "x": 304,
+            "y": 437,
+            "width": 1284,
+            "height": 36
+          }
+        },
+        {
+          "selector": "#biology-notebook-tool-buffer-row-1",
+          "label": "One ingredient per row",
+          "rect": {
+            "x": 304,
+            "y": 509,
+            "width": 1284,
+            "height": 34
+          }
+        },
+        {
+          "selector": "#biology-notebook-tool-buffer-amount-1",
+          "label": "Calculated amount",
+          "rect": {
+            "x": 1161,
+            "y": 510,
+            "width": 213,
+            "height": 32
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "#biology-notebook-tool-buffer-add-row",
+          "label": "Add ingredient",
+          "rect": {
+            "x": 305,
+            "y": 578,
+            "width": 1283,
+            "height": 32
+          }
+        }
+      ]
+    },
+    {
+      "name": "11-add-sample",
+      "title": "Add a sample to the page",
+      "crop": {
+        "x": 332,
+        "y": 236,
+        "width": 936,
+        "height": 585
+      },
+      "targets": [
+        {
+          "selector": ".biology-notebook-quick-sample-location.is-selected",
+          "label": "Storage location",
+          "rect": {
+            "x": 380,
+            "y": 508,
+            "width": 164,
+            "height": 44
+          }
+        },
+        {
+          "selector": "#biology-notebook-quick-sample-container",
+          "label": "Container",
+          "rect": {
+            "x": 380,
+            "y": 692,
+            "width": 166,
+            "height": 32
+          }
+        },
+        {
+          "selector": ".biology-notebook-quick-sample-well.is-selected",
+          "label": "Position",
+          "rect": {
+            "x": 653,
+            "y": 364,
+            "width": 71,
+            "height": 70
+          }
+        },
+        {
+          "selector": "#biology-notebook-quick-sample-name",
+          "label": "Sample Name",
+          "rect": {
+            "x": 983,
+            "y": 362,
+            "width": 235,
+            "height": 34
+          }
+        },
+        {
+          "selector": "#biology-notebook-quick-sample-submit-btn",
+          "label": "Add Sample",
+          "rect": {
+            "x": 1197,
+            "y": 748,
+            "width": 34,
+            "height": 34
+          }
+        }
+      ]
+    },
+    {
+      "name": "12-edit-page-copy",
+      "title": "Change this page’s protocol copy",
+      "crop": {
+        "x": 286,
+        "y": 65,
+        "width": 1314,
+        "height": 432
+      },
+      "targets": [
+        {
+          "selector": "#biology-notebook-page-protocol-steps",
+          "label": "One step per line",
+          "rect": {
+            "x": 319,
+            "y": 253,
+            "width": 1255,
+            "height": 180
+          }
+        },
+        {
+          "selector": "#biology-notebook-apply-protocol-edit-btn",
+          "label": "Apply page edit",
+          "rect": {
+            "x": 1494,
+            "y": 83,
+            "width": 30,
+            "height": 30
+          }
+        },
+        {
+          "selector": "#biology-notebook-cancel-protocol-edit-btn",
+          "label": "Cancel page edit",
+          "rect": {
+            "x": 1528,
+            "y": 83,
+            "width": 30,
+            "height": 30
+          },
+          "badge": "right"
+        }
+      ]
+    },
+    {
+      "name": "13-planned-page",
+      "title": "Complete a planned experiment",
+      "crop": {
+        "x": 0,
+        "y": 65,
+        "width": 1600,
+        "height": 542
+      },
+      "targets": [
+        {
+          "selector": "[data-notebook-entry-id=\"demo-run-repeat\"]",
+          "label": "Planned page",
+          "rect": {
+            "x": 16,
+            "y": 477,
+            "width": 252,
+            "height": 36
+          }
+        },
+        {
+          "selector": "#biology-notebook-mark-executed-btn",
+          "label": "Executed",
+          "rect": {
+            "x": 1460,
+            "y": 83,
+            "width": 30,
+            "height": 30
+          }
+        }
+      ]
+    },
+    {
+      "name": "14-project-dashboard",
+      "title": "Review a project",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "targets": [
+        {
+          "selector": "[data-notebook-project-id=\"demo-stability\"]",
+          "label": "Project folder",
+          "rect": {
+            "x": 45,
+            "y": 328,
+            "width": 192,
+            "height": 30
+          }
+        },
+        {
+          "selector": "[data-suggest-experiment]",
+          "label": "Suggest next experiment",
+          "rect": {
+            "x": 1139,
+            "y": 81,
+            "width": 210,
+            "height": 42
+          }
+        },
+        {
+          "selector": "#biology-notebook-project-export-pdf-btn",
+          "label": "Export All Pages as PDF",
+          "rect": {
+            "x": 1359,
+            "y": 81,
+            "width": 174,
+            "height": 40
+          }
+        }
+      ]
+    },
+    {
+      "name": "15-export-print",
+      "title": "Export or print the page",
+      "crop": {
+        "x": 286,
+        "y": 65,
+        "width": 1314,
+        "height": 79
+      },
+      "targets": [
+        {
+          "selector": "#biology-notebook-export-btn",
+          "label": "Export PDF",
+          "rect": {
+            "x": 1494,
+            "y": 83,
+            "width": 30,
+            "height": 30
+          }
+        },
+        {
+          "selector": "#biology-notebook-print-btn",
+          "label": "Print",
+          "rect": {
+            "x": 1528,
+            "y": 83,
+            "width": 30,
+            "height": 30
+          },
+          "badge": "right"
+        }
+      ]
+    }
+  ],
+  "checks": [
+    "Selecting a page row opens that page",
+    "Create project adds a project folder and opens its dashboard",
+    "Choosing a project and protocol enables Start Experiment",
+    "Start Experiment opens an unsaved page from the protocol",
+    "Repeated parameter values appear as suggestions; sample fields never do",
+    "Enter keeps a typed value; Tab accepts a suggested value",
+    "Choosing a sample links it to the field",
+    "Save notebook page stores the field values, notes, and a copy of the result file",
+    "A new page saved directly is listed in its project as Executed",
+    "A renamed title waits for Save",
+    "Save stores the new page title",
+    "Add Table inserts a table of the chosen size",
+    "Clicking a cell and typing fills the table",
+    "Add Column adds a column to the table",
+    "The molarity table computes the missing value",
+    "Save stores both tables with the page",
+    "The buffer preparer calculates each amount",
+    "Closing the calculator leaves its table on the page",
+    "Save stores the buffer calculation with the page",
+    "Add Sample creates the sample, links it to the page, and adds a note line",
+    "Add gel opens Gel for the current page",
+    "Apply page edit changes the page copy only",
+    "A suggested page offers Take Into Plan",
+    "Take Into Plan turns a suggested page into a planned page",
+    "A planned page offers Executed",
+    "Executed records the page as executed with a time"
+  ]
+}

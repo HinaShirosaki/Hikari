@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="A detailed illustrated tutorial for Hikari Workflows, with highlighted screenshots and step-by-step instructions."><title>Workflows · Hikari tutorials</title><link rel="stylesheet" href="tutorial.css"></head>
+<body><a class="skip-link" href="#chapter">Skip to tutorial</a>
+<aside class="sidebar"><a class="brand" href="../index.html">Hikari <span>/ Tutorials</span></a><p class="chapter-number">CHAPTER 07</p><p class="chapter-name">Workflows</p><nav aria-label="Chapter contents"><a href="#1-open-workflows">1. Open Workflows</a>
+<a href="#2-start-a-process">2. Start a process</a>
+<a href="#3-follow-each-process">3. Follow each process</a>
+<a href="#4-record-a-step">4. Record a step</a>
+<a href="#5-add-an-optional-branch">5. Add an optional branch</a>
+<a href="#6-rename-or-delete-a-process">6. Rename or delete a process</a>
+<a href="#7-create-a-workflow-template">7. Create a workflow template</a>
+<a href="#8-connect-and-arrange-blocks">8. Connect and arrange blocks</a></nav></aside>
+<main id="chapter"><div class="eyebrow">HIKARI / ILLUSTRATED TUTORIAL</div><article><h1>Workflows</h1>
+<p>How to run multi-step work, such as expressing and purifying a protein, as a series of protocols: start a process from a template, record each step, and follow every process&#39;s progress in one place.</p>
+<p><strong>Follow the numbered steps and the highlighted controls in each screenshot.</strong></p>
+<p>Screenshots use fictional example records.</p>
+<p>A <strong>template</strong> is the plan: its steps and the order they go in. A <strong>process</strong> is one run of that plan, such as one protein prep. You can start many processes from the same template.</p>
+<h2 id="1-open-workflows">1. Open Workflows<a class="heading-link" href="#1-open-workflows" aria-label="Link to 1. Open Workflows">#</a></h2>
+<ol>
+<li>Click <strong>Workflows</strong> in the top navigation bar.</li>
+<li>If it is outside the visible navigation bar, open <strong>More modules</strong> and select <strong>Workflows</strong>.</li>
+<li>Under <strong>Workflow Templates</strong> on the left, click a template. Its processes appear on the right.</li>
+<li>Click a process to open it beside the list.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 1"><img loading="lazy" src="images/01-workflows-workspace.png" alt="Templates are listed on the left. The selected template&#39;s processes are in the middle, and the open process is on the right."></button><figcaption><span>Figure 1.</span> Templates are listed on the left. The selected template&#39;s processes are in the middle, and the open process is on the right. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Each template on the left shows how many processes (runs) it has, how many are in progress (active) or have a failed step, and its number of steps. To find a template, type in <strong>Search templates</strong>.</p>
+<h2 id="2-start-a-process">2. Start a process<a class="heading-link" href="#2-start-a-process" aria-label="Link to 2. Start a process">#</a></h2>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 2"><img loading="lazy" src="images/02-new-process.png" alt="Choose the template and project, optionally name the process, and click Create process."></button><figcaption><span>Figure 2.</span> Choose the template and project, optionally name the process, and click Create process. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<ol>
+<li>Select the template on the left.</li>
+<li>Click <strong>+</strong> (<strong>New process</strong>) at the upper right.</li>
+<li>Check the <strong>Workflow template</strong>.</li>
+<li>Choose a <strong>Project</strong>, or leave <strong>No project</strong>.</li>
+<li>Optional: enter a <strong>Process name</strong>. If you leave it blank, the process is named after the template, such as <strong>Protein prep · tutorial 4</strong>.</li>
+<li>Click <strong>Create process</strong>.</li>
+</ol>
+<p>The process appears under its project and opens at its first step.</p>
+<p>To start a process in a particular project, click <strong>New process</strong> on that project&#39;s heading in the list. You can also start one from Notebook: see <a href="../03-notebook/index.html#3-start-a-new-experiment">Start a new experiment</a>.</p>
+<h2 id="3-follow-each-process">3. Follow each process<a class="heading-link" href="#3-follow-each-process" aria-label="Link to 3. Follow each process">#</a></h2>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 3"><img loading="lazy" src="images/03-progress.png" alt="Each row shows a process&#39;s steps as dots, how many are done, its next step, and when it was last updated."></button><figcaption><span>Figure 3.</span> Each row shows a process&#39;s steps as dots, how many are done, its next step, and when it was last updated. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Processes are grouped by project. Each row shows:</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>What it shows</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Process</strong></td>
+<td>The process name.</td>
+</tr>
+<tr>
+<td><strong>Progress</strong></td>
+<td>One dot per step, in order, and how many steps are done, such as <strong>1/4</strong>.</td>
+</tr>
+<tr>
+<td><strong>Next step</strong></td>
+<td>The step to do next. <strong>Failed</strong> or <strong>In progress</strong> appears beside it when that applies; <strong>Done</strong> when every step is complete.</td>
+</tr>
+<tr>
+<td><strong>Updated</strong></td>
+<td>When the process last changed.</td>
+</tr>
+</tbody></table></div>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Dot</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Green check</td>
+<td>Complete.</td>
+</tr>
+<tr>
+<td>Blue ring</td>
+<td>The next step.</td>
+</tr>
+<tr>
+<td>Red cross</td>
+<td>Failed.</td>
+</tr>
+<tr>
+<td>Dashed circle</td>
+<td>Not done yet.</td>
+</tr>
+<tr>
+<td><strong>Optional</strong> fork</td>
+<td>An optional branch starts here (Section 5).</td>
+</tr>
+</tbody></table></div>
+<p>Hover over a dot to see its step. Click a dot to open that step.</p>
+<p>A step stays locked until the steps before it are complete.</p>
+<h2 id="4-record-a-step">4. Record a step<a class="heading-link" href="#4-record-a-step" aria-label="Link to 4. Record a step">#</a></h2>
+<ol>
+<li>Click a process in the list. It opens on the right at its next step.</li>
+<li>Fill in the protocol fields, such as <strong>column</strong> and <strong>elution buffer</strong>. These are the fields of the step&#39;s protocol; see <a href="../02-protocols/index.html#4-add-reusable-fields-to-steps">Add reusable fields to steps</a>.</li>
+<li>Type what happened under <strong>Result</strong>.</li>
+<li>Click <strong>Complete</strong>.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 4"><img loading="lazy" src="images/04-record-step.png" alt="The open step shows its protocol fields, the Result box, and the Complete, Fail, Notebook, and Attach buttons."></button><figcaption><span>Figure 4.</span> The open step shows its protocol fields, the Result box, and the Complete, Fail, Notebook, and Attach buttons. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Values and results are saved when you click outside the field. A plain-text step, labeled <strong>note</strong>, shows its instruction instead of protocol fields.</p>
+<p>When you click <strong>Complete</strong>, the step gets a green check and the next step opens. Hikari also saves the step as an <strong>Executed</strong> notebook page in the process&#39;s project, with its fields and result.</p>
+<p>The other buttons:</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Button</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Fail</strong></td>
+<td>Marks the step failed. Click <strong>Retry</strong> to try it again.</td>
+</tr>
+<tr>
+<td><strong>Reopen</strong></td>
+<td>Shown on a completed step. Marks it not done again.</td>
+</tr>
+<tr>
+<td><strong>Notebook</strong></td>
+<td>Opens the step&#39;s notebook page, to add notes, tables, or samples. Until the step is complete, the page is <strong>Planned</strong>.</td>
+</tr>
+<tr>
+<td><strong>Attach</strong></td>
+<td>Choose result files. Hikari copies them into the process&#39;s folder in your workspace and lists them under the step.</td>
+</tr>
+</tbody></table></div>
+<p>Click a step&#39;s name to show or hide its fields. To close the process, click <strong>×</strong> at the upper right of its panel.</p>
+<h2 id="5-add-an-optional-branch">5. Add an optional branch<a class="heading-link" href="#5-add-an-optional-branch" aria-label="Link to 5. Add an optional branch">#</a></h2>
+<p>Some templates include extra steps that only some processes need, such as an additional gel check.</p>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 5"><img loading="lazy" src="images/05-branch.png" alt="The optional branch appears after the step it starts from. Click Activate to add its steps."></button><figcaption><span>Figure 5.</span> The optional branch appears after the step it starts from. Click Activate to add its steps. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<ol>
+<li>Open the process.</li>
+<li>Find the <strong>Optional branch</strong> card, after the step it starts from.</li>
+<li>Click <strong>Activate</strong>.</li>
+</ol>
+<p>The branch&#39;s steps are added to the process, and to its count of steps. To remove the branch again, open its first step and click <strong>Skip branch</strong>. This is possible only while none of the branch&#39;s steps are complete.</p>
+<h2 id="6-rename-or-delete-a-process">6. Rename or delete a process<a class="heading-link" href="#6-rename-or-delete-a-process" aria-label="Link to 6. Rename or delete a process">#</a></h2>
+<ul>
+<li>To rename a process, open it, click its name at the top of its panel, type the new name, and click outside the field.</li>
+<li>To delete a process, open it and click the trash icon (<strong>Delete process</strong>) at the upper right. <strong>It is deleted at once, without a confirmation.</strong> Click <strong>Undo</strong> in the top bar to restore it. Notebook pages made from its steps are kept.</li>
+</ul>
+<h2 id="7-create-a-workflow-template">7. Create a workflow template<a class="heading-link" href="#7-create-a-workflow-template" aria-label="Link to 7. Create a workflow template">#</a></h2>
+<ol>
+<li>Click the document icon (<strong>Template editor</strong>) beside <strong>Workflow Templates</strong>.</li>
+<li>Enter a <strong>Template name</strong>, and optionally a <strong>Description</strong>.</li>
+<li>Add each step as a block:<ul>
+<li>For a protocol, keep <strong>Protocol</strong> selected, type part of the protocol&#39;s name under <strong>Search protocols</strong>, click the protocol, and click <strong>Add Protocol Block</strong>.</li>
+<li>For an instruction, select <strong>Plain Text</strong>, type it, such as <strong>Send the plasmid for sequencing.</strong>, and click <strong>Add Text Block</strong>.</li>
+</ul>
+</li>
+<li>Connect the blocks in order in the <strong>Graph Editor</strong> (Section 8).</li>
+<li>Click the disk icon (<strong>Save Current Graph</strong>).</li>
+<li>Click the back arrow at the top of the left panel to return to your templates.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 6"><img loading="lazy" src="images/06-template-editor.png" alt="Enter the template name, choose Protocol or Plain Text, pick a protocol, add the block, and save."></button><figcaption><span>Figure 6.</span> Enter the template name, choose Protocol or Plain Text, pick a protocol, add the block, and save. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>A template needs a name and at least one block. To leave without saving, click <strong>×</strong> (<strong>Cancel</strong>).</p>
+<p>A saved template cannot be edited. To change the steps, create a new template, then delete the old one. Processes you already started keep their own copy of the steps.</p>
+<h3 id="delete-a-template">Delete a template<a class="heading-link" href="#delete-a-template" aria-label="Link to Delete a template">#</a></h3>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 7"><img loading="lazy" src="images/08-delete-template.png" alt="Right-click the template in the list and choose Delete Template."></button><figcaption><span>Figure 7.</span> Right-click the template in the list and choose Delete Template. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<ol>
+<li>Right-click the template under <strong>Workflow Templates</strong>.</li>
+<li>Choose <strong>Delete Template</strong>.</li>
+</ol>
+<p>The template is deleted at once. Click <strong>Undo</strong> in the top bar to restore it.</p>
+<p><strong>Delete Template</strong> is available only for a template with no processes, because processes are listed under their template. Delete its processes first (Section 6).</p>
+<h2 id="8-connect-and-arrange-blocks">8. Connect and arrange blocks<a class="heading-link" href="#8-connect-and-arrange-blocks" aria-label="Link to 8. Connect and arrange blocks">#</a></h2>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 8"><img loading="lazy" src="images/07-connect-blocks.png" alt="Point to a block to show its input and output dots and its delete button. Right-click a block for its menu."></button><figcaption><span>Figure 8.</span> Point to a block to show its input and output dots and its delete button. Right-click a block for its menu. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<ol>
+<li>Point to a block. Its input dot appears on the left, and its output dot on the right.</li>
+<li>Click the output dot of the first block.</li>
+<li>Click the input dot of the next block. A line connects them.</li>
+</ol>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>To</th>
+<th>Do this</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Move a block</td>
+<td>Drag it by its title.</td>
+</tr>
+<tr>
+<td>Delete a connection</td>
+<td>Click the line, or right-click it and choose <strong>Delete Connection</strong>.</td>
+</tr>
+<tr>
+<td>Delete a block</td>
+<td>Click the red <strong>×</strong> at its upper left, or right-click it and choose <strong>Delete Block</strong>.</td>
+</tr>
+<tr>
+<td>Select several blocks</td>
+<td>Drag across an empty part of the graph, or hold <strong>Shift</strong> and click each block. Right-click one of them to delete or disconnect them all.</td>
+</tr>
+<tr>
+<td>Cancel connecting</td>
+<td>Press <strong>Escape</strong>.</td>
+</tr>
+</tbody></table></div>
+<h3 id="how-hikari-orders-the-steps">How Hikari orders the steps<a class="heading-link" href="#how-hikari-orders-the-steps" aria-label="Link to How Hikari orders the steps">#</a></h3>
+<p>The steps run from the top-left block along its connections. Where a block connects to more than one next block, the one at the most similar height continues the main steps. Each other connection starts an <strong>optional branch</strong> (Section 5).</p>
+<p>Place the main steps in a row from left to right, and put optional steps below the step they follow.</p>
+<hr>
+<p><a href="../06-chemicals/index.html">Previous tutorial: Chemicals</a></p>
+</article><footer class="page-footer">Hikari tutorials · Chapter 07 · Workflows</footer></main>
+<dialog id="image-viewer" aria-label="Enlarged tutorial screenshot"><div class="viewer-toolbar"><span id="viewer-label">Screenshot</span><button id="viewer-zoom" type="button">Actual size</button><button id="viewer-close" type="button" aria-label="Close enlarged screenshot">Close ×</button></div><div class="viewer-body"><img id="viewer-image" alt=""></div></dialog>
+<script>
+const viewer = document.getElementById('image-viewer');
+const enlarged = document.getElementById('viewer-image');
+const zoom = document.getElementById('viewer-zoom');
+for (const button of document.querySelectorAll('.screenshot')) button.addEventListener('click', () => {
+  const img = button.querySelector('img'); enlarged.src = img.src; enlarged.alt = img.alt;
+  document.getElementById('viewer-label').textContent = button.closest('figure').querySelector('figcaption span').textContent;
+  viewer.classList.remove('actual-size'); zoom.textContent = 'Actual size'; viewer.showModal();
+});
+document.getElementById('viewer-close').addEventListener('click', () => viewer.close());
+zoom.addEventListener('click', () => { const actual = viewer.classList.toggle('actual-size'); zoom.textContent = actual ? 'Fit to window' : 'Actual size'; });
+viewer.addEventListener('click', event => { if (event.target === viewer) viewer.close(); });
+if ('IntersectionObserver' in window) {
+  const links = [...document.querySelectorAll('.sidebar nav a')];
+  const observer = new IntersectionObserver(entries => {
+    for (const entry of entries) if (entry.isIntersecting) {
+      for (const link of links) { const active = link.hash === '#' + entry.target.id; link.classList.toggle('current', active); if (active) link.setAttribute('aria-current', 'location'); else link.removeAttribute('aria-current'); }
+    }
+  }, { rootMargin: '-5% 0px -75% 0px' });
+  document.querySelectorAll('article h2').forEach(heading => observer.observe(heading));
+}
+</script></body></html>

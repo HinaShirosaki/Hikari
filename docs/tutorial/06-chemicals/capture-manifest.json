@@ -1,0 +1,342 @@
+{
+  "sourceVersion": "1.1.0-beta.9",
+  "exampleDate": "2026-10-24",
+  "timezone": "America/Chicago",
+  "viewport": [
+    1600,
+    1000
+  ],
+  "mode": "Real Chemicals renderer; fictional data; in-memory desktop adapters; spreadsheet import read in the renderer; no SQLite or other file writes.",
+  "screenshots": [
+    {
+      "name": "01-chemicals-workspace",
+      "title": "Open Chemicals",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "targets": [
+        {
+          "selector": ".chemical-sidebar-stack",
+          "label": "Add, import, search, and filter",
+          "rect": {
+            "x": 16,
+            "y": 93,
+            "width": 236,
+            "height": 265
+          }
+        },
+        {
+          "selector": "#chemical-list",
+          "label": "Chemicals",
+          "rect": {
+            "x": 336,
+            "y": 145,
+            "width": 674,
+            "height": 378
+          }
+        },
+        {
+          "selector": "#chemical-detail-panel",
+          "label": "Selected chemical",
+          "rect": {
+            "x": 1037,
+            "y": 79,
+            "width": 552,
+            "height": 538
+          }
+        }
+      ]
+    },
+    {
+      "name": "02-add-chemical",
+      "title": "Add a chemical",
+      "crop": {
+        "x": 0,
+        "y": 75,
+        "width": 1278,
+        "height": 769
+      },
+      "targets": [
+        {
+          "selector": "#chemical-open-add-btn",
+          "label": "Add chemical (+)",
+          "rect": {
+            "x": 16,
+            "y": 93,
+            "width": 36,
+            "height": 36
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "#chemical-name",
+          "label": "Name",
+          "rect": {
+            "x": 359,
+            "y": 323,
+            "width": 435,
+            "height": 39
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "#chemical-cas",
+          "label": "CAS Number",
+          "rect": {
+            "x": 806,
+            "y": 323,
+            "width": 435,
+            "height": 39
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "#chemical-location",
+          "label": "Location",
+          "rect": {
+            "x": 359,
+            "y": 401,
+            "width": 435,
+            "height": 39
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "#chemical-form button[type=\"submit\"]",
+          "label": "Save Chemical",
+          "rect": {
+            "x": 359,
+            "y": 770,
+            "width": 118,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "03-chemical-details",
+      "title": "Check a chemical",
+      "crop": {
+        "x": 1019,
+        "y": 61,
+        "width": 581,
+        "height": 574
+      },
+      "targets": [
+        {
+          "selector": "[data-tutorial-target=\"detail-Code\"]",
+          "label": "Code",
+          "rect": {
+            "x": 1330,
+            "y": 123,
+            "width": 259,
+            "height": 64
+          }
+        },
+        {
+          "selector": "[data-tutorial-target=\"detail-Location\"]",
+          "label": "Location and code",
+          "rect": {
+            "x": 1062,
+            "y": 194,
+            "width": 259,
+            "height": 64
+          }
+        },
+        {
+          "selector": "[data-tutorial-target=\"detail-Expiration\"]",
+          "label": "Expiration",
+          "rect": {
+            "x": 1330,
+            "y": 409,
+            "width": 259,
+            "height": 64
+          }
+        },
+        {
+          "selector": [
+            "#chemical-detail-edit-btn",
+            "#chemical-detail-delete-btn"
+          ],
+          "label": "Edit or delete",
+          "rect": {
+            "x": 1521,
+            "y": 79,
+            "width": 68,
+            "height": 30
+          },
+          "badge": "right"
+        }
+      ]
+    },
+    {
+      "name": "04-edit-chemical",
+      "title": "Edit a chemical",
+      "crop": {
+        "x": 322,
+        "y": 213,
+        "width": 956,
+        "height": 631
+      },
+      "targets": [
+        {
+          "selector": "#chemical-dialog-title",
+          "label": "Edit Chemical",
+          "rect": {
+            "x": 359,
+            "y": 250,
+            "width": 101,
+            "height": 22
+          }
+        },
+        {
+          "selector": "#chemical-stock",
+          "label": "Change a value",
+          "rect": {
+            "x": 806,
+            "y": 556,
+            "width": 435,
+            "height": 39
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "#chemical-form button[type=\"submit\"]",
+          "label": "Save Chemical",
+          "rect": {
+            "x": 359,
+            "y": 770,
+            "width": 118,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "05-find-chemicals",
+      "title": "Search, filter, and sort",
+      "crop": {
+        "x": 0,
+        "y": 61,
+        "width": 1028,
+        "height": 315
+      },
+      "targets": [
+        {
+          "selector": ".chemical-search-field",
+          "label": "Search",
+          "rect": {
+            "x": 16,
+            "y": 141,
+            "width": 236,
+            "height": 64
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "#chemical-filter-location",
+          "label": "Filter Location",
+          "rect": {
+            "x": 16,
+            "y": 245,
+            "width": 236,
+            "height": 38
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "#chemical-sort",
+          "label": "Sort By",
+          "rect": {
+            "x": 16,
+            "y": 319,
+            "width": 236,
+            "height": 38
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "#chemical-results-summary",
+          "label": "How many are shown",
+          "rect": {
+            "x": 336,
+            "y": 108,
+            "width": 163,
+            "height": 19
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "#chemical-list",
+          "label": "Matching chemicals",
+          "rect": {
+            "x": 336,
+            "y": 145,
+            "width": 674,
+            "height": 127
+          }
+        }
+      ]
+    },
+    {
+      "name": "06-import",
+      "title": "Import a spreadsheet",
+      "crop": {
+        "x": 0,
+        "y": 61,
+        "width": 1028,
+        "height": 564
+      },
+      "targets": [
+        {
+          "selector": "#chemical-import-btn",
+          "label": "Import chemicals",
+          "rect": {
+            "x": 58,
+            "y": 93,
+            "width": 36,
+            "height": 36
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "#chemical-import-status",
+          "label": "Import result",
+          "rect": {
+            "x": 16,
+            "y": 137,
+            "width": 236,
+            "height": 151
+          },
+          "badge": "right"
+        },
+        {
+          "selector": "#chemical-list",
+          "label": "Imported chemicals",
+          "rect": {
+            "x": 336,
+            "y": 145,
+            "width": 674,
+            "height": 462
+          }
+        }
+      ]
+    }
+  ],
+  "checks": [
+    "Every chemical gets a code when Chemicals opens",
+    "Save Chemical waits until the required CAS Number is filled in",
+    "Save Chemical adds it with a code for its location, selects it, and saves the inventory",
+    "Edit opens the chemical in the form",
+    "Saving an edit keeps the chemical and its code",
+    "Delete removes the chemical at once",
+    "Search matches part of a CAS number",
+    "Filter Location and Sort By narrow and order the list",
+    "Import adds new rows and updates matching chemicals",
+    "A row with a known CAS updates that chemical, and a new location is added with its own letter",
+    "A Chemical result in the top-bar search, found by catalog number, opens that chemical"
+  ]
+}

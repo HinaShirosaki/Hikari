@@ -1,0 +1,29 @@
+# Hikari illustrated tutorials
+
+Open [index.html](index.html) for the illustrated start page; Hikari opens the same page from **Settings > Tutorial**. Detailed tutorials live in their own chapter folders. Each chapter combines step-by-step instructions with real interface screenshots, numbered highlights, and arrows.
+
+| Chapter | Read in your browser | Editable text |
+| --- | --- | --- |
+| 01 · Home dashboard | [Open the illustrated tutorial](01-home-dashboard/index.html) | [Home dashboard](01-home-dashboard/home-dashboard.md) |
+| 02 · Protocols | [Open the illustrated tutorial](02-protocols/index.html) | [Protocols](02-protocols/protocols.md) |
+| 03 · Notebook | [Open the illustrated tutorial](03-notebook/index.html) | [Notebook](03-notebook/notebook.md) |
+| 04 · Papers | [Open the illustrated tutorial](04-papers/index.html) | [Papers](04-papers/papers.md) |
+| 05 · Samples | [Open the illustrated tutorial](05-samples/index.html) | [Samples](05-samples/samples.md) |
+| 06 · Chemicals | [Open the illustrated tutorial](06-chemicals/index.html) | [Chemicals](06-chemicals/chemicals.md) |
+| 07 · Workflows | [Open the illustrated tutorial](07-workflows/index.html) | [Workflows](07-workflows/workflows.md) |
+
+Start with **Home dashboard** for instructions on saving observations, preparing notebook pages, adding notes, using timers, setting reminders, finding papers, and checking activity.
+
+Continue with **Protocols** to create and edit procedures, add reusable fields, generate or polish drafts, import JSON, and export or print a saved protocol.
+
+Then use **Notebook** to organize projects, run protocols as notebook pages, record values, notes, files, and tables, use the bench calculators, link samples, plan experiments, and export pages.
+
+Use **Papers** to build your paper library, read and mark up PDFs, search selected text, and check each paper's details and research brief.
+
+Use **Samples** to record where each sample is stored: set up locations, boxes, plates, and tubes, add and edit samples, fill wells with copies, import and export containers as CSV, and find a sample from the top bar.
+
+Use **Chemicals** to keep the lab's chemical inventory: add and edit chemicals, read their location codes, search, filter, and sort the list, and import a spreadsheet.
+
+Use **Workflows** to run multi-step work from templates: start processes, record and complete each step, add optional branches, and build templates in the graph editor.
+
+The tutorials use fictional teaching examples. Screenshots show the source renderer; example AI responses and literature results are illustrative. See each chapter's [capture notes](01-home-dashboard/README.md) for its scope and refresh instructions.
