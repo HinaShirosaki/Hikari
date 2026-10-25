@@ -6,6 +6,7 @@ import {
   uniqueStrings
 } from '../model.js';
 import { resolveDefaultAssigneeId } from '../state.js';
+import { positionContextMenu } from '../../../lib/context-menu.js';
 
 // Building and editing a workflow template: the block composer, the draft form,
 // saving a template, and creating a workflow run from one.
@@ -274,11 +275,21 @@ function createWorkflowTemplateEditor({
     }
 
     const deleteBtn = event.target.closest('[data-workflow-template-delete]');
-    if (!deleteBtn) {
-      return;
+    if (deleteBtn) {
+      deleteTemplate(deleteBtn.dataset.workflowTemplateDelete);
     }
+  }
 
-    const templateId = deleteBtn.dataset.workflowTemplateDelete;
+  // Processes are listed under their template, so a template that still has
+  // processes is kept: deleting it would hide them.
+  function templateHasProcesses(templateId) {
+    return (state.workflows || []).some((workflow) => workflow.templateId === templateId);
+  }
+
+  function deleteTemplate(templateId) {
+    if (!templateId || templateHasProcesses(templateId)) {
+      return false;
+    }
     state.workflowTemplates = (state.workflowTemplates || []).filter(
       (template) => template.id !== templateId
     );
@@ -291,6 +302,34 @@ function createWorkflowTemplateEditor({
 
     persistWorkflowChanges();
     renderWorkflowViews();
+    return true;
+  }
+
+  function hideTemplateMenu() {
+    if (elements.workflowTemplateContextMenu) {
+      elements.workflowTemplateContextMenu.hidden = true;
+    }
+  }
+
+  function onWorkflowListContextMenu(event) {
+    const item = event.target.closest('[data-workflow-template-open]');
+    const menu = elements.workflowTemplateContextMenu;
+    if (!item || !menu || !elements.workflowTemplateDeleteBtn) {
+      return;
+    }
+    event.preventDefault();
+    const templateId = String(item.dataset.workflowTemplateOpen || '').trim();
+    const inUse = templateHasProcesses(templateId);
+    menu.dataset.templateId = templateId;
+    elements.workflowTemplateDeleteBtn.disabled = inUse;
+    elements.workflowTemplateDeleteBtn.title = inUse ? 'Delete its processes first.' : '';
+    positionContextMenu(menu, event.clientX, event.clientY);
+  }
+
+  function onTemplateMenuDelete() {
+    const templateId = elements.workflowTemplateContextMenu?.dataset.templateId || '';
+    hideTemplateMenu();
+    deleteTemplate(templateId);
   }
   return {
     getBlockComposerType,
@@ -305,7 +344,11 @@ function createWorkflowTemplateEditor({
     onWorkflowListClick,
     onSaveTemplate,
     onCreateFromTemplate,
-    onTemplateListClick
+    onTemplateListClick,
+    deleteTemplate,
+    hideTemplateMenu,
+    onWorkflowListContextMenu,
+    onTemplateMenuDelete
   };
 }
 

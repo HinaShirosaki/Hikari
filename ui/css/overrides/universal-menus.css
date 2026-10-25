@@ -160,7 +160,8 @@ body.theme-night {
 }
 
 .sequence-viewer-context-menu:not(.sequence-viewer-toolbar-menu) .sequence-viewer-context-item:disabled,
-.personal-inventory-context-item:disabled {
+.personal-inventory-context-item:disabled,
+.workflow-context-item:disabled {
   cursor: not-allowed;
   opacity: 0.52;
 }
@@ -288,7 +289,8 @@ body.theme-night .protocol-action-item:focus-visible {
 :is(.papers-context-item-danger, .personal-inventory-context-item-danger,
   .agent-session-context-item-danger, .sequence-viewer-context-item-danger,
   #biology-notebook-remove-table-btn, [data-sequence-feature-action="delete"],
-  [data-workflow-menu-action="delete-selected"], [data-workflow-menu-action="remove-link"]) {
+  [data-workflow-menu-action="delete-selected"], [data-workflow-menu-action="remove-link"],
+  #workflow-template-delete-btn) {
   --hikari-context-item-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.65' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7'/%3E%3C/svg%3E");
   color: var(--theme-danger) !important;
 }
@@ -296,7 +298,8 @@ body.theme-night .protocol-action-item:focus-visible {
 :is(.papers-context-item-danger, .personal-inventory-context-item-danger,
   .agent-session-context-item-danger, .sequence-viewer-context-item-danger,
   #biology-notebook-remove-table-btn, [data-sequence-feature-action="delete"],
-  [data-workflow-menu-action="delete-selected"], [data-workflow-menu-action="remove-link"]):is(:hover, :focus-visible):not(:disabled) {
+  [data-workflow-menu-action="delete-selected"], [data-workflow-menu-action="remove-link"],
+  #workflow-template-delete-btn):is(:hover, :focus-visible):not(:disabled) {
   background: var(--theme-danger-wash) !important;
 }
 
