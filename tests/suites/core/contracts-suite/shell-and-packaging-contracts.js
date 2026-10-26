@@ -116,6 +116,14 @@ module.exports = function registerShellAndPackagingContracts(context = {}) {
       assert.match(forgeConfig.packagerConfig.asar.unpackDir, /[{,]docs\/tutorial[,}]/);
     });
 
+    test('package.json files lists plain paths, which the source build copies one by one', () => {
+      // bin/source-build.js copies each included entry literally and rejects
+      // globs, so narrowing a folder has to use "!" entries instead.
+      const { files } = JSON.parse(readLocalSource('package.json'));
+      assert.deepEqual(files.filter((entry) => !entry.startsWith('!') && /[*?{}]/.test(entry)), []);
+      assert.ok(files.includes('docs/tutorial'));
+    });
+
     test('Settings > Tutorial opens the bundled start page, or says it is missing', async () => {
       const { registerSystemIpc } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-system-ipc.js'));
       const { SYSTEM } = require(path.join(__dirname, 'src', 'shared', 'ipc', 'channels.js'));
