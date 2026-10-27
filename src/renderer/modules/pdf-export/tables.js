@@ -1,6 +1,8 @@
 import { normalizeNotebookResultTable } from '../../lib/notebook-result-tables.js';
 import { notebookTableColumnLetter } from '../../lib/notebook-table-formulas.js';
 import {
+  BODY_FONT_SIZE,
+  LINE_HEIGHT,
   TABLE_FONT_SIZE,
   TABLE_LINE_HEIGHT,
   TABLE_CELL_PADDING,
@@ -21,7 +23,7 @@ import {
   splitWrappedLines,
   estimateTextWidth
 } from './doc-context.js';
-import { writeParagraph } from './text-blocks.js';
+import { writeMinorHeading, writeParagraph } from './text-blocks.js';
 
 function resolveTableColumnWidths(ctx, headers, rows) {
   const columnCount = headers.length;
@@ -48,7 +50,7 @@ function resolveTableColumnWidths(ctx, headers, rows) {
     return Array.from({ length: columnCount }, () => ctx.maxWidth / columnCount);
   }
   if (desiredTotal >= ctx.maxWidth) {
-    const floor = minWidth * 0.8;
+    const floor = Math.min(minWidth * 0.8, ctx.maxWidth / columnCount);
     const scaled = desiredWidths.map((width) => Math.max(floor, width * (ctx.maxWidth / desiredTotal)));
     // Columns held at the floor push the sum past maxWidth; take that excess from the rest.
     const floored = scaled.reduce((sum, width) => sum + (width <= floor ? width : 0), 0);
@@ -114,19 +116,37 @@ function drawTableRow(ctx, lineGroups, widths, { header = false, zebra = false }
   ctx.doc.line(ctx.margin, ctx.y, ctx.margin + totalWidth, ctx.y);
 }
 
-function writePdfTable(ctx, headers, rows, { emptyText = '-' } = {}) {
+function writePdfTable(ctx, headers, rows, {
+  emptyText = '-', repeatColumns = 1, banded = false, heading = '', sectionHeading = '', preamble = []
+} = {}) {
   const safeHeaders = Array.isArray(headers) ? headers.map((header) => safeValue(header)) : [];
   const safeRows = Array.isArray(rows)
     ? rows.map((cells) => (Array.isArray(cells) ? cells.map((cell) => String(cell ?? '').trim()) : []))
     : [];
 
-  if (!safeRows.length) {
-    writeParagraph(ctx, emptyText);
+  if (!safeRows.length || !safeHeaders.length) {
+    if (sectionHeading) writeMinorHeading(ctx, sectionHeading);
+    if (heading) writeMinorHeading(ctx, heading);
+    preamble.forEach(text => writeParagraph(ctx, text));
+    if (!safeRows.length) writeParagraph(ctx, emptyText);
+    else safeRows.forEach((cells) => writeParagraph(ctx, cells.join(' ')));
     return;
   }
 
-  if (!safeHeaders.length) {
-    safeRows.forEach((cells) => writeParagraph(ctx, cells.join(' ')));
+  // Keep the selected paper size and readable type. Wide sheets continue in
+  // column groups, with their row identity repeated in every group.
+  if (!banded && ctx.maxWidth / safeHeaders.length < 42) {
+    const fixed = Math.min(repeatColumns, safeHeaders.length - 1);
+    const perBand = Math.max(1, Math.floor(ctx.maxWidth / 62) - fixed);
+    const starts = [];
+    for (let start = fixed; start < safeHeaders.length; start += perBand) starts.push(start);
+    starts.forEach((start, band) => {
+      const indices = [...Array.from({ length: fixed }, (_, i) => i),
+        ...Array.from({ length: Math.min(perBand, safeHeaders.length - start) }, (_, i) => start + i)];
+      writePdfTable(ctx, indices.map(i => safeHeaders[i]), safeRows.map(row => indices.map(i => row[i])),
+        { emptyText, repeatColumns: fixed, banded: true, heading: `${heading || 'Table'} - part ${band + 1} of ${starts.length}`,
+          sectionHeading: band === 0 ? sectionHeading : '', preamble: band === 0 ? preamble : [] });
+    });
     return;
   }
 
@@ -135,16 +155,53 @@ function writePdfTable(ctx, headers, rows, { emptyText = '-' } = {}) {
   ctx.doc.setFontSize(TABLE_FONT_SIZE);
   const widths = resolveTableColumnWidths(ctx, safeHeaders, safeRows);
   font(ctx, 'bold');
-  const headerLines = splitTableCells(ctx, safeHeaders, widths, { fallback: '-' });
+  const freshPageHeight = contentBottom(ctx) - ctx.marginTop - 29;
+  const maxHeaderHeight = Math.min(120, freshPageHeight / 4);
+  const fullHeadings = [];
+  const repeatedHeaders = safeHeaders.map((header, index) => {
+    const lines = splitTableCells(ctx, [header], [widths[index]], { fallback: '-' })[0];
+    if (getTableRowHeight([lines]) <= maxHeaderHeight) return header;
+    const reference = `Column ${header.match(/^([A-Z]+)\s*·/)?.[1] || notebookTableColumnLetter(index)}`;
+    fullHeadings.push(`${reference}: ${header}`);
+    return reference;
+  });
+  // Long titles are printed once at full width below the table. Repeating a
+  // header taller than a page would otherwise leave no room for any body line.
+  const headerLines = splitTableCells(ctx, repeatedHeaders, widths, { fallback: '-' });
   const headerHeight = getTableRowHeight(headerLines);
   font(ctx, 'normal');
   const firstRow = safeHeaders.map((_header, index) => String(safeRows[0]?.[index] ?? '').trim());
   const firstRowHeight = getTableRowHeight(splitTableCells(ctx, firstRow, widths));
-  ensureSpace(ctx, headerHeight + firstRowHeight);
+  const shortTableHeight = safeRows.length <= 6
+    ? safeRows.reduce((height, row) => height + getTableRowHeight(splitTableCells(ctx, safeHeaders.map((_header, index) => row[index] || ''), widths)), headerHeight)
+    : Infinity;
+  let introHeight = 0;
+  for (const title of [sectionHeading, heading].filter(Boolean)) {
+    font(ctx, 'bold');
+    ctx.doc.setFontSize(BODY_FONT_SIZE);
+    introHeight += 9 + splitWrappedLines(ctx.doc, title, ctx.maxWidth).length * (BODY_FONT_SIZE + 4);
+  }
+  font(ctx, 'normal');
+  ctx.doc.setFontSize(BODY_FONT_SIZE);
+  introHeight += preamble.reduce((height, text) => height + splitWrappedLines(ctx.doc, text, ctx.maxWidth).length * LINE_HEIGHT + 4, 0);
+  const keepHeight = shortTableHeight + introHeight <= freshPageHeight
+    ? shortTableHeight : headerHeight + Math.min(firstRowHeight, TABLE_LINE_HEIGHT * 3 + TABLE_CELL_PADDING * 2);
+  ensureSpace(ctx, Math.min(freshPageHeight, keepHeight + introHeight));
+  if (sectionHeading) writeMinorHeading(ctx, sectionHeading);
+  if (heading) writeMinorHeading(ctx, heading);
+  preamble.forEach(text => writeParagraph(ctx, text));
 
   function writeHeader() {
     ensureSpace(ctx, headerHeight);
     drawTableRow(ctx, headerLines, widths, { header: true });
+  }
+
+  function nextTablePage() {
+    addPage(ctx);
+    writeHeader();
+    if (ctx.y + getTableRowHeight([['']]) > contentBottom(ctx)) {
+      throw new Error('The PDF page has no room for a table row below its header.');
+    }
   }
 
   writeHeader();
@@ -152,23 +209,50 @@ function writePdfTable(ctx, headers, rows, { emptyText = '-' } = {}) {
     const rowCells = safeHeaders.map((_header, index) => String(cells[index] ?? '').trim());
     font(ctx, 'normal');
     const rowLines = splitTableCells(ctx, rowCells, widths);
+    const lineCount = Math.max(...rowLines.map(lines => lines.length));
     const rowHeight = getTableRowHeight(rowLines);
-    if (ctx.y + rowHeight > contentBottom(ctx)) {
-      addPage(ctx);
-      writeHeader();
+    const pageCapacity = contentBottom(ctx) - ctx.marginTop - 29 - headerHeight;
+    if (rowHeight <= pageCapacity) {
+      if (ctx.y + rowHeight > contentBottom(ctx)) {
+        nextTablePage();
+      }
+      drawTableRow(ctx, rowLines, widths, { zebra: rowIndex % 2 === 1 });
+      return;
     }
-    drawTableRow(ctx, rowLines, widths, { zebra: rowIndex % 2 === 1 });
+    // A row can be taller than an entire page. Split its wrapped lines across
+    // pages, repeating column headings and short identity cells on continuation.
+    let offset = 0;
+    while (offset < lineCount) {
+      const capacity = Math.floor((contentBottom(ctx) - ctx.y - TABLE_CELL_PADDING * 2) / TABLE_LINE_HEIGHT);
+      if (capacity < 1) {
+        nextTablePage();
+        continue;
+      }
+      const count = Math.min(capacity, lineCount - offset);
+      const fragment = rowLines.map((lines, index) => offset && index < repeatColumns && lines.length === 1
+        ? lines : lines.slice(offset, offset + count));
+      drawTableRow(ctx, fragment, widths, { zebra: rowIndex % 2 === 1 });
+      offset += count;
+      if (offset < lineCount) {
+        nextTablePage();
+      }
+    }
   });
   ctx.y += 10;
+  if (fullHeadings.length) {
+    writeMinorHeading(ctx, 'Full column headings');
+    fullHeadings.forEach(text => writeParagraph(ctx, text));
+  }
 }
 
-function writeSimpleTable(ctx, headers, rows, { emptyText = '-' } = {}) {
-  writePdfTable(ctx, headers, rows, { emptyText });
+function writeSimpleTable(ctx, headers, rows, options = {}) {
+  writePdfTable(ctx, headers, rows, options);
 }
 
-function writeNotebookResultTable(ctx, table) {
+function writeNotebookResultTable(ctx, table, heading = '') {
   const normalized = normalizeNotebookResultTable(table);
   if (!normalized) {
+    if (heading) writeMinorHeading(ctx, heading);
     writeParagraph(ctx, '-');
     return;
   }
@@ -180,10 +264,10 @@ function writeNotebookResultTable(ctx, table) {
   const rows = normalized.rows.map((row, rowIndex) => (
     [String(rowIndex + 1), ...normalized.columns.map((column) => row[column.field] || '')]
   ));
-  writePdfTable(ctx, headers, rows);
+  writePdfTable(ctx, headers, rows, { repeatColumns: 2, heading });
 }
 
-function writeNotebookToolCalculationTable(ctx, table) {
+function writeNotebookToolCalculationTable(ctx, table, { heading = '', sectionHeading = '' } = {}) {
   const source = table && typeof table === 'object' ? table : null;
   if (!source) {
     writeParagraph(ctx, '-');
@@ -192,13 +276,21 @@ function writeNotebookToolCalculationTable(ctx, table) {
   const headers = Array.isArray(source.headers)
     ? source.headers.map((header) => safeValue(header))
     : [];
-  const rows = [
-    ...(Array.isArray(source.metaRows) ? source.metaRows : []),
-    ...(Array.isArray(source.rows) ? source.rows : []),
-    ...(Array.isArray(source.footerRows) ? source.footerRows : [])
-  ].map((row) => (Array.isArray(row) ? row.map((cell) => String(cell ?? '').trim()) : []))
+  const rows = (Array.isArray(source.rows) ? source.rows : [])
+    .map((row) => (Array.isArray(row) ? row.map((cell) => String(cell ?? '').trim()) : []))
     .filter((row) => row.some(Boolean));
-  writePdfTable(ctx, headers, rows);
+  const preamble = (Array.isArray(source.metaRows) ? source.metaRows : []).map(row => {
+    if (!Array.isArray(row) || !row.some(Boolean)) return '';
+    const pairs = [];
+    for (let index = 0; index < row.length; index += 2) {
+      if (row[index]) pairs.push(`${row[index]}: ${row[index + 1] || '-'}`);
+    }
+    return pairs.join(' | ');
+  }).filter(Boolean);
+  writePdfTable(ctx, headers, rows, { heading, sectionHeading, preamble });
+  (Array.isArray(source.footerRows) ? source.footerRows : []).forEach(row => {
+    if (Array.isArray(row) && row.some(Boolean)) writeParagraph(ctx, row.filter(Boolean).join(': '));
+  });
 }
 
 export {

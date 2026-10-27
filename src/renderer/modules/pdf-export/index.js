@@ -48,6 +48,7 @@ import {
   renderAssayPlot
 } from './figures.js';
 import { loadHikariPdfIconDataUrl } from './branding.js';
+import { writeNotebookNote } from './notes.js';
 
 // PDF export for protocols, notebook pages, project page bundles and assay
 // definitions, drawn with jsPDF.
@@ -108,18 +109,17 @@ async function writeNotebookNotesAndResults(ctx, entry, resultFileImages) {
   font(ctx, 'normal');
   ctx.doc.setFontSize(BODY_FONT_SIZE);
   const resultLineCount = splitWrappedLines(ctx.doc, safeValue(entry.result), ctx.maxWidth).length;
-  ensureSpace(ctx, 48 + Math.min(resultLineCount, 3) * LINE_HEIGHT);
+  ensureSpace(ctx, 35 + Math.min(resultLineCount, 3) * LINE_HEIGHT);
   writeHeading(ctx, 'Notes and results');
-  writeParagraph(ctx, safeValue(entry.result));
+  writeNotebookNote(ctx, safeValue(entry.result));
   const toolCalculations = normalizeNotebookToolCalculations(entry.toolCalculations);
   if (toolCalculations.length) {
-    writeMinorHeading(ctx, toolCalculations.length === 1 ? 'Tool Calculation' : 'Tool Calculations');
-    toolCalculations.forEach((calculation) => {
+    toolCalculations.forEach((calculation, index) => {
+      const sectionHeading = index === 0 ? (toolCalculations.length === 1 ? 'Tool Calculation' : 'Tool Calculations') : '';
       if (calculation.table) {
-        ensureSpace(ctx, 85);
-        writeMinorHeading(ctx, calculation.title);
-        writeNotebookToolCalculationTable(ctx, calculation.table);
+        writeNotebookToolCalculationTable(ctx, calculation.table, { heading: calculation.title, sectionHeading });
       } else {
+        if (sectionHeading) writeMinorHeading(ctx, sectionHeading);
         writeParagraph(ctx, `${calculation.title}: ${safeValue(calculation.result || calculation.summary)}`);
       }
       if (calculation.formula && !calculation.table) {
@@ -127,24 +127,20 @@ async function writeNotebookNotesAndResults(ctx, entry, resultFileImages) {
       }
     });
   }
-  if (resultTables.length) {
-    ensureSpace(ctx, 85);
-    writeMinorHeading(ctx, resultTables.length === 1 ? 'Result Table' : 'Result Tables');
-    resultTables.forEach((table, index) => {
-      if (resultTables.length > 1) {
-        ensureSpace(ctx, 85);
-        writeMinorHeading(ctx, `Table ${index + 1}`);
-      }
-      writeNotebookResultTable(ctx, table);
-    });
-  }
+  resultTables.forEach((table, index) => {
+    writeNotebookResultTable(ctx, table, resultTables.length === 1 ? 'Result Table' : `Result Table ${index + 1}`);
+  });
   const resultFileNames = Array.isArray(entry.resultFiles) ? entry.resultFiles : [];
   const attachedImages = Array.isArray(resultFileImages) ? resultFileImages : [];
-  if (resultFileNames.length || attachedImages.length) {
-    writeMinorHeading(ctx, 'Result Files');
-  }
-  if (resultFileNames.length) {
-    writeBulletLines(ctx, resultFileNames);
+  const imageNames = new Set(attachedImages.filter(image => image?.dataUrl).map(image => image.name));
+  const otherFiles = resultFileNames.filter(name => !imageNames.has(name));
+  // With no plain files to list, the heading goes in with the first image so a
+  // page break cannot leave it alone at the bottom of a page.
+  let filesHeading = resultFileNames.length || attachedImages.length ? 'Result Files' : '';
+  if (otherFiles.length) {
+    writeMinorHeading(ctx, filesHeading);
+    filesHeading = '';
+    writeBulletLines(ctx, otherFiles);
   }
   for (const image of attachedImages) {
     if (!String(image?.dataUrl || '').trim()) {
@@ -152,9 +148,14 @@ async function writeNotebookNotesAndResults(ctx, entry, resultFileImages) {
     }
     // eslint-disable-next-line no-await-in-loop
     await writeImageFigure(ctx, image.dataUrl, {
+      heading: filesHeading,
       caption: safeValue(image.name, 'Attached image'),
       maxHeight: 320
     });
+    filesHeading = '';
+  }
+  if (filesHeading) {
+    writeMinorHeading(ctx, filesHeading);
   }
 }
 
@@ -180,29 +181,33 @@ async function writeNotebookEntryBody(ctx, {
   await writeNotebookNotesAndResults(ctx, entry, resultFileImages);
 
   if (linkedGel || linkedAssay) {
-    ensureSpace(ctx, linkedAssay && !linkedGel
-      ? 100 + estimateAssayPlotHeight(ctx, resolveAssayDefinition(linkedAssay))
-      : 85);
-    writeHeading(ctx, 'Linked Results');
+    if (!linkedGelPreviewImage || !linkedGel) {
+      ensureSpace(ctx, linkedAssay && !linkedGel
+        ? 90 + estimateAssayPlotHeight(ctx, resolveAssayDefinition(linkedAssay)) : 95);
+      writeHeading(ctx, 'Linked Results');
+    }
 
     if (linkedGel) {
-      writeMinorHeading(ctx, 'Gel');
-      writeParagraph(
-        ctx,
-        `${safeValue(linkedGel.name, 'Linked Gel')} | ${formatGelAnalysisTypeLabel(linkedGel.analysisType)} | Updated ${formatTimestamp(linkedGel.updatedAt)}`
-      );
+      const description = `${safeValue(linkedGel.name, 'Linked Gel')} | ${formatGelAnalysisTypeLabel(linkedGel.analysisType)} | Updated ${formatTimestamp(linkedGel.updatedAt)}`;
       const gelCaption = `${formatGelAnalysisTypeLabel(linkedGel.analysisType)} preview`;
       if (linkedGelPreviewImage) {
         await writeImageFigure(ctx, linkedGelPreviewImage, {
           caption: gelCaption,
+          sectionHeading: 'Linked Results',
+          heading: 'Gel',
+          description,
           maxHeight: 260
         });
       } else {
+        writeMinorHeading(ctx, 'Gel');
+        writeParagraph(ctx, description);
         writeParagraph(ctx, gelCaption);
       }
     }
 
     if (linkedAssay) {
+      const assayDefinition = resolveAssayDefinition(linkedAssay);
+      ensureSpace(ctx, 60 + estimateAssayPlotHeight(ctx, assayDefinition));
       writeMinorHeading(ctx, 'Assay');
       writeParagraph(
         ctx,
@@ -218,7 +223,6 @@ async function writeNotebookEntryBody(ctx, {
         );
       }
 
-      const assayDefinition = resolveAssayDefinition(linkedAssay);
       ensureSpace(ctx, 28 + estimateAssayPlotHeight(ctx, assayDefinition));
       writeMinorHeading(ctx, 'Plate Layout');
       renderAssayPlot(ctx, linkedAssay, assayDefinition);
@@ -267,8 +271,8 @@ async function writeNotebookEntryBody(ctx, {
 
       const assayPlotImage = String(linkedAssayPlotImage || latestAnalysis?.chartDataUrl || '').trim();
       if (assayPlotImage) {
-        writeMinorHeading(ctx, 'Analysis Plot');
         await writeImageFigure(ctx, assayPlotImage, {
+          heading: 'Analysis Plot',
           caption: `${formatAssayAnalysisMethodLabel(latestAnalysis?.method)}${String(latestAnalysis?.summary || '').trim() ? ` | ${latestAnalysis.summary}` : ''}`,
           maxHeight: 220
         });
@@ -287,7 +291,7 @@ export const exportNotebookEntryPdf = async (params = {}) => {
 
     const title = safeValue(entry.experimentName || entry.protocolName, 'Untitled page');
     const pdfSettings = normalizeNotebookPdfSettings(params.pdfSettings);
-    const baseMargin = 72;
+    const baseMargin = 54;
     const cornerIconDataUrl = await loadHikariPdfIconDataUrl({ monochrome: true });
     const ctx = createContext({
       title,
@@ -300,6 +304,7 @@ export const exportNotebookEntryPdf = async (params = {}) => {
       margin: baseMargin,
       margins: resolveNotebookPdfMargins(pdfSettings, baseMargin),
       cornerIconDataUrl,
+      compact: true,
       visualStyle: 'editorial'
     });
     if (!ctx) {
@@ -355,9 +360,10 @@ export const exportProjectNotebookEntriesPdf = async ({
       ],
       orientation: 'p',
       format: pdfSettings.pageSize,
-      margin: 72,
-      margins: resolveNotebookPdfMargins(pdfSettings, 72),
+      margin: 54,
+      margins: resolveNotebookPdfMargins(pdfSettings, 54),
       cornerIconDataUrl,
+      compact: true,
       visualStyle: 'editorial'
     });
     if (!ctx) {

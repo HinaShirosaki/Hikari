@@ -119,7 +119,7 @@ function addPage(ctx, orientation = ctx.orientation, { runningHeader = true } = 
     ctx.doc.setDrawColor(...EDITORIAL_RULE);
     ctx.doc.setLineWidth(0.5);
     ctx.doc.line(ctx.margin, ctx.y + 10, ctx.margin + ctx.maxWidth, ctx.y + 10);
-    ctx.y += 29;
+    ctx.y += ctx.compact ? 23 : 29;
     ctx.doc.setTextColor(0, 0, 0);
     if (previousFont?.fontName) {
       ctx.doc.setFont(previousFont.fontName, previousFont.fontStyle || 'normal');
@@ -158,7 +158,8 @@ function splitWrappedLines(doc, text, maxWidth) {
 
 function writeWrappedBlock(ctx, text, x, maxWidth, lineHeight = LINE_HEIGHT) {
   const lines = splitWrappedLines(ctx.doc, text, maxWidth);
-  if (ctx.visualStyle === 'editorial' && lines.length * lineHeight <= contentBottom(ctx) - ctx.marginTop - 30) {
+  if (ctx.visualStyle === 'editorial' && (!ctx.compact || lines.length <= 3)
+    && lines.length * lineHeight <= contentBottom(ctx) - ctx.marginTop - 30) {
     ensureSpace(ctx, lines.length * lineHeight);
   }
   lines.forEach((line) => {

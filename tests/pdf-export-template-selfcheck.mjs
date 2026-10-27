@@ -236,7 +236,7 @@ assert.equal(notebookOk, true, 'notebook export should report success');
 assert.equal(calls.documents.at(-1).options.format, 'a4', 'notebook export uses the selected page size');
 assert.equal(
   calls.text.find((item) => item.text === 'HIKARI  /  NOTEBOOK PAGE')?.x,
-  136,
+  118,
   'left staple space shifts notebook content inward by 0.5 inch'
 );
 assert.equal(calls.saved, 'notebook-Atlas-Microscope-capture.pdf');
@@ -245,7 +245,7 @@ const notebookFigures = calls.images.filter((args) => args[0] === 'data:image/pn
 assert.equal(notebookFigures.length, 1, 'attached notebook images are embedded in PDF output');
 assert.equal(notebookCornerIcons.length, calls.pages, 'the Hikari icon is rendered once on every notebook PDF page');
 assert.ok(calls.iconTints.includes('#444444'), 'notebook footer icon is tinted neutral gray for printing');
-assert.ok(Math.abs(notebookCornerIcons[0][2] - 543.28) < 0.01, 'the Hikari icon sits in the lower-right A4 margin');
+assert.ok(Math.abs(notebookCornerIcons[0][2] - 552.28) < 0.01, 'the Hikari icon sits in the lower-right A4 margin');
 assert.ok(Math.abs(notebookCornerIcons[0][3] - 773.89) < 0.01, 'the Hikari icon aligns beside the A4 footer');
 assert.equal(notebookCornerIcons[0][4], 32, 'the Hikari icon is large enough to remain visible');
 assert.equal(notebookCornerIcons[0][5], 32, 'the Hikari icon remains square');
@@ -312,7 +312,7 @@ assert.equal(projectNotebookOk, true, 'project notebook export should report suc
 assert.equal(calls.documents.at(-1).options.format, 'legal', 'project notebook export uses the selected page size');
 assert.equal(
   calls.text.find((item) => item.text === 'HIKARI  /  PROJECT NOTEBOOK')?.y,
-  108,
+  90,
   'top staple space shifts project notebook content downward by 0.5 inch'
 );
 assert.equal(calls.saved, 'project-notebook-Atlas.pdf');

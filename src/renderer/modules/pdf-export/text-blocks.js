@@ -19,8 +19,8 @@ import { writeLabel } from './page-chrome.js';
 
 function writeHeading(ctx, heading) {
   if (ctx.visualStyle === 'editorial') {
-    const spacingBefore = ctx.sectionCount > 0 ? 17 : 0;
-    ensureSpace(ctx, spacingBefore + 35);
+    const spacingBefore = ctx.sectionCount > 0 ? (ctx.compact ? 12 : 17) : 0;
+    ensureSpace(ctx, spacingBefore + (ctx.compact ? 47 : 35));
     ctx.y += spacingBefore;
     font(ctx, 'bold');
     ctx.doc.setFontSize(9);
@@ -29,7 +29,7 @@ function writeHeading(ctx, heading) {
     ctx.doc.setDrawColor(...EDITORIAL_RULE);
     ctx.doc.setLineWidth(0.6);
     ctx.doc.line(ctx.margin, ctx.y + 9, ctx.margin + ctx.maxWidth, ctx.y + 9);
-    ctx.y += 29;
+    ctx.y += ctx.compact ? 23 : 29;
     ctx.sectionCount += 1;
     return;
   }
@@ -162,7 +162,7 @@ function writeEditorialMaterials(ctx, values) {
 }
 
 function writeMinorHeading(ctx, heading) {
-  ensureSpace(ctx, BODY_FONT_SIZE + 12);
+  ensureSpace(ctx, ctx.compact ? 58 : BODY_FONT_SIZE + 12);
   ctx.y += 6;
   font(ctx, 'bold');
   ctx.doc.setFontSize(BODY_FONT_SIZE);
