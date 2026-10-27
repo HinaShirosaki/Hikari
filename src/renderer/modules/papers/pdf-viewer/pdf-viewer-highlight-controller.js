@@ -9,6 +9,7 @@ import {
   renderPins
 } from './pdf-viewer-overlays.js';
 import {
+  buildHighlightCommentPopoverMarkup,
   buildHighlightPopoverMarkup,
   copyPdfHighlightText,
   normalizePdfHighlightText
@@ -76,7 +77,14 @@ export const installPdfViewerHighlightController = (ctx) => {
     activeHighlightId = highlightId;
     activeHighlightCopyText = copyText;
     activeHighlight = highlight;
-    highlightCommentPopover.innerHTML = buildHighlightPopoverMarkup(highlight);
+    showAnnotationPopover(buildHighlightPopoverMarkup(highlight, {
+      comment: getCommentForHighlight(highlight),
+      canDelete: typeof state.onDeleteHighlight === 'function'
+    }), clientX, clientY);
+  }
+
+  function showAnnotationPopover(markup, clientX, clientY) {
+    highlightCommentPopover.innerHTML = markup;
     highlightCommentPopover.hidden = false;
     const shellRect = shell.getBoundingClientRect?.();
     const rawLeft = (Number(clientX) || 0) - Number(shellRect?.left || 0) + 12;
@@ -98,6 +106,9 @@ export const installPdfViewerHighlightController = (ctx) => {
     )) || null;
     if (highlight) {
       showHighlightPopover(highlight, clientX, clientY);
+    } else if (highlightCommentPopover && shell) {
+      hideHighlightCommentPopover();
+      showAnnotationPopover(buildHighlightCommentPopoverMarkup(comment), clientX, clientY);
     }
   }
 
@@ -116,7 +127,11 @@ export const installPdfViewerHighlightController = (ctx) => {
       selectedCommentId: state.selectedCommentId,
       placementMode: state.placementMode,
       isActive: ctx.hasActiveDocument(),
-      onPinSelect: state.onPinSelect
+      onPinSelect: (comment, event) => {
+        const rect = event?.currentTarget?.getBoundingClientRect?.();
+        state.onPinSelect?.(comment);
+        showHighlightCommentPopover(comment, rect?.right ?? event?.clientX, rect?.top ?? event?.clientY);
+      }
     });
   }
 
@@ -222,13 +237,27 @@ export const installPdfViewerHighlightController = (ctx) => {
   }
 
   async function handleHighlightPopoverClick(event) {
-    const button = event?.target?.closest?.('[data-paper-highlight-copy], [data-paper-highlight-ask]') || null;
+    const button = event?.target?.closest?.('[data-paper-highlight-copy], [data-paper-highlight-ask], [data-paper-highlight-delete]') || null;
     if (!button || !highlightCommentPopover?.contains?.(button)) {
       return;
     }
     event.preventDefault?.();
     event.stopPropagation?.();
     cancelHighlightPopoverHide();
+    if (button.matches?.('[data-paper-highlight-delete]')) {
+      if (!activeHighlight || typeof state.onDeleteHighlight !== 'function') {
+        return;
+      }
+      const highlight = activeHighlight;
+      const hasComment = Boolean(getCommentForHighlight(highlight));
+      const didDelete = state.onDeleteHighlight({ paperId: state.paperId, highlightId: highlight.id });
+      if (didDelete !== false) {
+        hideHighlightCommentPopover();
+        const label = highlight.kind === 'underline' ? 'underline' : 'highlight';
+        ctx.setStatus(`Deleted ${label}${hasComment ? ' and comment' : ''}. Use Undo to restore.`);
+      }
+      return;
+    }
     if (button.matches?.('[data-paper-highlight-ask]')) {
       if (!activeHighlight || typeof state.onSelectionAsk !== 'function') {
         return;

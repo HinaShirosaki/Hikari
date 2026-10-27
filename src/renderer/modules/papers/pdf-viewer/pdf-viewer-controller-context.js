@@ -90,6 +90,7 @@ export function createPapersPdfViewerContext(elements = {}) {
     onPlacement: typeof elements.onPlacement === 'function' ? elements.onPlacement : null,
     onPinSelect: typeof elements.onPinSelect === 'function' ? elements.onPinSelect : null,
     onHighlightSelection: typeof elements.onHighlightSelection === 'function' ? elements.onHighlightSelection : null,
+    onDeleteHighlight: typeof elements.onDeleteHighlight === 'function' ? elements.onDeleteHighlight : null,
     onSelectionComment: typeof elements.onSelectionComment === 'function' ? elements.onSelectionComment : null,
     onSelectionSearch: typeof elements.onSelectionSearch === 'function' ? elements.onSelectionSearch : null,
     onSelectionAsk: typeof elements.onSelectionAsk === 'function' ? elements.onSelectionAsk : null,

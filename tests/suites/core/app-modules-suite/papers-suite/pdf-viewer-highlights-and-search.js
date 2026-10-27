@@ -71,6 +71,8 @@ function buildFakePapersViewerFactory() {
         onPlacement: elements.onPlacement,
         onPinSelect: elements.onPinSelect,
         onHighlightSelection: elements.onHighlightSelection,
+        onDeleteHighlight: elements.onDeleteHighlight,
+        onSelectionComment: elements.onSelectionComment,
         onSelectionSearch: elements.onSelectionSearch,
         onMetadataResolved: elements.onMetadataResolved,
         onClose: elements.onClose
@@ -413,7 +415,7 @@ test('papers highlighted text copy helper merges PDF line wraps and preserves pa
   }), true);
   assert.deepEqual(writes, [expected]);
 });
-test('papers highlighted text hover markup is a compact ask and copy toolbar', () => {
+test('papers highlighted text hover markup offers ask, copy and direct deletion', () => {
   const viewerModule = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'index.js')
   );
@@ -423,9 +425,45 @@ test('papers highlighted text hover markup is a compact ask and copy toolbar', (
 
   assert.match(markup, /data-paper-highlight-copy/);
   assert.match(markup, /data-paper-highlight-ask/);
+  assert.match(markup, /data-paper-highlight-delete/);
   assert.match(markup, /aria-label="Copy highlighted text"/);
   assert.match(markup, /aria-label="Ask Hikari about highlighted text"/);
   assert.doesNotMatch(markup, /First PDF line second PDF line/);
+});
+test('papers hover markup shows escaped saved comments and labels linked deletion', () => {
+  const { buildHighlightPopoverMarkup } = loadEsmStyleModule(
+    path.join(__dirname, 'src/renderer/modules/papers/pdf-viewer/pdf-viewer-search.js')
+  );
+  const markup = buildHighlightPopoverMarkup({ text: 'Selected text' }, {
+    comment: { author: '<Alice>', text: 'Saved note\n<script>bad()</script>' }
+  });
+  assert.match(markup, /&lt;Alice&gt;/);
+  assert.match(markup, /Saved note\n&lt;script&gt;bad\(\)&lt;\/script&gt;/);
+  assert.match(markup, /Delete highlight and comment/);
+  assert.doesNotMatch(markup, /<script>/);
+  assert.doesNotMatch(buildHighlightPopoverMarkup({ text: 'Text' }, { canDelete: false }), /data-paper-highlight-delete/);
+});
+test('papers directly deletes stored highlights and linked notes without touching other annotations', async () => {
+  const harness = buildPapersManagementHarness();
+  await openPaperInHarness(harness);
+  const callbacks = harness.viewerFactory.controller.callbacks;
+  const selection = { pageNumber: 1, text: 'Selected text', boxes: [{ x: 0.1, y: 0.2, width: 0.3, height: 0.04 }] };
+  callbacks.onHighlightSelection({ ...selection, kind: 'underline' });
+  callbacks.onSelectionComment({ ...selection, commentText: 'Saved comment' });
+  const paper = harness.state.papers[0];
+  const [underline, commented] = paper.highlights;
+  const beforeDelete = harness.persistCalls;
+  assert.equal(callbacks.onDeleteHighlight({ paperId: 'other-paper', highlightId: commented.id }), false);
+  assert.equal(callbacks.onDeleteHighlight({ paperId: paper.id, highlightId: 'missing' }), false);
+  assert.equal(harness.persistCalls, beforeDelete);
+  assert.equal(callbacks.onDeleteHighlight({ paperId: paper.id, highlightId: commented.id }), true);
+  assert.equal(harness.persistCalls, beforeDelete + 1, 'annotation deletion persists as one undo step');
+  assert.deepEqual(paper.highlights.map(item => item.id), [underline.id]);
+  assert.equal(paper.comments.length, 0);
+  assert.equal(harness.viewerFactory.controller.comments.length, 0);
+  assert.equal(harness.viewerFactory.controller.highlights.length, 1);
+  assert.equal(callbacks.onDeleteHighlight({ paperId: paper.id, highlightId: underline.id }), true);
+  assert.equal(paper.highlights.length, 0);
 });
 test('papers selection hover menu shows styled captions without native tooltips', () => {
   const viewHtml = fs.readFileSync(

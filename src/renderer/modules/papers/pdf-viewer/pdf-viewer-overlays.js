@@ -221,7 +221,7 @@ export function renderPins({
         event.preventDefault();
         event.stopPropagation();
         if (typeof onPinSelect === 'function') {
-          onPinSelect(comment);
+          onPinSelect(comment, event);
         }
       });
       overlay.appendChild(pin);
