@@ -16,7 +16,8 @@
   min-height: 0;
   overflow: visible;
 }
-#gel-view .has-gel-tool-dock.is-tools-collapsed .gel-inspector { grid-template-columns: 64px; width: 64px; gap: 0; }
+/* Reserve the inspector column even when its contents are hidden. Refitting
+   the image whenever a tool opens would change its scale and pointer position. */
 #gel-view .has-gel-tool-dock .gel-viewer-card {
   grid-column: 2;
   grid-row: 1;
@@ -28,7 +29,6 @@
   overflow-y: auto;
   scrollbar-width: none;
 }
-#gel-view .has-gel-tool-dock.is-tools-collapsed .gel-viewer-card { grid-column: 1; }
 #gel-view .has-gel-tool-dock .gel-viewer-toolbar { align-items: center; gap: 8px; }
 #gel-view .has-gel-tool-dock .gel-tool-categories { display: flex; flex-direction: column; gap: 4px; }
 #gel-view .has-gel-tool-dock .gel-viewer-toolbar > .gel-card-row,
@@ -101,7 +101,38 @@
 #gel-view .has-gel-tool-dock .gel-figure-tools-head { justify-content: flex-end; }
 /* Menus open toward the canvas, clear of the icon strip. */
 #gel-view .has-gel-tool-dock #gel-export-menu { top: anchor(top); right: calc(anchor(left) + 10px); margin: 0; }
+#gel-view .gel-export-option { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 8px 12px; border-bottom: 1px solid var(--theme-border-soft); font-size: .8125rem; cursor: pointer; }
+#gel-view .gel-export-option input { appearance: none; position: relative; flex: none; width: 30px; height: 18px; min-height: 0; margin: 0; padding: 0; border: 1px solid var(--theme-border-soft); border-radius: 999px; background: var(--theme-fill-strong); cursor: pointer; }
+#gel-view .gel-export-option input::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--theme-surface-elevated); box-shadow: var(--theme-shadow-small); }
+#gel-view .gel-export-option input:checked { background: var(--theme-accent); border-color: var(--theme-accent); }
+#gel-view .gel-export-option input:checked::after { left: 14px; }
+#gel-view .gel-export-option input:focus-visible { outline: 2px solid var(--theme-focus); outline-offset: 2px; }
 #gel-view .has-gel-tool-dock #gel-record-menu { bottom: anchor(bottom); right: calc(anchor(left) + 10px); margin: 0; }
+
+#gel-view .gel-results-actions { display: grid; gap: 6px; }
+#gel-view .gel-results-actions > .ghost-btn {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 14px;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: .8125rem;
+  text-align: left;
+}
+#gel-view .gel-results-actions > .ghost-btn[aria-expanded='true'] {
+  border-color: var(--theme-accent);
+  background: var(--theme-accent-wash);
+}
+#gel-view .gel-results-actions svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+#gel-view .gel-results-actions .gel-result-launch-icon { width: 14px; height: 14px; color: var(--theme-text-muted); }
+#gel-view #gel-lane-profile-panel { gap: 8px; margin-top: 4px; padding-top: 14px; border-top: 1px solid var(--theme-border-soft); }
+#gel-view #gel-lane-profile-panel .gel-lane-profile-picker { width: 100%; min-width: 0; }
+#gel-view #gel-lane-profile-select { width: 100%; min-height: 30px; padding: 4px 8px; }
+#gel-view #gel-lane-profile-empty { margin: 0; line-height: 1.5; }
+#gel-view #gel-lane-profile-empty[hidden],
+#gel-view #gel-lane-profile-chart-shell[hidden] { display: none; }
 
 @media (max-width: 1100px) {
   #gel-view .has-gel-tool-dock .gel-inspector { grid-template-columns: 250px 64px; width: 326px; }

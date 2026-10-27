@@ -13,7 +13,7 @@ import {
   preprocessWithJs
 } from './image-processing.js';
 import { computeProminence, findLocalMaxima } from './auto-lanes.js';
-import { computeLaneBaseline } from './lane-signal.js';
+import { BAND_MEASUREMENT_VERSION, computeLaneBaseline } from './lane-signal.js';
 import { applyBandOverrides, buildLanesFromManualSegmentation } from './manual-lanes.js';
 import {
   applyCalibrationToBands,
@@ -108,6 +108,7 @@ function buildReport({
           top: targetBand.top,
           bottom: targetBand.bottom,
           thickness: targetBand.thickness,
+          edges: targetBand.edges,
           areaPx: targetBand.areaPx,
           rawIntensity: round(targetBand.rawIntensity, 4),
           correctedIntensity: round(targetBand.correctedIntensity, 4),
@@ -117,7 +118,10 @@ function buildReport({
           backgroundStd: round(targetBand.backgroundStd, 6),
           snr: round(targetBand.snr, 4),
           saturationFraction: round(targetBand.saturationFraction, 4),
-          baselineMode: targetBand.baselineMode || 'lane-profile'
+          baselineMode: targetBand.baselineMode || 'lane-profile',
+          baselineAnchors: targetBand.baselineAnchors,
+          intensityStatus: targetBand.intensityStatus,
+          netIntensity: round(targetBand.netIntensity, 6)
         }
         : null,
       bands: lane.bands.map((band) => ({
@@ -126,10 +130,16 @@ function buildReport({
         bottom: band.bottom,
         pixelY: band.pixelY,
         thickness: band.thickness,
+        edges: band.edges,
         estimatedMw: Number.isFinite(band.estimatedMw) ? round(band.estimatedMw, 3) : null,
         rawIntensity: round(band.rawIntensity, 4),
         correctedIntensity: round(band.correctedIntensity, 4),
         bandSignalSum: round(band.bandSignalSum, 4),
+        baselineSum: round(band.baselineSum, 4),
+        baselineMode: band.baselineMode,
+        baselineAnchors: band.baselineAnchors,
+        intensityStatus: band.intensityStatus,
+        netIntensity: round(band.netIntensity, 6),
         backgroundMean: round(band.backgroundMean, 6),
         backgroundStd: round(band.backgroundStd, 6),
         areaPx: band.areaPx,
@@ -149,6 +159,8 @@ function buildReport({
   const laneScores = laneReports.map((lane) => lane.confidence.score).filter((score) => Number.isFinite(score));
   const overallScore = laneScores.length ? mean(laneScores) : 0;
   const warnings = [];
+  const backgroundReview = laneReports.filter(lane => lane.bands.some(band => band.intensityStatus && band.intensityStatus !== 'ok'));
+  if (backgroundReview.length) warnings.push(`Review the band background in lane(s): ${backgroundReview.map(lane => lane.laneIndex).join(', ')}. Use a Band integration baseline spanning the selected band.`);
 
   if (!calibration.ok) {
     warnings.push(`MW calibration unavailable: ${calibration.reason}`);
@@ -165,6 +177,7 @@ function buildReport({
 
   return {
     generatedAt: new Date().toISOString(),
+    quantification: { version: BAND_MEASUREMENT_VERSION, signal: 'original-gray', automaticBaseline: 'local-edge', manualBaseline: 'peak-editor' },
     image: {
       name: imageName,
       width,

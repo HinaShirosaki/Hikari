@@ -1,4 +1,5 @@
 import { analyzeGelImage } from './analysis/analysis-core.js';
+import { BAND_MEASUREMENT_VERSION } from './analysis/lane-signal.js';
 import { createCropController } from './images/crop-controller.js';
 import { getGelElements } from './dom.js';
 import { createFloatingWindows } from './floating-windows.js';
@@ -53,6 +54,20 @@ export function initGelAnalysis({
     throw new Error(`Gel workspace markup is missing required elements: ${missingElementKeys.join(', ')}.`);
   }
   const rootWindow = rootDocument.defaultView || (typeof window !== 'undefined' ? window : null);
+  function upgradeBandReport(draft) {
+    const report = draft.currentReport, image = draft.currentImage;
+    if (!image || report?.quantification?.version === BAND_MEASUREMENT_VERSION
+      || !report?.lanes?.some(lane => lane.targetBand)) return null;
+    const parameters = report.parameters || {};
+    return analyzeGelImage({ gray: image.gray, imageName: image.name, width: image.width, height: image.height,
+      preprocessed: { cleanNormalized: image.gray, preprocessing: report.preprocessing || {} },
+      params: { ladderStandards: [], ladderLane: 1, normalization: 'none', ...parameters,
+        analysisType: draft.controls?.['gel-type'] || report.analysisType,
+        tiffPage: image.tiffPageIndex ?? report.image?.tiffPage ?? null,
+        tiffPageCount: image.tiffPageCount ?? report.image?.tiffPageCount ?? null,
+        manualOverrides: draft.manualOverrides, enhancement: parameters.enhancement || {} }
+    }).report;
+  }
   const runtime = {
     createId,
     cropApplied: false,
@@ -64,6 +79,8 @@ export function initGelAnalysis({
     currentImage: null,
     currentReport: null,
     enhancementRerunTimer: null,
+    analysisPromise: null,
+    analysisRevision: null,
     imageRevision: 0,
     figureExportIncludeLadder: true,
     ladderBandDrag: null,
@@ -170,11 +187,13 @@ export function initGelAnalysis({
     safeText,
     deps: {
       documentObject: rootDocument,
-      getFigureImageData: () => {
-        const preprocessed = runtime.viewerMode === 'processed'
-          ? imageController.getPreprocessedImageForCurrentSettings?.()
-          : null;
-        return selectViewerBaseImageData(runtime.currentImage, preprocessed, runtime.viewerMode);
+      getFigureImageData: async () => {
+        const image = runtime.currentImage, revision = runtime.imageRevision, mode = runtime.viewerMode;
+        const preprocessed = mode === 'processed' ? await imageController.prepareCurrentImage() : null;
+        if (image !== runtime.currentImage || revision !== runtime.imageRevision || mode !== runtime.viewerMode || (mode === 'processed' && !preprocessed)) {
+          throw new Error('The gel changed while preparing the export. Try exporting again.');
+        }
+        return selectViewerBaseImageData(image, preprocessed, mode);
       },
       setStatus
     }
@@ -218,6 +237,8 @@ export function initGelAnalysis({
     elements,
     deps: {
       copyNormalizedImage: imageController.copyNormalizedImage,
+      beforeSave: settleProcessing,
+      upgradeBandReport,
       confirmDelete: (record) => (
         typeof rootWindow?.confirm !== 'function'
         || rootWindow.confirm(
@@ -243,6 +264,10 @@ export function initGelAnalysis({
     deps: {
       getPreprocessedImageForCurrentSettings: imageController.getPreprocessedImageForCurrentSettings,
       renderLaneTable: () => laneTable.render(),
+      onPeakIntegrationsChanged: () => {
+        renderCanvasAndCommit();
+        if (runtime.currentReport) void onRunAnalysis();
+      },
       setStatus
     }
   });
@@ -250,6 +275,7 @@ export function initGelAnalysis({
   floatingWindows = createFloatingWindows({
     documentObject: rootDocument,
     onOpen: {
+      intensity: () => rendering.renderCellTable(),
       peak: () => {
         rendering.onPeakEditorOpen();
         return Boolean(runtime.peakEditor?.open);
@@ -264,6 +290,9 @@ export function initGelAnalysis({
     runtime, elements, documentObject: rootDocument,
     deps: {
       imageDataToDataUrl: imageController.imageDataToDataUrl,
+      prepareImage: imageController.prepareImage,
+      upgradeBandReport,
+      peekProcessedImage: imageController.peekProcessedImage,
       saveImportedGel: recordsManager.saveImportedGel,
       restoreRecordImage: recordsManager.restoreRecordImage,
       openSavedAnalysis: recordsManager.fillFromRecord,
@@ -272,7 +301,7 @@ export function initGelAnalysis({
       workspacePersistence,
       resetEditor: recordsManager.resetForm,
       leaveCropMode: () => cropController.leaveCropMode(),
-      hideWindows: () => floatingWindows.close('peak'),
+      hideWindows: () => floatingWindows.closeAll(),
       onHistoryChanged,
       onEditorHistory: () => onHistoryChanged?.(history.getHistoryState()),
       renderEditor: () => { rendering.renderCanvas(); laneTable.fitViewerToStage(); },
@@ -299,6 +328,7 @@ export function initGelAnalysis({
         manualWorkflow.renderOverrideStatus();
         manualWorkflow.renderManualProgress();
         history.reset();
+        if (draft.analysisPending) void onRunAnalysis();
       },
       setStatus
     }
@@ -397,7 +427,10 @@ export function initGelAnalysis({
   elements.gelExportImageBtn?.addEventListener('click', (event) => laneTable.onGenerateFigureClick(event.currentTarget));
   elements.gelExportPptxBtn?.addEventListener('click', (event) => laneTable.onGeneratePowerPointClick(event.currentTarget));
   elements.gelLaneTableShell?.addEventListener('click', laneTable.onShellClick);
-  elements.gelLaneTableShell?.addEventListener('input', laneTable.onShellInput);
+  elements.gelLaneTableShell?.addEventListener('input', (event) => {
+    laneTable.onShellInput(event);
+    rendering.renderCellTable();
+  });
   elements.gelForm?.addEventListener('submit', recordsManager.onSaveAnalysis);
   elements.gelSearchInput?.addEventListener('input', recordsManager.renderList);
   elements.gelList?.addEventListener('click', recordsManager.onListClick);
@@ -427,6 +460,7 @@ export function initGelAnalysis({
       return;
     }
     runtime.viewerMode = mode;
+    imageController.updateProcessingNotice();
     updateViewerModeButtons();
     rendering.renderCanvas();
   }
@@ -479,34 +513,44 @@ export function initGelAnalysis({
     }
   }
 
+  let analysisRequest = 0;
+  let disposed = false;
   function onRunAnalysis() {
-    if (!runtime.currentImage) {
-      setStatus('Load a gel image before running analysis.');
-      return;
+    if (!runtime.currentImage) { setStatus('Load a gel image before running analysis.'); return Promise.resolve(null); }
+    const request = ++analysisRequest, image = runtime.currentImage, revision = runtime.imageRevision;
+    const params = recordsManager.readParams(), signature = JSON.stringify(params);
+    const task = (async () => {
+      try {
+        const preprocessed = await imageController.prepareCurrentImage();
+        if (!preprocessed || disposed || request !== analysisRequest || image !== runtime.currentImage || revision !== runtime.imageRevision
+          || signature !== JSON.stringify(recordsManager.readParams())) return null;
+        const result = analyzeGelImage({ gray: image.gray, imageName: image.name, width: image.width, height: image.height, params, preprocessed });
+        runtime.currentReport = result.report;
+        renderCanvasAndCommit(); manualWorkflow.renderOverrideStatus();
+        return result;
+      } catch (error) { if (!disposed && request === analysisRequest) setStatus(error instanceof Error ? error.message : 'Analysis failed.'); return null; }
+    })();
+    runtime.analysisPromise = task;
+    runtime.analysisRevision = revision;
+    void task.finally(() => { if (runtime.analysisPromise === task) runtime.analysisPromise = null; });
+    return task;
+  }
+  async function settleProcessing() {
+    if (!runtime.currentImage) return;
+    const result = await imageController.prepareCurrentImage();
+    if (!result && runtime.currentImage) throw new Error('The gel changed while processing. Try saving again.');
+    if (runtime.enhancementRerunTimer) {
+      clearTimeout(runtime.enhancementRerunTimer); runtime.enhancementRerunTimer = null;
+      await onRunAnalysis();
     }
-
-    try {
-      const params = recordsManager.readParams();
-      const preprocessed = imageController.getPreprocessedImageForCurrentSettings();
-      const result = analyzeGelImage({
-        gray: runtime.currentImage.gray,
-        imageName: runtime.currentImage.name,
-        width: runtime.currentImage.width,
-        height: runtime.currentImage.height,
-        params,
-        preprocessed
-      });
-      runtime.currentReport = result.report;
-      renderCanvasAndCommit();
-      // No success message: it would replace the hint for the next step.
-      manualWorkflow.renderOverrideStatus();
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Analysis failed.');
-    }
+    if (runtime.analysisPromise) await runtime.analysisPromise;
   }
 
   function destroy() {
+    disposed = true; analysisRequest++;
+    rendering.destroy?.();
     toolDock.destroy();
+    imageController.destroy();
     blotFigure?.destroy();
     manualWorkflow.destroy();
     floatingWindows.destroy();
@@ -529,6 +573,8 @@ export function initGelAnalysis({
 
   return {
     ready: blotFigure?.ready,
+    waitForProcessing: settleProcessing,
+    getProcessingStats: imageController.getProcessingStats,
     suspendWorkspace: () => blotFigure?.suspendWorkspace(),
     destroy,
     getHistoryState: () => blotFigure?.ownsHistory() ? blotFigure.getHistoryState() : history.getHistoryState(),
@@ -540,6 +586,7 @@ export function initGelAnalysis({
     render,
     renderList: () => { recordsManager.renderList(); blotFigure?.refreshSavedRecords(); },
     saveUnsavedChanges: async () => {
+      await settleProcessing();
       if (blotFigure?.hasUnsavedChanges() && !await blotFigure.saveWorkspace()) return false;
       if (blotFigure?.ownsEditor()) { markDraftSaved(); return true; }
       if (getCurrentDraftSnapshot() === savedDraftSnapshot) return true;

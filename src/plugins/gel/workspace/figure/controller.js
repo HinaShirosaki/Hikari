@@ -12,6 +12,7 @@ import { DEFAULT_STACK_TRIM } from './trim.js';
 import { createCanvasTrimEditor } from './trim-editor.js';
 import { bindFigureWorkspaceActions } from './workspace-actions.js';
 import { createSavedGelNavigation } from './saved-gels.js';
+import { normalizeEnhancementSettings } from '../analysis/image-processing.js';
 import { createWorkspaceAutosave } from './autosave.js';
 import { mergeBlotProject, reconnectProjectRecords } from './project-merge.js';
 
@@ -162,10 +163,42 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
   }
   function detachEditor() { syncActive(); activeId = ''; activeSignature = ''; if (isOpen()) close(); }
 
+  function prepareProcessedRow(row) {
+    const image = row.draft.currentImage;
+    const settings = normalizeEnhancementSettings({ denoiseStrength: row.draft.controls['gel-denoise-strength'], contrastBoost: row.draft.controls['gel-contrast-strength'] });
+    const key = row.draft.viewerMode === 'processed' ? JSON.stringify(settings) : 'original';
+    if (row.displayData && row.displayGray === image.gray && row.displayKey === key) return null;
+    const result = key !== 'original' ? deps.peekProcessedImage?.(image.gray, image.width, image.height, settings) : null;
+    if (key === 'original' || result) {
+      row.displayData = result?.previewImageData || image.imageData; row.displayGray = image.gray; row.displayKey = key;
+      return null;
+    }
+    if (!deps.prepareImage) return null;
+    if (row.processingTask?.gray === image.gray && row.processingTask.key === key) return row.processingTask.promise;
+    row.displayData ||= image.imageData;
+    const task = { gray: image.gray, key };
+    task.promise = deps.prepareImage(image.gray, image.width, image.height, settings).then(result => {
+      if (disposed) return null;
+      if (row.processingTask === task) row.processingTask = null;
+      const current = normalizeEnhancementSettings({ denoiseStrength: row.draft.controls['gel-denoise-strength'], contrastBoost: row.draft.controls['gel-contrast-strength'] });
+      if (result && row.draft.currentImage.gray === image.gray && row.draft.viewerMode === 'processed' && JSON.stringify(current) === key) {
+        row.displayData = result.previewImageData; row.displayGray = image.gray; row.displayKey = key;
+      }
+      if (isOpen()) renderPreview();
+      return result;
+    }).catch(error => {
+      if (row.processingTask === task) row.processingTask = null;
+      if (!disposed) status(error.message, { type: 'error' });
+      return null;
+    });
+    row.processingTask = task; return task.promise;
+  }
   function renderPreview() {
     previewPlan = null;
     const preview = get('preview');
     const visibleRows = previewRows();
+    visibleRows.forEach(prepareProcessedRow);
+    get('preview').setAttribute('aria-busy', String(visibleRows.some(row => row.processingTask)));
     get('preview-title').textContent = currentStack().name;
     get('preview-detail').textContent = `${visibleRows.length} gel${visibleRows.length === 1 ? '' : 's'}`;
     preview.replaceChildren();
@@ -279,6 +312,8 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
     close(); deps.setStatus('');
   }
   function restoreLayer(row) {
+    const upgraded = deps.upgradeBandReport?.(row.draft);
+    if (upgraded) row.draft = { ...row.draft, currentReport: upgraded };
     deps.restoreDraft({ ...row.draft, controls: { ...row.draft.controls, 'gel-name': row.label } });
   }
   async function loadSavedLayer(id) {
@@ -407,7 +442,11 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
     trimEditor.apply();
     return runBusy(async () => {
       status(`Preparing ${format.toUpperCase()}…`);
-      const output = createBlotFigureCanvas(previewRows(), documentObject, previewOptions());
+      const visibleRows = previewRows();
+      await Promise.all(visibleRows.map(prepareProcessedRow));
+      if (disposed || visibleRows.some(row => row.draft.viewerMode === 'processed' && row.displayKey !== JSON.stringify(normalizeEnhancementSettings({ denoiseStrength: row.draft.controls['gel-denoise-strength'], contrastBoost: row.draft.controls['gel-contrast-strength'] })))) throw new Error('Image processing is incomplete. Try exporting again.');
+      const output = createBlotFigureCanvas(visibleRows, documentObject, { ...previewOptions(),
+        showLadderLabels: Boolean(elements.gelExportLadderLabelsInput?.checked) });
       const title = `${get('name').value || 'Gel layers'}-${currentStack().name}`;
       const fileName = `${safeFilePart(title)}.${format}`;
       const result = format === 'png'
@@ -480,25 +519,6 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
     resumeEditor: close, exportFigure, saveProject }));
   // These actions replace the editor's image; capture a figure row
   // first, before the existing controller clears its crop and lane settings.
-  // Removing a gel belongs to the gel being edited (the toolbar's More menu), not to Layout.
-  const removeButton = documentObject.getElementById('gel-remove-gel-btn');
-  listen(documentObject.getElementById('gel-record-menu'), 'beforetoggle', () => {
-    if (removeButton) removeButton.disabled = !rows.some(row => row.id === activeId);
-  });
-  listen(removeButton, 'click', () => {
-    if (busy || elements.gelForm?.getAttribute('aria-busy') === 'true') return;
-    const index = rows.findIndex(row => row.id === activeId); if (index < 0) return;
-    const [row] = rows.splice(index, 1);
-    for (const stack of stacks) {
-      stack.layerIds = stack.layerIds.filter(id => id !== row.id);
-    }
-    activeId = ''; activeSignature = '';
-    selectedId = rows[Math.min(index, rows.length - 1)]?.id || '';
-    commit();
-    // Clear the editor first, or opening the next gel would add the removed one back.
-    deps.resetEditor();
-    if (selectedId) editSelected(); else render();
-  });
   listen(elements.gelImageFileInput, 'change', detachEditor, true);
   listen(elements.gelCancelBtn, 'click', detachEditor, true);
   listen(elements.gelList, 'click', event => { if (event.target.closest('[data-gel-edit]')) detachEditor(); }, true);

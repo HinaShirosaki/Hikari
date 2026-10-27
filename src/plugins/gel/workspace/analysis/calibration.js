@@ -149,10 +149,12 @@ export function applyCalibrationToBands(lanes, calibration, imageHeight) {
 
 export function applyNormalization(lanes, normalizationMode) {
   lanes.forEach((lane) => {
-    const total = lane.bands.reduce((sum, band) => sum + band.rawIntensity, 0);
-    const maxIntensity = Math.max(0, ...lane.bands.map((band) => band.rawIntensity));
+    const accepted = lane.bands.filter(band => !band.intensityStatus || band.intensityStatus === 'ok');
+    const total = accepted.reduce((sum, band) => sum + band.rawIntensity, 0);
+    const maxIntensity = Math.max(0, ...accepted.map((band) => band.rawIntensity));
 
     lane.bands.forEach((band) => {
+      if (band.intensityStatus && band.intensityStatus !== 'ok') { band.normalizedIntensity = null; return; }
       if (normalizationMode === 'total-lane') {
         band.normalizedIntensity = total > 0 ? (band.rawIntensity / total) : null;
       } else if (normalizationMode === 'max') {

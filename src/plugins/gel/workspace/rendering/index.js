@@ -10,7 +10,8 @@ import {
 } from '../shared.js';
 import { createCanvasDrawController } from './canvas-draw.js';
 import { createPeakEditorController } from './peak-editor.js';
-import { buildSmoothPath, downsampleLaneProfile } from './profile-shape.js';
+import { getPeakEditorProfilePoints } from './peak-editor-svg.js';
+import { buildLinearPath } from './profile-shape.js';
 
 export { calculatePeakIntegrationRows } from './peak-editor-svg.js';
 export { selectViewerBaseImageData } from './canvas-draw.js';
@@ -132,13 +133,13 @@ function renderLaneProfileSvg(svg, profile, bandTop = null, bandBottom = null) {
   const plotHeight = plotBottom - plotTop;
   const rowMax = Math.max(1, profile.values.length - 1);
   const valueSpan = Math.max(1e-6, profile.maxValue - profile.minValue);
-  const points = downsampleLaneProfile(profile.values).map((point) => ({
+  // Every row, straight segments, as in the peak editor: bucket means and curve
+  // smoothing cut narrow peaks well below their real height.
+  const points = getPeakEditorProfilePoints(profile.values).map((point) => ({
     x: plotLeft + ((point.row / rowMax) * plotWidth),
     y: plotBottom - (((point.value - profile.minValue) / valueSpan) * plotHeight)
   }));
-  const path = buildSmoothPath(points);
-  const peakX = plotLeft + ((profile.peakRow / rowMax) * plotWidth);
-  const peakY = plotBottom - (((profile.peakValue - profile.minValue) / valueSpan) * plotHeight);
+  const path = buildLinearPath(points);
 
   let highlightedBand = '';
   if (Number.isFinite(bandTop) && Number.isFinite(bandBottom)) {
@@ -146,7 +147,7 @@ function renderLaneProfileSvg(svg, profile, bandTop = null, bandBottom = null) {
     const end = clamp(Math.max(bandTop, bandBottom), start, rowMax);
     const rectX = plotLeft + ((start / rowMax) * plotWidth);
     const rectWidth = Math.max(2, ((end - start) / rowMax) * plotWidth);
-    highlightedBand = `<rect class="lane-profile-window" x="${rectX}" y="${plotTop}" width="${rectWidth}" height="${plotHeight}" rx="8" />`;
+    highlightedBand = `<rect class="lane-profile-window" x="${rectX}" y="${plotTop}" width="${rectWidth}" height="${plotHeight}" />`;
   }
 
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
@@ -158,7 +159,6 @@ function renderLaneProfileSvg(svg, profile, bandTop = null, bandBottom = null) {
     <line class="lane-profile-grid" x1="${plotLeft}" y1="${plotTop + (plotHeight / 2)}" x2="${plotRight}" y2="${plotTop + (plotHeight / 2)}" />
     <line class="lane-profile-grid" x1="${plotLeft}" y1="${plotTop + ((plotHeight * 3) / 4)}" x2="${plotRight}" y2="${plotTop + ((plotHeight * 3) / 4)}" />
     <path class="lane-profile-path" d="${path}" />
-    <circle class="lane-profile-peak" cx="${peakX}" cy="${peakY}" r="4" />
     <text class="lane-profile-axis-label" x="${plotLeft}" y="${height - 8}">Top</text>
     <text class="lane-profile-axis-label" x="${plotRight}" y="${height - 8}" text-anchor="end">Bottom</text>
     <g class="lane-profile-hover" data-role="hover" style="display: none;">
@@ -206,6 +206,16 @@ function clearLaneProfileHover(svg) {
 }
 
 export function createRenderingController({ runtime, elements, safeText, deps = {} }) {
+  function setLaneProfileAvailable(available) {
+    if (elements.gelLaneProfileChartShell) elements.gelLaneProfileChartShell.hidden = !available;
+    if (elements.gelLaneProfileEmpty) {
+      elements.gelLaneProfileEmpty.hidden = available;
+      elements.gelLaneProfileEmpty.textContent = runtime.currentImage
+        ? 'Finish lane dividers to view the profile.'
+        : 'Add a gel image to view lane profiles.';
+    }
+  }
+
   function renderLaneProfile() {
     if (
       !elements.gelLaneProfilePanel
@@ -216,6 +226,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     }
 
     if (!runtime.currentImage) {
+      setLaneProfileAvailable(false);
       runtime.selectedLaneProfileLane = null;
       elements.gelLaneProfileSelect.disabled = true;
       elements.gelLaneProfileSelect.innerHTML = '<option value="">Select lane</option>';
@@ -227,6 +238,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     const lanes = getLaneProfileLanes(runtime);
 
     if (!lanes.length) {
+      setLaneProfileAvailable(false);
       runtime.selectedLaneProfileLane = null;
       elements.gelLaneProfileSelect.disabled = true;
       elements.gelLaneProfileSelect.innerHTML = '<option value="">Select lane</option>';
@@ -257,10 +269,12 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     }) : null;
 
     if (!profile) {
+      setLaneProfileAvailable(false);
       renderLaneProfilePlaceholder(elements.gelLaneProfileChart);
       return;
     }
 
+    setLaneProfileAvailable(true);
     const selectedBandWindow = getTargetBandWindowForLane(overrides.laneSegmentation, selectedLane.laneIndex);
     renderLaneProfileSvg(
       elements.gelLaneProfileChart,
@@ -328,6 +342,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
   } = canvasDrawController;
 
   return {
+    destroy() { peakEditorController.destroy(); canvasDrawController.destroy(); },
     onCanvasHoverLeave,
     onCellTableCopy,
     onCanvasHoverMove,

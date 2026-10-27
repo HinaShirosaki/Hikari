@@ -25,7 +25,11 @@ export function createBandsCsv(report) {
       'lane_target_band_intensity',
       'lane_total_band_intensity',
       'lane_confidence',
-      'lane_confidence_label'
+      'lane_confidence_label',
+      'baseline_mode',
+      'intensity_status',
+      'baseline_sum',
+      'net_intensity'
     ].join(',')
   ];
 
@@ -54,7 +58,7 @@ export function createBandsCsv(report) {
         lane.targetBandIntensity ?? '',
         lane.totalBandIntensity ?? '',
         lane.confidence?.score ?? '',
-        lane.confidence?.label ?? ''
+        lane.confidence?.label ?? '', '', '', '', ''
       ].map(escapeCsv).join(','));
       return;
     }
@@ -83,7 +87,11 @@ export function createBandsCsv(report) {
         lane.targetBandIntensity ?? '',
         lane.totalBandIntensity ?? '',
         lane.confidence?.score ?? '',
-        lane.confidence?.label ?? ''
+        lane.confidence?.label ?? '',
+        band.baselineMode || '',
+        band.intensityStatus || '',
+        band.baselineSum ?? '',
+        band.netIntensity ?? ''
       ].map(escapeCsv).join(','));
     });
   });

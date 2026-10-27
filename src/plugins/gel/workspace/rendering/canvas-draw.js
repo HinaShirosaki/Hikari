@@ -1,3 +1,4 @@
+import { createGelCanvasSurface } from './canvas-surface.js';
 import { buildLanesFromManualSegmentation } from '../analysis/analysis-core.js';
 import {
   clamp,
@@ -16,6 +17,8 @@ import {
   formatIntensity,
   SNR_THRESHOLD
 } from './cell-table.js';
+
+const DETECTED_EDGE_COLOR = 'rgba(250, 255, 64, 0.95)';
 
 export function selectViewerBaseImageData(currentImage, preprocessed = null, viewerMode = 'original') {
   if (viewerMode === 'processed' && preprocessed?.previewImageData) {
@@ -39,6 +42,9 @@ export function createCanvasDrawController({
   setLaneProfileHover
 }) {
   const { onCellTableCopy, renderCellTable } = createCellTableController({ runtime, elements, safeText, deps });
+  let pixelSize = 1;
+  const uiPx = value => value * pixelSize;
+  const surface = createGelCanvasSurface(elements.gelCanvas, () => drawCanvas());
 
   function strokeLaneOutline(context, lane, height) {
     const vertices = getLaneVertexArray(lane);
@@ -69,17 +75,40 @@ export function createCanvasDrawController({
     return true;
   }
 
-  function strokeLaneWindow(context, lane, top, bottom) {
-    const topSegment = getLaneRowSegment(lane, top, runtime.currentImage?.height);
-    const bottomSegment = getLaneRowSegment(lane, bottom, runtime.currentImage?.height);
+  // `from`/`to` limit the box to that span of each lane row (0 = left side, 1 = right).
+  function strokeLaneWindow(context, lane, top, bottom, from = 0, to = 1) {
+    const ends = (row) => {
+      const { left, right } = getLaneRowSegment(lane, row, runtime.currentImage?.height);
+      const at = s => [left.x + ((right.x - left.x) * s) + 0.5, left.y + ((right.y - left.y) * s) + 0.5];
+      return [at(from), at(to)];
+    };
+    const [topLeft, topRight] = ends(top);
+    const [bottomLeft, bottomRight] = ends(bottom);
     context.beginPath();
-    context.moveTo(topSegment.left.x + 0.5, topSegment.left.y + 0.5);
-    context.lineTo(topSegment.right.x + 0.5, topSegment.right.y + 0.5);
-    context.lineTo(bottomSegment.right.x + 0.5, bottomSegment.right.y + 0.5);
-    context.lineTo(bottomSegment.left.x + 0.5, bottomSegment.left.y + 0.5);
+    context.moveTo(...topLeft);
+    context.lineTo(...topRight);
+    context.lineTo(...bottomRight);
+    context.lineTo(...bottomLeft);
     context.closePath();
     context.stroke();
     return true;
+  }
+
+  // The band's convolution-found edges, padded just outside so the outline
+  // never covers band pixels.
+  function strokeDetectedEdges(context, lane, edges) {
+    const pad = uiPx(2);
+    const { left, right } = getLaneRowSegment(lane, edges.top, runtime.currentImage.height);
+    const padAcross = pad / Math.max(1, Math.hypot(right.x - left.x, right.y - left.y));
+    const top = edges.top - pad;
+    context.save();
+    context.setLineDash([]);
+    context.strokeStyle = DETECTED_EDGE_COLOR;
+    context.lineWidth = uiPx(2);
+    context.lineJoin = 'round';
+    strokeLaneWindow(context, lane, top, Math.max(edges.bottom + pad, top + 1),
+      Math.max(0, edges.left - padAcross), Math.min(1, edges.right + padAcross));
+    context.restore();
   }
 
   function drawLaneVertexHandles(context, lanes, savedLaneVertices = []) {
@@ -93,9 +122,9 @@ export function createCanvasDrawController({
       return;
     }
     context.save();
-    context.lineWidth = 1.7;
+    context.lineWidth = uiPx(1.7);
     context.strokeStyle = 'rgba(14, 165, 233, 0.95)';
-    context.setLineDash([5, 3]);
+    context.setLineDash([5, 3].map(uiPx));
     outlineLanes.forEach((lane) => {
       strokeLaneOutline(context, lane, runtime.currentImage.height);
     });
@@ -104,19 +133,19 @@ export function createCanvasDrawController({
       return;
     }
     context.setLineDash([]);
-    context.font = '11px "SF Pro Text", "Segoe UI", sans-serif';
+    context.font = `${uiPx(11)}px "SF Pro Text", "Segoe UI", sans-serif`;
     outlineLanes.forEach((lane) => {
       const points = getLaneVertexArray(lane);
       points.forEach((point, index) => {
         context.beginPath();
-        context.arc(point.x + 0.5, point.y + 0.5, 5, 0, Math.PI * 2);
+        context.arc(point.x + 0.5, point.y + 0.5, uiPx(5), 0, Math.PI * 2);
         context.fillStyle = 'rgba(14, 165, 233, 0.95)';
         context.fill();
-        context.lineWidth = 1.5;
+        context.lineWidth = uiPx(1.5);
         context.strokeStyle = 'rgba(255, 255, 255, 0.95)';
         context.stroke();
         context.fillStyle = 'rgba(255, 255, 255, 0.98)';
-        context.fillText(String(index + 1), point.x + 7, point.y - 5);
+        context.fillText(String(index + 1), point.x + uiPx(7), point.y - uiPx(5));
       });
     });
     context.restore();
@@ -128,9 +157,9 @@ export function createCanvasDrawController({
     const y = Math.max(0, Math.min(runtime.currentImage.height - 1, Math.round(runtime.laneProfileHoverY)));
     const segment = getLaneRowSegment(lastProfileLane, y, runtime.currentImage.height);
     context.save();
-    context.lineWidth = 1.4;
+    context.lineWidth = uiPx(1.4);
     context.strokeStyle = 'rgba(250, 204, 21, 0.95)';
-    context.setLineDash([3, 3]);
+    context.setLineDash([3, 3].map(uiPx));
     context.beginPath();
     context.moveTo(segment.left.x + 0.5, segment.left.y + 0.5);
     context.lineTo(segment.right.x + 0.5, segment.right.y + 0.5);
@@ -247,7 +276,7 @@ export function createCanvasDrawController({
       return;
     }
     context.save();
-    context.font = '11px "SF Pro Text", "Segoe UI", sans-serif';
+    context.font = `${uiPx(11)}px "SF Pro Text", "Segoe UI", sans-serif`;
     reportLanes.forEach((lane) => {
       const cell = lane.targetBand;
       if (!cell) {
@@ -256,46 +285,39 @@ export function createCanvasDrawController({
       const top = clamp(Math.min(cell.top, cell.bottom), 0, runtime.currentImage.height - 1);
       const bottom = clamp(Math.max(cell.top, cell.bottom), top + 1, runtime.currentImage.height - 1);
       const hasBand = Number(cell.snr) >= SNR_THRESHOLD;
-      context.lineWidth = 1.4;
       if (hasBand) {
-        context.setLineDash([]);
-        context.strokeStyle = 'rgba(34, 197, 94, 0.95)';
+        strokeDetectedEdges(context, lane, cell.edges || { top, bottom, left: 0, right: 1 });
       } else {
-        context.setLineDash([4, 3]);
+        context.lineWidth = uiPx(1.4);
+        context.setLineDash([4, 3].map(uiPx));
         context.strokeStyle = 'rgba(148, 163, 184, 0.85)';
+        strokeLaneWindow(context, lane, top, bottom);
       }
-      strokeLaneWindow(context, lane, top, bottom);
       context.setLineDash([]);
-      const label = formatIntensity(Number(cell.correctedIntensity));
+      const label = cell.intensityStatus === 'unavailable' ? 'Review bg' : formatIntensity(Number(cell.correctedIntensity));
       const topSegment = getLaneRowSegment(lane, top, runtime.currentImage.height);
-      context.fillStyle = hasBand ? 'rgba(34, 197, 94, 0.95)' : 'rgba(148, 163, 184, 0.9)';
-      const textY = Math.max(10, topSegment.left.y - 2);
-      context.fillText(label, topSegment.left.x + 2, textY);
+      context.fillStyle = cell.intensityStatus && cell.intensityStatus !== 'ok' ? 'rgba(180, 83, 9, 0.95)'
+        : hasBand ? 'rgba(34, 197, 94, 0.95)' : 'rgba(148, 163, 184, 0.9)';
+      const textY = Math.max(uiPx(10), topSegment.left.y - uiPx(2));
+      context.fillText(label, topSegment.left.x + uiPx(2), textY);
     });
     context.restore();
   }
 
   function drawCanvas() {
-    if (!elements.gelCanvas) {
+    if (!elements.gelCanvas || !runtime.currentImage) {
+      surface.clear();
       return;
     }
-    const context = elements.gelCanvas.getContext('2d');
-    if (!runtime.currentImage || !context) {
-      elements.gelCanvas.width = 1;
-      elements.gelCanvas.height = 1;
-      context?.clearRect(0, 0, 1, 1);
-      return;
-    }
-
-    elements.gelCanvas.width = runtime.currentImage.width;
-    elements.gelCanvas.height = runtime.currentImage.height;
     const viewerMode = runtime.viewerMode === 'processed' ? 'processed' : 'original';
     const preprocessed = viewerMode === 'processed'
-      ? deps.getPreprocessedImageForCurrentSettings?.()
-      : null;
+      ? deps.getPreprocessedImageForCurrentSettings?.() : null;
     const baseImageData = selectViewerBaseImageData(runtime.currentImage, preprocessed, viewerMode);
-    context.putImageData(baseImageData, 0, 0);
+    surface.paint(baseImageData, drawOverlays, runtime.cropperActive || elements.gelCanvas.hidden);
+  }
 
+  function drawOverlays(context, scale) {
+    pixelSize = scale;
     const overrides = normalizeManualOverrides(runtime.manualOverrides);
     const segmentation = overrides.laneSegmentation || {};
     const segmentationLanes = buildLanesFromManualSegmentation(
@@ -316,7 +338,7 @@ export function createCanvasDrawController({
       || (Array.isArray(segmentation.dividers) && segmentation.dividers.length)
     ) {
       context.save();
-      context.lineWidth = 1.4;
+      context.lineWidth = uiPx(1.4);
       if (showStraightDividers && Number.isFinite(segmentation.gelLeft)) {
         const x = clamp(segmentation.gelLeft, 0, runtime.currentImage.width - 1);
         context.strokeStyle = 'rgba(255, 214, 10, 0.95)';
@@ -362,7 +384,7 @@ export function createCanvasDrawController({
         const bottom = clamp(Math.max(segmentation.bandTop, segmentation.bandBottom), top + 1, runtime.currentImage.height - 1);
         segmentationLanes.forEach((lane) => {
           context.strokeStyle = 'rgba(34, 197, 94, 0.95)';
-          context.lineWidth = 1.2;
+          context.lineWidth = uiPx(1.2);
           strokeLaneWindow(context, lane, top, bottom);
         });
       }
@@ -378,7 +400,7 @@ export function createCanvasDrawController({
           if (!window) {
             return;
           }
-          context.lineWidth = 1.4;
+          context.lineWidth = uiPx(1.4);
           context.strokeStyle = 'rgba(56, 189, 248, 0.95)';
           if (Number.isFinite(window.bandTop)) {
             const y = clamp(window.bandTop, 0, runtime.currentImage.height - 1);
@@ -392,7 +414,7 @@ export function createCanvasDrawController({
             const top = clamp(Math.min(window.bandTop, window.bandBottom), 0, runtime.currentImage.height - 1);
             const bottom = clamp(Math.max(window.bandTop, window.bandBottom), top + 1, runtime.currentImage.height - 1);
             context.strokeStyle = 'rgba(34, 197, 94, 0.95)';
-            context.lineWidth = 1.2;
+            context.lineWidth = uiPx(1.2);
             strokeLaneWindow(context, lane, top, bottom);
           }
         });
@@ -403,7 +425,7 @@ export function createCanvasDrawController({
         const ladder = segmentationLanes.find((lane) => lane.index + 1 === overrides.ladderLane);
         if (ladder) {
           context.strokeStyle = 'rgba(255, 197, 61, 0.98)';
-          context.lineWidth = 2.2;
+          context.lineWidth = uiPx(2.2);
           strokeLaneOutline(context, ladder, runtime.currentImage.height);
         }
       }
@@ -417,7 +439,7 @@ export function createCanvasDrawController({
           ? getLaneRowSegment(ladderLane, y, runtime.currentImage.height)
           : null;
         context.strokeStyle = 'rgba(255, 197, 61, 0.98)';
-        context.lineWidth = 1.2;
+        context.lineWidth = uiPx(1.2);
         if (ladderLane) {
           strokeLaneRowSegment(context, ladderLane, y);
         } else {
@@ -427,11 +449,11 @@ export function createCanvasDrawController({
           context.stroke();
         }
         context.fillStyle = 'rgba(255, 197, 61, 0.98)';
-        context.font = '11px "SF Pro Text", "Segoe UI", sans-serif';
+        context.font = `${uiPx(11)}px "SF Pro Text", "Segoe UI", sans-serif`;
         context.fillText(
           `${round(item.mw, 1)}kDa`,
-          labelSegment ? labelSegment.right.x + 3 : 4,
-          labelSegment ? labelSegment.right.y - 3 : Math.max(10, y - 3)
+          labelSegment ? labelSegment.right.x + uiPx(3) : uiPx(4),
+          labelSegment ? labelSegment.right.y - uiPx(3) : Math.max(uiPx(10), y - uiPx(3))
         );
       });
       context.restore();
@@ -446,25 +468,26 @@ export function createCanvasDrawController({
         const isLadder = (overrides.ladderLane === lane.laneIndex)
           || (runtime.currentReport.calibration?.ladderLane === lane.laneIndex);
         context.strokeStyle = isLadder ? 'rgba(255, 197, 61, 0.95)' : 'rgba(46, 173, 255, 0.9)';
-        context.lineWidth = isLadder ? 2.2 : 1.6;
+        context.lineWidth = uiPx(isLadder ? 2.2 : 1.6);
         if (!vertexToolActive) {
           strokeLaneOutline(context, lane, runtime.currentImage.height);
         }
 
         const labelSegment = getLaneRowSegment(lane, 0, runtime.currentImage.height);
         context.fillStyle = isLadder ? 'rgba(255, 197, 61, 0.95)' : 'rgba(46, 173, 255, 0.95)';
-        context.font = '12px "SF Pro Text", "Segoe UI", sans-serif';
-        context.fillText(String(lane.laneIndex), labelSegment.left.x + 2, Math.max(12, labelSegment.left.y + 12));
+        context.font = `${uiPx(12)}px "SF Pro Text", "Segoe UI", sans-serif`;
+        context.fillText(String(lane.laneIndex), labelSegment.left.x + uiPx(2), Math.max(uiPx(12), labelSegment.left.y + uiPx(12)));
 
         lane.bands.forEach((band) => {
-          context.strokeStyle = band.manual ? 'rgba(34, 197, 94, 0.98)' : 'rgba(255, 99, 132, 0.95)';
-          context.lineWidth = 1.3;
-          strokeLaneRowSegment(context, lane, band.pixelY);
+          // Each band shows as its edge box; a center line would cover the band.
+          if (band.measurementMode === 'manual-point' && band.edges) {
+            strokeDetectedEdges(context, lane, band.edges);
+          }
 
           if (Number.isFinite(band.estimatedMw)) {
             const bandSegment = getLaneRowSegment(lane, band.pixelY, runtime.currentImage.height);
             context.fillStyle = band.manualMw ? 'rgba(34, 197, 94, 0.95)' : 'rgba(255, 99, 132, 0.92)';
-            context.fillText(`${round(band.estimatedMw, 1)}kDa`, bandSegment.right.x + 3, bandSegment.right.y - 1);
+            context.fillText(`${round(band.estimatedMw, 1)}kDa`, bandSegment.right.x + uiPx(3), bandSegment.right.y - uiPx(1));
           }
         });
       });
@@ -483,6 +506,7 @@ export function createCanvasDrawController({
   }
 
   return {
+    destroy: surface.destroy,
     drawCanvas,
     onCellTableCopy,
     onCanvasHoverLeave,

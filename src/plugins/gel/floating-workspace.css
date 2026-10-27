@@ -1,4 +1,5 @@
 @import url('./tool-dock.css');
+@import url('./band-intensity.css');
 
 /* Navigation on the left, canvas in the center, actions and editing tools on the right. */
 body.plugin-gel,
@@ -332,21 +333,9 @@ body.plugin-gel #gel-view.is-active {
 
 #gel-view .gel-floating-head h3 { margin: 0; font-size: 0.88rem; }
 #gel-view .gel-floating-head > div:first-child { flex: 1; min-width: 0; }
-#gel-view .gel-floating-head .gel-window-close,
 #gel-view .gel-floating-head .app-dialog-close-btn {
   position: static;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 28px;
-  width: 28px;
-  height: 28px;
-  min-height: 28px;
-  padding: 4px;
-  border: 0;
-  border-radius: 3px;
-  color: var(--theme-text-muted);
-  background: transparent;
+  margin: 0;
 }
 
 #gel-view .gel-lane-profile-picker { display: flex; align-items: center; min-width: 0; }

@@ -25,8 +25,8 @@ async function main() {
   const temp = process.argv[2];
   app.setPath('userData', path.join(temp, 'profile'));
   await app.whenReady();
-  const dir = 'src/plugins/gel/';
-  const url = file => pathToFileURL(path.join(root, dir, file)).href;
+  const pluginRoot = process.env.HIKARI_GEL_TEST_PLUGIN || path.join(root, 'src/plugins/gel');
+  const url = file => pathToFileURL(path.join(pluginRoot, file)).href;
   const output = path.join(root, 'artifacts/gel-floating-workspace');
   fs.mkdirSync(output, { recursive: true });
   const fixture = path.join(temp, 'index.html');
@@ -36,7 +36,7 @@ async function main() {
     'vendor/css/overrides/cross-view-fixes.css', 'vendor/css/overrides/left-rail-template.css',
     'vendor/css/overrides/folder-tree-template.css', 'vendor/css/overrides/universal-left-rail-lists.css',
     'vendor/css/overrides/universal-dialogs.css', 'style.css', 'floating-workspace.css'];
-  const markup = fs.readFileSync(path.join(root, dir, 'vendor/gel-view.html'), 'utf8').replace('class="view"', 'class="view is-active"');
+  const markup = fs.readFileSync(path.join(pluginRoot, 'vendor/gel-view.html'), 'utf8').replace('class="view"', 'class="view is-active"');
   fs.writeFileSync(fixture, `<!doctype html><html><head><meta charset="utf-8">
     ${styles.map(file => `<link rel="stylesheet" href="${url(file)}">`).join('\n')}
     <script src="${url('vendor/cropperjs/cropper.min.js')}"></script>
@@ -49,6 +49,7 @@ async function main() {
         writeJsonFile:async data=>({ok:true,filePath:data.targetFolder+'/'+data.fileName,relativePath:data.targetFolder+'/'+data.fileName})
       };
       window.gelState = {gelAnalyses:[],settings:{storagePath:'.'}};
+      Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{window.qaCopiedText=text}}});
       window.controller = initGelAnalysis({state:gelState,persist:async()=>{},createId:()=>crypto.randomUUID(),
         safeText:value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),document});
       controller.render();
@@ -106,6 +107,17 @@ async function main() {
     await waitFor('Boolean(window.qaReady)');
     await exec('loadGel()');
     await waitFor("!document.getElementById('gel-crop-mode-btn').disabled");
+    await exec("click('gel-tool-results-btn')");
+    await settle();
+    const emptyResults=await exec("({chart:document.getElementById('gel-lane-profile-chart').checkVisibility(),hint:document.getElementById('gel-lane-profile-empty').checkVisibility(),height:rect('gel-tools-panel').height})");
+    assert.equal(emptyResults.chart,false,'An unmeasured lane profile does not show a large empty chart');
+    assert.equal(emptyResults.hint,true,'Results shows a compact next-step prompt');
+    assert.ok(emptyResults.height<300,'The empty Results card stays compact');
+    fs.writeFileSync(path.join(output,'results-empty.png'),(await win.webContents.capturePage()).toPNG());
+    await exec("click('gel-open-band-intensity-btn')");
+    assert.equal(await exec("document.getElementById('gel-band-intensity-empty').checkVisibility()"),true,'An unmeasured gel explains how to get intensities');
+    assert.equal(await exec("document.getElementById('gel-cell-table-copy-btn').disabled"),true,'Empty results cannot overwrite the clipboard');
+    await exec("document.querySelector('#gel-cell-table-panel [data-gel-window-close]').click();click('gel-tool-image-btn')");
     // Navigation stays left; category icons sit to the right of their inspector.
     const layout=await exec(`(()=>{const rail=document.querySelector('.gel-setup-panel'),status=document.getElementById('gel-status');return {toolbars:document.querySelectorAll('.gel-viewer-panel [role=toolbar]').length,navigationTools:rail.querySelectorAll('.gel-tool-group').length,sections:[...document.querySelectorAll('[data-gel-tool-category]')].map(s=>s.getAttribute('aria-label')),hint:status.textContent.trim(),hintOnScreen:status.getBoundingClientRect().width>1,card:document.querySelector('.gel-viewer-card').getBoundingClientRect().toJSON(),panel:rect('gel-tools-panel'),stage:rect('gel-viewer-stage')}})()`);
     assert.equal(layout.toolbars,1,'The viewer keeps a single toolbar');
@@ -121,6 +133,7 @@ async function main() {
     assert.equal(await exec("document.getElementById('gel-processed-preview').checked"),true,'Opening Processed previews the enhancement settings');
     assert.equal(await exec("document.getElementById('gel-denoise-strength').checkVisibility() && document.getElementById('gel-contrast-strength').checkVisibility()"),true,'Both enhancement sliders belong to the Processed panel');
     await exec("window.enhancedPreview=document.getElementById('gel-canvas').toDataURL();{const c=document.getElementById('gel-contrast-strength');c.value='60';c.dispatchEvent(new Event('input',{bubbles:true}))}");
+    await waitFor("document.getElementById('gel-canvas').toDataURL()!==enhancedPreview");
     assert.equal(await exec("document.getElementById('gel-canvas').toDataURL()!==enhancedPreview"),true,'Changing contrast updates the processed preview');
     await exec("click('gel-processed-preview')");
     assert.equal(await exec("document.getElementById('gel-canvas').toDataURL()===originalPreview"),true,'Turning processed preview off shows the original image');
@@ -130,9 +143,15 @@ async function main() {
     assert.equal(await exec("document.getElementById('gel-processed-preview').checked"),true,'Collapsing tools preserves the processed preview');
     await exec("click('gel-process-image-btn');{const c=document.getElementById('gel-contrast-strength');c.value='100';c.dispatchEvent(new Event('input',{bubbles:true}))}click('gel-processed-preview');click('gel-tool-image-btn')");
     const stageWithTools=await exec("rect('gel-viewer-stage')");
+    const gelWithTools=await exec("rect('gel-canvas')");
+    fs.writeFileSync(path.join(output,'tools-open.png'),(await win.webContents.capturePage()).toPNG());
     await exec("click('gel-tool-image-btn')"); await settle();
     assert.equal(await exec("document.getElementById('gel-tools-panel').hidden"),true,'Clicking the selected category collapses its panel');
-    assert.ok((await exec("rect('gel-viewer-stage')")).width>stageWithTools.width+200,'Collapsing tools makes more room for the canvas');
+    for (const [id, before] of [['gel-viewer-stage',stageWithTools],['gel-canvas',gelWithTools]]) {
+      const after=await exec(`rect('${id}')`);
+      for (const key of ['left','top','width','height']) assert.ok(Math.abs(after[key]-before[key])<1,`Collapsing tools preserves ${id} ${key}`);
+    }
+    fs.writeFileSync(path.join(output,'tools-closed.png'),(await win.webContents.capturePage()).toPNG());
     await exec("click('gel-tool-lanes-btn')"); await settle();
     assert.deepEqual(await exec("[...document.querySelectorAll('[data-gel-tool-panel]')].filter(p=>p.checkVisibility()).map(p=>p.dataset.gelToolPanel)"),['lanes'],'Category selection shows just its tools');
     assert.equal(await exec("document.getElementById('gel-tool-lanes-btn').getAttribute('aria-pressed')"),'true');
@@ -291,6 +310,10 @@ async function main() {
     await exec("dismissMw();click('gel-tool-ladder-mw-btn');document.body.classList.remove('theme-night')");
     assert.ok(await exec("document.getElementById('gel-lane-profile-select').options.length")>1,'The lane profile renders inline in Results');
     await exec("click('gel-tool-results-btn');document.getElementById('gel-lane-profile-select').focus()");
+    assert.equal(await exec("document.getElementById('gel-lane-profile-chart').checkVisibility()"),true,'Available lane data reveals the profile');
+    assert.equal(await exec("document.getElementById('gel-lane-profile-empty').hidden"),true);
+    await settle();
+    fs.writeFileSync(path.join(output,'results-profile.png'),(await win.webContents.capturePage()).toPNG());
     assert.ok(await exec("(()=>{const tools=document.querySelector('.gel-tools-panel');return tools.scrollTop===0&&tools.scrollHeight<=tools.clientHeight+1})()"),'Only the tool fields scroll; Save stays pinned');
     await exec("click('gel-open-lane-table-btn');click('gel-add-table-btn')");
     await settle();
@@ -336,8 +359,38 @@ async function main() {
     assert.ok(await exec("(()=>{const body=document.querySelector('.gel-lane-table-body');return body.scrollHeight>body.clientHeight})()"),'Long tables scroll inside the dock');
     await exec("{click('gel-tool-band-top-btn');const c=rect('gel-canvas');document.getElementById('gel-canvas').dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:c.x+c.width*.4,clientY:c.y+c.height*.55}));if(document.getElementById('gel-tool-band-bottom-btn').getAttribute('aria-pressed')!=='true')throw new Error('Top did not hand off to Bottom');document.getElementById('gel-canvas').dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:c.x+c.width*.4,clientY:c.y+c.height*.66}));}");
     await waitFor("document.querySelectorAll('#gel-cell-table-host tbody tr').length > 0");
-    assert.equal(await exec("document.getElementById('gel-cell-table-copy-btn').disabled"),false,'Band intensities render inline in Results');
-    assert.equal(await exec("document.querySelectorAll('[data-gel-window]').length"),1,'The peak editor is the only floating window');
+    assert.equal(await exec("document.getElementById('gel-cell-table-copy-btn').disabled"),false,'Band intensities enable table copying');
+    assert.equal(await exec("document.getElementById('gel-cell-table-panel').hidden"),true,'Measurements do not open a window automatically');
+    assert.equal(await exec("document.querySelectorAll('[data-gel-window]').length"),2,'Band intensity and Peak editor are floating windows');
+    assert.equal(await exec("document.getElementById('gel-tool-page-results').contains(document.getElementById('gel-cell-table-host'))"),false,'The table is no longer squeezed into Results');
+    const intensityCanvasBefore=await exec("rect('gel-canvas')");
+    await exec("click('gel-open-band-intensity-btn')");
+    await settle();
+    sameRect(intensityCanvasBefore,await exec("rect('gel-canvas')"),'Opening Band intensity');
+    const intensity=await exec(`(()=>{const panel=document.getElementById('gel-cell-table-panel'),chart=document.getElementById('gel-band-intensity-chart'),table=document.getElementById('gel-cell-table-host');return {hidden:panel.hidden,modal:panel.getAttribute('aria-modal'),chartVisible:chart.checkVisibility(),chart:chart.getBoundingClientRect().toJSON(),table:table.getBoundingClientRect().toJSON(),rows:table.querySelectorAll('tbody tr').length,series:chart.querySelectorAll('.gel-intensity-series').length}})()`);
+    assert.equal(intensity.hidden,false);
+    assert.equal(intensity.modal,'false');
+    assert.equal(intensity.chartVisible,true,'The SVG chart is visibly rendered');
+    assert.ok(intensity.chart.height>=200,'The graph has room for values and lane labels');
+    assert.ok(intensity.chart.bottom<intensity.table.top,'The bar graph comes before the table');
+    assert.equal(intensity.series,intensity.rows,'The graph and table cover the same lanes');
+    await exec("click('gel-cell-table-copy-btn')");
+    await waitFor("document.getElementById('gel-cell-table-copy-status').textContent==='Table copied.'");
+    assert.equal(await exec('qaCopiedText'),await exec("[...document.querySelectorAll('#gel-cell-table-host tr')].map(row=>[...row.cells].map(cell=>cell.textContent.trim()).join('\\t')).join('\\n')"),'Copy includes every header and row');
+    await exec("{const input=document.querySelector('[data-gel-table-role=value]');input.value='Control <A>';input.dispatchEvent(new Event('input',{bubbles:true}))}");
+    assert.match(await exec("document.querySelector('#gel-band-intensity-chart .gel-intensity-series title').textContent"),/Control <A>/,'An open graph reflects updated lane labels');
+    const intensityBefore=await exec("rect('gel-cell-table-panel')");
+    await exec("{const h=document.querySelector('#gel-cell-table-panel [data-gel-window-handle]');h.focus();h.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}))}");
+    assert.ok((await exec("rect('gel-cell-table-panel')")).x>intensityBefore.x,'Band intensity can be moved without changing the gel');
+    await exec("document.querySelector('#gel-cell-table-panel [data-gel-window-handle]').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))");
+    assert.equal(await exec("document.getElementById('gel-cell-table-panel').hidden"),true);
+    assert.equal(await exec("document.activeElement.id"),'gel-open-band-intensity-btn','Closing restores focus to Band intensity');
+    await exec("click('gel-open-band-intensity-btn')");
+    await exec("click('gel-open-peak-editor-btn')");
+    await settle();
+    await exec("document.querySelector('#gel-peak-editor-overlay [data-gel-window-handle]').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))");
+    assert.equal(await exec("document.getElementById('gel-peak-editor-overlay').hidden"),true,'Escape closes the front window');
+    assert.equal(await exec("document.getElementById('gel-cell-table-panel').hidden"),false,'Escape preserves the window underneath');
     await exec("click('gel-open-peak-editor-btn')");
     await settle();
     const peakBefore = await exec("rect('gel-peak-editor-overlay')");
@@ -352,23 +405,48 @@ async function main() {
     const dragged = await exec("rect('gel-peak-editor-overlay')");
     assert.ok(dragged.x>handle.x,'Pointer dragging moves the window within the available canvas bounds');
     await exec("click('gel-peak-editor-close-btn')");
-    await exec("document.getElementById('gel-cell-table-panel').scrollIntoView({block:'center'})");
+    await exec("document.querySelector('.gel-band-intensity-body').scrollTop=0");
     // Rail buttons scrolled into view finish their theme transition late; capture the settled look.
     await new Promise(resolve=>setTimeout(resolve,350));
     fs.writeFileSync(path.join(output,'workspace.png'),(await win.webContents.capturePage()).toPNG());
+    await exec("document.body.classList.add('theme-night')");
+    await new Promise(resolve=>setTimeout(resolve,350));
+    fs.writeFileSync(path.join(output,'band-intensity-night.png'),(await win.webContents.capturePage()).toPNG());
+    await exec("document.body.classList.remove('theme-night')");
+    await exec("click('gel-close-lane-table-btn');document.querySelector('.gel-band-intensity-body').scrollTop=0");
+    await settle();
+    await new Promise(resolve=>setTimeout(resolve,350));
+    fs.writeFileSync(path.join(output,'band-intensity.png'),(await win.webContents.capturePage()).toPNG());
+    await exec("click('gel-open-lane-table-btn')");
     // Keep a window open through the resize checks so its bounds are covered.
     await exec("click('gel-open-peak-editor-btn')");
     for (const [width,height] of [[1400,900],[1024,768],[800,700],[600,800]]) {
       win.setSize(width,height);
       await settle();
-      const sizes=await exec(`(()=>{const main=document.querySelector('.gel-main'),canvas=rect('gel-canvas'),stage=rect('gel-viewer-stage'),layer=document.querySelector('.gel-floating-layer').getBoundingClientRect();return {client:main.clientHeight,scroll:main.scrollHeight,canvas,stage,layer:layer.toJSON(),windows:[...document.querySelectorAll('[data-gel-window]')].filter(e=>!e.hidden).map(e=>e.getBoundingClientRect().toJSON())}})()`);
+      const sizes=await exec(`(()=>{const main=document.querySelector('.gel-main'),canvas=rect('gel-canvas'),stage=rect('gel-viewer-stage'),layer=document.querySelector('.gel-floating-layer').getBoundingClientRect();return {client:main.clientHeight,scroll:main.scrollHeight,canvas,stage,layer:layer.toJSON(),windows:[...document.querySelectorAll('[data-gel-window]')].filter(e=>!e.hidden).map(e=>({rect:e.getBoundingClientRect().toJSON(),layer:e.parentElement.getBoundingClientRect().toJSON()}))}})()`);
       if (width > 760) assert.ok(sizes.scroll<=sizes.client+1,`No main scrolling at ${width}×${height}`);
       assert.ok(await exec("(()=>{const main=document.querySelector('.gel-main');return main.scrollWidth<=main.clientWidth+1})()"),`No horizontal overflow at ${width}×${height}`);
       const tools = await exec("({rail:document.querySelector('.gel-viewer-card').getBoundingClientRect().toJSON(),panel:rect('gel-tools-panel'),width:innerWidth,height:innerHeight})");
       assert.ok(tools.panel.left>=0&&tools.panel.right<=tools.rail.left&&tools.panel.bottom<=tools.height+1&&tools.rail.right<=tools.width,`Tool panel stays beside the icon rail at ${width}×${height}: ${JSON.stringify(tools)}`);
+      const resultsLayout=await exec("({band:rect('gel-open-band-intensity-btn'),peak:rect('gel-open-peak-editor-btn'),profile:rect('gel-lane-profile-panel'),picker:rect('gel-lane-profile-select')})");
+      assert.ok(resultsLayout.band.bottom<=resultsLayout.peak.top&&resultsLayout.peak.bottom<resultsLayout.profile.top,`Result windows are grouped above the profile at ${width}×${height}`);
+      assert.ok(Math.abs(resultsLayout.picker.width-resultsLayout.profile.width)<2,`Lane selector uses the card width at ${width}×${height}`);
+      await exec("document.querySelector('.gel-tool-panel-close').click()"); await settle();
+      assert.equal(await exec("document.getElementById('gel-tools-panel').hidden"),true,'The close button hides the tool panel');
+      const closed=await exec("rect('gel-canvas')");
+      for (const key of ['left','top','width','height']) assert.ok(Math.abs(closed[key]-sizes.canvas[key])<1,`Closing tools preserves gel ${key} at ${width}×${height}`);
+      for (const id of ['gel-tool-image-btn','gel-tool-lanes-btn','gel-tool-ladder-btn','gel-tool-bands-btn','gel-tool-results-btn']) {
+        await exec(`click('${id}')`); await settle();
+        const after=await exec("rect('gel-canvas')");
+        for (const key of ['left','top','width','height']) assert.ok(Math.abs(after[key]-sizes.canvas[key])<1,`Opening ${id} preserves gel ${key} at ${width}×${height}`);
+      }
       assert.ok(sizes.canvas.bottom<=sizes.stage.bottom+1,'Gel fits stage height');
       await checkDock();
-      sizes.windows.forEach(rect=>{assert.ok(rect.left>=sizes.layer.left-1&&rect.right<=sizes.layer.right+1,'Window fits width');assert.ok(rect.top>=sizes.layer.top-1&&rect.bottom<=sizes.layer.bottom+1,'Window fits height');});
+      sizes.windows.forEach(({rect,layer})=>{assert.ok(rect.left>=layer.left-1&&rect.right<=layer.right+1,'Window fits width');assert.ok(rect.top>=layer.top-1&&rect.bottom<=layer.bottom+1,'Window fits height');});
+      await exec("document.getElementById('gel-cell-table-copy-btn').scrollIntoView({block:'nearest'})");
+      await settle();
+      const copyBounds=await exec("({button:rect('gel-cell-table-copy-btn'),panel:rect('gel-cell-table-panel')})");
+      assert.ok(copyBounds.button.top>=copyBounds.panel.top&&copyBounds.button.bottom<=copyBounds.panel.bottom,`Copy remains reachable at ${width}×${height}: ${JSON.stringify(copyBounds)}`);
       await exec("click('gel-tool-ladder-mw-btn');gelPointer('click',.08,.98)");
       const entry=await exec("({box:rect('gel-ladder-mw-editor'),width:innerWidth,height:innerHeight,hidden:document.getElementById('gel-ladder-mw-editor').hidden})");
       assert.equal(entry.hidden,false,`MW box opens at ${width}×${height}`);
@@ -376,6 +454,7 @@ async function main() {
       await exec("dismissMw();click('gel-tool-ladder-mw-btn')");
     }
     win.setSize(1400,900);await settle();
+    await exec("document.querySelector('#gel-cell-table-panel [data-gel-window-close]').click()");
     const beforeCrop=await exec("rect('gel-canvas')");
     await exec("click('gel-peak-editor-close-btn');click('gel-crop-mode-btn')");
     await waitFor("Boolean(document.querySelector('.cropper-container'))");
@@ -389,9 +468,29 @@ async function main() {
     assert.deepEqual(await exec("[...document.querySelectorAll('[data-gel-tool-panel]')].filter(p=>p.checkVisibility()).map(p=>p.dataset.gelToolPanel)"),[],'Crop hides the category pages');
     assert.equal(await exec("document.getElementById('gel-crop-mode-btn').getAttribute('aria-pressed')"),'true','The Crop icon shows its mode');
     assert.equal(await exec("document.getElementById('gel-open-figure-btn').inert"),true,'Layout is unavailable until the active crop is finished');
+    const cropGeometry=()=>exec(`(()=>{const cropper=document.getElementById('gel-cropper-image').cropper;const image=cropper.getImageData();return {scale:image.width/image.naturalWidth,crop:cropper.getData(),box:cropper.getCropBoxData()}})()`);
+    const initialRotationGeometry=await cropGeometry();
+    async function assertRotationScale(label) {
+      const geometry=await cropGeometry();
+      assert.ok(Math.abs(geometry.scale-initialRotationGeometry.scale)<1e-9,`${label} preserves the gel's pixel scale: ${initialRotationGeometry.scale} → ${geometry.scale}`);
+      for(const key of ['width','height']) assert.ok(Math.abs(geometry.crop[key]-initialRotationGeometry.crop[key])<1e-6,`${label} preserves crop ${key}`);
+      return geometry;
+    }
     await exec("const a=document.getElementById('gel-crop-angle');a.value='5';a.dispatchEvent(new Event('input',{bubbles:true}))");
     assert.equal(await exec("document.getElementById('gel-cropper-image').cropper.getData().rotate"),5,'The straighten slider rotates the crop');
     assert.equal(await exec("document.getElementById('gel-crop-angle-value').textContent"),'5°');
+    await assertRotationScale('Straightening');
+    await exec("click('gel-crop-rotate-btn')");
+    const quarterRotationGeometry=await assertRotationScale('Quarter turn');
+    assert.equal(quarterRotationGeometry.crop.rotate,-85);
+    await settle();
+    fs.writeFileSync(path.join(output,'crop-rotation.png'),(await win.webContents.capturePage()).toPNG());
+    await exec("document.getElementById('gel-crop-angle').value='-5';document.getElementById('gel-crop-angle').dispatchEvent(new Event('input',{bubbles:true}))");
+    assert.equal((await assertRotationScale('Straightening after a quarter turn')).crop.rotate,-95);
+    for(let i=0;i<3;i++) {
+      await exec("click('gel-crop-rotate-btn')");
+      await assertRotationScale('Repeated quarter turns');
+    }
     await exec("click('gel-reset-crop-btn')");
     assert.equal(await exec("document.getElementById('gel-cropper-image').cropper.getData().rotate"),0,'Reset clears the rotation');
     const cropRect=()=>exec("document.querySelector('.cropper-crop-box').getBoundingClientRect().toJSON()");
@@ -404,6 +503,14 @@ async function main() {
       win.webContents.sendInputEvent({type:'mouseUp',button:'left',clickCount:1,x:origin.x+dx,y:origin.y+dy});
       await settle();
     }
+    await dragCropTarget('.cropper-face',320,0);
+    const draggedRotationGeometry=await assertRotationScale('Free rotation drag');
+    assert.equal(draggedRotationGeometry.crop.rotate,80,'Dragging the gel rotates it without zooming');
+    const rotatedOutput=await exec(`(()=>{const canvas=document.getElementById('gel-cropper-image').cropper.getCroppedCanvas();return {width:canvas.width,height:canvas.height}})()`);
+    assert.equal(rotatedOutput.width,Math.round(initialRotationGeometry.crop.width),'Rotation preserves the selected output width');
+    assert.equal(rotatedOutput.height,Math.round(initialRotationGeometry.crop.height),'Rotation preserves the selected output height');
+    fs.writeFileSync(path.join(output,'rotation-scale.json'),JSON.stringify({initial:initialRotationGeometry,quarterTurn:quarterRotationGeometry,dragged:draggedRotationGeometry,output:rotatedOutput},null,2));
+    await exec("click('gel-reset-crop-btn')");
     await dragCropTarget('.cropper-line.line-e',-70,0);
     const edgeCrop=await cropRect();
     assert.ok(edgeCrop.width<fullCrop.width-50,'The transparent edge target still resizes the crop');
@@ -421,17 +528,86 @@ async function main() {
     sameRect(beforeCrop,await exec("rect('gel-canvas')"),'Cancelling crop');
     await exec("document.body.classList.add('theme-night');click('gel-open-peak-editor-btn')");
     await settle();
-    await exec("const chart=document.getElementById('gel-peak-editor-chart');const bounds=chart.getBoundingClientRect();for(const fraction of [.48,.75])chart.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:bounds.x+bounds.width*fraction,clientY:bounds.y+bounds.height*.8}));");
+    await exec("const chart=document.getElementById('gel-peak-editor-chart');const bounds=chart.getBoundingClientRect();for(const row of [282,465])chart.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:bounds.x+16+row/609*(bounds.width-32),clientY:bounds.y+bounds.height*.8}));");
     await settle();
     assert.ok(await exec("document.querySelectorAll('#gel-peak-editor-table .tabulator-row').length")>0,'Peak editing produces integration rows in the floating window');
+    await waitFor("Boolean(document.querySelector('#gel-peak-editor-chart [data-band-baseline=manual]'))");
+    assert.equal(await exec("document.getElementById('gel-peak-editor-summary').checkVisibility()"),false,'Band integration omits the baseline instruction');
+    assert.ok(await exec("Boolean(document.querySelector('#gel-cell-table-host td[title=\"Manual baseline\"]'))"),'Band intensity updates from the Peak editor');
+    const manualValue=await exec("document.querySelector('#gel-cell-table-host td[title=\"Manual baseline\"]').textContent");
+    await exec("click('gel-peak-editor-clear-lane-btn')");
+    await waitFor("Boolean(document.querySelector('#gel-peak-editor-chart [data-band-baseline=auto]'))");
+    assert.equal(await exec("Boolean(document.querySelector('#gel-cell-table-host td[title=\"Manual baseline\"]'))"),false,'Clearing restores automatic background');
+    await exec("document.querySelector('#gel-peak-editor-overlay [data-gel-window-handle]').focus();controller.undo()");
+    await waitFor("Boolean(document.querySelector('#gel-peak-editor-chart [data-band-baseline=manual]'))");
+    assert.equal(await exec("document.querySelector('#gel-cell-table-host td[title=\"Manual baseline\"]').textContent"),manualValue,'Undo restores the manual measurement');
+    await exec('controller.redo()');
+    await waitFor("Boolean(document.querySelector('#gel-peak-editor-chart [data-band-baseline=auto]'))");
+    await exec('controller.undo()');
+    await waitFor("Boolean(document.querySelector('#gel-peak-editor-chart [data-band-baseline=manual]'))");
+    await exec("click('gel-peak-editor-clear-lane-btn')");
+    await waitFor("Boolean(document.querySelector('#gel-peak-editor-chart [data-band-baseline=auto]'))");
+    await exec("{const chart=document.getElementById('gel-peak-editor-chart'),b=chart.getBoundingClientRect();for(const row of [319,421])chart.dispatchEvent(new MouseEvent('click',{bubbles:true,clientX:b.x+16+row/609*(b.width-32),clientY:b.y+b.height*.8}))}");
+    await waitFor("Boolean(document.querySelector('#gel-cell-table-host .gel-intensity-review'))");
+    assert.match(await exec("document.querySelector('#gel-cell-table-host td[title=\"Manual baseline\"]').textContent"),/^-/,'A negative net value remains visible beside the review message');
+    await exec("click('gel-open-band-intensity-btn');click('gel-cell-table-copy-btn')");
+    await waitFor("document.getElementById('gel-cell-table-copy-status').textContent==='Table copied.'");
+    assert.doesNotMatch(await exec('qaCopiedText'),/Review background/,'The copyable intensity column remains numeric');
+    assert.ok(await exec("Boolean(document.querySelector('#gel-band-intensity-chart rect[data-review=true][data-value]'))"),'The graph marks review measurements');
+    fs.writeFileSync(path.join(output,'band-background-review.png'),(await win.webContents.capturePage()).toPNG());
+    await exec("document.querySelector('#gel-cell-table-panel [data-gel-window-close]').click();document.querySelector('#gel-peak-editor-overlay [data-gel-window-handle]').focus();controller.undo();controller.undo();controller.undo()");
+    await waitFor("Boolean(document.querySelector('#gel-peak-editor-chart [data-band-baseline=manual]'))");
     // Theme colors animate in the shared styles; inspect the settled appearance.
     await new Promise(resolve=>setTimeout(resolve,350));
     fs.writeFileSync(path.join(output,'peak-editor-night.png'),(await win.webContents.capturePage()).toPNG());
+    assert.equal(await exec("document.getElementById('gel-open-peak-editor-btn').textContent.trim()"),'Band integration');
+    assert.equal(await exec("document.getElementById('gel-peak-editor-title').textContent"),'Band integration');
+    for (const [width,height] of [[1400,900],[1024,768],[800,700],[600,800]]) {
+      win.setSize(width,height);await settle();
+      await waitFor("(()=>{const svg=document.getElementById('gel-peak-editor-chart'),b=svg.getBoundingClientRect();return Math.abs(svg.viewBox.baseVal.width-b.width)<1&&Math.abs(svg.viewBox.baseVal.height-b.height)<1})()");
+      const plotGeometry=await exec(`(()=>{const svg=document.getElementById('gel-peak-editor-chart'),b=svg.getBoundingClientRect(),path=svg.querySelector('.peak-editor-path').getBBox();return {width:b.width,height:b.height,frame:svg.querySelectorAll('.peak-editor-frame,.peak-editor-path-shadow').length,path:{x:path.x,width:path.width},labels:[...svg.querySelectorAll('.peak-editor-axis-label')].map(e=>({x:Number(e.getAttribute('x')),text:e.textContent})),grid:[...svg.querySelectorAll('.peak-editor-grid')].map(e=>({left:Number(e.getAttribute('x1')),right:Number(e.getAttribute('x2'))}))}})()`);
+      assert.equal(plotGeometry.frame,0,'The integration graph has no outer box or glow');
+      assert.ok(Math.abs(plotGeometry.path.x-16)<.1&&Math.abs(plotGeometry.path.x+plotGeometry.path.width-(plotGeometry.width-16))<.1,'The curve has equal side margins');
+      assert.deepEqual(plotGeometry.labels.map(label=>label.text),['Top','Bottom']);
+      assert.ok(Math.abs(plotGeometry.labels[0].x-plotGeometry.path.x)<.1&&Math.abs(plotGeometry.labels[1].x-(plotGeometry.path.x+plotGeometry.path.width))<.1,'Endpoint labels align with the curve');
+      for(const grid of plotGeometry.grid)assert.ok(Math.abs(grid.left-16)<.1&&Math.abs(grid.right-(plotGeometry.width-16))<.1,'Grid lines share the curve bounds');
+      for(const row of [0,100,609]){
+        const pointer=await exec(`(()=>{const svg=document.getElementById('gel-peak-editor-chart'),b=svg.getBoundingClientRect(),event=new MouseEvent('mousemove',{bubbles:true,clientX:b.left+16+${row}/609*(b.width-32),clientY:b.top+b.height/2});svg.dispatchEvent(event);return {clientX:event.clientX,left:b.left,width:b.width}})()`);
+        const sampledRow=Number(await exec("document.querySelector('#gel-peak-editor-chart .peak-editor-hover-label').textContent"));
+        // MouseEvent stores integer screen coordinates; narrow plots can have
+        // several image rows per screen pixel. Check the actual pointer position.
+        assert.ok(Math.abs(sampledRow-row)<=Math.ceil(609/(pointer.width-32)),`Pointer stays within one screen pixel of row ${row} after resize to ${width}`);
+        const hover=await exec("(()=>{const svg=document.getElementById('gel-peak-editor-chart'),circle=svg.querySelector('.peak-editor-hover-dot'),label=svg.querySelector('.peak-editor-hover-label');const box=label.getBBox();return {x:Number(circle.getAttribute('cx')),label:{x:box.x,y:box.y,width:box.width,height:box.height},width:svg.viewBox.baseVal.width,height:svg.viewBox.baseVal.height}})()");
+        assert.ok(Math.abs(hover.x-(16+sampledRow/609*(hover.width-32)))<.1,'Hover point aligns with the curve row');
+        assert.ok(Math.abs(pointer.left+hover.x-pointer.clientX)<=Math.max(1,(pointer.width-32)/609/2)+.1,'Hover marker follows the screen pointer');
+        assert.ok(hover.label.x>=0&&hover.label.x+hover.label.width<=hover.width&&hover.label.y>=0&&hover.label.y+hover.label.height<=hover.height,'Edge labels fit inside the graph');
+      }
+      await exec("document.getElementById('gel-peak-editor-chart').dispatchEvent(new MouseEvent('mouseleave',{bubbles:true}))");
+      const integrationTable=await exec(`(()=>{const host=document.getElementById('gel-peak-editor-table'),holder=host.querySelector('.tabulator-tableholder');return {
+        headers:[...host.querySelectorAll('.tabulator-col-title')].map(e=>({title:e.textContent,width:e.clientWidth,content:e.scrollWidth,height:e.clientHeight,contentHeight:e.scrollHeight})),
+        cells:[...host.querySelectorAll('.tabulator-row .tabulator-cell')].map(e=>({text:e.textContent,width:e.clientWidth,content:e.scrollWidth})),
+        holder:{width:holder.clientWidth,scroll:holder.scrollWidth,height:holder.clientHeight},host:host.getBoundingClientRect().toJSON(),window:rect('gel-peak-editor-overlay'),mainScroll:document.querySelector('.gel-main').scrollWidth,mainWidth:document.querySelector('.gel-main').clientWidth
+      }})()`);
+      assert.deepEqual(integrationTable.headers.map(header=>header.title),['Lane','Baseline','Band','Band area','Peak signal','Raw area','Baseline area']);
+      for(const header of integrationTable.headers)assert.ok(header.width+1>=header.content&&header.height+1>=header.contentHeight,`Full integration header at ${width}: ${JSON.stringify(header)}`);
+      for(const cell of integrationTable.cells)assert.ok(cell.width+1>=cell.content,`Full integration value at ${width}: ${JSON.stringify(cell)}`);
+      assert.ok(integrationTable.holder.scroll>integrationTable.holder.width,'The table scrolls instead of shrinking columns');
+      assert.ok(integrationTable.holder.height>=28,'At least one data row fits below the wrapped headers');
+      assert.ok(integrationTable.mainScroll<=integrationTable.mainWidth+1,'Horizontal scrolling stays inside the table');
+      await exec("document.querySelector('#gel-peak-editor-table .tabulator-tableholder').scrollLeft=10000");await settle();
+      const end=await exec("(()=>{const holder=document.querySelector('#gel-peak-editor-table .tabulator-tableholder'),last=document.querySelector('#gel-peak-editor-table .tabulator-row .tabulator-cell[tabulator-field=baselineArea]');return {scroll:holder.scrollLeft,last:last.getBoundingClientRect().toJSON(),holder:holder.getBoundingClientRect().toJSON()}})()");
+      assert.ok(end.scroll>0&&end.last.right<=end.holder.right+1&&end.last.left>=end.holder.left-1,'The last measurement is reachable by scrolling');
+      await exec("document.querySelector('#gel-peak-editor-table .tabulator-tableholder').scrollLeft=0");
+      fs.writeFileSync(path.join(output,`band-integration-${width}.png`),(await win.webContents.capturePage()).toPNG());
+    }
+    win.setSize(1400,900);await settle();await exec("document.body.classList.remove('theme-night')");
+    await new Promise(resolve=>setTimeout(resolve,350));
+    fs.writeFileSync(path.join(output,'band-integration-light.png'),(await win.webContents.capturePage()).toPNG());
     await exec('controller.destroy()');
     assert.equal(await exec("document.querySelector('.gel-floating-layer')"),null);
     assert.equal(await exec("document.querySelector('.gel-divider-menu')"),null,'Destroy removes the divider menu');
     assert.deepEqual(errors,[]);
-    console.log('gel-floating-workspace-electron: passed (divider drag tolerance at 3 sizes, full-height grab, outer edges, neighbor limits, single-step undo/redo, context menu/removal, MW entry/edit/drag, cursor, Enter/Escape, validation, popup bounds at 4 viewport sizes, light/dark, image import, table editing, windows, crop, disposal)');
+    console.log('gel-floating-workspace-electron: passed (Band intensity graph/table/copy/live labels/empty state, stacked windows and bounds at 4 sizes, divider tolerance, MW editing, light/dark, table dock, crop rotation, disposal)');
   } finally { win.destroy();app.quit(); }
 }
 main().catch(error=>{console.error(error);process.exitCode=1;if(process.versions.electron)require('electron').app.exit(1);});

@@ -42,21 +42,35 @@
 .gel-figure-layer-focus { display: flex; align-items: center; gap: 8px; min-width: 0; width: 100%; }
 .gel-figure-layer-names { display: block; flex: 1; min-width: 0; }
 #gel-view .gel-figure-rename-row { cursor: default; touch-action: auto; user-select: auto; }
-#gel-view .gel-figure-rename-row .folder-tree-template__rename-input {
-  flex: 1 1 0;
-  width: 0;
+#gel-view .gel-figure-rename-name { position: relative; overflow: visible; }
+#gel-view .gel-figure-rename-input {
+  position: absolute;
+  inset-inline-start: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  box-sizing: border-box;
+  width: calc(100% + 8px);
   min-width: 0;
-  min-height: 0;
-  height: 1.35em;
+  min-height: 24px;
+  height: calc(1lh + 6px);
+  max-height: calc(var(--gel-rename-row-height) - 4px);
   margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 3px;
+  padding: 2px 3px;
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 6px;
+  background: var(--theme-surface-elevated);
+  color: inherit;
   font: inherit;
   line-height: inherit;
-  box-shadow: 0 0 0 1px var(--theme-focus);
+  text-overflow: clip;
+  box-shadow: none;
   outline: none;
   cursor: text;
+}
+#gel-view .gel-figure-rename-input:focus {
+  border-color: color-mix(in srgb, var(--theme-focus) 72%, var(--theme-border-soft));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-focus) 16%, transparent);
+  outline: none;
 }
 #gel-view .gel-figure-stack-layer { display: flex; gap: 8px; align-items: center; margin: 0; }
 .gel-figure-layout-layer { display: flex; gap: 8px; align-items: center; }
@@ -119,3 +133,6 @@
 .gel-figure-tools-head h3 { margin: 0; font-size: 0.88rem; }
 .gel-figure-save { width: 100%; }
 #gel-figure-preview-detail { overflow-wrap: anywhere; }
+
+#gel-view .gel-processing-notice { position: absolute; inset-inline-start: 50%; bottom: 14px; transform: translateX(-50%); z-index: 5; padding: 6px 12px; border: 1px solid var(--theme-border-soft); border-radius: 8px; background: var(--theme-surface-elevated); color: var(--theme-text-muted); font-size: .8rem; pointer-events: none; }
+#gel-view .gel-processing-notice[hidden] { display: none; }

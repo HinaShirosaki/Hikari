@@ -117,7 +117,9 @@ export function createCropController({ runtime, elements, deps }) {
       elements.gelCanvas.style.display = 'none';
     }
     runtime.cropperInstance = new window.Cropper(elements.gelCropperImage, {
-      viewMode: 1,
+      // Keep the source-pixel scale fixed while rotating. Mode 1 zooms in to
+      // cover the crop box near a quarter turn, then retains that larger scale.
+      viewMode: 0,
       autoCropArea: 1,
       responsive: true,
       background: false,

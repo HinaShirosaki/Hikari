@@ -1,4 +1,5 @@
 import { FIGURE_FONT_SIZE, FIGURE_MARGIN, LABEL_WIDTH } from './model.js';
+import { addLadderLabelsToSlide } from '../rendering/ladder-labels.js';
 
 export async function createBlotFigurePowerPoint({ plan, blotCanvases, title }) {
   const PptxGenJS = globalThis.PptxGenJS;
@@ -38,6 +39,9 @@ export async function createBlotFigurePowerPoint({ plan, blotCanvases, title }) 
       x: left + plan.imageLeft * scale, y: top + row.imageY * scale,
       w: plan.imageWidth * scale, h: row.imageHeight * scale,
       objectName: `Blot ${index + 1}`, altText: row.labelLines.join(' ') });
+    addLadderLabelsToSlide(slide, row.ladderLabels,
+      left + (plan.imageLeft - row.ladderLabels.width) * scale,
+      top + (row.imageY - row.ladderLabels.imageTop) * scale, scale);
     slide.addText(row.labelLines.join('\n'), {
       x: left + FIGURE_MARGIN * scale, y: top + (row.y + row.rowHeight / 2 - row.labelLines.length * 14) * scale,
       w: (LABEL_WIDTH - 20) * scale, h: row.labelLines.length * 28 * scale,

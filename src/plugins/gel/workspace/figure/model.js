@@ -1,6 +1,7 @@
 import { buildLanesFromManualSegmentation } from '../analysis/analysis-core.js';
 import { detectLanes } from '../analysis/auto-lanes.js';
 import { resolveStackCrop } from './trim.js';
+import { buildLadderLabels } from '../rendering/ladder-labels.js';
 
 export const MAX_BLOTS = 16;
 export const FIGURE_WIDTH = 900;
@@ -105,7 +106,7 @@ export function wrapAntibodyLabel(value, measureText = text => Array.from(text).
 
 // One affine horizontal transform per intact blot. The same factor is used on
 // Y, preserving band proportions; no lanes are cut apart or independently warped.
-export function buildBlotFigurePlan(rows, { measureText, trim } = {}) {
+export function buildBlotFigurePlan(rows, { measureText, trim, showLadderLabels = false } = {}) {
   if (!rows?.length) throw new Error('Add at least one blot to the figure.');
   if (rows.length > MAX_BLOTS) throw new Error(`A figure can contain up to ${MAX_BLOTS} blots.`);
   const plannedRows = rows.map(row => {
@@ -115,10 +116,13 @@ export function buildBlotFigurePlan(rows, { measureText, trim } = {}) {
     const sourceTop = Math.floor(height * placement.top / 100);
     const sourceBottom = Math.min(height, Math.max(sourceTop + 1, Math.ceil(height * placement.bottom / 100)));
     const imageHeight = (sourceBottom - sourceTop) * scale;
+    const ladderLabels = buildLadderLabels({ manualOverrides: showLadderLabels ? row.draft.manualOverrides : null,
+      ladderPreset: row.draft.controls?.['gel-ladder-preset'], sourceTop,
+      sourceHeight: sourceBottom - sourceTop, sourceImageHeight: height, imageHeight, fontSize: 18 });
     const labelLines = wrapAntibodyLabel(row.label, measureText);
-    const rowHeight = Math.max(imageHeight, labelLines.length * 28 + 12);
+    const rowHeight = Math.max(ladderLabels.height, labelLines.length * 28 + 12);
     const result = {
-      id: row.id, labelLines, rowHeight, imageHeight,
+      id: row.id, labelLines, rowHeight, imageHeight, ladderLabels,
       sourceTop, sourceHeight: sourceBottom - sourceTop,
       imageX: FIGURE_WIDTH * GUIDE_LEFT - width * placement.first / 100 * scale,
       imageWidth: width * scale
@@ -170,12 +174,13 @@ export function buildBlotFigurePlan(rows, { measureText, trim } = {}) {
     part.imageY = y + (part.rowHeight - part.imageHeight) / 2;
     y += part.rowHeight + 16;
   });
-  const width = Math.ceil(FIGURE_MARGIN * 2 + LABEL_WIDTH + imageWidth);
+  const ladderLabelWidth = Math.max(...plannedRows.map(row => row.ladderLabels.width));
+  const width = Math.ceil(FIGURE_MARGIN * 2 + LABEL_WIDTH + ladderLabelWidth + imageWidth);
   const height = Math.ceil(y - 16 + FIGURE_MARGIN);
   if (height > 12000 || width > 12000 || width * height > 24000000) {
     throw new Error('This figure is too large. Check the lane anchors, crop the blots, or use fewer rows.');
   }
   return { width, height, imageWidth, fullImageWidth, crop, guideLeft: FIGURE_WIDTH * GUIDE_LEFT - left - crop.sourceLeft,
-    guideRight: FIGURE_WIDTH * GUIDE_RIGHT - left - crop.sourceLeft, imageLeft: FIGURE_MARGIN + LABEL_WIDTH,
+    guideRight: FIGURE_WIDTH * GUIDE_RIGHT - left - crop.sourceLeft, imageLeft: FIGURE_MARGIN + LABEL_WIDTH + ladderLabelWidth,
     tables, blotTop: plannedRows[0].imageY, rows: plannedRows };
 }

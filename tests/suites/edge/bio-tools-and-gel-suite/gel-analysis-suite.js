@@ -1533,7 +1533,7 @@ test('[EDGE] gel-analysis band intensity table shows and copies only the intensi
     deps: { writeClipboardText: async (value) => copies.push(value) }
   });
 
-  // The table renders inline in the rail's Results section once a band is measured.
+  // The floating result window keeps the same compact, copyable measurements.
   controller.renderCellTable();
   assert.ok(elements.gelCellTableHost.innerHTML.includes('<table class="gel-cell-table">'));
   assert.equal(elements.gelCellTableCopyBtn.disabled, false);
@@ -1602,6 +1602,46 @@ test('[EDGE] gel-analysis copies all current labels and formatted intensities an
   await controller.onCellTableCopy();
   assert.match(elements.gelCellTableCopyStatus.textContent, /Could not copy/);
   assert.equal(elements.gelCellTableCopyBtn.disabled, false);
+});
+
+test('[EDGE] gel-analysis band intensity chart preserves measured values, missing data and table labels', () => {
+  const { createCellTableController } = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'workspace', 'rendering', 'cell-table.js'));
+  const { escapeHtml } = loadEsmStyleModule(path.join(__dirname, 'src', 'plugins', 'gel', 'lib', 'html.js'));
+  const runtime = {
+    currentImage: {},
+    currentReport: { lanes: [120.125, 60.0625, -30.03125, 0, NaN].map((value, index) => ({ laneIndex: index + 1, targetBand: { correctedIntensity: value } })) },
+    manualOverrides: { laneSegmentation: { bandTop: 1, bandBottom: 3 }, laneTable: { rows: [{ label: 'Label', values: ['Control <A>'] }] } }
+  };
+  const elements = {
+    gelCellTableHost: new MockElement('gel-cell-table-host'),
+    gelCellTableCopyBtn: new MockElement('gel-cell-table-copy-btn'),
+    gelOpenBandIntensityBtn: new MockElement('gel-open-band-intensity-btn'),
+    gelBandIntensityChart: new MockElement('gel-band-intensity-chart'),
+    gelBandIntensityEmpty: new MockElement('gel-band-intensity-empty')
+  };
+  const controller = createCellTableController({ runtime, elements, safeText: escapeHtml });
+  controller.renderCellTable();
+  const chart = elements.gelBandIntensityChart.innerHTML;
+  assert.equal((chart.match(/class="gel-intensity-series"/g) || []).length, 5, 'Every table row has a chart label, including missing measurements');
+  assert.equal((chart.match(/class="gel-intensity-bar"/g) || []).length, 4, 'A missing measurement is not drawn as zero');
+  assert.match(chart, /data-value="120\.125"/);
+  assert.match(chart, /Lane 1 — Control &lt;A&gt;: 120\.13/);
+  assert.doesNotMatch(chart, /(?:height|y)="(?:NaN|Infinity)/);
+  const heights = [...chart.matchAll(/class="gel-intensity-bar"[^>]*height="([^"]+)"/g)].map(match => Number(match[1]));
+  assertClose(heights[0] / heights[1], 2, 1e-9, 'Bars retain the ratio of unrounded measurements');
+  assertClose(heights[1] / heights[2], 2, 1e-9, 'Negative values retain their magnitude');
+  assert.equal(heights[3], 0, 'Zero has no invented positive height');
+  assert.equal(elements.gelBandIntensityEmpty.hidden, true);
+  runtime.currentReport = null;
+  controller.renderCellTable();
+  assert.equal(elements.gelBandIntensityChart.getAttribute('hidden'), '');
+  assert.equal(elements.gelBandIntensityChart.innerHTML, '');
+  assert.equal(elements.gelBandIntensityEmpty.hidden, false);
+  assert.equal(elements.gelCellTableCopyBtn.disabled, true);
+  assert.equal(elements.gelOpenBandIntensityBtn.disabled, false, 'An imported gel can open the empty-state guidance');
+  runtime.currentImage = null;
+  controller.renderCellTable();
+  assert.equal(elements.gelOpenBandIntensityBtn.disabled, true);
 });
 
 test('[EDGE] gel-analysis clipboard fallback restores focus and removes its temporary field', async () => {
@@ -1777,9 +1817,9 @@ test('[EDGE] gel-analysis peak editor maps cursor positions through rendered SVG
   });
 
   const rowToClientX = (row) => {
-    const svgWidth = 920;
-    const plotLeft = 58;
-    const plotRight = 884;
+    const svgWidth = chartRect.width;
+    const plotLeft = 16;
+    const plotRight = chartRect.width - 16;
     const svgX = plotLeft + ((row / (height - 1)) * (plotRight - plotLeft));
     return chartRect.left + ((svgX / svgWidth) * chartRect.width);
   };
@@ -2098,7 +2138,8 @@ test('[EDGE] gel-analysis tilted lane vertices define target-band area in report
   assert.equal(result.report.lanes[0].xStart, 3);
   assert.equal(result.report.lanes[0].xEnd, 11);
   assert.equal(JSON.stringify(result.report.lanes[0].vertices.topLeft), JSON.stringify({ x: 3, y: 0 }));
-  assert.equal(result.report.lanes[0].targetBand.areaPx, laneWidth * 5);
+  // Edge detection may widen the window; the area still follows the tilted lane width.
+  assert.equal(result.report.lanes[0].targetBand.areaPx, laneWidth * result.report.lanes[0].targetBand.thickness);
 });
 
 test('[EDGE] gel-analysis lane vertex tool drag updates one lane quadrilateral', () => {
@@ -2627,13 +2668,13 @@ test('[EDGE] gel-analysis manual per-lane target windows feed lane-specific repo
   assert.equal(result.report.preprocessing.manualOverridesSummary.laneSegmentationBandMode, 'per-lane');
   assert.equal(result.report.preprocessing.manualOverridesSummary.laneSegmentationLaneBandWindows, 2);
   assert.equal(result.report.lanes.length, 2);
-  assert.equal(result.report.lanes[0].targetBand.top, 4);
-  assert.equal(result.report.lanes[0].targetBand.bottom, 8);
-  assert.equal(result.report.lanes[1].targetBand.top, 18);
-  assert.equal(result.report.lanes[1].targetBand.bottom, 23);
+  // Each lane measures around its own window; detected band edges only move out.
+  const [first, second] = result.report.lanes.map(lane => lane.targetBand);
+  assert.ok(first.top <= 4 && first.bottom >= 8 && first.bottom < 18, `lane 1 ${first.top}-${first.bottom}`);
+  assert.ok(second.top <= 18 && second.bottom >= 23 && second.top > 8, `lane 2 ${second.top}-${second.bottom}`);
 });
 
-test('[EDGE] gel-analysis target-band baseline comes only from guarded flanking rows', () => {
+test('[EDGE] gel-analysis target-band baseline uses local background outside the band', () => {
   const width = 12;
   const height = 60;
   const analyzeBand = (bandValue) => {
@@ -2681,9 +2722,9 @@ test('[EDGE] gel-analysis target-band baseline comes only from guarded flanking 
   const intenseBand = analyzeBand(0.9);
   const moderateBand = analyzeBand(0.6);
 
-  assert.equal(intenseBand.baselineMode, 'flanking-median');
+  assert.equal(intenseBand.baselineMode, 'local-edge');
   assert.equal(intenseBand.backgroundMean, 0.15);
-  assert.equal(intenseBand.baselineSum, 16.5);
+  assert.ok(Math.abs(intenseBand.baselineSum - 0.15 * intenseBand.areaPx) < 1e-6);
   assert.equal(moderateBand.baselineSum, intenseBand.baselineSum);
   assert.ok(intenseBand.correctedIntensity > moderateBand.correctedIntensity);
 });

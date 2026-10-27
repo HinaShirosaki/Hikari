@@ -38,7 +38,8 @@ export function serializeBlotProject(rows, title, imageDataToDataUrl, {
     draft: {
       controls: { ...row.draft.controls, 'gel-id': '' }, manualOverrides: row.draft.manualOverrides,
       viewerMode: row.draft.viewerMode, cropApplied: row.draft.cropApplied,
-      currentReport: row.draft.currentReport, pendingNotebookLink: row.draft.pendingNotebookLink,
+      currentReport: row.draft.analysisPending ? null : row.draft.currentReport, pendingNotebookLink: row.draft.pendingNotebookLink,
+      analysisPending: Boolean(row.draft.analysisPending),
       currentImage: packImage(row.draft.currentImage),
       originalImage: row.draft.cropApplied ? packImage(row.draft.originalImage) : null
     }
@@ -115,6 +116,7 @@ export async function parseBlotProject(content, createId, { local = false } = {}
       placement: validatePlacement(row.placement),
       draft: { currentImage, originalImage, originalFile: null, controls,
         manualOverrides: normalizeManualOverrides(draft.manualOverrides), currentReport: draft.currentReport && typeof draft.currentReport === 'object' ? draft.currentReport : null,
+        analysisPending: Boolean(draft.analysisPending),
         viewerMode: draft.viewerMode === 'processed' ? 'processed' : 'original',
         cropApplied: Boolean(draft.cropApplied), pendingNotebookLink: draft.pendingNotebookLink && typeof draft.pendingNotebookLink === 'object' ? draft.pendingNotebookLink : null }
     });

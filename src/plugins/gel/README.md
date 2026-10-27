@@ -4,9 +4,16 @@ This is Hikari's Gel workspace. Its source lives under `src/plugins/gel` and
 ships with the application, but it loads as a plugin rather than a renderer
 module. It remains a full workspace: image/TIFF ingestion,
 crop and free rotation, enhancement, lane segmentation, ladder calibration,
-band quantification, peak editing, reports, saved records, and CSV export.
+band quantification, band integration, reports, saved records, and CSV export.
 Generated PNG figures use up to 4× raster density for publication-scale text,
 and PowerPoint export keeps the lane table as an editable native table.
+
+Enable **Export → Ladder labels** to add marked ladder sizes beside an exported
+PNG or PowerPoint clip. It defaults to off and applies to both individual gels
+and Stacks. Only ladder marks inside each gel's crop are labeled; every Stack
+row uses its own marked positions and image scale. Labels and ticks remain
+editable in PowerPoint. Units follow the selected protein, DNA or RNA ladder.
+This export option does not change measurements or mark the gel as unsaved.
 
 ## Gel layers and Stack
 
@@ -45,8 +52,9 @@ no selection checkboxes. The canvas stays in the
 center. The far-right vertical icon toolbar groups Image, Crop, Lanes, Ladder, Bands,
 and Results; a Layout icon joins them only while a Stack is open, because a
 single gel has no layout. One category panel opens to its left; click its icon again
-or close the panel to give the canvas more space. Processed, Export, Save,
-and record actions remain directly available as icons. Each icon has a short
+or close the panel to hide its contents. The gel keeps its size and position.
+Processed, Export, and Save
+remain directly available as icons. Each icon has a short
 caption under it, and arrow keys move through the toolbar. Stack selection shows Layout; select a gel to use
 its processing tools. Cropping keeps its controls visible until Done or Cancel.
 New layers are named Gel 1,
@@ -55,8 +63,6 @@ double-click a Gel, Stack, or Layout entry to rename it directly in
 the rail (F2 also works). Enter or clicking away saves; Escape cancels; a blank
 name keeps the previous name. Names support undo/redo and project saving. The gel name is
 also the antibody caption in the figure. Drag gels in the rail to reorder them.
-**More → Remove gel** in the toolbar removes the gel being edited from the
-project and opens the next one; undo brings it back.
 
 Create a stack with **Add stack**, then drag gel entries into it. The **Stack** entry
 previews those gels in layer order inside the current Gel viewer. Its nested
@@ -132,7 +138,7 @@ selection settings are ignored.
 The main workspace stays on the gel image. The right editing panel groups tools by
 function: **Image** (name and analysis type), **Processed** (denoise and contrast),
 **Lanes**, **Ladder**, **Bands**, and **Results** (the band
-intensity table with Copy, the lane profile, and the peak editor). Sections are
+intensity window, the lane profile, and the band integration window). Sections are
 not steps; open whichever you need. The **Processed** icon opens both enhancement
 sliders and previews their effect. Its **Processed view** switch compares the
 result with the original; closing the panel keeps the chosen preview and settings.
@@ -150,10 +156,23 @@ adds **Try again** to the **Add gel** menu. The **Crop** icon opens crop mode, a
 edges on the image, and the Crop panel holds **Straighten** (±45°), **90°**,
 **Reset**, **Cancel**, and **Done** (Enter keeps the crop, Esc cancels). Reset shows the full original image again; nothing
 changes until Done. **Reset** is a toolbar icon that clears lane and band
-selections and supports undo. **Save** and the gel actions menu stay below the tools.
-The peak editor is the
-only floating window: drag its title bar, or focus the title bar and use the
-arrow keys (Shift moves farther); Escape closes it. The lane table scrolls
+selections and supports undo. **Save** stays below the tools.
+**Band intensity** opens a floating window with a bar graph above the measurement
+table. **Copy table** copies the headers and every row for pasting into a spreadsheet.
+Quantification uses the original image, independently of preview denoise and
+contrast. Automatic background connects nearby stable profile strips outside
+the selected band. In the **Band integration**, place both baseline ends outside the
+highlighted band to use that line instead; the smallest spanning baseline in
+that lane takes priority. Clearing it restores automatic background. The dashed
+line shows the background used for the highlighted measurement.
+Negative net intensity is retained and marked **Review background**. A band
+covering the entire image has no automatic background and displays **–** until
+a manual baseline is available. One-sided background is also marked for review.
+CSV reports include the baseline method, status, background sum, and signed net
+intensity. Saved reports with source pixels are recalculated when reopened.
+Band intensity and the band integration window can be moved by dragging their title bars,
+or by focusing the title bar and using the arrow keys (Shift moves farther).
+Escape closes the front window. The lane table scrolls
 within its panel above the gel.
 
 ## Distribution and permissions
