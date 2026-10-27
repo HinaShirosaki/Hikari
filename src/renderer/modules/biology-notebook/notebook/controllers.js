@@ -4,6 +4,7 @@ import { createSpreadsheetTables } from '../spreadsheet-tables/index.js';
 import { createSampleLinkMenuController } from '../samples/sample-link-menu.js';
 import { createNotebookQuickSampleController } from '../samples/quick-sample-controller.js';
 import { createInlinePlaceholderController } from '../protocol/inline-placeholder-controller.js';
+import { buildNotebookSampleNote } from '../samples/sample-helpers.js';
 import { createEntryListRenderer } from '../entry/entry-list-renderer.js';
 import { createDropdownRenderer } from '../entry/dropdown-renderer.js';
 import { createProtocolSnapshotEditor } from '../protocol/protocol-snapshot-editor.js';
@@ -33,6 +34,7 @@ function createNotebookControllers({
   getEditingEntryId,
   getActiveProjectDashboardId,
   getSampleLinkDrafts,
+  appendNotebookResultLine,
   persistActiveEntrySampleLinks,
   maybeGenerateNotebookPageName,
   syncPageStarterProject,
@@ -107,6 +109,11 @@ function createNotebookControllers({
     getSettings: () => state.settings || {},
     onOpenSampleLinkMenu: (params) => sampleLinkMenu.open(params),
     onCloseSampleLinkMenu: () => sampleLinkMenu.close(),
+    onSampleLinked: (link, previousLink) => {
+      if (link.sampleId !== previousLink?.sampleId || link.storageLabel !== previousLink?.storageLabel) {
+        appendNotebookResultLine(buildNotebookSampleNote(link, 'Linked', state.settings));
+      }
+    },
     onPersistSampleLinks: (...args) => persistActiveEntrySampleLinks(...args),
     onValueCommitted: () => { void maybeGenerateNotebookPageName(); }
   });

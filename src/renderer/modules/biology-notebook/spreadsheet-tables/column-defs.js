@@ -16,6 +16,7 @@ function createSpreadsheetColumnDefs({
     const element = document.createElement('span');
     if (!computed?.formula) {
       element.textContent = computed?.text ?? raw;
+      element.title = element.textContent;
       return element;
     }
     if (computed.error) {
@@ -68,6 +69,7 @@ function createSpreadsheetColumnDefs({
     return () => {
       const head = document.createElement('span');
       head.className = 'spreadsheet-head';
+      head.title = column.title;
       const address = document.createElement('span');
       address.className = 'spreadsheet-head-address';
       address.textContent = notebookTableColumnLetter(columnIndex);
@@ -109,6 +111,9 @@ function createSpreadsheetColumnDefs({
       title: column.title,
       titleFormatter: buildTitleFormatter(column, columnIndex, tableIndex),
       field: column.field,
+      // Wide sheets scroll horizontally instead of squeezing every value into
+      // Tabulator's 40px default minimum and showing only ellipses.
+      minWidth: 120,
       // 'input' edits the underlying value, so clicking a computed cell brings the
       // formula back the way a spreadsheet does.
       editor: 'input',

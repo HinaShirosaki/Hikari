@@ -14,6 +14,7 @@ export function createInlinePlaceholderController({
   getInventory = () => ({}),
   getSettings,
   onOpenSampleLinkMenu,
+  onSampleLinked,
   onPersistSampleLinks,
   onValueCommitted
 } = {}) {
@@ -130,6 +131,9 @@ export function createInlinePlaceholderController({
         delete wrap.dataset.carriedOver;
       }
       closeEditor(editor);
+      if (selectedLink) {
+        onSampleLinked?.(selectedLink, existingLink);
+      }
       if (removedSampleLink || selectedLink) {
         onPersistSampleLinks?.();
       }

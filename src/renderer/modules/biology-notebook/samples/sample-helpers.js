@@ -4,7 +4,6 @@ import {
   getConfiguredSampleTypeLabel,
   normalizeConfiguredSampleType
 } from '../../../lib/inventory-settings.js';
-import { formatEntryTimestamp } from '../entry/entry-helpers.js';
 import { cloneMetadataObject, formatSampleRecordLabel } from '../../../lib/sample-records.js';
 
 export function normalizeSampleLookupText(value) {
@@ -198,11 +197,10 @@ export function buildNotebookSampleLinkMetadata({
 }
 
 export function buildNotebookSampleNote(link, action = 'Linked', settings = {}) {
-  const timeLabel = formatEntryTimestamp(link?.linkedAt || new Date().toISOString());
   const sampleLabel = formatSampleLinkValue(link);
   const typeLabel = getSampleTypeLabel(link?.sampleType, settings);
   const placeholderLabel = String(link?.placeholderName || '').trim();
   const targetText = placeholderLabel ? ` to ${placeholderLabel}` : '';
   const storageLabel = String(link?.storageLabel || '').trim() || 'No storage location recorded';
-  return `[${timeLabel}] ${action} sample ${sampleLabel} (${typeLabel})${targetText}. Saved in: ${storageLabel}.`;
+  return `${action} sample ${sampleLabel} (${typeLabel})${targetText}. Saved in: ${storageLabel}.`;
 }
