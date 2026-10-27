@@ -2,7 +2,7 @@
 
 /* Match the Notebook's visible hover/focus captions while keeping each Assay
    action's existing accessible name and compact geometry. */
-#assay-view button[data-hover-caption] {
+#assay-view button[data-hover-caption]:not(.app-dialog-close-btn) {
   position: relative;
 }
 

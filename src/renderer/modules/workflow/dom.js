@@ -2,6 +2,7 @@ export function getWorkflowElements(rootDocument) {
   return {
     workflowProcessDialog: rootDocument?.getElementById?.('workflow-process-dialog'),
     workflowProcessForm: rootDocument?.getElementById?.('workflow-process-form'),
+    workflowProcessTemplateField: rootDocument?.getElementById?.('workflow-process-template-field'),
     workflowProcessTemplate: rootDocument?.getElementById?.('workflow-process-template'),
     workflowProcessProject: rootDocument?.getElementById?.('workflow-process-project'),
     workflowProcessName: rootDocument?.getElementById?.('workflow-process-name'),

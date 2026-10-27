@@ -745,11 +745,11 @@ test('workflow processes share a template across projects without sharing execut
   assert.ok(!markup.includes(`data-project-process-open="${other.id}"`));
 });
 
-test('workflow process dialog preselects context, cancels safely, and creates with explicit project', () => {
+test('workflow process dialog inherits its template context, cancels safely, and creates with explicit project', () => {
   const listeners = {};
   const control = (key) => ({ value: '', focus() {}, addEventListener(type, fn) { listeners[`${key}:${type}`] = fn; } });
   const dialog = { open: false, showModal() { this.open = true; }, close() { this.open = false; } };
-  const elements = { workflowProcessDialog: dialog, workflowProcessForm: control('form'), workflowProcessTemplate: control('template'),
+  const elements = { workflowProcessDialog: dialog, workflowProcessForm: control('form'), workflowProcessTemplateField: {}, workflowProcessTemplate: control('template'),
     workflowProcessProject: control('project'), workflowProcessName: control('name'), workflowProcessStatus: {}, workflowProcessCancel: control('cancel') };
   let created = null;
   let navigated = '';
@@ -759,13 +759,21 @@ test('workflow process dialog preselects context, cancels safely, and creates wi
   });
   api.open({ projectId: 'p1' });
   assert.equal(elements.workflowProcessProject.value, 'p1');
+  assert.equal(elements.workflowProcessTemplateField.hidden, false);
+  assert.equal(elements.workflowProcessTemplate.disabled, false);
+  assert.equal(elements.workflowProcessTemplate.required, true);
   listeners['cancel:click']();
   assert.equal(created, null);
   api.open({ templateId: 't1', projectId: 'p1', onCreated: (process) => { navigated = process.id; } });
+  assert.equal(elements.workflowProcessTemplateField.hidden, true);
+  assert.equal(elements.workflowProcessTemplate.disabled, true);
+  assert.equal(elements.workflowProcessTemplate.required, false);
+  elements.workflowProcessTemplate.value = '';
   elements.workflowProcessName.value = ' Repeat ';
   listeners['form:submit']({ preventDefault() {} });
   assert.equal(created.options.projectId, 'p1');
   assert.equal(created.options.workflowName, 'Repeat');
+  assert.equal(created.template.id, 't1');
   assert.equal(navigated, 'new');
   assert.equal(dialog.open, false);
   api.open({ templateId: 't1' });
@@ -774,6 +782,14 @@ test('workflow process dialog preselects context, cancels safely, and creates wi
   listeners['form:submit']({ preventDefault() {} });
   assert.equal(created, null);
   assert.equal(dialog.open, true);
+  listeners['cancel:click']();
+  api.open({ projectId: 'p1' });
+  assert.equal(elements.workflowProcessTemplateField.hidden, false);
+  assert.equal(elements.workflowProcessTemplate.disabled, false);
+  elements.workflowProcessTemplate.value = 't1';
+  listeners['form:submit']({ preventDefault() {} });
+  assert.equal(created.template.id, 't1');
+  assert.equal(created.options.projectId, 'p1');
 });
 
 test('notebook New Experiment starts workflow processes directly and restores selection on cancel', () => {

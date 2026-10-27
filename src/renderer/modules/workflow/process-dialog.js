@@ -1,12 +1,17 @@
 // Shared process creation entry point for Workflow and Notebook projects.
 export function createWorkflowProcessDialog({ state, elements, safeText, createProcess, onCreated = () => {} }) {
   const { workflowProcessDialog: dialog, workflowProcessForm: form,
-    workflowProcessTemplate: templateInput, workflowProcessProject: projectInput,
+    workflowProcessTemplateField: templateField, workflowProcessTemplate: templateInput, workflowProcessProject: projectInput,
     workflowProcessName: nameInput, workflowProcessStatus: status } = elements;
   let afterCreate = onCreated;
+  let contextTemplateId = '';
   function open({ templateId = '', projectId = '', onCreated: callback } = {}) {
     if (!dialog || dialog.open) return;
     afterCreate = callback || onCreated;
+    contextTemplateId = templateId;
+    if (templateField) templateField.hidden = Boolean(contextTemplateId);
+    templateInput.disabled = Boolean(contextTemplateId);
+    templateInput.required = !contextTemplateId;
     templateInput.innerHTML = '<option value="">Choose a workflow template</option>' + (state.workflowTemplates || [])
       .map((template) => `<option value="${safeText(template.id)}">${safeText(template.name || 'Untitled template')}</option>`).join('');
     projectInput.innerHTML = '<option value="">No project</option>' + (state.projects || [])
@@ -20,7 +25,7 @@ export function createWorkflowProcessDialog({ state, elements, safeText, createP
   }
   form?.addEventListener('submit', (event) => {
     event.preventDefault();
-    const template = (state.workflowTemplates || []).find((item) => item.id === templateInput.value);
+    const template = (state.workflowTemplates || []).find((item) => item.id === (contextTemplateId || templateInput.value));
     if (!template || !template.blocks?.length) {
       status.textContent = 'Choose a workflow template with at least one step.';
       return;
