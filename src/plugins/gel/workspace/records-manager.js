@@ -137,6 +137,8 @@ export function createRecordsManager({ runtime, elements, deps }) {
 
   async function performSaveAnalysis() {
     ensureState();
+    try { await deps.beforeSave?.(); }
+    catch (error) { deps.setStatus(`Could not finish image processing: ${error.message}`); return null; }
 
     const name = elements.gelNameInput?.value.trim() || '';
     if (!name) {
@@ -366,6 +368,10 @@ export function createRecordsManager({ runtime, elements, deps }) {
 
     if (restored.image) {
       deps.setCurrentImage(restored.image);
+      if (restored.kind === 'source') {
+        runtime.currentReport = deps.upgradeBandReport?.({ currentImage: restored.image,
+          currentReport: runtime.currentReport, manualOverrides: runtime.manualOverrides }) || runtime.currentReport;
+      }
       runtime.originalImage = deps.copyNormalizedImage(restored.image);
       deps.leaveCropMode();
       deps.renderCanvas();

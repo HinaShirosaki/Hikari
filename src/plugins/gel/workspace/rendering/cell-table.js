@@ -1,5 +1,6 @@
 import { hasAnyTargetBandWindow, normalizeManualOverrides } from '../shared.js';
 import { copyTextToClipboard } from '../../lib/clipboard.js';
+import { renderBandIntensityChart } from './band-intensity-chart.js';
 
 export function formatIntensity(value) {
   if (!Number.isFinite(value)) {
@@ -17,7 +18,7 @@ export const SNR_THRESHOLD = 3;
 export function createCellTableController({ runtime, elements, safeText, deps = {} }) {
   let copying = false;
 
-  function getTableRows() {
+  function getMeasurements() {
     const overrides = normalizeManualOverrides(runtime.manualOverrides);
     if (!hasAnyTargetBandWindow(overrides.laneSegmentation)) {
       return [];
@@ -25,11 +26,18 @@ export function createCellTableController({ runtime, elements, safeText, deps = 
     const labelRow = (overrides.laneTable?.rows || []).find((row) => /label/i.test(row?.label || ''));
     return (runtime.currentReport?.lanes || [])
       .filter((lane) => lane.targetBand)
-      .map((lane) => [
-        String(lane.laneIndex),
-        String(labelRow?.values?.[lane.laneIndex - 1] || '').replace(/[\t\r\n]+/g, ' '),
-        formatIntensity(Number(lane.targetBand.correctedIntensity))
-      ]);
+      .map((lane) => ({
+        lane: String(lane.laneIndex),
+        label: String(labelRow?.values?.[lane.laneIndex - 1] || '').replace(/[\t\r\n]+/g, ' '),
+        value: lane.targetBand.intensityStatus === 'unavailable' || lane.targetBand.correctedIntensity === null ? NaN : Number(lane.targetBand.correctedIntensity),
+        intensity: lane.targetBand.intensityStatus === 'unavailable' ? '-' : formatIntensity(lane.targetBand.correctedIntensity === null ? NaN : Number(lane.targetBand.correctedIntensity)),
+        review: lane.targetBand.intensityStatus && lane.targetBand.intensityStatus !== 'ok',
+        method: lane.targetBand.baselineMode === 'manual-peak' ? 'Manual baseline' : 'Automatic local baseline'
+      }));
+  }
+
+  function getTableRows(measurements = getMeasurements()) {
+    return measurements.map(({ lane, label, intensity }) => [lane, label, intensity]);
   }
 
   async function onCellTableCopy() {
@@ -53,12 +61,12 @@ export function createCellTableController({ runtime, elements, safeText, deps = 
     }
   }
 
-  // The table sits inline in the rail's Results section; with no measurement
-  // the host is simply empty.
   function setCellTableVisibility(hasCells) {
     if (elements.gelCellTableCopyBtn) {
       elements.gelCellTableCopyBtn.disabled = !hasCells;
     }
+    if (elements.gelOpenBandIntensityBtn) elements.gelOpenBandIntensityBtn.disabled = !runtime.currentImage;
+    if (elements.gelBandIntensityEmpty) elements.gelBandIntensityEmpty.hidden = hasCells;
   }
 
   function renderCellTable() {
@@ -67,7 +75,9 @@ export function createCellTableController({ runtime, elements, safeText, deps = 
       return;
     }
 
-    const rows = getTableRows();
+    const measurements = getMeasurements();
+    const rows = getTableRows(measurements);
+    renderBandIntensityChart(elements.gelBandIntensityChart, measurements, safeText);
     if (elements.gelCellTableCopyStatus && !copying) {
       elements.gelCellTableCopyStatus.textContent = '';
     }
@@ -78,12 +88,12 @@ export function createCellTableController({ runtime, elements, safeText, deps = 
     }
 
     setCellTableVisibility(true);
-    const rowsHtml = rows.map(([lane, label, intensity]) => {
+    const rowsHtml = measurements.map(({ lane, label, intensity, review, method }) => {
       return `
         <tr class="gel-cell-row">
           <td>${safeText(lane)}</td>
           <td>${safeText(label)}</td>
-          <td class="num gel-cell-intensity">${safeText(intensity)}</td>
+          <td class="num gel-cell-intensity" title="${safeText(method)}">${safeText(intensity)}${review ? '<span class="gel-intensity-review">Review background</span>' : ''}</td>
         </tr>
       `;
     }).join('');

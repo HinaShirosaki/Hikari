@@ -66,6 +66,7 @@ const segmentation = overrides?.laneSegmentation || {};
 
 lanes.forEach((lane) => {
   const laneIndex = lane.index + 1;
+  const baselines = (overrides.peakIntegrations || []).filter(integration => integration.laneIndex === laneIndex);
   const targetWindow = getTargetBandWindowForLane(segmentation, laneIndex);
   // A clicked band is measured like the target band, in a window of the same
   // thickness centred on the click; 5 rows when the lane has no window yet.
@@ -82,7 +83,8 @@ lanes.forEach((lane) => {
       height,
       lane,
       bandTop: targetTop,
-      bandBottom: targetBottom
+      bandBottom: targetBottom,
+      baselines
     });
     targetBand.perLaneWindow = Boolean(targetWindow.perLane);
     lane.bands.push(targetBand);
@@ -99,7 +101,8 @@ lanes.forEach((lane) => {
         height,
         lane,
         bandTop: item.pixelY - halfThickness,
-        bandBottom: item.pixelY + halfThickness
+        bandBottom: item.pixelY + halfThickness,
+        baselines
       });
       band.measurementMode = 'manual-point';
       lane.bands.push(band);

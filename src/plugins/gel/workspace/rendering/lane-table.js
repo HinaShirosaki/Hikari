@@ -369,9 +369,6 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
       return null;
     }
 
-    const layout = resolveLaneLayout(runtime);
-    const includeLadder = runtime.figureExportIncludeLadder !== false;
-    const ladderLane = resolveLadderLane(layout);
     const originalLabel = button?.textContent || 'Export image';
     if (button) {
       button.disabled = true;
@@ -381,7 +378,10 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
 
     figureExportPromise = Promise.resolve()
       .then(async () => {
-        const imageData = deps.getFigureImageData?.() || runtime.currentImage.imageData;
+        const imageData = await deps.getFigureImageData?.() || runtime.currentImage.imageData;
+        const layout = resolveLaneLayout(runtime);
+        const includeLadder = runtime.figureExportIncludeLadder !== false;
+        const ladderLane = resolveLadderLane(layout);
         const createFigure = deps.createGelFigureCanvas || createGelFigureCanvas;
         const result = createFigure({
           documentObject: deps.documentObject || elements.gelLaneTableShell?.ownerDocument || globalThis?.document,
@@ -390,7 +390,9 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
           imageHeight: runtime.currentImage.height,
           manualOverrides: runtime.manualOverrides,
           includeLadder,
-          ladderLane
+          ladderLane,
+          showLadderLabels: Boolean(elements.gelExportLadderLabelsInput?.checked),
+          ladderPreset: elements.gelLadderPresetSelect?.value
         });
         const fileName = `${safeFilePart(elements.gelNameInput?.value, 'gel-figure')}.png`;
         const dataUrl = result.canvas.toDataURL('image/png');
@@ -429,9 +431,6 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
       return null;
     }
 
-    const layout = resolveLaneLayout(runtime);
-    const includeLadder = runtime.figureExportIncludeLadder !== false;
-    const ladderLane = resolveLadderLane(layout);
     const originalLabel = button?.textContent || 'Export PPT';
     if (button) {
       button.disabled = true;
@@ -441,7 +440,10 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
 
     figureExportPromise = Promise.resolve()
       .then(async () => {
-        const imageData = deps.getFigureImageData?.() || runtime.currentImage.imageData;
+        const imageData = await deps.getFigureImageData?.() || runtime.currentImage.imageData;
+        const layout = resolveLaneLayout(runtime);
+        const includeLadder = runtime.figureExportIncludeLadder !== false;
+        const ladderLane = resolveLadderLane(layout);
         const createGelImage = deps.createGelImageCanvas || createGelImageCanvas;
         const gelResult = createGelImage({
           documentObject: deps.documentObject || elements.gelLaneTableShell?.ownerDocument || globalThis?.document,
@@ -450,7 +452,9 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
           imageHeight: runtime.currentImage.height,
           manualOverrides: runtime.manualOverrides,
           includeLadder,
-          ladderLane
+          ladderLane,
+          showLadderLabels: Boolean(elements.gelExportLadderLabelsInput?.checked),
+          ladderPreset: elements.gelLadderPresetSelect?.value
         });
         const title = String(elements.gelNameInput?.value || '').trim() || 'Gel figure';
         const createPowerPoint = deps.createGelPowerPoint || createGelPowerPoint;

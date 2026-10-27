@@ -153,3 +153,5 @@ Place the main steps in a row from left to right, and put optional steps below t
 ---
 
 [Previous tutorial: Chemicals](../06-chemicals/index.html)
+
+[Next tutorial: DNA](../08-dna/index.html)

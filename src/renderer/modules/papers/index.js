@@ -272,6 +272,7 @@ export function initPapersManagement({
     },
     onPinSelect: (...args) => context.comments?.onViewerPinSelect(...args),
     onHighlightSelection: (...args) => context.createPaperHighlight?.(...args),
+    onDeleteHighlight: (...args) => context.deletePaperHighlight?.(...args),
     onSelectionComment: (...args) => context.createPaperTextComment?.(...args),
     onSelectionSearch: (...args) => context.searchSelectedTextInPapers?.(...args),
     onSelectionAsk: (...args) => context.askAgentAboutSelection?.(...args),
@@ -355,6 +356,30 @@ export function initPapersManagement({
     activePaper.updatedAt = now;
     persist();
     context.syncViewerHighlights();
+    context.renderLibrarySidebar?.(libraryState.selectedFolderKey);
+    return true;
+  };
+  context.deletePaperHighlight = ({ paperId, highlightId } = {}) => {
+    const activePaper = context.getActivePaper?.() || null;
+    if (!activePaper || activePaper.id !== paperId || !highlightId) {
+      return false;
+    }
+    const highlights = ensurePaperHighlights(activePaper);
+    const highlight = highlights.find((item) => item.id === highlightId);
+    if (!highlight) {
+      return false;
+    }
+    activePaper.highlights = highlights.filter((item) => item.id !== highlightId);
+    // The note and its text anchor form one annotation and one undo step.
+    activePaper.comments = (activePaper.comments || []).filter((comment) => (
+      comment.highlightId !== highlightId && (!highlight.commentId || comment.id !== highlight.commentId)
+    ));
+    if (!activePaper.comments.some((comment) => comment.id === commentState.selectedCommentId)) {
+      commentState.selectedCommentId = '';
+    }
+    activePaper.updatedAt = new Date().toISOString();
+    persist();
+    context.comments?.syncViewerComments?.();
     context.renderLibrarySidebar?.(libraryState.selectedFolderKey);
     return true;
   };
@@ -459,7 +484,7 @@ export function initPapersManagement({
   context.render = () => {
     context.renderCommentPanelState();
     library.renderLibrarySidebar();
-    context.syncViewerHighlights();
+    comments.syncViewerComments();
     comments.renderCommentSidebar();
     library.schedulePapersEdgeBleedSync();
     void maybeDiscoverStoredPapers();

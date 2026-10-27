@@ -1,5 +1,6 @@
 import { buildLanesFromManualSegmentation } from '../analysis/analysis-core.js';
 import { clamp, normalizeManualOverrides } from '../shared.js';
+import { buildLadderLabels, drawLadderLabels } from './ladder-labels.js';
 
 const MIN_LABEL_WIDTH_PX = 118;
 const MAX_LABEL_WIDTH_PX = 260;
@@ -65,7 +66,9 @@ export function buildGelFigurePlan({
   imageHeight,
   manualOverrides,
   includeLadder = true,
-  ladderLane = null
+  ladderLane = null,
+  showLadderLabels = false,
+  ladderPreset = null
 } = {}) {
   const width = positiveInteger(imageWidth);
   const height = positiveInteger(imageHeight);
@@ -107,8 +110,11 @@ export function buildGelFigurePlan({
   const tableGap = rows.length ? Math.max(12, Math.round(typography.rowHeight * 0.32)) : 0;
   const tableHeight = (rows.length * typography.rowHeight) + tableGap;
   const crop = resolveVerticalCrop(overrides.laneSegmentation, height);
-  const canvasWidth = labelWidth + gelWidth;
-  const canvasHeight = tableHeight + crop.sourceHeight;
+  const ladderLabels = buildLadderLabels({ manualOverrides: showLadderLabels ? overrides : null,
+    ladderPreset, sourceTop: crop.sourceTop, sourceHeight: crop.sourceHeight, sourceImageHeight: height,
+    fontSize: clamp(Math.round(typography.fontSize * .75), 12, 22) });
+  const canvasWidth = labelWidth + ladderLabels.width + gelWidth;
+  const canvasHeight = tableHeight + ladderLabels.height;
 
   if (
     canvasWidth > MAX_FIGURE_DIMENSION_PX
@@ -120,7 +126,7 @@ export function buildGelFigurePlan({
 
   let gelOffset = 0;
   const slices = rawSlices.map((slice) => {
-    const outputX = labelWidth + gelOffset;
+    const outputX = labelWidth + ladderLabels.width + gelOffset;
     gelOffset += slice.sourceWidth;
     return {
       ...slice,
@@ -141,6 +147,8 @@ export function buildGelFigurePlan({
     rowHeight: typography.rowHeight,
     tableGap,
     tableHeight,
+    gelTop: tableHeight + ladderLabels.imageTop,
+    ladderLabels,
     gelWidth,
     ladderLane: validLadderLane,
     includeLadder: Boolean(includeLadder || !validLadderLane),
@@ -160,6 +168,8 @@ export function createGelImageCanvas({
   manualOverrides,
   includeLadder = true,
   ladderLane = null,
+  showLadderLabels = false,
+  ladderPreset = null,
   rasterScale = DEFAULT_RASTER_SCALE
 } = {}) {
   if (!documentObject?.createElement || !imageData) {
@@ -171,7 +181,9 @@ export function createGelImageCanvas({
     imageHeight,
     manualOverrides,
     includeLadder,
-    ladderLane
+    ladderLane,
+    showLadderLabels,
+    ladderPreset
   });
   const sourceCanvas = documentObject.createElement('canvas');
   sourceCanvas.width = positiveInteger(imageWidth);
@@ -197,7 +209,7 @@ export function createGelImageCanvas({
       plan.sourceTop,
       slice.sourceWidth,
       plan.sourceHeight,
-      (slice.outputX - plan.labelWidth) * scale,
+      (slice.outputX - plan.labelWidth - plan.ladderLabels.width) * scale,
       0,
       slice.sourceWidth * scale,
       plan.sourceHeight * scale
@@ -214,6 +226,8 @@ export function createGelFigureCanvas({
   manualOverrides,
   includeLadder = true,
   ladderLane = null,
+  showLadderLabels = false,
+  ladderPreset = null,
   rasterScale = DEFAULT_RASTER_SCALE
 } = {}) {
   if (!documentObject?.createElement || !imageData) {
@@ -225,7 +239,9 @@ export function createGelFigureCanvas({
     imageHeight,
     manualOverrides,
     includeLadder,
-    ladderLane
+    ladderLane,
+    showLadderLabels,
+    ladderPreset
   });
   const sourceCanvas = documentObject.createElement('canvas');
   sourceCanvas.width = positiveInteger(imageWidth);
@@ -252,7 +268,7 @@ export function createGelFigureCanvas({
       slice.sourceWidth,
       plan.sourceHeight,
       slice.outputX * scale,
-      plan.tableHeight * scale,
+      plan.gelTop * scale,
       slice.sourceWidth * scale,
       plan.sourceHeight * scale
     );
@@ -281,6 +297,12 @@ export function createGelFigureCanvas({
     });
   });
   outputContext.restore();
+  if (plan.ladderLabels.labels.length) {
+    outputContext.save();
+    outputContext.scale(scale, scale);
+    drawLadderLabels(outputContext, plan.ladderLabels, plan.labelWidth, plan.tableHeight);
+    outputContext.restore();
+  }
 
   return { canvas: outputCanvas, plan, scale };
 }

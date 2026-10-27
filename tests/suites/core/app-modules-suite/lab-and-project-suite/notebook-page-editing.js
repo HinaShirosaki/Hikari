@@ -1144,7 +1144,7 @@ test('biology-notebook creates a result table from a placeholder variable', () =
   });
 
   const table = resultTableController.getCurrentTables()[0];
-  assert.equal(table.columns.map((column) => column.title).join('|'), 'Variable|Value');
+  assert.equal(table.columns.map((column) => column.title).join('|'), 'Incubation temperature|Value');
   assert.equal(table.rows.length, 1);
   assert.equal(table.rows[0][table.columns[0].field], 'Incubation temperature');
   assert.equal(table.rows[0][table.columns[1].field], '37 °C');

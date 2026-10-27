@@ -166,12 +166,6 @@
   stroke-linejoin: round;
 }
 
-.gel-lane-profile-chart .lane-profile-peak {
-  fill: var(--gel-path);
-  stroke: var(--theme-surface);
-  stroke-width: 2;
-}
-
 .gel-lane-profile-chart .lane-profile-axis-label {
   fill: var(--theme-text-muted);
   font-size: 10px;
@@ -248,10 +242,7 @@
   cursor: crosshair;
 }
 
-.gel-peak-editor-chart .peak-editor-frame {
-  fill: var(--theme-surface);
-  stroke: var(--theme-border-soft);
-}
+
 
 .gel-peak-editor-chart .peak-editor-grid {
   stroke: var(--theme-border-soft);
@@ -259,18 +250,13 @@
   stroke-dasharray: 4 5;
 }
 
-.gel-peak-editor-chart .peak-editor-path-shadow {
-  fill: none;
-  stroke: var(--gel-path-glow);
-  stroke-width: 12;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
+
 
 .gel-peak-editor-chart .peak-editor-path {
   fill: none;
   stroke: var(--gel-path);
-  stroke-width: 3;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
@@ -1126,27 +1112,17 @@ body.theme-night .gel-lane-profile-chart .lane-profile-path {
   stroke: var(--gel-path);
 }
 
-body.theme-night .gel-lane-profile-chart .lane-profile-peak {
-  fill: var(--gel-path);
-  stroke: var(--theme-surface);
-}
-
 body.theme-night .gel-lane-profile-chart .lane-profile-axis-label {
   fill: var(--theme-text-muted);
 }
 
-body.theme-night .gel-peak-editor-chart .peak-editor-frame {
-  fill: var(--theme-surface);
-  stroke: var(--theme-border-soft);
-}
+
 
 body.theme-night .gel-peak-editor-chart .peak-editor-grid {
   stroke: var(--theme-border-soft);
 }
 
-body.theme-night .gel-peak-editor-chart .peak-editor-path-shadow {
-  stroke: var(--gel-path-glow);
-}
+
 
 body.theme-night .gel-peak-editor-chart .peak-editor-path,
 body.theme-night .gel-peak-editor-chart .peak-editor-apex {

@@ -55,30 +55,6 @@ function downsampleLaneProfile(values, maxPoints = 220) {
   return points;
 }
 
-function buildSmoothPath(points) {
-  if (!points.length) {
-    return '';
-  }
-  if (points.length === 1) {
-    return `M ${points[0].x} ${points[0].y}`;
-  }
-  if (points.length === 2) {
-    return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
-  }
-
-  let path = `M ${points[0].x} ${points[0].y}`;
-  for (let index = 1; index < points.length - 1; index += 1) {
-    const current = points[index];
-    const next = points[index + 1];
-    const midX = (current.x + next.x) / 2;
-    const midY = (current.y + next.y) / 2;
-    path += ` Q ${current.x} ${current.y} ${midX} ${midY}`;
-  }
-  const last = points[points.length - 1];
-  path += ` T ${last.x} ${last.y}`;
-  return path;
-}
-
 function buildLinearPath(points) {
   if (!points.length) {
     return '';
@@ -91,7 +67,6 @@ function buildLinearPath(points) {
 export {
   buildLinearPath,
   getProfileValueAtRow,
-  buildSmoothPath,
   downsampleLaneProfile,
   formatTableNumber,
   makeProfilePoint

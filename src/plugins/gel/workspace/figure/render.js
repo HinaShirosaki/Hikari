@@ -1,11 +1,12 @@
 import { preprocessWithJs } from '../analysis/image-processing.js';
 import { buildBlotFigurePlan, FIGURE_FONT_SIZE, FIGURE_MARGIN, LABEL_WIDTH } from './model.js';
+import { drawLadderLabels } from '../rendering/ladder-labels.js';
 
-export function blotImageData(row) {
+export function blotImageData(row, preprocess = preprocessWithJs) {
   if (!row.displayData) {
     const draft = row.draft;
     row.displayData = draft.viewerMode === 'processed'
-      ? preprocessWithJs(draft.currentImage.gray, draft.currentImage.width, draft.currentImage.height, {
+      ? preprocess(draft.currentImage.gray, draft.currentImage.width, draft.currentImage.height, {
         denoiseStrength: draft.controls['gel-denoise-strength'],
         contrastBoost: draft.controls['gel-contrast-strength']
       }).previewImageData
@@ -14,11 +15,11 @@ export function blotImageData(row) {
   return row.displayData;
 }
 
-export function createBlotFigureCanvas(rows, documentObject, { rasterScale = 3, trim } = {}) {
+export function createBlotFigureCanvas(rows, documentObject, { rasterScale = 3, trim, preprocess, showLadderLabels = false } = {}) {
   const canvas = documentObject.createElement('canvas');
   const ctx = canvas.getContext('2d');
   ctx.font = `${FIGURE_FONT_SIZE}px Arial, Helvetica, sans-serif`;
-  const plan = buildBlotFigurePlan(rows, { measureText: text => ctx.measureText(text).width, trim });
+  const plan = buildBlotFigurePlan(rows, { measureText: text => ctx.measureText(text).width, trim, showLadderLabels });
   const scale = Math.max(1, Math.min(rasterScale, 12000 / Math.max(plan.width, plan.height),
     Math.sqrt(36000000 / (plan.width * plan.height))));
   canvas.width = Math.ceil(plan.width * scale);
@@ -42,7 +43,7 @@ export function createBlotFigureCanvas(rows, documentObject, { rasterScale = 3, 
     const image = rows[index].draft.currentImage;
     const source = documentObject.createElement('canvas');
     source.width = image.width; source.height = image.height;
-    source.getContext('2d').putImageData(blotImageData(rows[index]), 0, 0);
+    source.getContext('2d').putImageData(blotImageData(rows[index], preprocess), 0, 0);
     const blot = documentObject.createElement('canvas');
     blot.width = Math.ceil(plan.imageWidth * scale);
     blot.height = Math.ceil(part.imageHeight * scale);
@@ -52,6 +53,8 @@ export function createBlotFigureCanvas(rows, documentObject, { rasterScale = 3, 
     blotCtx.drawImage(source, 0, part.sourceTop, image.width, part.sourceHeight,
       part.imageX * horizontalScale, 0, part.imageWidth * horizontalScale, blot.height);
     ctx.drawImage(blot, plan.imageLeft, part.imageY, plan.imageWidth, part.imageHeight);
+    drawLadderLabels(ctx, part.ladderLabels, plan.imageLeft - part.ladderLabels.width,
+      part.imageY - part.ladderLabels.imageTop);
     drawLines(part.labelLines, FIGURE_MARGIN + LABEL_WIDTH - 20, part.y, part.rowHeight, 'right');
     blotCanvases.push(blot);
   });

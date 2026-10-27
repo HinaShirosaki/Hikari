@@ -21,7 +21,7 @@ async function main() {
   const { app, BrowserWindow } = require('electron');
   const temp = process.argv[2]; app.setPath('userData', path.join(temp, 'profile'));
   await app.whenReady();
-  const dir = path.join(root, 'src/plugins/gel');
+  const dir = process.env.HIKARI_GEL_TEST_PLUGIN || path.join(root, 'src/plugins/gel');
   const url = file => pathToFileURL(path.join(dir, file)).href;
   const output = path.join(root, 'artifacts/gel-blot-figure'); fs.mkdirSync(output, { recursive: true });
   const styles = ['vendor/cropperjs/cropper.min.css', 'vendor/tabulator/tabulator.min.css',
@@ -107,7 +107,8 @@ async function main() {
         const before={row:rect(button),name:rect(button.querySelector('.gel-figure-layer-names')),icon:rect(button.querySelector('svg'))};
         button.dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));
         const input=document.querySelector('[data-gel-navigation-rename]'),editor=input.closest('.gel-figure-rename-row');
-        const after={row:rect(editor),input:rect(input),icon:rect(editor?.querySelector('svg')),iconVisible:Boolean(editor?.querySelector('svg')?.checkVisibility())};
+        const style=getComputedStyle(input);
+        const after={row:rect(editor),input:rect(input),textLeft:input.getBoundingClientRect().left+parseFloat(style.borderLeftWidth)+parseFloat(style.paddingLeft),radius:parseFloat(style.borderRadius),icon:rect(editor?.querySelector('svg')),iconVisible:Boolean(editor?.querySelector('svg')?.checkVisibility())};
         input.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
         return {before,after,restored:button.checkVisibility()&&!document.querySelector('[data-gel-navigation-rename]')};
       };
@@ -249,6 +250,10 @@ async function main() {
     await exec(`load('gel-figure-project-file',[new File([${JSON.stringify(individualProject)}],'individual-tables.json',{type:'application/json'})])`);
     await waitFor("el('gel-figure-status').textContent==='Figure project opened.'");
     assert.equal(await exec("Boolean(el('gel-figure-table-source'))"), false, 'Layout has no shared table source selector');
+    await exec("edit('Treatment B');click('gel-tool-results-btn');click('gel-open-band-intensity-btn')");
+    assert.equal(await exec("el('gel-cell-table-panel').hidden"),false,'An individual gel opens its intensity window');
+    await exec('stackView()');
+    assert.equal(await exec("el('gel-cell-table-panel').hidden"),true,'Returning to Stack closes the individual intensity window');
     await exec("action('save')");await waitFor("el('gel-figure-status').textContent==='Figure project saved.'");
     const ownTables=await exec('headerCheck()');
     assert.deepEqual(ownTables.map(table=>({label:table.label,values:table.values})),[
@@ -313,6 +318,10 @@ async function main() {
     }
     await exec("click('gel-process-image-btn');click('gel-processed-preview')");
     assert.equal(await exec('controller.hasUnsavedChanges()'), false, 'Comparing processed and original previews is view state');
+    await exec("click('gel-tool-results-btn');click('gel-open-band-intensity-btn')");
+    assert.equal(await exec('controller.hasUnsavedChanges()'), false, 'Opening Band intensity is view state');
+    await exec("click('gel-open-band-intensity-btn')");
+    assert.equal(await exec('controller.hasUnsavedChanges()'), false, 'Closing Band intensity stays clean');
     await exec("renameRow('Archived gel 6','Edited saved gel')");
     assert.equal(await exec('controller.hasUnsavedChanges()'), true, 'Renaming a browsed gel is a real edit');
     await exec("document.querySelector('[data-figure-row=\"saved:saved-15\"]').click()");
@@ -426,7 +435,10 @@ async function main() {
       const {before,after,restored}=await exec(`renameGeometry(${JSON.stringify(selector)})`);
       assert.equal(after.iconVisible, true, `Rename retains the ${selector} icon`);
       for (const key of ['left','top','width','height']) assert.ok(Math.abs(after.row[key]-before.row[key])<.6, `Rename keeps the row's ${key} for ${selector}`);
-      for (const key of ['left','width']) assert.ok(Math.abs(after.input[key]-before.name[key])<.6, `Rename uses the name's original ${key} for ${selector}`);
+      assert.ok(Math.abs(after.textLeft-before.name.left)<.6, `Rename keeps the text in its original position for ${selector}`);
+      assert.ok(after.input.left<before.name.left && after.input.width>before.name.width, 'The field adds padding around the original name');
+      assert.ok(after.input.top>=after.row.top+1 && after.input.bottom<=after.row.bottom-1, 'The padded field fits inside its row');
+      assert.ok(after.radius>=6, 'The field uses the shared rounded shape');
       assert.deepEqual(after.icon, before.icon, 'Rename does not move the icon');
       assert.equal(restored, true, 'Escape restores the original row');
     }
@@ -633,12 +645,9 @@ async function main() {
     assert.match(await exec("document.querySelector('[data-figure-row]').textContent"), /β-actin/, 'Gels reorder in the rail');
     await exec('controller.undo()'); assert.match(await exec("document.querySelector('[data-figure-row]').textContent"), /p-ERK/);
     await exec('controller.redo()'); assert.match(await exec("document.querySelector('[data-figure-row]').textContent"), /β-actin/);
-    // Remove belongs to the gel being edited: the toolbar's More menu.
-    await exec("edit(0);click('gel-record-menu-btn')");
-    assert.equal(await exec("el('gel-remove-gel-btn').disabled"), false);
-    await exec("click('gel-remove-gel-btn')"); assert.equal(await exec('count()'), 1);
-    assert.equal(await exec("el('gel-name').value"), 'p-ERK1/2', 'Removing a gel opens the next one');
-    await exec('controller.undo()'); assert.equal(await exec('count()'), 2);
+    await exec('edit(0)');
+    assert.equal(await exec("el('gel-record-menu-btn')"),null,'The toolbar omits the More menu');
+    assert.equal(await exec("el('gel-remove-gel-btn')"),null,'The Remove gel action is removed');
     const layerBounds = await exec("document.querySelector('[data-figure-row]').getBoundingClientRect().toJSON()");
     const point = { x: Math.round(layerBounds.x + layerBounds.width / 2), y: Math.round(layerBounds.y + layerBounds.height / 2) };
     for (const clickCount of [1, 2]) {
@@ -1093,6 +1102,38 @@ async function main() {
     assert.equal(await exec('controller.hasUnsavedChanges()'),true);
     assert.equal(await exec('controller.saveUnsavedChanges()'),false,'A failed restore blocks overwriting the saved workspace');
     assert.equal(await exec("localStorage.getItem('workspace-files')"),corruptWorkspace,'The unavailable saved workspace is preserved');
+    await exec('controller.destroy()');
+    // Switching gels while an analysis is queued retains that obligation, and
+    // reopening/restoring it must refresh the report with its current settings.
+    await win.loadFile(fixture); await waitFor('Boolean(window.ready)');
+    await exec("const project=JSON.parse(await individualTablesProject());project.rows=project.rows.slice(0,2);project.stacks=[];project.stack=[];project.hasStack=false;project.checked=[];project.view=0;const draft=project.rows[0].draft;draft.analysisPending=true;draft.controls['gel-denoise-strength']='43';draft.controls['gel-contrast-strength']='120';draft.manualOverrides.laneSegmentation.bandTop=20;draft.manualOverrides.laneSegmentation.bandBottom=45;load('gel-figure-project-file',[new File([JSON.stringify(project)],'pending-analysis.json')])");
+    await waitFor("el('gel-figure-status').textContent==='Figure project opened.'");
+    await exec('await controller.waitForProcessing()');
+    await exec("click('gel-save-btn')");await waitFor("el('gel-form').getAttribute('aria-busy')==='false'");
+    assert.equal(await exec("gelState.gelAnalyses[0].report.preprocessing.denoiseStrength"),43,'A restored pending analysis finishes before saving');
+    await exec("set('gel-denoise-strength','65');edit('Treatment B');edit('Treatment A')");
+    await exec('await controller.waitForProcessing()');
+    await exec("click('gel-save-btn')");await waitFor("el('gel-form').getAttribute('aria-busy')==='false'");
+    assert.equal(await exec("gelState.gelAnalyses[0].report.preprocessing.denoiseStrength"),65,'Returning to a gel resumes an analysis interrupted by navigation');
+    await exec("action('stack');action('save')");await waitFor("el('gel-figure-status').textContent==='Figure project saved.'");
+    assert.equal(await exec("JSON.parse(exports.findLast(item=>item.content).content).rows.find(row=>row.label==='Treatment A').draft.analysisPending"),false,'Completed analysis clears the saved pending marker');
+    // Reports predating the current baseline calculation are derived again from
+    // source pixels before the restored editor captures its clean signature.
+    const legacyMeasurementProject=JSON.parse(await exec("exports.findLast(item=>item.content).content"));
+    const legacyMeasurementRow=legacyMeasurementProject.rows.find(row=>row.label==='Treatment A');
+    const expectedIntensity=legacyMeasurementRow.draft.currentReport.lanes[0].targetBand.correctedIntensity;
+    delete legacyMeasurementRow.draft.currentReport.quantification;
+    legacyMeasurementRow.draft.currentReport.lanes.forEach(lane=>{if(lane.targetBand)lane.targetBand.correctedIntensity=987654});
+    await exec(`load('gel-figure-project-file',[new File([${JSON.stringify(JSON.stringify(legacyMeasurementProject))}],'legacy-measurement.json')])`);
+    await waitFor("el('gel-figure-status').textContent==='Figure project opened.'");
+    await exec("edit('Treatment A');click('gel-save-btn')");
+    await waitFor("el('gel-form').getAttribute('aria-busy')==='false'");
+    assert.equal(await exec("gelState.gelAnalyses.find(row=>row.name==='Treatment A').report.quantification.version"),2,'Reopening upgrades an old band report');
+    assert.equal(await exec("gelState.gelAnalyses.find(row=>row.name==='Treatment A').report.lanes[0].targetBand.correctedIntensity"),expectedIntensity,'Legacy measurements are recalculated from original pixels');
+    assert.equal(await exec('controller.saveUnsavedChanges()'),true);
+    assert.equal(await exec('controller.hasUnsavedChanges()'),false);
+    await exec("edit('Treatment B');edit('Treatment A')");await settle();
+    assert.equal(await exec('controller.hasUnsavedChanges()'),false,'Browsing the upgraded report stays clean');
     await exec('controller.destroy()');
     assert.deepEqual(errors, []);
     console.log('gel-blot-figure-electron: passed (file drops, TIFF, import limits, scrolling tree, multiple stacks, exclusive membership, per-stack settings, undo/redo, shared workspace, toolbar, trim, processing, lane/table alignment, 4 viewports, PNG/PPTX, project migration/roundtrip, precision, automatic stack recovery, legacy deduplication, failed-save retry, disposal)');

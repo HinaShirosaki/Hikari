@@ -164,27 +164,33 @@ export function gaussianBlur2d(data, width, height, sigma) {
   const horizontal = new Float32Array(data.length);
   const output = new Float32Array(data.length);
 
+  // Accumulate in the original kernel order with double precision, but walk
+  // contiguous rows. Clamp only the edges, not every kernel sample of every
+  // pixel. This is the same Gaussian, including its replicated-edge boundary.
+  const sums = new Float64Array(width);
   for (let y = 0; y < height; y += 1) {
     const rowOffset = y * width;
-    for (let x = 0; x < width; x += 1) {
-      let sum = 0;
-      for (let offset = -radius; offset <= radius; offset += 1) {
-        const sampleX = clamp(x + offset, 0, width - 1);
-        sum += data[rowOffset + sampleX] * kernel[offset + radius];
-      }
-      horizontal[rowOffset + x] = sum;
+    sums.fill(0);
+    for (let offset = -radius; offset <= radius; offset += 1) {
+      const weight = kernel[offset + radius];
+      const leftEnd = Math.min(width, Math.max(0, -offset));
+      const rightStart = Math.min(width, Math.max(0, width - offset));
+      for (let x = 0; x < leftEnd; x += 1) sums[x] += data[rowOffset] * weight;
+      for (let x = leftEnd; x < rightStart; x += 1) sums[x] += data[rowOffset + x + offset] * weight;
+      for (let x = rightStart; x < width; x += 1) sums[x] += data[rowOffset + width - 1] * weight;
     }
+    for (let x = 0; x < width; x += 1) horizontal[rowOffset + x] = sums[x];
   }
 
-  for (let x = 0; x < width; x += 1) {
-    for (let y = 0; y < height; y += 1) {
-      let sum = 0;
-      for (let offset = -radius; offset <= radius; offset += 1) {
-        const sampleY = clamp(y + offset, 0, height - 1);
-        sum += horizontal[(sampleY * width) + x] * kernel[offset + radius];
-      }
-      output[(y * width) + x] = sum;
+  for (let y = 0; y < height; y += 1) {
+    sums.fill(0);
+    for (let offset = -radius; offset <= radius; offset += 1) {
+      const rowOffset = clamp(y + offset, 0, height - 1) * width;
+      const weight = kernel[offset + radius];
+      for (let x = 0; x < width; x += 1) sums[x] += horizontal[rowOffset + x] * weight;
     }
+    const rowOffset = y * width;
+    for (let x = 0; x < width; x += 1) output[rowOffset + x] = sums[x];
   }
 
   return output;
@@ -243,16 +249,11 @@ export function grayArrayToImageData(gray, width, height) {
 const BACKGROUND_SIGMA = 24;
 const CLAHE_ACTIVATION_THRESHOLD = 0.5;
 
-export function preprocessWithJs(gray, width, height, settings = {}) {
-  const enhancement = normalizeEnhancementSettings(settings);
-  const denoiseFactor = enhancement.denoiseStrength / 100;
-  const contrastFactor = enhancement.contrastBoost / 100;
-  const denoiseSigma = denoiseFactor * 2.0;
-
+function prepareFlatField(gray, width, height, denoiseSigma, blur = gaussianBlur2d) {
   const denoised = denoiseSigma > 0.05
-    ? gaussianBlur2d(gray, width, height, denoiseSigma)
+    ? blur(gray, width, height, denoiseSigma)
     : gray;
-  const background = gaussianBlur2d(denoised, width, height, BACKGROUND_SIGMA);
+  const background = blur(denoised, width, height, BACKGROUND_SIGMA);
 
   let backgroundSum = 0;
   for (let index = 0; index < background.length; index += 1) {
@@ -265,6 +266,12 @@ export function preprocessWithJs(gray, width, height, settings = {}) {
     flatField[index] = clamp(denoised[index] - background[index] + backgroundMean, 0, 1);
   }
 
+  return flatField;
+}
+
+function finishPreprocessing(flatField, width, height, enhancement) {
+  const denoiseSigma = enhancement.denoiseStrength / 100 * 2.0;
+  const contrastFactor = enhancement.contrastBoost / 100;
   const claheEnabled = contrastFactor > CLAHE_ACTIVATION_THRESHOLD;
   const claheClipFactor = claheEnabled
     ? (2.0 + ((contrastFactor - CLAHE_ACTIVATION_THRESHOLD) * 2.0))
@@ -295,6 +302,37 @@ export function preprocessWithJs(gray, width, height, settings = {}) {
       pipeline: 'denoise -> flat-field -> contrast'
     }
   };
+}
+
+export function preprocessWithJs(gray, width, height, settings = {}) {
+  const enhancement = normalizeEnhancementSettings(settings);
+  return finishPreprocessing(prepareFlatField(gray, width, height, enhancement.denoiseStrength / 100 * 2.0), width, height, enhancement);
+}
+
+// Normalized gel pixels are immutable; crop/rotate creates a new gray array.
+// Keep at most two images so comparing gels reuses work without retaining the
+// complete library's full-size float images. Contrast does not affect flat-field
+// correction or quantification, so it only reruns the preview stages.
+export function createPreprocessingCache({ blur = gaussianBlur2d } = {}) {
+  const entries = [];
+  function preprocess(gray, width, height, settings = {}) {
+    const enhancement = normalizeEnhancementSettings(settings);
+    const index = entries.findIndex(entry => entry.gray === gray && entry.width === width && entry.height === height);
+    const entry = index < 0 ? { gray, width, height } : entries.splice(index, 1)[0];
+    if (!entry.flatField || entry.denoiseStrength !== enhancement.denoiseStrength) {
+      entry.flatField = prepareFlatField(gray, width, height, enhancement.denoiseStrength / 100 * 2.0, blur);
+      entry.denoiseStrength = enhancement.denoiseStrength;
+      entry.result = null;
+    }
+    if (!entry.result || entry.contrastBoost !== enhancement.contrastBoost) {
+      entry.result = finishPreprocessing(entry.flatField, width, height, enhancement);
+      entry.contrastBoost = enhancement.contrastBoost;
+    }
+    entries.unshift(entry); entries.length = Math.min(entries.length, 2);
+    return entry.result;
+  }
+  preprocess.clear = () => { entries.length = 0; };
+  return preprocess;
 }
 
 export function detectGelPolarity(gray) {

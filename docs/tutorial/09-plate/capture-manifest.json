@@ -1,0 +1,775 @@
+{
+  "sourceVersion": "1.1.0-beta.9",
+  "exampleDate": "2026-10-25",
+  "timezone": "America/Chicago",
+  "viewport": [
+    1600,
+    1000
+  ],
+  "mode": "Real Plate renderer; fictional assay values; in-memory desktop adapters; no research workspace opened.",
+  "screenshots": [
+    {
+      "name": "01-plate-workspace",
+      "title": "Open Plate and choose Setup or Analyze",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "targets": [
+        {
+          "selector": "#assay-mode-switch",
+          "label": "Setup or Analyze",
+          "rect": {
+            "x": 0,
+            "y": 65,
+            "width": 279,
+            "height": 70
+          }
+        },
+        {
+          "selector": "#assay-form",
+          "label": "Plate details",
+          "rect": {
+            "x": 0,
+            "y": 134,
+            "width": 279,
+            "height": 443
+          }
+        },
+        {
+          "selector": "#assay-plate-preview",
+          "label": "Well mappings",
+          "rect": {
+            "x": 320,
+            "y": 164,
+            "width": 1269,
+            "height": 836
+          }
+        }
+      ]
+    },
+    {
+      "name": "02-create-plate",
+      "title": "Create a new assay plate",
+      "crop": {
+        "x": 0,
+        "y": 116,
+        "width": 297,
+        "height": 479
+      },
+      "targets": [
+        {
+          "selector": "#assay-plate-type",
+          "label": "Choose a plate size",
+          "rect": {
+            "x": 62,
+            "y": 190,
+            "width": 104,
+            "height": 34
+          }
+        },
+        {
+          "selector": "#assay-name",
+          "label": "Name the assay",
+          "rect": {
+            "x": 16,
+            "y": 348,
+            "width": 239,
+            "height": 39
+          }
+        },
+        {
+          "selector": "#assay-project",
+          "label": "Choose its project",
+          "rect": {
+            "x": 16,
+            "y": 426,
+            "width": 239,
+            "height": 38
+          }
+        }
+      ]
+    },
+    {
+      "name": "03-axis-mapping",
+      "title": "Map sample IDs along an axis",
+      "crop": {
+        "x": 0,
+        "y": 146,
+        "width": 1600,
+        "height": 854
+      },
+      "targets": [
+        {
+          "selector": "#assay-sample-axis-row-btn",
+          "label": "Sample IDs along rows",
+          "rect": {
+            "x": 22,
+            "y": 511,
+            "width": 49,
+            "height": 33
+          }
+        },
+        {
+          "selector": "#assay-plate-preview [data-axis-dimension=row]",
+          "label": "Enter the sample labels",
+          "rect": {
+            "x": 540,
+            "y": 258,
+            "width": 182,
+            "height": 268
+          }
+        }
+      ]
+    },
+    {
+      "name": "05-fill-concentrations",
+      "title": "Fill the concentration series",
+      "crop": {
+        "x": 302,
+        "y": 83,
+        "width": 1298,
+        "height": 917
+      },
+      "targets": [
+        {
+          "selector": "#assay-plate-preview [data-axis-dimension=column][data-axis-index=\"0\"]",
+          "label": "Enter the starting value",
+          "rect": {
+            "x": 728,
+            "y": 202,
+            "width": 143,
+            "height": 34
+          }
+        },
+        {
+          "selector": "#assay-fill-mode",
+          "label": "Choose the fill method",
+          "rect": {
+            "x": 529,
+            "y": 104,
+            "width": 102,
+            "height": 32
+          }
+        },
+        {
+          "selector": "#assay-dilution-fill-btn",
+          "label": "Fill the axis",
+          "rect": {
+            "x": 726,
+            "y": 104,
+            "width": 40,
+            "height": 32
+          }
+        }
+      ]
+    },
+    {
+      "name": "04-edit-well",
+      "title": "Override a single well",
+      "crop": {
+        "x": 302,
+        "y": 83,
+        "width": 1298,
+        "height": 917
+      },
+      "targets": [
+        {
+          "selector": "#assay-plate-field-sample-btn",
+          "label": "Choose the field to edit",
+          "rect": {
+            "x": 323,
+            "y": 104,
+            "width": 83,
+            "height": 32
+          }
+        },
+        {
+          "selector": "#assay-plate-preview input[data-well=\"D6\"]",
+          "label": "Enter the well override",
+          "rect": {
+            "x": 1450,
+            "y": 512,
+            "width": 133,
+            "height": 20
+          }
+        }
+      ]
+    },
+    {
+      "name": "06-serial-dilution",
+      "title": "Review the serial dilution plan",
+      "crop": {
+        "x": 352,
+        "y": 58,
+        "width": 896,
+        "height": 598
+      },
+      "targets": [
+        {
+          "selector": "#assay-serial-dilution-volume",
+          "label": "Volume per well",
+          "rect": {
+            "x": 387,
+            "y": 161,
+            "width": 180,
+            "height": 39
+          }
+        },
+        {
+          "selector": ".assay-serial-dilution-stock-table",
+          "label": "Stock concentrations",
+          "rect": {
+            "x": 387,
+            "y": 244,
+            "width": 343,
+            "height": 109
+          }
+        },
+        {
+          "selector": "#assay-serial-dilution-content > .assay-serial-dilution-sample",
+          "label": "Review the dilution steps",
+          "rect": {
+            "x": 387,
+            "y": 372,
+            "width": 826,
+            "height": 248
+          }
+        }
+      ]
+    },
+    {
+      "name": "07-layout-csv-save",
+      "title": "Import or export mappings, then save",
+      "crop": {
+        "x": 0,
+        "y": 130,
+        "width": 273,
+        "height": 112
+      },
+      "targets": [
+        {
+          "selector": "#assay-export-template-btn",
+          "label": "Export CSV template",
+          "rect": {
+            "x": 58,
+            "y": 148,
+            "width": 34,
+            "height": 34
+          }
+        },
+        {
+          "selector": "#assay-import-template-btn",
+          "label": "Import layout CSV",
+          "rect": {
+            "x": 100,
+            "y": 148,
+            "width": 34,
+            "height": 34
+          }
+        },
+        {
+          "selector": "#assay-save-btn",
+          "label": "Save assay",
+          "rect": {
+            "x": 142,
+            "y": 148,
+            "width": 76,
+            "height": 34
+          }
+        }
+      ]
+    },
+    {
+      "name": "08-analyze-workspace",
+      "title": "Open Analyze for the selected plate",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "targets": [
+        {
+          "selector": "#assay-analysis-panel",
+          "label": "Data and analysis settings",
+          "rect": {
+            "x": 16,
+            "y": 345,
+            "width": 246,
+            "height": 555
+          }
+        },
+        {
+          "selector": ".assay-workspace-chart",
+          "label": "Analysis chart",
+          "rect": {
+            "x": 324,
+            "y": 178,
+            "width": 1241,
+            "height": 62
+          }
+        },
+        {
+          "selector": ".assay-workspace-data",
+          "label": "Result and summary tables",
+          "rect": {
+            "x": 324,
+            "y": 260,
+            "width": 1241,
+            "height": 272
+          }
+        }
+      ]
+    },
+    {
+      "name": "09-enter-results",
+      "title": "Enter numeric results in the plate grid",
+      "crop": {
+        "x": 306,
+        "y": 96,
+        "width": 1277,
+        "height": 430
+      },
+      "targets": [
+        {
+          "selector": "#assay-result-table .tabulator-cell.tabulator-editing",
+          "label": "Enter the result value",
+          "rect": {
+            "x": 455,
+            "y": 379,
+            "width": 77,
+            "height": 32
+          }
+        },
+        {
+          "selector": "#assay-save-results-btn",
+          "label": "Save the current results",
+          "rect": {
+            "x": 1486,
+            "y": 114,
+            "width": 79,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "10-import-results",
+      "title": "Choose the result matrix to import",
+      "crop": {
+        "x": 262,
+        "y": 58,
+        "width": 1076,
+        "height": 345
+      },
+      "targets": [
+        {
+          "selector": "#assay-result-import-candidates",
+          "label": "Choose a detected matrix",
+          "rect": {
+            "x": 297,
+            "y": 145,
+            "width": 280,
+            "height": 174
+          }
+        },
+        {
+          "selector": "#assay-result-import-preview",
+          "label": "Check the row and column layout",
+          "rect": {
+            "x": 589,
+            "y": 145,
+            "width": 714,
+            "height": 174
+          }
+        },
+        {
+          "selector": "#assay-result-import-apply-btn",
+          "label": "Use This Matrix",
+          "rect": {
+            "x": 1180,
+            "y": 330,
+            "width": 123,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "11-transform-formula",
+      "title": "Create a transformed plate with formulas",
+      "crop": {
+        "x": 306,
+        "y": 317,
+        "width": 1277,
+        "height": 531
+      },
+      "targets": [
+        {
+          "selector": "#assay-data-tab-transformed",
+          "label": "Transformed plate · Table2",
+          "rect": {
+            "x": 419,
+            "y": 335,
+            "width": 81,
+            "height": 41
+          }
+        },
+        {
+          "selector": "#assay-derived-plate-table .tabulator-cell.tabulator-editing",
+          "label": "Enter a per-well formula",
+          "rect": {
+            "x": 455,
+            "y": 701,
+            "width": 77,
+            "height": 32
+          }
+        }
+      ]
+    },
+    {
+      "name": "12-analysis-source",
+      "title": "Choose which plate supplies analysis values",
+      "crop": {
+        "x": 0,
+        "y": 532,
+        "width": 280,
+        "height": 123
+      },
+      "targets": [
+        {
+          "selector": "#assay-analysis-data-source",
+          "label": "Choose Table1 or Table2",
+          "rect": {
+            "x": 16,
+            "y": 589,
+            "width": 246,
+            "height": 34
+          }
+        }
+      ]
+    },
+    {
+      "name": "13-custom-groups",
+      "title": "Group selected rows or columns",
+      "crop": {
+        "x": 0,
+        "y": 455,
+        "width": 1583,
+        "height": 501
+      },
+      "targets": [
+        {
+          "selector": "#assay-analysis-add-row-group-btn",
+          "label": "Add selected rows as a group",
+          "rect": {
+            "x": 16,
+            "y": 518,
+            "width": 92,
+            "height": 32
+          }
+        },
+        {
+          "selector": "#assay-analysis-add-column-group-btn",
+          "label": "Or group selected columns",
+          "rect": {
+            "x": 113,
+            "y": 518,
+            "width": 113,
+            "height": 32
+          }
+        },
+        {
+          "selector": "#assay-analysis-clear-groups-btn",
+          "label": "Clear custom groups",
+          "rect": {
+            "x": 232,
+            "y": 518,
+            "width": 30,
+            "height": 32
+          }
+        }
+      ]
+    },
+    {
+      "name": "14-summary-analysis",
+      "title": "Choose grouping and a summary method",
+      "crop": {
+        "x": 0,
+        "y": 203,
+        "width": 1582,
+        "height": 688
+      },
+      "targets": [
+        {
+          "selector": "#assay-analysis-group-by",
+          "label": "Choose how to group wells",
+          "rect": {
+            "x": 16,
+            "y": 700,
+            "width": 246,
+            "height": 34
+          }
+        },
+        {
+          "selector": "#assay-analysis-kind",
+          "label": "Choose the analysis method",
+          "rect": {
+            "x": 16,
+            "y": 768,
+            "width": 246,
+            "height": 34
+          }
+        },
+        {
+          "selector": "#assay-analysis-table",
+          "label": "Inspect the resulting chart",
+          "rect": {
+            "x": 325,
+            "y": 221,
+            "width": 1239,
+            "height": 430
+          }
+        }
+      ]
+    },
+    {
+      "name": "15-curve-fit",
+      "title": "Inspect a fitted curve and its summary",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "targets": [
+        {
+          "selector": ".assay-workspace-chart",
+          "label": "Inspect data and fitted curves",
+          "rect": {
+            "x": 324,
+            "y": 160,
+            "width": 1241,
+            "height": 492
+          }
+        },
+        {
+          "selector": "#assay-data-tab-summary",
+          "label": "Open the analysis summary",
+          "rect": {
+            "x": 520,
+            "y": 672,
+            "width": 59,
+            "height": 41
+          }
+        },
+        {
+          "selector": "#assay-workspace-format-btn",
+          "label": "Format the chart",
+          "rect": {
+            "x": 1361,
+            "y": 181,
+            "width": 30,
+            "height": 30
+          }
+        }
+      ]
+    },
+    {
+      "name": "16-format-frame",
+      "title": "Format the chart frame and canvas",
+      "crop": {
+        "x": 0,
+        "y": 337,
+        "width": 280,
+        "height": 647
+      },
+      "targets": [
+        {
+          "selector": ".assay-chart-style-tabs",
+          "label": "Choose a format section",
+          "rect": {
+            "x": 16,
+            "y": 468,
+            "width": 246,
+            "height": 35
+          }
+        },
+        {
+          "selector": "[data-cc=backgroundColor]",
+          "label": "Set the chart background",
+          "rect": {
+            "x": 16,
+            "y": 662,
+            "width": 88,
+            "height": 34
+          }
+        },
+        {
+          "selector": "[data-cc=presetSaveBtn]",
+          "label": "Save formatting as a preset",
+          "rect": {
+            "x": 137,
+            "y": 424,
+            "width": 30,
+            "height": 34
+          }
+        }
+      ]
+    },
+    {
+      "name": "17-format-axis",
+      "title": "Set axis scale and range",
+      "crop": {
+        "x": 0,
+        "y": 337,
+        "width": 280,
+        "height": 663
+      },
+      "targets": [
+        {
+          "selector": "[data-cc=xScale]",
+          "label": "Choose the X-axis scale",
+          "rect": {
+            "x": 16,
+            "y": 561,
+            "width": 119,
+            "height": 34
+          }
+        },
+        {
+          "selector": "[data-cc=yScale]",
+          "label": "Choose the Y-axis scale",
+          "rect": {
+            "x": 143,
+            "y": 561,
+            "width": 119,
+            "height": 34
+          }
+        },
+        {
+          "selector": "[data-cc=xRangeAuto]",
+          "label": "Keep automatic range or set limits",
+          "rect": {
+            "x": 20,
+            "y": 606,
+            "width": 13,
+            "height": 13
+          }
+        }
+      ]
+    },
+    {
+      "name": "18-export-chart",
+      "title": "Export or focus the chart",
+      "crop": {
+        "x": 307,
+        "y": 143,
+        "width": 1275,
+        "height": 96
+      },
+      "targets": [
+        {
+          "selector": "#assay-chart-export-png-btn",
+          "label": "Export PNG",
+          "rect": {
+            "x": 1420,
+            "y": 181,
+            "width": 46,
+            "height": 31
+          }
+        },
+        {
+          "selector": "#assay-chart-export-svg-btn",
+          "label": "Export SVG",
+          "rect": {
+            "x": 1469,
+            "y": 181,
+            "width": 45,
+            "height": 31
+          }
+        },
+        {
+          "selector": "#assay-chart-focus-btn",
+          "label": "Focus the chart",
+          "rect": {
+            "x": 1518,
+            "y": 181,
+            "width": 30,
+            "height": 30
+          }
+        }
+      ]
+    },
+    {
+      "name": "19-existing-plates",
+      "title": "Find and edit a saved plate",
+      "crop": {
+        "x": 0,
+        "y": 549,
+        "width": 270,
+        "height": 195
+      },
+      "targets": [
+        {
+          "selector": "#assay-search",
+          "label": "Search saved assays",
+          "rect": {
+            "x": 16,
+            "y": 596,
+            "width": 236,
+            "height": 36
+          }
+        },
+        {
+          "selector": "[data-assay-edit=demo-plate]",
+          "label": "Edit the saved plate",
+          "rect": {
+            "x": 180,
+            "y": 647,
+            "width": 30,
+            "height": 30
+          }
+        }
+      ]
+    },
+    {
+      "name": "20-delete-plate",
+      "title": "Delete a plate record",
+      "crop": {
+        "x": 0,
+        "y": 549,
+        "width": 270,
+        "height": 195
+      },
+      "targets": [
+        {
+          "selector": "[data-assay-delete=demo-plate]",
+          "label": "Delete this plate record",
+          "rect": {
+            "x": 214,
+            "y": 647,
+            "width": 30,
+            "height": 30
+          }
+        }
+      ]
+    }
+  ],
+  "checks": [
+    "Dilution fill divides the starting concentration by the factor",
+    "Layout CSV import and Save create a plate with all 24 well mappings",
+    "Editing a Table1 cell saves the numeric result on the active plate",
+    "Result import fills 24 wells and attaches the source CSV",
+    "A Table2 formula is stored separately from the raw plate results",
+    "The transformed A1 formula computes 6 from the original A1 value of 3",
+    "A selected range can become a custom row group",
+    "The analysis renders real Plotly traces for the example plate",
+    "Changing the chart scale saves formatting on the active assay",
+    "Focus chart expands the analysis chart",
+    "Delete removes the chosen example assay from the list"
+  ]
+}

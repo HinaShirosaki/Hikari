@@ -778,6 +778,31 @@
 .papers-highlight-comment-popover {
   width: auto;
   pointer-events: auto;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.papers-highlight-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.papers-highlight-comment-content {
+  padding: var(--space-6);
+  max-height: min(280px, 40vh);
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.papers-highlight-comment-content p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.papers-highlight-comment-content p + p {
+  margin-top: var(--space-6);
 }
 
 .papers-highlight-comment-popover .ghost-btn.is-copied {

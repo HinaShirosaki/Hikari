@@ -192,11 +192,6 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
-/* Keep the close control anchored despite Assay's relative tooltip buttons. */
-#assay-view .assay-serial-dilution-head > button.app-dialog-close-btn {
-  position: absolute;
-}
-
 #assay-serial-dilution-summary:empty {
   display: none;
 }

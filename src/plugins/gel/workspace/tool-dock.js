@@ -64,7 +64,7 @@ export function createGelToolDock({ documentObject: doc, onProcess, onSelect }) 
     get(id).setAttribute('aria-label', label); get(id).title = label;
   }
   const actions = doc.querySelector('.gel-record-actions');
-  actions.setAttribute('role', 'group'); actions.setAttribute('aria-label', 'Save and gel actions');
+  actions.setAttribute('role', 'group'); actions.setAttribute('aria-label', 'Save');
   get('save-btn').setAttribute('form', 'gel-form'); toolbar.append(actions);
   const form = get('form'), name = form.querySelector('.gel-name-field');
   let active = 'image', processing = 'image', open = true, wasLayout = false, lastStep = '';
@@ -94,7 +94,6 @@ export function createGelToolDock({ documentObject: doc, onProcess, onSelect }) 
     }
     get('save-btn').setAttribute('aria-label', isLayout() ? 'Save project' : 'Save gel');
     get('save-btn').title = isLayout() ? 'Save project' : 'Save gel';
-    get('record-menu-btn').hidden = isLayout() || !get('record-menu').querySelector('button');
     const reset = get('reset-overrides-btn');
     reset.hidden = isLayout();
     reset.disabled = crop.disabled || stack || cropping;

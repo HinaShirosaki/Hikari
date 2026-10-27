@@ -83,6 +83,7 @@ export function initLabNotebook({
     onCreateLinkedGel,
     onOpenPaper,
     ...drafts,
+    appendNotebookResultLine: (line) => appendNotebookResultLine(line),
     persistActiveEntrySampleLinks: (...args) => persistActiveEntrySampleLinks(...args),
     maybeGenerateNotebookPageName: (...args) => maybeGenerateNotebookPageName(...args),
     syncPageStarterProject: (...args) => syncPageStarterProject(...args),

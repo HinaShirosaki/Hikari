@@ -41,7 +41,6 @@ export function buildNotebookSampleCapture(ctx, record, capture = {}) {
     linkedAt: savedAt,
     captureRequestedAt: String(capture?.requestedAt || '').trim()
   };
-  const savedAtLabel = new Date(savedAt).toLocaleString();
-  const note = `[${savedAtLabel}] Saved sample ${formatSampleRecordLabel(record)} (${getSampleTypeLabel(ctx.state.settings, record?.type)}) from Add Samples. Saved in: ${storageLabel}.`;
+  const note = `Saved sample ${formatSampleRecordLabel(record)} (${getSampleTypeLabel(ctx.state.settings, record?.type)}) from Add Samples. Saved in: ${storageLabel}.`;
   return { entryIndex, sampleLink, note, savedAt };
 }

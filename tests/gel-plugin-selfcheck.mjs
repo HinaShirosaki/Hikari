@@ -265,8 +265,7 @@ async function checkAdapterContract() {
   assert.match(viewSource, /id="gel-save-btn"/, 'the save action has a stable busy-state target');
   [
     ['gel-save-btn', 'Save'],
-    ['gel-reset-overrides-btn', 'Reset lanes and bands'],
-    ['gel-record-menu-btn', 'More gel actions']
+    ['gel-reset-overrides-btn', 'Reset lanes and bands']
   ].forEach(([id, caption]) => {
     assert.match(
       viewSource,

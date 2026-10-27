@@ -21,12 +21,13 @@ import { angleDelta, rotateComponents } from './rotation.mjs';
 import { installCanvasClipboard } from './clipboard.mjs';
 import { installCanvasContextMenu } from './context-menu.mjs';
 import { createArtworkHitTester } from './hit-testing.mjs';
+import { createCanvasTextEditor } from './text-editor.mjs';
 
 const { hikari } = window.HikariPlugin;
 const $ = id => document.getElementById(id);
 const properties = $('properties');
 const artworkHitTester = createArtworkHitTester();
-let assetsPanel, workspaceTools, artworkImport, canvasCrop, canvasContextMenu;
+let assetsPanel, workspaceTools, artworkImport, canvasCrop, canvasContextMenu, textEditor;
 const componentRail = createComponentRail({ document, focusTab: name => workspaceTools?.focus(`${name}-tab`), onChange: name => {
   if (name === 'assets') assetsPanel?.render();
   if (name && workspaceTools?.isHosted()) void hikari.call('app.setAgentChatExpanded', { expanded: false }).catch(() => {});
@@ -108,7 +109,7 @@ document.addEventListener('click', event => {
   document.querySelectorAll('.popover[open]').forEach(menu => {
     // The select's finishing click must not dismiss the custom-size form it opened.
     const sizeControl = menu.classList.contains('canvas-options') && event.target.closest('#canvas-size');
-    if ((!menu.contains(event.target) && !sizeControl) || event.target.closest('.popover-panel button')) menu.open = false;
+    if ((!menu.contains(event.target) && !sizeControl) || event.target.closest('.popover-panel button:not(.image-generation-info-button)')) menu.open = false;
   });
 });
 document.querySelectorAll('.popover').forEach(menu => menu.addEventListener('toggle', () => {
@@ -159,7 +160,7 @@ function renderZoom() {
   $('zoom-fit').setAttribute('aria-pressed', String(view.zoom === null));
   workspaceTools?.sync();
 }
-const viewport = createCanvasViewport(stage => { syncSelectionSize(stage); renderZoom(); });
+const viewport = createCanvasViewport(stage => { syncSelectionSize(stage); renderZoom(); textEditor?.layout(); });
 function renderCanvas(canvas, documentState = state) {
   const stage = $(`${canvas}-canvas`), focusedId = document.activeElement?.dataset.objectId,
     focusedRotation = document.activeElement?.dataset.rotateId;
@@ -175,6 +176,7 @@ function renderCanvas(canvas, documentState = state) {
   if (focusedId && selectedIds.includes(focusedId)) stage.querySelector(`[data-object-id="${focusedId}"]`)?.focus({ preventScroll: true });
   if (focusedRotation) stage.querySelector(`[data-rotate-id="${focusedRotation}"]`)?.focus({ preventScroll: true });
   if (areaDrag?.canvas === canvas) renderSelectionRegion();
+  textEditor?.layout();
 }
 document.fonts.addEventListener('loadingdone', () => {
   clearTextBounds();
@@ -223,6 +225,7 @@ async function edit(operations, revision = state?.revision) {
   return result;
 }
 function render(next, id = illustrationId) {
+  textEditor?.sync(next, id);
   canvasContextMenu?.close(true);
   if (drag?.rotating && (next.revision !== drag.revision || id !== illustrationId
     || activeCanvas !== drag.canvas || JSON.stringify(selectedIds) !== JSON.stringify(drag.ids))) cancelRotation();
@@ -301,7 +304,7 @@ async function manageIllustration(action, id) {
 }
 $('illustration-search').addEventListener('input', () => { $('illustrations').scrollTop = 0; renderIllustrations(); });
 $('new-illustration').addEventListener('click', () => void manageIllustration('create'));
-$('duplicate-illustration').addEventListener('click', () => illustrationId && void manageIllustration('duplicate', illustrationId));
+let lastLayerClick = null;
 function renderLayers() {
   const focusedRow = document.activeElement?.closest('[data-layer-id]');
   const focusedId = focusedRow?.dataset.layerId, focusedAction = document.activeElement?.dataset.layerAction;
@@ -341,7 +344,18 @@ function renderLayers() {
   }
   const name = document.createElement('span'); name.className = 'layer-name'; name.textContent = object.name;
   button.append(preview, name);
-  button.setAttribute('aria-pressed', String(selectedIds.includes(object.id))); button.addEventListener('click', event => select(object.id, { additive: event.shiftKey }));
+  button.setAttribute('aria-pressed', String(selectedIds.includes(object.id)));
+  button.addEventListener('click', event => {
+    // Selection replaces the row, so the second native click can have a new target.
+    const now = performance.now();
+    const doubleClick = object.type === 'text' && event.detail > 0 && !event.shiftKey
+      && lastLayerClick?.id === object.id && now - lastLayerClick.time < 500
+      && Math.hypot(event.clientX - lastLayerClick.x, event.clientY - lastLayerClick.y) < 4;
+    lastLayerClick = event.detail > 0 && !doubleClick ? { id: object.id, time: now, x: event.clientX, y: event.clientY } : null;
+    if (doubleClick) editLabel(object.id);
+    else select(object.id, { additive: event.shiftKey });
+  });
+  if (object.type === 'text') button.addEventListener('dblclick', () => editLabel(object.id));
   const visibility = document.createElement('button'); visibility.type = 'button'; visibility.className = 'layer-visibility icon-button'; visibility.dataset.layerAction = 'visibility';
   visibility.title = `${object.visible ? 'Hide' : 'Show'} ${object.name}`; visibility.setAttribute('aria-label', visibility.title); visibility.setAttribute('aria-pressed', String(object.visible));
   visibility.append(icon(object.visible ? 'eye' : 'hidden'));
@@ -395,9 +409,19 @@ function select(id, { reveal = true, additive = false } = {}) {
   setSelection(additive ? ids.every(id => selectedIds.includes(id)) ? selectedIds.filter(id => !ids.includes(id)) : [...selectedIds, ...ids] : ids);
   render(state);
 }
+textEditor = createCanvasTextEditor({ getContext: () => ({ state, illustrationId }), status,
+  save: ({ id, text, revision, illustrationId: targetId }) => workspace.request({ action: 'apply', illustration_id: targetId,
+    expected_revision: revision, request_id: crypto.randomUUID(), operations: [{ op: 'update', id, patch: { text } }] }).then(result => {
+    if (!result.ok) status(result.error);
+    return result;
+  }) });
 function editLabel(id) {
   if (state?.objects.find(object => object.id === id)?.type !== 'text') return;
-  select(id); $('label-content').focus(); $('label-content').select();
+  // Inline editing must not open a panel and refit the canvas beneath the text.
+  select(id, { reveal: false });
+  if (!textEditor.open(id)) {
+    componentRail.open('layers'); $('label-content').focus(); $('label-content').select();
+  }
 }
 properties.addEventListener('submit', event => event.preventDefault());
 properties.querySelectorAll('[data-text-style], [data-align]').forEach(button => button.addEventListener('click', () => {
@@ -554,6 +578,7 @@ setSelectionTool('pointer');
     viewport.zoom(stage, Math.exp(-Math.max(-100, Math.min(100, event.deltaY)) * 0.002), { x: event.clientX, y: event.clientY });
   }, { passive: false });
   stage.addEventListener('pointerdown', event => {
+    if (textEditor.isActive()) return;
     if (!state || event.button !== 0 || event.ctrlKey && /Mac/i.test(navigator.platform) || drag || areaDrag || !event.isPrimary) return;
     let hit = artworkHitTester.hit(stage, state.objects, event);
     if (hit?.dataset.moveId && event.shiftKey) hit = null;
@@ -582,7 +607,9 @@ setSelectionTool('pointer');
     const objects = selectedObjects(), object = objects.length === 1 ? objects[0] : selectionTarget();
     if (!object) return;
     const boxes = objects.map(interactionBox);
-    drag = { canvas: key, pointerId: event.pointerId, id, object: { ...object }, objects: objects.map(object => ({ ...object })), bounds: objects.length === 1 ? boxes[0] : selectionBounds(boxes), ids: [...selectedIds], start, revision: state.revision, resizing: hit.dataset.resizeDirection, rotating: Boolean(hit.dataset.rotateId), gap: Boolean(hit.dataset.moveId), preview: null };
+    drag = { canvas: key, pointerId: event.pointerId, id, object: { ...object }, objects: objects.map(object => ({ ...object })), bounds: objects.length === 1 ? boxes[0] : selectionBounds(boxes), ids: [...selectedIds], start,
+      screen: { x: event.clientX, y: event.clientY }, textClick: Boolean(hit.dataset.objectId && state.objects.find(object => object.id === id)?.type === 'text'),
+      revision: state.revision, resizing: hit.dataset.resizeDirection, rotating: Boolean(hit.dataset.rotateId), gap: Boolean(hit.dataset.moveId), preview: null };
     if (drag.rotating) {
       drag.pivot = { x: drag.bounds.x + drag.bounds.width / 2, y: drag.bounds.y + drag.bounds.height / 2 };
       drag.lastAngle = Math.atan2(start.y - drag.pivot.y, start.x - drag.pivot.x) * 180 / Math.PI;
@@ -596,6 +623,10 @@ setSelectionTool('pointer');
   stage.addEventListener('pointermove', event => {
     if (areaDrag?.canvas === key && areaDrag.pointerId === event.pointerId) { updateSelectionRegion(event); return; }
     if (!drag || drag.pointerId !== event.pointerId) return;
+    // The first text click reveals handles beneath the second click. Ignore
+    // pointer jitter on those handles so a double-click cannot resize the font.
+    if ((drag.textClick || drag.resizing && drag.objects.some(object => object.type === 'text')) && !drag.preview && !drag.rotating
+      && Math.hypot(event.clientX - drag.screen.x, event.clientY - drag.screen.y) < 4) return;
     const current = point(stage.querySelector('svg'), event), dx = current.x - drag.start.x, dy = current.y - drag.start.y;
     if (drag.rotating) {
       if (Math.hypot(current.x - drag.pivot.x, current.y - drag.pivot.y) < 1e-6) return;
@@ -655,9 +686,10 @@ setSelectionTool('pointer');
       // Recognize a double-click here, after capture, without moving the canvas
       // or opening the inspector in the middle of a drag/resize gesture.
       const now = performance.now();
-      const doubleClick = lastClick?.id === finished.id && now - lastClick.time < 500
+      const textClick = finished.textClick || finished.resizing && finished.objects.length === 1 && finished.object.type === 'text';
+      const doubleClick = textClick && lastClick?.id === finished.id && now - lastClick.time < 500
         && Math.hypot(event.clientX - lastClick.x, event.clientY - lastClick.y) < 4;
-      lastClick = doubleClick ? null : { id: finished.id, time: now, x: event.clientX, y: event.clientY };
+      lastClick = finished.textClick && !doubleClick ? { id: finished.id, time: now, x: event.clientX, y: event.clientY } : null;
       if (doubleClick) editLabel(finished.id);
       return;
     }
@@ -681,7 +713,7 @@ setSelectionTool('pointer');
     if (id && !selectedIds.includes(id)) select(state.groups.find(group => group.ids.includes(id))?.ids || id, { reveal: false });
   });
   stage.addEventListener('dblclick', event => {
-    if ($('selection-tool').value !== 'pointer') return;
+    if ($('selection-tool').value !== 'pointer' || textEditor.isActive()) return;
     // Selection redraws the SVG during pointer-down. Chromium can deliver the
     // resulting double-click to the stage after that original node is replaced.
     const target = event.target.closest('[data-object-id]');
@@ -792,7 +824,7 @@ document.addEventListener('keydown', event => {
   }
   const object = selectionTarget(); if (!object) return;
   if (event.key === 'Enter' && object.type === 'text' && (event.target.dataset.objectId || event.target.closest('.layer-select'))) {
-    event.preventDefault(); componentRail.open('layers'); $('label-content').focus(); $('label-content').select(); return;
+    event.preventDefault(); editLabel(object.id); return;
   }
   if (event.key === 'Delete' || event.key === 'Backspace') { event.preventDefault(); deleteSelection(); return; }
   const delta = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];

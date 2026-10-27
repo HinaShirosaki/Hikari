@@ -285,9 +285,16 @@
   padding-top: 0;
 }
 
+/* The ledger owns its side insets; avoid adding the shared rail gap twice. */
+#workflow-management-view .workflow-editor-layout:has(> .workflow-editor-main > .workflow-list-panel:not([hidden])) {
+  column-gap: 0;
+}
+
 #workflow-management-view .workflow-editor-main:has(> .workflow-list-panel:not([hidden])) {
   grid-template-rows: minmax(0, 1fr);
   align-content: stretch;
+  padding-inline: 0;
+  scrollbar-gutter: stable both-edges;
 }
 
 #workflow-management-view .workflow-editor-main > .workflow-list-panel:not([hidden]) {
@@ -295,6 +302,7 @@
   grid-template-rows: auto minmax(0, 1fr);
   min-height: 100%;
   align-content: stretch;
+  padding-inline: clamp(var(--space-16), 2vw, var(--space-24));
 }
 
 #workflow-management-view .workflow-editor-sidebar-scroll > .workflow-template-editor-panel,
@@ -368,7 +376,7 @@
 
 #workflow-management-view .workflow-block-protocol-search-result.is-selected {
   background: var(--theme-surface-active);
-  box-shadow: inset 0.1875rem 0 0 var(--theme-accent);
+  box-shadow: none;
 }
 
 #workflow-management-view .workflow-block-protocol-search-result:focus-visible {
@@ -709,14 +717,10 @@
   cursor: grabbing;
 }
 
-.workflow-node-connecting {
-  border-color: var(--theme-accent-line);
-  box-shadow: inset 0 0 0 1px var(--theme-accent-soft);
-}
-
+.workflow-node-connecting,
 .workflow-node-selected {
   border-color: var(--theme-accent-line);
-  box-shadow: inset 0 0 0 1px var(--theme-accent-soft);
+  box-shadow: none;
 }
 
 .workflow-node-header {
@@ -969,7 +973,7 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: var(--space-10) var(--space-12);
+  padding: var(--space-10) var(--space-16);
   border-bottom: 1px solid var(--theme-border-soft);
   background: var(--theme-surface);
   color: var(--theme-text-muted);
@@ -982,7 +986,7 @@
 }
 
 .workflow-ledger td {
-  padding: 9px var(--space-12);
+  padding: 9px var(--space-16);
   border-bottom: 1px solid var(--theme-border-soft);
   vertical-align: middle;
 }
@@ -1651,11 +1655,6 @@ body.workflow-dragging {
   background: var(--theme-surface-elevated);
 }
 
-.workflow-node-selected,
-.workflow-node-connecting {
-  box-shadow: inset 2px 0 0 var(--theme-accent-line);
-}
-
 /* Workflow cards inside the shared rail. Moved from left-rail-template.css. */
 .left-rail-template__rail .workflow-card {
   border: 0 !important;
@@ -1689,7 +1688,7 @@ body.workflow-dragging {
 .workflow-process-dialog #workflow-process-status:empty { display: none; }
 
 .workflow-project-heading > th {
-  padding: var(--space-12) var(--space-10) var(--space-6);
+  padding: var(--space-12) var(--space-16) var(--space-6);
   background: color-mix(in srgb, var(--theme-surface-subtle) 50%, var(--theme-surface));
   text-transform: none;
   letter-spacing: normal;

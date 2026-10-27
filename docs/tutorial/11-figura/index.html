@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="A detailed illustrated tutorial for Hikari Figura, with highlighted screenshots and step-by-step instructions."><title>Figura · Hikari tutorials</title><link rel="stylesheet" href="tutorial.css"></head>
+<body><a class="skip-link" href="#chapter">Skip to tutorial</a>
+<aside class="sidebar"><a class="brand" href="../index.html">Hikari <span>/ Tutorials</span></a><p class="chapter-number">CHAPTER 11</p><p class="chapter-name">Figura</p><nav aria-label="Chapter contents"><a href="#1-open-figura">1. Open Figura</a>
+<a href="#2-create-and-name-an-illustration">2. Create and name an illustration</a>
+<a href="#3-describe-a-figure-for-codex">3. Describe a figure for Codex</a>
+<a href="#4-set-the-canvas-size">4. Set the canvas size</a>
+<a href="#5-add-and-edit-text-labels">5. Add and edit text labels</a>
+<a href="#6-add-or-style-a-vector-component">6. Add or style a vector component</a>
+<a href="#7-import-and-crop-artwork">7. Import and crop artwork</a>
+<a href="#8-select-one-or-several-components">8. Select one or several components</a>
+<a href="#9-move-resize-and-rotate-components">9. Move, resize, and rotate components</a>
+<a href="#10-manage-layers-and-visibility">10. Manage layers and visibility</a>
+<a href="#11-group-related-artwork-and-labels">11. Group related artwork and labels</a>
+<a href="#12-align-components-and-distribute-spacing">12. Align components and distribute spacing</a>
+<a href="#13-copy-and-paste-editable-components">13. Copy and paste editable components</a>
+<a href="#14-save-and-reuse-components-as-assets">14. Save and reuse components as assets</a>
+<a href="#15-find-and-duplicate-saved-illustrations">15. Find and duplicate saved illustrations</a>
+<a href="#16-export-the-finished-figure">16. Export the finished figure</a></nav></aside>
+<main id="chapter"><div class="eyebrow">HIKARI / ILLUSTRATED TUTORIAL</div><article><h1>Figura</h1>
+<p>How to create an illustration, edit its components, reuse artwork, and export a figure.</p>
+<p><strong>Follow the numbered steps and the highlighted controls in each screenshot.</strong></p>
+<p>The screenshots use a fictional diagram with two schematic cells and a signal arrow. Artwork and labels remain separate, editable layers.</p>
+<h2 id="1-open-figura">1. Open Figura<a class="heading-link" href="#1-open-figura" aria-label="Link to 1. Open Figura">#</a></h2>
+<ol>
+<li>Open <strong>More modules</strong> in Hikari&#39;s top navigation bar and choose <strong>Figura</strong>.</li>
+<li>Find saved figures in <strong>Illustrations</strong> on the left.</li>
+<li>Click an illustration&#39;s row to open its canvas.</li>
+<li>Use the top toolbar for the title, canvas size, drawing complexity, figure options, and exports.</li>
+<li>Use the right toolbar for selection, layers, reusable assets, grouping, alignment, and zoom.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 1"><img loading="lazy" src="images/01-figura-workspace.png" alt="Find saved illustrations on the left, edit the canvas in the center, and use the right toolbar for drawing tools."></button><figcaption><span>Figure 1.</span> Find saved illustrations on the left, edit the canvas in the center, and use the right toolbar for drawing tools. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Open <strong>Layers</strong> or <strong>Assets</strong> when you need its panel. Click the active tool again, or the panel&#39;s close button, to return that space to the canvas. The chevron beside the figure title hides or shows the Illustrations rail.</p>
+<h2 id="2-create-and-name-an-illustration">2. Create and name an illustration<a class="heading-link" href="#2-create-and-name-an-illustration" aria-label="Link to 2. Create and name an illustration">#</a></h2>
+<ol>
+<li>Click <strong>New illustration</strong>, the plus icon beside Illustrations.</li>
+<li>Enter a descriptive title in the top-left title field, such as <code>Practice diagram · example</code>.</li>
+<li>Click outside the field to finish the title edit.</li>
+<li>Start with an AI description or add layers manually using the steps below.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 2"><img loading="lazy" src="images/02-create-illustration.png" alt="Click New illustration and enter the figure title in the top toolbar."></button><figcaption><span>Figure 2.</span> Click New illustration and enter the figure title in the top toolbar. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Figura saves each illustration independently as you finish edits. There is no separate Save button in the editor. If an error appears in the status line, resolve it before switching away or closing Hikari.</p>
+<h2 id="3-describe-a-figure-for-codex">3. Describe a figure for Codex<a class="heading-link" href="#3-describe-a-figure-for-codex" aria-label="Link to 3. Describe a figure for Codex">#</a></h2>
+<h3 id="start-from-an-empty-canvas">Start from an empty canvas<a class="heading-link" href="#start-from-an-empty-canvas" aria-label="Link to Start from an empty canvas">#</a></h3>
+<ol>
+<li>Choose a <strong>Complexity</strong> level in the top toolbar: <strong>Simple</strong>, <strong>Standard</strong>, or <strong>Detailed</strong>.</li>
+<li>In the composer beneath the empty canvas, describe the content, relationships, labels, and arrangement you want.</li>
+<li>Click <strong>Draw with Codex</strong>, the arrow beside the composer, or press <strong>⌘Enter</strong> on macOS / <strong>Ctrl+Enter</strong> on Windows.</li>
+<li>Follow the work in Hikari&#39;s agent chat rail.</li>
+<li>Inspect the resulting figure and labels before exporting it.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 3"><img loading="lazy" src="images/03-drawing-prompt.png" alt="Choose Complexity, enter a figure description, and use the arrow to draw with Codex."></button><figcaption><span>Figure 3.</span> Choose Complexity, enter a figure description, and use the arrow to draw with Codex. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>A practice description:</p>
+<blockquote>
+<p>Draw a simple schematic of one sender cell, a signal arrow, and one receiver cell. Keep every label separately editable.</p>
+</blockquote>
+<p>Codex drawing requires Hikari&#39;s configured Codex access. When the illustration already contains components, open its agent chat rail to request changes; the starting composer beneath the canvas is hidden. Each illustration has its own conversation.</p>
+<p>Use specific follow-up requests, such as “Move the receiver cell to the right and keep both cells the same size,” or “Change the arrow label to Signal A.” Changing Complexity guides the next request; it does not redraw the existing figure by itself.</p>
+<h3 id="set-image-generation-preferences">Set image-generation preferences<a class="heading-link" href="#set-image-generation-preferences" aria-label="Link to Set image-generation preferences">#</a></h3>
+<ol>
+<li>Open <strong>Figure options</strong>, the three-dot button beside Complexity.</li>
+<li>Turn on <strong>Image generation</strong> if you want to specify a percentage preference.</li>
+<li>Choose <strong>0%, 25%, 50%, 75%, or 100%</strong>. Use 0% when you want new illustrative artwork to remain SVG.</li>
+<li>Choose an <strong>Image style</strong> and add <strong>Style notes</strong> when you want to describe the appearance of newly generated artwork.</li>
+<li>Close the menu and make your next drawing or revision request.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 4"><img loading="lazy" src="images/04-generation-preferences.png" alt="Use Figure options to set image-generation preference, image style, and optional style notes."></button><figcaption><span>Figure 4.</span> Use Figure options to set image-generation preference, image style, and optional style notes. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>With the switch off, Figura uses <strong>Automatic · SVG first</strong>. The percentage guides the approximate area of eligible illustrative artwork; labels, arrows, frames, and quantitative charts stay separately editable. Preferences affect future requested edits and do not convert existing artwork automatically.</p>
+<p>You can also start from <strong>Protocols &gt; Generate illustration</strong>, or select text in a paper PDF and choose <strong>Generate illustration</strong>. Those actions create a new figure with the selected source context. For a data plot, give the agent the actual data, units, and intended error-bar definition, then inspect the resulting chart and calculations.</p>
+<h2 id="4-set-the-canvas-size">4. Set the canvas size<a class="heading-link" href="#4-set-the-canvas-size" aria-label="Link to 4. Set the canvas size">#</a></h2>
+<ol>
+<li>Open the <strong>Canvas</strong> size menu in the top toolbar.</li>
+<li>Choose <strong>Landscape</strong>, <strong>Portrait</strong>, <strong>Square</strong>, <strong>Widescreen</strong>, or <strong>Small</strong>.</li>
+<li>Choose <strong>Custom…</strong> for exact dimensions, or click the adjacent three-dot <strong>Custom canvas size</strong> button.</li>
+<li>Enter <strong>Width</strong> and <strong>Height</strong>, then click outside each field to finish the edit.</li>
+<li>Inspect the figure at its new bounds.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 5"><img loading="lazy" src="images/05-canvas-size.png" alt="Choose a canvas preset or enter exact width and height in the canvas-size options."></button><figcaption><span>Figure 5.</span> Choose a canvas preset or enter exact width and height in the canvas-size options. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Changing canvas size changes the figure&#39;s bounds while preserving object positions and sizes. It does not scale the artwork to fit. Use <strong>Fit</strong> in the right toolbar to see the full canvas, and <strong>− / +</strong> to zoom. When zoomed in, scroll to pan; hold <strong>⌘ / Ctrl</strong> while scrolling to zoom at the pointer.</p>
+<h2 id="5-add-and-edit-text-labels">5. Add and edit text labels<a class="heading-link" href="#5-add-and-edit-text-labels" aria-label="Link to 5. Add and edit text labels">#</a></h2>
+<ol>
+<li>Click <strong>Add layer</strong>, the plus icon in the right toolbar.</li>
+<li>Choose <strong>Text label</strong>.</li>
+<li>Enter the label&#39;s content in <strong>Layers and properties</strong>.</li>
+<li>Adjust its font, size, color, weight, alignment, and anchor as needed.</li>
+<li>Click outside the edited field to keep the change.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 6"><img loading="lazy" src="images/06-add-layer-menu.png" alt="Add layer offers Text label, Vector component, and Import artwork."></button><figcaption><span>Figure 6.</span> Add layer offers Text label, Vector component, and Import artwork. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 7"><img loading="lazy" src="images/07-edit-text.png" alt="Edit a label&#39;s content, font, size, color, weight, and anchor in its properties."></button><figcaption><span>Figure 7.</span> Edit a label&#39;s content, font, size, color, weight, and anchor in its properties. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>To revise a label already on the canvas, double-click it to open its text controls. Text remains independent of the underlying artwork. Resizing a text layer scales its box and font together; changing the font-size field gives you a separate size control.</p>
+<p>Use <strong>Position &amp; size</strong> for exact placement. For a label you want centered under a component, inspect its alignment and anchor as well as its position.</p>
+<h2 id="6-add-or-style-a-vector-component">6. Add or style a vector component<a class="heading-link" href="#6-add-or-style-a-vector-component" aria-label="Link to 6. Add or style a vector component">#</a></h2>
+<ol>
+<li>Click <strong>Add layer &gt; Vector component</strong>.</li>
+<li>Select the new component on the canvas or in Layers.</li>
+<li>Set <strong>Fill</strong>, <strong>Stroke</strong>, and <strong>Stroke width</strong> in its vector properties.</li>
+<li>Move or resize the component to fit your figure.</li>
+<li>For a prepared SVG component, use <strong>Import artwork…</strong> as described in the next section.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 8"><img loading="lazy" src="images/08-style-vector.png" alt="Use Fill and Stroke to style a vector component, or open its SVG artwork editor."></button><figcaption><span>Figure 8.</span> Use Fill and Stroke to style a vector component, or open its SVG artwork editor. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Clear a fill or stroke override to restore the original SVG styling. <strong>Edit SVG source</strong> opens the component&#39;s artwork source; use <strong>Apply artwork</strong> to keep an edited SVG or <strong>Cancel</strong> to leave it unchanged.</p>
+<p>The supplied <a href="examples/cell-component.svg">cell-component.svg</a> is a text-free example you can import. Add its label as a separate text layer.</p>
+<h2 id="7-import-and-crop-artwork">7. Import and crop artwork<a class="heading-link" href="#7-import-and-crop-artwork" aria-label="Link to 7. Import and crop artwork">#</a></h2>
+<h3 id="add-artwork-to-the-canvas">Add artwork to the canvas<a class="heading-link" href="#add-artwork-to-the-canvas" aria-label="Link to Add artwork to the canvas">#</a></h3>
+<ol>
+<li>Click <strong>Add layer &gt; Import artwork…</strong>.</li>
+<li>Choose an SVG, PNG, JPEG, or WebP file, up to 5 MiB.</li>
+<li>Inspect the preview. For a raster image, confirm that it contains no text by checking the review box.</li>
+<li>Click <strong>Add artwork</strong>.</li>
+<li>Position the new layer and add any labels separately.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 9"><img loading="lazy" src="images/09-import-artwork.png" alt="Inspect the imported image, confirm that it has no embedded text, and add the artwork."></button><figcaption><span>Figure 9.</span> Inspect the imported image, confirm that it has no embedded text, and add the artwork. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>You can practice with <a href="examples/cell-artwork.png">cell-artwork.png</a>. It contains a schematic cell without labels. SVG imports must also contain artwork without text or embedded images.</p>
+<h3 id="crop-a-raster-image">Crop a raster image<a class="heading-link" href="#crop-a-raster-image" aria-label="Link to Crop a raster image">#</a></h3>
+<ol>
+<li>Select the imported image.</li>
+<li>Click <strong>Crop selected image</strong> in the right toolbar.</li>
+<li>Drag the crop handles, or enter exact <strong>X</strong>, <strong>Y</strong>, <strong>Width</strong>, and <strong>Height</strong> in pixels.</li>
+<li>Click <strong>Apply crop</strong> to keep the cropped image.</li>
+<li>Use <strong>Reset</strong> to restart the crop preview, or <strong>Cancel / Escape</strong> to leave the image unchanged.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 10"><img loading="lazy" src="images/10-crop-image.png" alt="Adjust the image crop with handles or pixel bounds, then click Apply crop."></button><figcaption><span>Figure 10.</span> Adjust the image crop with handles or pixel bounds, then click Apply crop. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Crop applies to raster artwork. To replace an image, select its layer and use <strong>Replace artwork…</strong> in its properties.</p>
+<h2 id="8-select-one-or-several-components">8. Select one or several components<a class="heading-link" href="#8-select-one-or-several-components" aria-label="Link to 8. Select one or several components">#</a></h2>
+<h3 id="use-rectangle-selection">Use rectangle selection<a class="heading-link" href="#use-rectangle-selection" aria-label="Link to Use rectangle selection">#</a></h3>
+<ol>
+<li>Choose <strong>Select and move</strong>, the pointer icon, or press <strong>V</strong> while the canvas has focus.</li>
+<li>Click a component to select it.</li>
+<li>Drag from empty canvas to draw a rectangle around several components.</li>
+<li>Inspect the selection frames before moving or resizing anything.</li>
+<li>Hold <strong>Shift</strong> to add to the selection. Press <strong>Escape</strong> to clear it.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 11"><img loading="lazy" src="images/11-rectangle-selection.png" alt="Drag from empty canvas to select several components and inspect the shared frame."></button><figcaption><span>Figure 11.</span> Drag from empty canvas to select several components and inspect the shared frame. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<h3 id="use-a-freehand-outline">Use a freehand outline<a class="heading-link" href="#use-a-freehand-outline" aria-label="Link to Use a freehand outline">#</a></h3>
+<ol>
+<li>Choose <strong>Freehand selection</strong>, the lasso icon, or press <strong>L</strong>.</li>
+<li>Drag a path around the components you want. The outline closes when you release the pointer.</li>
+<li>Move or resize the resulting selection with its frame and handles.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 12"><img loading="lazy" src="images/12-freehand-selection.png" alt="Choose Freehand selection, outline the components, and inspect the selection."></button><figcaption><span>Figure 12.</span> Choose Freehand selection, outline the components, and inspect the selection. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Components touched by the selection region are included. Groups select together; hold <strong>Alt</strong> to target individual group members. Clicking transparent space in artwork can select a visible component beneath it, so check the selected layer before editing.</p>
+<h2 id="9-move-resize-and-rotate-components">9. Move, resize, and rotate components<a class="heading-link" href="#9-move-resize-and-rotate-components" aria-label="Link to 9. Move, resize, and rotate components">#</a></h2>
+<h3 id="move-or-enter-exact-dimensions">Move or enter exact dimensions<a class="heading-link" href="#move-or-enter-exact-dimensions" aria-label="Link to Move or enter exact dimensions">#</a></h3>
+<ol>
+<li>Select the component or components.</li>
+<li>Drag a selected component to move the selection.</li>
+<li>Drag a corner or edge handle to resize it.</li>
+<li>For precise values, open <strong>Layers</strong>, select the component, and expand <strong>Position &amp; size</strong>.</li>
+<li>Enter <strong>X</strong>, <strong>Y</strong>, <strong>Width</strong>, or <strong>Height</strong>. Use the nearby <strong>Rotation</strong> and <strong>Opacity</strong> fields when needed.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 13"><img loading="lazy" src="images/13-position-and-size.png" alt="Expand Position &amp; size for exact geometry, and use Rotation or Opacity for the selected component."></button><figcaption><span>Figure 13.</span> Expand Position &amp; size for exact geometry, and use Rotation or Opacity for the selected component. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Arrow keys nudge a selection by one canvas unit; hold <strong>Shift</strong> to move by ten. Vector and raster handles can stretch artwork along one or both dimensions. Text handles preserve its aspect ratio and scale the font with its box.</p>
+<h3 id="rotate-with-the-canvas-handle">Rotate with the canvas handle<a class="heading-link" href="#rotate-with-the-canvas-handle" aria-label="Link to Rotate with the canvas handle">#</a></h3>
+<ol>
+<li>Select a component or group.</li>
+<li>Drag the round handle connected to its selection frame.</li>
+<li>Hold <strong>Shift</strong> to snap to 15-degree increments.</li>
+<li>Release to keep the rotation, or press <strong>Escape</strong> during the drag to cancel.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 14"><img loading="lazy" src="images/14-rotate-selection.png" alt="Use the round handle to rotate the selection, and the frame handles to resize it."></button><figcaption><span>Figure 14.</span> Use the round handle to rotate the selection, and the frame handles to resize it. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>You can focus the rotation handle and use arrow keys for one-degree steps, or <strong>Shift + arrow</strong> for 15-degree steps. Hikari&#39;s Undo and Redo actions let you revise a completed edit; <strong>⌘/Ctrl+Z</strong> undoes and <strong>⌘/Ctrl+Shift+Z</strong> redoes.</p>
+<h2 id="10-manage-layers-and-visibility">10. Manage layers and visibility<a class="heading-link" href="#10-manage-layers-and-visibility" aria-label="Link to 10. Manage layers and visibility">#</a></h2>
+<ol>
+<li>Open <strong>Layers and properties</strong> from the right toolbar.</li>
+<li>Click a layer row to select its component.</li>
+<li>Hover over or focus the row to reveal its visibility button. Click it to hide or show the component.</li>
+<li>With a component selected, use the bottom action icons to <strong>Duplicate layer</strong>, <strong>Bring forward</strong>, <strong>Send backward</strong>, or <strong>Delete layer</strong>.</li>
+<li>Inspect overlapping artwork after changing layer order.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 15"><img loading="lazy" src="images/15-layer-actions.png" alt="Select layers, toggle their visibility, and use the duplicate, order, and delete actions."></button><figcaption><span>Figure 15.</span> Select layers, toggle their visibility, and use the duplicate, order, and delete actions. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Hidden layers remain in the illustration but are omitted from exports. Layer names help you identify artwork separately from its labels. You can change the selected layer&#39;s name at the top of its properties.</p>
+<h2 id="11-group-related-artwork-and-labels">11. Group related artwork and labels<a class="heading-link" href="#11-group-related-artwork-and-labels" aria-label="Link to 11. Group related artwork and labels">#</a></h2>
+<ol>
+<li>Select the components you want to keep together, such as a cell and its label.</li>
+<li>Click <strong>Group selection</strong> in the right toolbar, or press <strong>⌘G / Ctrl+G</strong>.</li>
+<li>Move, resize, or rotate the group using its outer frame.</li>
+<li>To separate the components again, select the group and click <strong>Ungroup</strong>, or press <strong>⌘Shift+G / Ctrl+Shift+G</strong>.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 16"><img loading="lazy" src="images/16-group-selection.png" alt="Select related components and use Group or Ungroup in the right toolbar."></button><figcaption><span>Figure 16.</span> Select related components and use Group or Ungroup in the right toolbar. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Grouping keeps artwork and text independently editable. A selected group shows its outer frame; you can select an individual member from Layers when you need to edit only that component.</p>
+<h3 id="use-the-context-menu">Use the context menu<a class="heading-link" href="#use-the-context-menu" aria-label="Link to Use the context menu">#</a></h3>
+<p>Right-click a component on the canvas or its layer row for <strong>Copy</strong>, <strong>Paste</strong>, <strong>Group</strong>, <strong>Ungroup</strong>, and <strong>Save as an asset…</strong>. Unavailable actions are disabled. On macOS, Control-click also opens the menu.</p>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 17"><img loading="lazy" src="images/17-context-menu.png" alt="Right-click a component or group to access copy, grouping, and reusable-asset actions."></button><figcaption><span>Figure 17.</span> Right-click a component or group to access copy, grouping, and reusable-asset actions. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Right-clicking an already selected component keeps the current multiple selection. Press <strong>Escape</strong> to dismiss the menu.</p>
+<h2 id="12-align-components-and-distribute-spacing">12. Align components and distribute spacing<a class="heading-link" href="#12-align-components-and-distribute-spacing" aria-label="Link to 12. Align components and distribute spacing">#</a></h2>
+<ol>
+<li>Select at least two items.</li>
+<li>Open <strong>Align and distribute</strong> in the right toolbar.</li>
+<li>Choose left, right, top, bottom, horizontal-center, or vertical-center alignment.</li>
+<li>With three or more items, choose <strong>Distribute horizontally</strong> or <strong>Distribute vertically</strong> for equal gaps.</li>
+<li>Inspect the result and use Undo if you want to try another arrangement.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 18"><img loading="lazy" src="images/18-align-distribute.png" alt="Use alignment actions for two or more items, or distribution actions for three or more."></button><figcaption><span>Figure 18.</span> Use alignment actions for two or more items, or distribution actions for three or more. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Alignment uses the selection&#39;s visible bounds. Distribution keeps the outside items in place while spacing the items between them. Complete groups count as single items; individual group members can also be selected and arranged separately.</p>
+<h2 id="13-copy-and-paste-editable-components">13. Copy and paste editable components<a class="heading-link" href="#13-copy-and-paste-editable-components" aria-label="Link to 13. Copy and paste editable components">#</a></h2>
+<ol>
+<li>Select a component, several components, or a group.</li>
+<li>Right-click and choose <strong>Copy</strong>, or use <strong>⌘C / Ctrl+C</strong>.</li>
+<li>Stay on the same canvas, or open another illustration in the left rail.</li>
+<li>Right-click the destination canvas and choose <strong>Paste</strong>, or use <strong>⌘V / Ctrl+V</strong>.</li>
+<li>Move the selected copies to their intended positions.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 19"><img loading="lazy" src="images/19-copy-paste.png" alt="Use Copy and Paste to create editable copies on the current canvas or another illustration."></button><figcaption><span>Figure 19.</span> Use Copy and Paste to create editable copies on the current canvas or another illustration. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Copies retain artwork, separate labels, styles, rotation, and group membership. They appear slightly offset so you can see the new selection. Editing a copy does not alter the original. Text-field copy and paste continue to work as ordinary text editing.</p>
+<h2 id="14-save-and-reuse-components-as-assets">14. Save and reuse components as assets<a class="heading-link" href="#14-save-and-reuse-components-as-assets" aria-label="Link to 14. Save and reuse components as assets">#</a></h2>
+<h3 id="save-a-component-or-group">Save a component or group<a class="heading-link" href="#save-a-component-or-group" aria-label="Link to Save a component or group">#</a></h3>
+<ol>
+<li>Select the artwork and labels you want to reuse.</li>
+<li>Right-click and choose <strong>Save as an asset…</strong>.</li>
+<li>Enter a descriptive <strong>Name</strong>.</li>
+<li>Click <strong>Save asset</strong>.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 20"><img loading="lazy" src="images/20-save-asset.png" alt="Give the selected component a reusable name and click Save asset."></button><figcaption><span>Figure 20.</span> Give the selected component a reusable name and click Save asset. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<h3 id="insert-an-asset">Insert an asset<a class="heading-link" href="#insert-an-asset" aria-label="Link to Insert an asset">#</a></h3>
+<ol>
+<li>Open <strong>Reusable assets</strong> in the right toolbar.</li>
+<li>Search for the component by name.</li>
+<li>Click its preview or name to insert an editable copy into the active illustration.</li>
+<li>Move or resize the inserted selection as needed.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 21"><img loading="lazy" src="images/21-reusable-assets.png" alt="Search Assets and click a component to insert it; Import asset adds artwork to the reusable library."></button><figcaption><span>Figure 21.</span> Search Assets and click a component to insert it; Import asset adds artwork to the reusable library. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p><strong>Import asset…</strong> adds an artwork file to the reusable library. To remove a saved asset, use its trash icon in Assets. Existing copies already placed in illustrations remain independent.</p>
+<h2 id="15-find-and-duplicate-saved-illustrations">15. Find and duplicate saved illustrations<a class="heading-link" href="#15-find-and-duplicate-saved-illustrations" aria-label="Link to 15. Find and duplicate saved illustrations">#</a></h2>
+<ol>
+<li>Use <strong>Search illustrations</strong> in the left rail to filter titles.</li>
+<li>Click a matching row to open its saved canvas.</li>
+<li>Clear the search to see all illustrations again.</li>
+<li>If the rail is folded, use the title&#39;s chevron to show it.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 22"><img loading="lazy" src="images/22-saved-illustrations.png" alt="Search the Illustrations rail and click a saved figure to reopen it."></button><figcaption><span>Figure 22.</span> Search the Illustrations rail and click a saved figure to reopen it. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<h3 id="make-a-separate-version">Make a separate version<a class="heading-link" href="#make-a-separate-version" aria-label="Link to Make a separate version">#</a></h3>
+<ol>
+<li>Open the figure you want to copy.</li>
+<li>Open <strong>Figure options</strong> beside Complexity.</li>
+<li>Click <strong>Duplicate illustration</strong>.</li>
+<li>Give the copy a new title, then make your revisions there.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 23"><img loading="lazy" src="images/23-duplicate-illustration.png" alt="Use Duplicate illustration in Figure options to create a separate saved figure."></button><figcaption><span>Figure 23.</span> Use Duplicate illustration in Figure options to create a separate saved figure. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>The copy starts with the figure&#39;s content and settings and has its own conversation. The original remains available in the library.</p>
+<h2 id="16-export-the-finished-figure">16. Export the finished figure<a class="heading-link" href="#16-export-the-finished-figure" aria-label="Link to 16. Export the finished figure">#</a></h2>
+<ol>
+<li>Inspect the full canvas with <strong>Fit</strong>. Check labels, positions, overlap, and which layers are visible.</li>
+<li>Open <strong>Export</strong> in the top toolbar.</li>
+<li>Choose <strong>SVG</strong>, <strong>PNG</strong>, or <strong>PowerPoint</strong>.</li>
+<li>Follow the save prompt and open the exported file to inspect it.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 24"><img loading="lazy" src="images/24-export-figure.png" alt="Choose SVG, PNG, or PowerPoint from the Export menu."></button><figcaption><span>Figure 24.</span> Choose SVG, PNG, or PowerPoint from the Export menu. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Format</th>
+<th>Use it for</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>SVG</strong></td>
+<td>A vector figure that retains separate artwork and text groups.</td>
+</tr>
+<tr>
+<td><strong>PNG</strong></td>
+<td>An assembled image of the visible canvas.</td>
+</tr>
+<tr>
+<td><strong>PowerPoint</strong></td>
+<td>A slide with separate components you can move, resize, rotate, or delete. Labels remain editable text boxes.</td>
+</tr>
+</tbody></table></div>
+<p>Hidden layers and selection handles do not appear in exports. In PowerPoint, raster artwork remains an image; editing vector paths requires PowerPoint&#39;s <strong>Convert to Shape</strong> feature. Fonts other than the bundled Inter font may need to be installed on the computer opening the file.</p>
+<p>You can inspect <a href="examples/finished-figure.svg">the example exported SVG</a> alongside your own result.</p>
+<hr>
+<p><a href="../10-gel/index.html">Previous tutorial: Gel</a> · <a href="../index.html">All tutorials</a></p>
+</article><footer class="page-footer">Hikari tutorials · Chapter 11 · Figura</footer></main>
+<dialog id="image-viewer" aria-label="Enlarged tutorial screenshot"><div class="viewer-toolbar"><span id="viewer-label">Screenshot</span><button id="viewer-zoom" type="button">Actual size</button><button id="viewer-close" type="button" aria-label="Close enlarged screenshot">Close ×</button></div><div class="viewer-body"><img id="viewer-image" alt=""></div></dialog>
+<script>
+const viewer = document.getElementById('image-viewer');
+const enlarged = document.getElementById('viewer-image');
+const zoom = document.getElementById('viewer-zoom');
+for (const button of document.querySelectorAll('.screenshot')) button.addEventListener('click', () => {
+  const img = button.querySelector('img'); enlarged.src = img.src; enlarged.alt = img.alt;
+  document.getElementById('viewer-label').textContent = button.closest('figure').querySelector('figcaption span').textContent;
+  viewer.classList.remove('actual-size'); zoom.textContent = 'Actual size'; viewer.showModal();
+});
+document.getElementById('viewer-close').addEventListener('click', () => viewer.close());
+zoom.addEventListener('click', () => { const actual = viewer.classList.toggle('actual-size'); zoom.textContent = actual ? 'Fit to window' : 'Actual size'; });
+viewer.addEventListener('click', event => { if (event.target === viewer) viewer.close(); });
+if ('IntersectionObserver' in window) {
+  const links = [...document.querySelectorAll('.sidebar nav a')];
+  const observer = new IntersectionObserver(entries => {
+    for (const entry of entries) if (entry.isIntersecting) {
+      for (const link of links) { const active = link.hash === '#' + entry.target.id; link.classList.toggle('current', active); if (active) link.setAttribute('aria-current', 'location'); else link.removeAttribute('aria-current'); }
+    }
+  }, { rootMargin: '-5% 0px -75% 0px' });
+  document.querySelectorAll('article h2').forEach(heading => observer.observe(heading));
+}
+</script></body></html>

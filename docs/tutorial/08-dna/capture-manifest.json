@@ -1,0 +1,782 @@
+{
+  "sourceVersion": "1.1.0-beta.9",
+  "exampleDate": "2026-10-25",
+  "timezone": "America/Chicago",
+  "viewport": [
+    1600,
+    1000
+  ],
+  "mode": "Real DNA renderer; fictional data; in-memory desktop adapters; sequence library kept in memory; no research workspace opened; no live searches or orders.",
+  "screenshots": [
+    {
+      "name": "01-dna-library",
+      "title": "Open DNA and choose a sequence",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "targets": [
+        {
+          "selector": "#sequence-viewer-library-list",
+          "label": "Stored sequences",
+          "rect": {
+            "x": 16,
+            "y": 293,
+            "width": 236,
+            "height": 112
+          }
+        },
+        {
+          "selector": "#sequence-viewer-preview-host",
+          "label": "Map preview",
+          "rect": {
+            "x": 304,
+            "y": 108,
+            "width": 1285,
+            "height": 850
+          }
+        },
+        {
+          "selector": ".sequence-viewer-library-switch",
+          "label": "Saved or Unsaved",
+          "rect": {
+            "x": 16,
+            "y": 177,
+            "width": 145,
+            "height": 39
+          }
+        }
+      ]
+    },
+    {
+      "name": "02-new-sequence",
+      "title": "Load a new sequence",
+      "crop": {
+        "x": 442,
+        "y": 211,
+        "width": 716,
+        "height": 636
+      },
+      "targets": [
+        {
+          "selector": "#sequence-viewer-new-textarea",
+          "label": "Paste sequence text",
+          "rect": {
+            "x": 481,
+            "y": 333,
+            "width": 638,
+            "height": 360
+          }
+        },
+        {
+          "selector": ".sequence-viewer-new-topology",
+          "label": "Choose the topology",
+          "rect": {
+            "x": 481,
+            "y": 709,
+            "width": 638,
+            "height": 46
+          }
+        },
+        {
+          "selector": "#sequence-viewer-new-form button[type=submit]",
+          "label": "Load Sequence",
+          "rect": {
+            "x": 996,
+            "y": 771,
+            "width": 123,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "03-save-sequence",
+      "title": "Save a loaded sequence to the library",
+      "crop": {
+        "x": 0,
+        "y": 73,
+        "width": 1600,
+        "height": 114
+      },
+      "targets": [
+        {
+          "selector": "#sequence-viewer-save-btn",
+          "label": "Save to library",
+          "rect": {
+            "x": 300,
+            "y": 91,
+            "width": 75,
+            "height": 34
+          }
+        },
+        {
+          "selector": "#sequence-viewer-annotate-btn",
+          "label": "Annotate from stored features",
+          "rect": {
+            "x": 382,
+            "y": 91,
+            "width": 103,
+            "height": 34
+          }
+        },
+        {
+          "selector": "#sequence-viewer-vector-builder-btn",
+          "label": "Open Vector Builder",
+          "rect": {
+            "x": 16,
+            "y": 135,
+            "width": 134,
+            "height": 34
+          }
+        }
+      ]
+    },
+    {
+      "name": "04-sequence-viewer",
+      "title": "Read bases and feature tracks",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "targets": [
+        {
+          "selector": ".sequence-viewer-detail-toolbar",
+          "label": "Viewing tools",
+          "rect": {
+            "x": 300,
+            "y": 91,
+            "width": 1300,
+            "height": 34
+          }
+        },
+        {
+          "selector": "#sequence-viewer-sequence-host .sequence-viewer-dual-line:first-child",
+          "label": "Bases and feature tracks",
+          "rect": {
+            "x": 300,
+            "y": 149,
+            "width": 1289,
+            "height": 102
+          }
+        }
+      ]
+    },
+    {
+      "name": "05-selection-menu",
+      "title": "Add an annotation to a selected range",
+      "crop": {
+        "x": 478,
+        "y": 179,
+        "width": 183,
+        "height": 229
+      },
+      "targets": [
+        {
+          "selector": "[data-sequence-feature-action=add]",
+          "label": "Add Feature",
+          "rect": {
+            "x": 503,
+            "y": 238,
+            "width": 133,
+            "height": 36
+          }
+        },
+        {
+          "selector": "[data-sequence-feature-action=design-primer]",
+          "label": "Design Primer",
+          "rect": {
+            "x": 503,
+            "y": 274,
+            "width": 133,
+            "height": 36
+          }
+        }
+      ]
+    },
+    {
+      "name": "06-feature-editor",
+      "title": "Save feature details",
+      "crop": {
+        "x": 502,
+        "y": 252,
+        "width": 596,
+        "height": 554
+      },
+      "targets": [
+        {
+          "selector": "#sequence-viewer-feature-editor-name",
+          "label": "Name the feature",
+          "rect": {
+            "x": 535,
+            "y": 391,
+            "width": 260,
+            "height": 37
+          }
+        },
+        {
+          "selector": ".sequence-viewer-feature-editor-grid",
+          "label": "Check type and coordinates",
+          "rect": {
+            "x": 535,
+            "y": 368,
+            "width": 530,
+            "height": 356
+          }
+        },
+        {
+          "selector": "#sequence-viewer-feature-editor-save",
+          "label": "Save Feature",
+          "rect": {
+            "x": 535,
+            "y": 735,
+            "width": 107,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "07-edit-bases",
+      "title": "Insert bases at the cursor",
+      "crop": {
+        "x": 542,
+        "y": 357,
+        "width": 516,
+        "height": 343
+      },
+      "targets": [
+        {
+          "selector": "#sequence-viewer-sequence-edit-title",
+          "label": "Check the edit action",
+          "rect": {
+            "x": 575,
+            "y": 390,
+            "width": 91,
+            "height": 22
+          }
+        },
+        {
+          "selector": "#sequence-viewer-sequence-edit-textarea",
+          "label": "Enter DNA bases",
+          "rect": {
+            "x": 575,
+            "y": 540,
+            "width": 450,
+            "height": 78
+          }
+        },
+        {
+          "selector": "#sequence-viewer-sequence-edit-confirm",
+          "label": "Apply the edit",
+          "rect": {
+            "x": 575,
+            "y": 630,
+            "width": 102,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "08-orf-options",
+      "title": "Choose ORF display options",
+      "crop": {
+        "x": 847,
+        "y": 112,
+        "width": 246,
+        "height": 443
+      },
+      "targets": [
+        {
+          "selector": "#sequence-viewer-orf-menu",
+          "label": "Choose display, stops, and frames",
+          "rect": {
+            "x": 865,
+            "y": 130,
+            "width": 210,
+            "height": 407
+          }
+        }
+      ]
+    },
+    {
+      "name": "09-restriction-cutters",
+      "title": "Show restriction cutters",
+      "crop": {
+        "x": 935,
+        "y": 112,
+        "width": 246,
+        "height": 118
+      },
+      "targets": [
+        {
+          "selector": "#sequence-viewer-restriction-neb-toggle",
+          "label": "NEB sites",
+          "rect": {
+            "x": 972,
+            "y": 145,
+            "width": 18,
+            "height": 18
+          }
+        },
+        {
+          "selector": "#sequence-viewer-restriction-thermo-toggle",
+          "label": "Thermo sites",
+          "rect": {
+            "x": 972,
+            "y": 178,
+            "width": 18,
+            "height": 18
+          }
+        }
+      ]
+    },
+    {
+      "name": "10-alignment-query",
+      "title": "Align a query to the open reference",
+      "crop": {
+        "x": 402,
+        "y": 58,
+        "width": 796,
+        "height": 510
+      },
+      "targets": [
+        {
+          "selector": "#sequence-viewer-alignment-query-mode-file",
+          "label": "Or choose a query file",
+          "rect": {
+            "x": 611,
+            "y": 96,
+            "width": 111,
+            "height": 33
+          }
+        },
+        {
+          "selector": "#sequence-viewer-alignment-query-textarea",
+          "label": "Paste a query sequence",
+          "rect": {
+            "x": 437,
+            "y": 143,
+            "width": 726,
+            "height": 340
+          }
+        },
+        {
+          "selector": "#sequence-viewer-alignment-run-btn",
+          "label": "Run Alignment",
+          "rect": {
+            "x": 437,
+            "y": 495,
+            "width": 116,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "11-alignment-result",
+      "title": "Inspect the aligned sequence",
+      "crop": {
+        "x": 282,
+        "y": 133,
+        "width": 1318,
+        "height": 179
+      },
+      "targets": [
+        {
+          "selector": "[data-tutorial-target=\"aligned-row\"] .sequence-viewer-strand-row-top",
+          "label": "Reference strand",
+          "rect": {
+            "x": 384,
+            "y": 173,
+            "width": 1205,
+            "height": 19
+          }
+        },
+        {
+          "selector": "[data-tutorial-target=\"aligned-row\"] .sequence-viewer-alignment-query-row",
+          "label": "Aligned query",
+          "rect": {
+            "x": 384,
+            "y": 233,
+            "width": 1205,
+            "height": 19
+          }
+        }
+      ]
+    },
+    {
+      "name": "16-cloning-design",
+      "title": "Choose a cloning route and design primers",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "targets": [
+        {
+          "selector": "#sequence-viewer-cloning-design-strategy-list",
+          "label": "Choose a route",
+          "rect": {
+            "x": 16,
+            "y": 216,
+            "width": 236,
+            "height": 381
+          }
+        },
+        {
+          "selector": "#sequence-viewer-cloning-design-run-btn",
+          "label": "Design Primers",
+          "rect": {
+            "x": 1330,
+            "y": 88,
+            "width": 120,
+            "height": 37
+          }
+        },
+        {
+          "selector": "#sequence-viewer-cloning-design-confirm-btn",
+          "label": "Confirm the reviewed design",
+          "rect": {
+            "x": 1458,
+            "y": 88,
+            "width": 122,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "12-vector-builder",
+      "title": "Work with the map and bases together",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "targets": [
+        {
+          "selector": "#sequence-viewer-vector-builder-map",
+          "label": "Select a map feature",
+          "rect": {
+            "x": 13,
+            "y": 166,
+            "width": 788,
+            "height": 821
+          }
+        },
+        {
+          "selector": "#sequence-viewer-vector-builder-sequence",
+          "label": "Inspect its bases",
+          "rect": {
+            "x": 838,
+            "y": 206,
+            "width": 749,
+            "height": 781
+          }
+        },
+        {
+          "selector": "#sequence-viewer-vector-builder-protein-builder-btn",
+          "label": "Open Protein Builder",
+          "rect": {
+            "x": 1343,
+            "y": 92,
+            "width": 116,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "13-map-actions",
+      "title": "Open actions for a map selection",
+      "crop": {
+        "x": 537,
+        "y": 617,
+        "width": 312,
+        "height": 382
+      },
+      "targets": [
+        {
+          "selector": "[data-vector-action=replace-feature]",
+          "label": "Replace from stored features",
+          "rect": {
+            "x": 562,
+            "y": 784,
+            "width": 262,
+            "height": 36
+          }
+        },
+        {
+          "selector": "[data-vector-action=delete-bases]",
+          "label": "Delete selected bases",
+          "rect": {
+            "x": 562,
+            "y": 820,
+            "width": 262,
+            "height": 36
+          }
+        },
+        {
+          "selector": "[data-vector-action=protein-replace]",
+          "label": "Build a replacement protein",
+          "rect": {
+            "x": 562,
+            "y": 937,
+            "width": 262,
+            "height": 36
+          }
+        }
+      ]
+    },
+    {
+      "name": "14-add-protein",
+      "title": "Add a protein block",
+      "crop": {
+        "x": 322,
+        "y": 219,
+        "width": 956,
+        "height": 620
+      },
+      "targets": [
+        {
+          "selector": "#sequence-viewer-protein-builder-add-protein-name",
+          "label": "Name the block",
+          "rect": {
+            "x": 359,
+            "y": 405,
+            "width": 882,
+            "height": 39
+          }
+        },
+        {
+          "selector": "#sequence-viewer-protein-builder-add-protein-type",
+          "label": "Choose sequence type",
+          "rect": {
+            "x": 359,
+            "y": 485,
+            "width": 882,
+            "height": 38
+          }
+        },
+        {
+          "selector": "#sequence-viewer-protein-builder-add-protein-confirm-btn",
+          "label": "Add to Chain",
+          "rect": {
+            "x": 1058,
+            "y": 764,
+            "width": 106,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "15-protein-builder",
+      "title": "Arrange a protein construct",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "targets": [
+        {
+          "selector": "#sequence-viewer-protein-builder-workflow",
+          "label": "Arrange the assembly chain",
+          "rect": {
+            "x": 304,
+            "y": 194,
+            "width": 1273,
+            "height": 348
+          }
+        },
+        {
+          "selector": "#sequence-viewer-protein-builder-protein-sequence-highlight",
+          "label": "Review amino acids",
+          "rect": {
+            "x": 304,
+            "y": 613,
+            "width": 1273,
+            "height": 136
+          }
+        },
+        {
+          "selector": "#sequence-viewer-protein-builder-codon-usage",
+          "label": "Choose codon usage",
+          "rect": {
+            "x": 474,
+            "y": 785,
+            "width": 239,
+            "height": 30
+          }
+        }
+      ]
+    },
+    {
+      "name": "17-primer-library",
+      "title": "Select primers in Primer Library",
+      "crop": {
+        "x": 322,
+        "y": 329,
+        "width": 956,
+        "height": 400
+      },
+      "targets": [
+        {
+          "selector": "#sequence-viewer-primer-library-search",
+          "label": "Search primers",
+          "rect": {
+            "x": 359,
+            "y": 422,
+            "width": 737,
+            "height": 39
+          }
+        },
+        {
+          "selector": "#sequence-viewer-primer-library-body",
+          "label": "Check names and sequences",
+          "rect": {
+            "x": 360,
+            "y": 520,
+            "width": 880,
+            "height": 118
+          }
+        },
+        {
+          "selector": "#sequence-viewer-primer-library-export",
+          "label": "Export Selected to IDT",
+          "rect": {
+            "x": 1077,
+            "y": 655,
+            "width": 164,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "18-primer-order",
+      "title": "Copy an order block",
+      "crop": {
+        "x": 322,
+        "y": 294,
+        "width": 956,
+        "height": 469
+      },
+      "targets": [
+        {
+          "selector": ".sequence-viewer-primer-order-controls",
+          "label": "Choose order options",
+          "rect": {
+            "x": 359,
+            "y": 387,
+            "width": 882,
+            "height": 61
+          }
+        },
+        {
+          "selector": "#sequence-viewer-primer-order-preview",
+          "label": "Review the order block",
+          "rect": {
+            "x": 359,
+            "y": 502,
+            "width": 882,
+            "height": 171
+          }
+        },
+        {
+          "selector": "#sequence-viewer-primer-order-copy-idt",
+          "label": "Copy IDT Block",
+          "rect": {
+            "x": 359,
+            "y": 689,
+            "width": 121,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "19-library-actions",
+      "title": "Organize the sequence library",
+      "crop": {
+        "x": 38,
+        "y": 385,
+        "width": 246,
+        "height": 158
+      },
+      "targets": [
+        {
+          "selector": "#sequence-viewer-library-context-menu [data-sequence-library-action=new-folder]",
+          "label": "New Folder",
+          "rect": {
+            "x": 63,
+            "y": 410,
+            "width": 196,
+            "height": 36
+          }
+        },
+        {
+          "selector": "#sequence-viewer-library-context-menu [data-sequence-library-action=rename]",
+          "label": "Rename",
+          "rect": {
+            "x": 63,
+            "y": 446,
+            "width": 196,
+            "height": 36
+          }
+        },
+        {
+          "selector": "#sequence-viewer-library-context-menu [data-sequence-library-action=move-entry]",
+          "label": "Move to Folder",
+          "rect": {
+            "x": 63,
+            "y": 482,
+            "width": 196,
+            "height": 36
+          }
+        }
+      ]
+    },
+    {
+      "name": "20-rename-sequence",
+      "title": "Rename a sequence",
+      "crop": {
+        "x": 23,
+        "y": 351,
+        "width": 247,
+        "height": 64
+      },
+      "targets": [
+        {
+          "selector": "#sequence-viewer-library-list input",
+          "label": "Edit the name, then Enter",
+          "rect": {
+            "x": 41,
+            "y": 369,
+            "width": 211,
+            "height": 28
+          }
+        }
+      ]
+    }
+  ],
+  "checks": [
+    "New sequence loads and Save promotes it to the Saved library",
+    "New Sequence dialog is visible from the detail viewer as well as the home library",
+    "Adding a feature updates the active saved record",
+    "Applying an insertion adds the expected three bases",
+    "A manual protein and a common tag form an assembled chain",
+    "Saving two annotated primers from their hover cards populates Primer Library",
+    "Copy IDT Block copies the selected primer names and sequences",
+    "Inline Rename updates the selected library record"
+  ]
+}

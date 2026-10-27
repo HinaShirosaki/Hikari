@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="A detailed illustrated tutorial for Hikari Gel, with highlighted screenshots and step-by-step instructions."><title>Gel · Hikari tutorials</title><link rel="stylesheet" href="tutorial.css"></head>
+<body><a class="skip-link" href="#chapter">Skip to tutorial</a>
+<aside class="sidebar"><a class="brand" href="../index.html">Hikari <span>/ Tutorials</span></a><p class="chapter-number">CHAPTER 10</p><p class="chapter-name">Gel</p><nav aria-label="Chapter contents"><a href="#1-open-gel-and-load-an-image">1. Open Gel and load an image</a>
+<a href="#2-name-the-gel-and-choose-its-type">2. Name the gel and choose its type</a>
+<a href="#3-crop-and-straighten-the-image">3. Crop and straighten the image</a>
+<a href="#4-adjust-the-processed-preview">4. Adjust the processed preview</a>
+<a href="#5-detect-and-adjust-lane-dividers">5. Detect and adjust lane dividers</a>
+<a href="#6-correct-tilted-lanes-with-vertices">6. Correct tilted lanes with Vertices</a>
+<a href="#7-select-and-label-the-ladder">7. Select and label the ladder</a>
+<a href="#8-set-the-band-measurement-window">8. Set the band measurement window</a>
+<a href="#9-read-band-intensities-and-lane-profiles">9. Read band intensities and lane profiles</a>
+<a href="#10-define-manual-peak-areas">10. Define manual peak areas</a>
+<a href="#11-add-a-lane-table-to-the-figure">11. Add a lane table to the figure</a>
+<a href="#12-save-and-reopen-a-gel">12. Save and reopen a gel</a>
+<a href="#13-combine-gels-in-a-stack">13. Combine gels in a stack</a>
+<a href="#14-trim-a-stack-to-shared-edges">14. Trim a stack to shared edges</a>
+<a href="#15-export-figures-and-measurements">15. Export figures and measurements</a>
+<a href="#16-keep-a-project-backup-and-manage-names">16. Keep a project backup and manage names</a></nav></aside>
+<main id="chapter"><div class="eyebrow">HIKARI / ILLUSTRATED TUTORIAL</div><article><h1>Gel</h1>
+<p>How to open gel images, define lanes and bands, read measurements, and assemble an exported figure.</p>
+<p><strong>Follow the numbered steps and the highlighted controls in each screenshot.</strong></p>
+<p>The screenshots use simulated images for learning the interface. You can follow along with <a href="examples/simulated-gel.png">simulated-gel.png</a> and <a href="examples/simulated-control.png">simulated-control.png</a>.</p>
+<h2 id="1-open-gel-and-load-an-image">1. Open Gel and load an image<a class="heading-link" href="#1-open-gel-and-load-an-image" aria-label="Link to 1. Open Gel and load an image">#</a></h2>
+<ol>
+<li>Open <strong>More modules</strong> in Hikari&#39;s top navigation bar and choose <strong>Gel</strong>.</li>
+<li>At the top of the <strong>Gels</strong> navigator, click <strong>Add gel</strong>, the image-and-plus icon.</li>
+<li>Choose <strong>Image files…</strong> and select your image. Common image formats and TIFF files are supported.</li>
+<li>To add several gels, select several files. You can also drag image files onto the gel navigator or viewer.</li>
+<li>Click a gel&#39;s entry in the navigator to open it for processing.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 1"><img loading="lazy" src="images/01-import-image.png" alt="Open Add gel and choose Image files to import an image into Gel."></button><figcaption><span>Figure 1.</span> Open Add gel and choose Image files to import an image into Gel. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 2"><img loading="lazy" src="images/02-gel-workspace.png" alt="Select gels in the left navigator, inspect the image in the center, and choose tools on the right."></button><figcaption><span>Figure 2.</span> Select gels in the left navigator, inspect the image in the center, and choose tools on the right. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>The vertical toolbar on the right opens <strong>Image</strong>, <strong>Crop</strong>, <strong>Lanes</strong>, <strong>Ladder</strong>, <strong>Bands</strong>, <strong>Results</strong>, and <strong>Processed</strong>. Click an open category again, or its panel&#39;s close button, to make more room for the image.</p>
+<p>A project can hold up to 16 gel layers. New imports appear in the navigator so you can return to their images and settings.</p>
+<p>These categories are tools you can revisit as needed. For a first measurement, work through the image preparation, lanes, and band-window sections below. Ladder calibration is optional when you only need band intensities.</p>
+<h2 id="2-name-the-gel-and-choose-its-type">2. Name the gel and choose its type<a class="heading-link" href="#2-name-the-gel-and-choose-its-type" aria-label="Link to 2. Name the gel and choose its type">#</a></h2>
+<ol>
+<li>Select the gel in the navigator.</li>
+<li>Click <strong>Image</strong> in the right toolbar.</li>
+<li>Enter a descriptive <strong>Gel Name</strong>, such as <code>Target signal · example</code>.</li>
+<li>Choose <strong>Analysis Type</strong>: <strong>SDS-PAGE</strong>, <strong>Western Blot</strong>, or <strong>DNA/RNA Agarose</strong>.</li>
+<li>You can also name a gel by double-clicking its navigator entry, typing the name, and pressing <strong>Enter</strong>.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 3"><img loading="lazy" src="images/03-name-and-type.png" alt="Enter the gel name and select the analysis type in Image tools."></button><figcaption><span>Figure 3.</span> Enter the gel name and select the analysis type in Image tools. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>The gel&#39;s name is also used as its caption when you arrange it in a stack. Name the second practice image <code>Loading control · example</code> to make the two layers easy to identify.</p>
+<h2 id="3-crop-and-straighten-the-image">3. Crop and straighten the image<a class="heading-link" href="#3-crop-and-straighten-the-image" aria-label="Link to 3. Crop and straighten the image">#</a></h2>
+<ol>
+<li>Click <strong>Crop</strong> in the right toolbar.</li>
+<li>Drag the crop-box edges or corners to choose the area to keep.</li>
+<li>Adjust <strong>Straighten</strong> to correct a small rotation. Use <strong>90°</strong> for a quarter-turn.</li>
+<li>Click <strong>Done</strong> to apply the crop, or press <strong>Enter</strong>.</li>
+<li>Use <strong>Cancel</strong> or <strong>Escape</strong> to leave the previous image intact.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 4"><img loading="lazy" src="images/04-crop-and-rotate.png" alt="Drag the crop handles, adjust Straighten, and choose Done to keep the crop."></button><figcaption><span>Figure 4.</span> Drag the crop handles, adjust Straighten, and choose Done to keep the crop. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p><strong>Reset</strong> inside Crop brings back the full original image and clears rotation in the crop preview. Click <strong>Done</strong> to keep that reset. Finish or cancel cropping before switching to another tool.</p>
+<p>Crop before placing lanes and band windows so those selections correspond to the image you intend to measure.</p>
+<h2 id="4-adjust-the-processed-preview">4. Adjust the processed preview<a class="heading-link" href="#4-adjust-the-processed-preview" aria-label="Link to 4. Adjust the processed preview">#</a></h2>
+<ol>
+<li>Click <strong>Processed</strong> in the right toolbar.</li>
+<li>Adjust <strong>Denoise Strength</strong> and <strong>Contrast Boost</strong> while watching the image.</li>
+<li>Turn <strong>Processed view</strong> off to compare with the original image.</li>
+<li>Turn it on again to return to the processed preview.</li>
+<li>Close the panel when ready. Closing it keeps the chosen settings and preview.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 5"><img loading="lazy" src="images/05-processed-preview.png" alt="Use the denoise and contrast sliders, and toggle Processed view to compare the image."></button><figcaption><span>Figure 5.</span> Use the denoise and contrast sliders, and toggle Processed view to compare the image. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>The example slider values show how the controls work. Review your own image after each adjustment, especially where faint bands or background variation are present.</p>
+<h2 id="5-detect-and-adjust-lane-dividers">5. Detect and adjust lane dividers<a class="heading-link" href="#5-detect-and-adjust-lane-dividers" aria-label="Link to 5. Detect and adjust lane dividers">#</a></h2>
+<h3 id="start-with-automatic-detection">Start with automatic detection<a class="heading-link" href="#start-with-automatic-detection" aria-label="Link to Start with automatic detection">#</a></h3>
+<ol>
+<li>Open <strong>Lanes</strong>.</li>
+<li>Enter the expected number of <strong>Lanes</strong>, including the ladder lane. The practice image has <code>6</code>.</li>
+<li>Click <strong>Auto-detect</strong>.</li>
+<li>Inspect every boundary. Confirm that each lane encloses the intended vertical track and that blank lanes have not been missed.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 6"><img loading="lazy" src="images/06-detect-lanes.png" alt="Enter the expected lane count and click Auto-detect."></button><figcaption><span>Figure 6.</span> Enter the expected lane count and click Auto-detect. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<h3 id="correct-the-boundaries">Correct the boundaries<a class="heading-link" href="#correct-the-boundaries" aria-label="Link to Correct the boundaries">#</a></h3>
+<ol>
+<li>While <strong>Dividers</strong> is active, drag an existing divider horizontally to move it.</li>
+<li>Click on the image to add a missing boundary.</li>
+<li>To remove a boundary, right-click near it and choose <strong>Remove divider</strong>.</li>
+<li>Check the leftmost and rightmost boundaries; these define the outside edges of the gel area.</li>
+<li>Click <strong>Finish dividers</strong> when all lanes are correct.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 7"><img loading="lazy" src="images/07-adjust-dividers.png" alt="Inspect and adjust the lane boundaries, then click Finish dividers."></button><figcaption><span>Figure 7.</span> Inspect and adjust the lane boundaries, then click Finish dividers. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>You can place dividers manually without Auto-detect. Turn on <strong>Dividers</strong>, place the two outer boundaries and the boundaries between lanes, then finish. Return to Dividers whenever the segmentation needs correction.</p>
+<h2 id="6-correct-tilted-lanes-with-vertices">6. Correct tilted lanes with Vertices<a class="heading-link" href="#6-correct-tilted-lanes-with-vertices" aria-label="Link to 6. Correct tilted lanes with Vertices">#</a></h2>
+<ol>
+<li>Finish the lane dividers.</li>
+<li>Under <strong>Lanes</strong>, click <strong>Vertices</strong>.</li>
+<li>Find the lane&#39;s corner handles at the top and bottom of the image.</li>
+<li>Drag a corner horizontally so the lane follows its track. Check the neighboring lane along a shared boundary.</li>
+<li>Click <strong>Vertices</strong> again to leave the tool.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 8"><img loading="lazy" src="images/08-lane-vertices.png" alt="Turn on Vertices and adjust the lane corners to follow a tilted track."></button><figcaption><span>Figure 8.</span> Turn on Vertices and adjust the lane corners to follow a tilted track. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>The top and bottom corners stay on the image&#39;s top and bottom edges. Use Crop to change the overall image area; use Vertices to refine the lane boundaries within it.</p>
+<h2 id="7-select-and-label-the-ladder">7. Select and label the ladder<a class="heading-link" href="#7-select-and-label-the-ladder" aria-label="Link to 7. Select and label the ladder">#</a></h2>
+<h3 id="choose-a-ladder-lane-and-preset">Choose a ladder lane and preset<a class="heading-link" href="#choose-a-ladder-lane-and-preset" aria-label="Link to Choose a ladder lane and preset">#</a></h3>
+<ol>
+<li>Open <strong>Ladder</strong> after finishing the lane dividers.</li>
+<li>Click <strong>Pick lane</strong>, then click inside the ladder lane on the image.</li>
+<li>Choose the <strong>Ladder Preset</strong> that matches the ladder you used.</li>
+<li>Click <strong>Detect</strong> to detect and label its bands.</li>
+<li>Inspect the labels against the actual ladder pattern before using the calibration.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 9"><img loading="lazy" src="images/09-ladder-setup.png" alt="Pick the ladder lane, choose its preset, and detect the ladder bands."></button><figcaption><span>Figure 9.</span> Pick the ladder lane, choose its preset, and detect the ladder bands. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p><strong>Detect</strong> and <strong>Set MW</strong> become available after you pick a ladder lane. The preset displayed in the example is for demonstrating the controls; choose the preset corresponding to your own image.</p>
+<h3 id="enter-or-correct-a-band-size">Enter or correct a band size<a class="heading-link" href="#enter-or-correct-a-band-size" aria-label="Link to Enter or correct a band size">#</a></h3>
+<ol>
+<li>Click <strong>Set MW</strong> to turn on ladder labeling.</li>
+<li>Click a band inside the ladder lane.</li>
+<li>Enter its known size in the small field beside the band.</li>
+<li>Press <strong>Enter</strong> to keep the label. Press <strong>Escape</strong> to cancel the entry.</li>
+<li>With Set MW still active, click a labeled band to edit its value, or drag its label to correct its vertical position.</li>
+<li>Click <strong>Set MW</strong> again when finished.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 10"><img loading="lazy" src="images/10-ladder-mw.png" alt="Enable Set MW, click a ladder band, and enter the known size beside it."></button><figcaption><span>Figure 10.</span> Enable Set MW, click a ladder band, and enter the known size beside it. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Read the unit shown for the selected ladder and analysis type. Protein ladders use kDa; nucleic-acid ladder presets use their corresponding size units. Size estimates depend on the selected lane and correct ladder labels.</p>
+<h2 id="8-set-the-band-measurement-window">8. Set the band measurement window<a class="heading-link" href="#8-set-the-band-measurement-window" aria-label="Link to 8. Set the band measurement window">#</a></h2>
+<h3 id="use-one-window-across-the-lanes">Use one window across the lanes<a class="heading-link" href="#use-one-window-across-the-lanes" aria-label="Link to Use one window across the lanes">#</a></h3>
+<ol>
+<li>Open <strong>Bands</strong>.</li>
+<li>Click <strong>Top</strong>, then click just above the target band region on the gel.</li>
+<li>The tool moves to <strong>Bottom</strong>. Click just below the region.</li>
+<li>Inspect the two horizontal edges across all lanes. Revisit Top or Bottom to adjust an edge.</li>
+<li>Check that the intended bands lie inside the window.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 11"><img loading="lazy" src="images/11-band-window.png" alt="Set Top and Bottom around the target region and inspect the measurement window."></button><figcaption><span>Figure 11.</span> Set Top and Bottom around the target region and inspect the measurement window. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<h3 id="give-each-lane-its-own-window">Give each lane its own window<a class="heading-link" href="#give-each-lane-its-own-window" aria-label="Link to Give each lane its own window">#</a></h3>
+<ol>
+<li>Click <strong>Per lane</strong> when the target region needs a different window in each lane.</li>
+<li>Top becomes active. Click the top edge within the intended lane, then click its bottom edge.</li>
+<li>Continue placing pairs of edges for the remaining lanes. Watch the active Top or Bottom button as you work.</li>
+<li>Review each lane&#39;s window before reading the results.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 12"><img loading="lazy" src="images/12-per-lane-window.png" alt="Enable Per lane and place a separate Top and Bottom pair for each lane."></button><figcaption><span>Figure 12.</span> Enable Per lane and place a separate Top and Bottom pair for each lane. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Turn <strong>Per lane</strong> off to return to the shared window. Clicking the image only changes selections while a tool such as Top, Bottom, Dividers, or Set MW is active.</p>
+<h2 id="9-read-band-intensities-and-lane-profiles">9. Read band intensities and lane profiles<a class="heading-link" href="#9-read-band-intensities-and-lane-profiles" aria-label="Link to 9. Read band intensities and lane profiles">#</a></h2>
+<h3 id="open-the-measurement-table">Open the measurement table<a class="heading-link" href="#open-the-measurement-table" aria-label="Link to Open the measurement table">#</a></h3>
+<ol>
+<li>After defining the lanes and band window, open <strong>Results</strong>.</li>
+<li>Click <strong>Band intensity</strong>.</li>
+<li>Compare the bar graph with the measurement rows below it. The table lists lane, label, and band intensity.</li>
+<li>Click <strong>Copy table</strong> to copy the headers and rows for pasting into a spreadsheet.</li>
+<li>Close the floating window with its top-right close button when finished.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 13"><img loading="lazy" src="images/13-band-intensity.png" alt="Read the band-intensity graph and measurement table, then use Copy table."></button><figcaption><span>Figure 13.</span> Read the band-intensity graph and measurement table, then use Copy table. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>If the window explains that measurements are unavailable, return to Lanes and Bands and check that the dividers are finished and a target window is defined. Add lane labels using section 11 to make the measurement rows easier to identify.</p>
+<h3 id="inspect-a-lanes-profile">Inspect a lane&#39;s profile<a class="heading-link" href="#inspect-a-lanes-profile" aria-label="Link to Inspect a lane's profile">#</a></h3>
+<ol>
+<li>In <strong>Results</strong>, choose a lane under <strong>Lane intensity</strong>.</li>
+<li>Inspect the profile to see how intensity changes from the top to the bottom of that lane.</li>
+<li>Choose another lane to compare profiles.</li>
+<li>Click <strong>Band integration</strong> when you want to define integration regions manually.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 14"><img loading="lazy" src="images/14-lane-profile.png" alt="Choose a lane to view its intensity profile, or open Band integration for manual integration."></button><figcaption><span>Figure 14.</span> Choose a lane to view its intensity profile, or open Band integration for manual integration. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>You can move floating result windows by dragging their title bars. <strong>Escape</strong> closes the front window; reopening it lets you return to the results without leaving the gel.</p>
+<h2 id="10-define-manual-peak-areas">10. Define manual peak areas<a class="heading-link" href="#10-define-manual-peak-areas" aria-label="Link to 10. Define manual peak areas">#</a></h2>
+<h3 id="add-a-baseline-region">Add a baseline region<a class="heading-link" href="#add-a-baseline-region" aria-label="Link to Add a baseline region">#</a></h3>
+<ol>
+<li>Open <strong>Results &gt; Band integration</strong>. Its floating window is titled <strong>Band integration</strong>.</li>
+<li>Choose the <strong>Lane</strong> to inspect.</li>
+<li>Select <strong>Baseline</strong>.</li>
+<li>Click the profile at one side of the region you want to integrate, then click the other side.</li>
+<li>Inspect the baseline, shaded area, and resulting table row.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 15"><img loading="lazy" src="images/15-peak-baseline.png" alt="Choose a lane and Baseline mode, then click two endpoints around a peak region."></button><figcaption><span>Figure 15.</span> Choose a lane and Baseline mode, then click two endpoints around a peak region. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>The two clicks choose positions along the lane profile. Add another pair of endpoints to define another region. Check the region&#39;s boundaries and the calculated area before continuing.</p>
+<h3 id="split-a-region">Split a region<a class="heading-link" href="#split-a-region" aria-label="Link to Split a region">#</a></h3>
+<ol>
+<li>Create a complete baseline region first.</li>
+<li>Select <strong>Divider</strong>.</li>
+<li>Click inside the existing region to insert a vertical divider.</li>
+<li>Read the separate peak areas in the table.</li>
+<li>Use <strong>Clear lane</strong> to discard the current lane&#39;s manual integrations, or <strong>Clear all</strong> to clear them across lanes.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 16"><img loading="lazy" src="images/16-peak-divider.png" alt="Use Divider inside an existing region and inspect the resulting peak-area rows."></button><figcaption><span>Figure 16.</span> Use Divider inside an existing region and inspect the resulting peak-area rows. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Use the lane selector to work on another lane. Close the window when finished; use <strong>Save</strong> on the gel to retain your work.</p>
+<h2 id="11-add-a-lane-table-to-the-figure">11. Add a lane table to the figure<a class="heading-link" href="#11-add-a-lane-table-to-the-figure" aria-label="Link to 11. Add a lane table to the figure">#</a></h2>
+<ol>
+<li>Open <strong>Lanes</strong>, then click <strong>Table</strong>.</li>
+<li>Click <strong>Add table</strong>. This becomes available after you finish the lane dividers.</li>
+<li>Enter a row label in the left-hand field. For sample names, use <code>Label</code>.</li>
+<li>Enter each lane&#39;s value in the aligned fields above the image.</li>
+<li>Click <strong>Add row</strong> for another row of descriptions or conditions.</li>
+<li>Use <strong>Include ladder lane</strong> to choose whether the ladder appears in the figure and its table.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 17"><img loading="lazy" src="images/17-lane-table.png" alt="Enter a row label and values above the lanes, and use Add row for another table row."></button><figcaption><span>Figure 17.</span> Enter a row label and values above the lanes, and use Add row for another table row. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>The table follows the gel&#39;s placement and appears in PNG and PowerPoint exports. In a stack, each gel retains its own table. Edit that table in the individual gel&#39;s processing view.</p>
+<p>The practice row uses <code>Ladder</code>, <code>Control</code>, and Sample A through Sample D. The row named <code>Label</code> also supplies labels in the Band intensity window.</p>
+<h2 id="12-save-and-reopen-a-gel">12. Save and reopen a gel<a class="heading-link" href="#12-save-and-reopen-a-gel" aria-label="Link to 12. Save and reopen a gel">#</a></h2>
+<ol>
+<li>Check the gel name, image settings, lane boundaries, ladder labels, band window, and any table or peak edits.</li>
+<li>Click <strong>Save</strong> in the right toolbar while viewing the individual gel.</li>
+<li>To continue with another image, select its entry in the <strong>Gels</strong> navigator.</li>
+<li>Click the original gel&#39;s entry to return to it.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 18"><img loading="lazy" src="images/18-save-gel.png" alt="Save the gel record, then use its navigator entry to reopen it."></button><figcaption><span>Figure 18.</span> Save the gel record, then use its navigator entry to reopen it. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Imported images are kept in the configured Gel storage, and the workspace also retains its layers and stack arrangement automatically. Use the gel&#39;s Save action to keep the current record, and section 16 for a portable project file you can reopen separately.</p>
+<p>If a save reports an error, correct the storage issue and retry before closing the workspace.</p>
+<h2 id="13-combine-gels-in-a-stack">13. Combine gels in a stack<a class="heading-link" href="#13-combine-gels-in-a-stack" aria-label="Link to 13. Combine gels in a stack">#</a></h2>
+<h3 id="add-a-stack-and-its-members">Add a stack and its members<a class="heading-link" href="#add-a-stack-and-its-members" aria-label="Link to Add a stack and its members">#</a></h3>
+<ol>
+<li>Import the gels you want to arrange together. For this example, add <a href="examples/simulated-control.png">simulated-control.png</a> as a second gel.</li>
+<li>Prepare each gel&#39;s lanes and target region in its processing view, and save it.</li>
+<li>At the top of the navigator, click <strong>Add stack</strong>, the stacked-layers-plus icon.</li>
+<li>Drag a gel entry onto the stack&#39;s entry. Repeat for the other gels.</li>
+<li>Click the stack&#39;s name to open its combined preview.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 19"><img loading="lazy" src="images/19-create-stack.png" alt="Use Add stack and drag gel entries into the new stack."></button><figcaption><span>Figure 19.</span> Use Add stack and drag gel entries into the new stack. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<h3 id="arrange-the-figure">Arrange the figure<a class="heading-link" href="#arrange-the-figure" aria-label="Link to Arrange the figure">#</a></h3>
+<ol>
+<li>In the stack preview, click a blot to select it.</li>
+<li>Drag the blot to adjust its position. Moving it above or below another blot changes the order.</li>
+<li>Drag its top or bottom edge to crop the visible vertical region.</li>
+<li>Drag a side edge to resize it and align its lanes with the other blots.</li>
+<li>Open <strong>Exact values</strong> in Layout tools when you want to inspect or enter the placement numerically.</li>
+<li>Use <strong>Process gel</strong> to return to the selected gel&#39;s analysis tools. Click the stack or its <strong>Layout</strong> entry to return to the combined figure.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 20"><img loading="lazy" src="images/20-stack-layout.png" alt="Open the stack, arrange the blots in its preview, and use Layout tools for placement."></button><figcaption><span>Figure 20.</span> Open the stack, arrange the blots in its preview, and use Layout tools for placement. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Each stack has its own layout. Drag gels between stacks or back to the top-level gel area to change membership. You can also reorder entries by dropping one before or after another.</p>
+<h2 id="14-trim-a-stack-to-shared-edges">14. Trim a stack to shared edges<a class="heading-link" href="#14-trim-a-stack-to-shared-edges" aria-label="Link to 14. Trim a stack to shared edges">#</a></h2>
+<ol>
+<li>Open the stack&#39;s <strong>Layout</strong> view.</li>
+<li>Under <strong>Trim stack</strong>, click <strong>Set trim edges</strong>.</li>
+<li>Drag the left and right handles to define the horizontal area to keep. Shaded margins show what will be excluded.</li>
+<li>Click <strong>Apply trim</strong>, or press <strong>Enter</strong>.</li>
+<li>Use <strong>Adjust trim edges</strong> to revise the selection, <strong>Reset trim</strong> to restore the full width, or <strong>Cancel</strong> to leave the previous trim intact.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 21"><img loading="lazy" src="images/21-stack-trim.png" alt="Move the two trim handles and click Apply trim to use the same edges across the stack."></button><figcaption><span>Figure 21.</span> Move the two trim handles and click Apply trim to use the same edges across the stack. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>The same edges trim the stack&#39;s blots and their individual lane tables. You can focus a handle and use the arrow keys for small adjustments; hold <strong>Shift</strong> to move farther. The individual gels remain available for processing in the navigator.</p>
+<h2 id="15-export-figures-and-measurements">15. Export figures and measurements<a class="heading-link" href="#15-export-figures-and-measurements" aria-label="Link to 15. Export figures and measurements">#</a></h2>
+<ol>
+<li>Select the individual gel or open the stack you want to export.</li>
+<li>Inspect the displayed figure, including its labels, crop, and alignment.</li>
+<li>Click <strong>Export</strong> in the right toolbar.</li>
+<li>Choose <strong>Image (PNG)</strong> for an image, or <strong>PowerPoint (PPTX)</strong> for a slide with separate blot images and editable labels and table cells.</li>
+<li>Follow the save prompt, then open the exported file to inspect it.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 22"><img loading="lazy" src="images/22-export-menu.png" alt="Use Export to choose Image, PowerPoint, or measured Bands data."></button><figcaption><span>Figure 22.</span> Use Export to choose Image, PowerPoint, or measured Bands data. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>For <strong>Bands (CSV)</strong>, first select the individual gel whose analysis results you want, then choose that export. It exports that gel&#39;s band report. To copy the compact target-intensity table, use <strong>Results &gt; Band intensity &gt; Copy table</strong>.</p>
+<p>For an individual gel, finish the lane dividers before exporting its figure. In a stack&#39;s view, PNG and PowerPoint export the combined stack shown in the viewer.</p>
+<h2 id="16-keep-a-project-backup-and-manage-names">16. Keep a project backup and manage names<a class="heading-link" href="#16-keep-a-project-backup-and-manage-names" aria-label="Link to 16. Keep a project backup and manage names">#</a></h2>
+<h3 id="save-a-portable-project">Save a portable project<a class="heading-link" href="#save-a-portable-project" aria-label="Link to Save a portable project">#</a></h3>
+<ol>
+<li>Open the stack&#39;s view.</li>
+<li>Click <strong>Save</strong> in the right toolbar. In this view its action is <strong>Save project</strong>.</li>
+<li>Save the downloaded <code>.gel-figure.json</code> file.</li>
+<li>To reopen a project, click <strong>Add gel &gt; Project…</strong> and choose the JSON file.</li>
+<li>Inspect the imported layers, stacks, names, and settings.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 23"><img loading="lazy" src="images/23-project-backup.png" alt="From a stack, Save project creates a portable file; Add gel then Project opens one."></button><figcaption><span>Figure 23.</span> From a stack, Save project creates a portable file; Add gel then Project opens one. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>The project includes the gel images, processing settings, manual selections, lane tables, and stack placement. Opening a project merges its contents into the current workspace. You can practice with <a href="examples/practice.gel-figure.json">practice.gel-figure.json</a>, which contains the two simulated gels shown here.</p>
+<h3 id="rename-or-remove-a-gel">Rename or remove a gel<a class="heading-link" href="#rename-or-remove-a-gel" aria-label="Link to Rename or remove a gel">#</a></h3>
+<ol>
+<li>Double-click a gel, stack, or Layout entry in the navigator. You can also focus the entry and press <strong>F2</strong>.</li>
+<li>Type the new name.</li>
+<li>Press <strong>Enter</strong> to keep it, or <strong>Escape</strong> to cancel.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 24"><img loading="lazy" src="images/24-rename-gel.png" alt="Edit a name directly in the navigator and press Enter to keep it."></button><figcaption><span>Figure 24.</span> Edit a name directly in the navigator and press Enter to keep it. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<hr>
+<p><a href="../09-plate/index.html">Previous tutorial: Plate</a> · <a href="../11-figura/index.html">Next tutorial: Figura</a> · <a href="../index.html">All tutorials</a></p>
+</article><footer class="page-footer">Hikari tutorials · Chapter 10 · Gel</footer></main>
+<dialog id="image-viewer" aria-label="Enlarged tutorial screenshot"><div class="viewer-toolbar"><span id="viewer-label">Screenshot</span><button id="viewer-zoom" type="button">Actual size</button><button id="viewer-close" type="button" aria-label="Close enlarged screenshot">Close ×</button></div><div class="viewer-body"><img id="viewer-image" alt=""></div></dialog>
+<script>
+const viewer = document.getElementById('image-viewer');
+const enlarged = document.getElementById('viewer-image');
+const zoom = document.getElementById('viewer-zoom');
+for (const button of document.querySelectorAll('.screenshot')) button.addEventListener('click', () => {
+  const img = button.querySelector('img'); enlarged.src = img.src; enlarged.alt = img.alt;
+  document.getElementById('viewer-label').textContent = button.closest('figure').querySelector('figcaption span').textContent;
+  viewer.classList.remove('actual-size'); zoom.textContent = 'Actual size'; viewer.showModal();
+});
+document.getElementById('viewer-close').addEventListener('click', () => viewer.close());
+zoom.addEventListener('click', () => { const actual = viewer.classList.toggle('actual-size'); zoom.textContent = actual ? 'Fit to window' : 'Actual size'; });
+viewer.addEventListener('click', event => { if (event.target === viewer) viewer.close(); });
+if ('IntersectionObserver' in window) {
+  const links = [...document.querySelectorAll('.sidebar nav a')];
+  const observer = new IntersectionObserver(entries => {
+    for (const entry of entries) if (entry.isIntersecting) {
+      for (const link of links) { const active = link.hash === '#' + entry.target.id; link.classList.toggle('current', active); if (active) link.setAttribute('aria-current', 'location'); else link.removeAttribute('aria-current'); }
+    }
+  }, { rootMargin: '-5% 0px -75% 0px' });
+  document.querySelectorAll('article h2').forEach(heading => observer.observe(heading));
+}
+</script></body></html>

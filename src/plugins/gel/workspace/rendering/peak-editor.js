@@ -35,6 +35,7 @@ export function createPeakEditorController({
   function setPeakEditorStatus(message) {
     if (elements.gelPeakEditorSummary) {
       elements.gelPeakEditorSummary.textContent = message || '';
+      elements.gelPeakEditorSummary.hidden = !message;
     }
   }
 
@@ -69,11 +70,16 @@ export function createPeakEditorController({
       .filter((integration) => integration.laneIndex === laneIndex);
   }
 
+  function selectedBandMeasurement(laneIndex) {
+    return runtime.currentReport?.lanes?.find(lane => lane.laneIndex === laneIndex)?.targetBand || null;
+  }
+
   function setPeakIntegrations(integrations) {
     runtime.manualOverrides = {
       ...normalizeManualOverrides(runtime.manualOverrides),
       peakIntegrations: integrations
     };
+    deps.onPeakIntegrationsChanged?.();
   }
 
   function getPeakEditorRowFromEvent(event, profile) {
@@ -86,7 +92,7 @@ export function createPeakEditorController({
     if (!Number.isFinite(svgX)) {
       return null;
     }
-    return clamp(getPeakEditorScales(profile).xToRow(svgX), 0, rowMax);
+    return clamp(getPeakEditorScales(profile, svg).xToRow(svgX), 0, rowMax);
   }
 
   function getAllPeakIntegrationRows() {
@@ -125,7 +131,8 @@ export function createPeakEditorController({
       profile,
       laneIntegrations,
       hasHoverOverride ? nextHoverRow : state.hoverRow,
-      state.mode
+      state.mode,
+      selectedBandMeasurement(selectedLane?.laneIndex)
     );
   }
 
@@ -149,8 +156,10 @@ export function createPeakEditorController({
           data: tableRows,
           columns: PEAK_EDITOR_COLUMNS,
           layout: 'fitColumns',
+          columnDefaults: { headerWordWrap: true, headerTooltip: true, tooltip: true },
+          columnHeaderVertAlign: 'middle',
           height: '100%',
-          placeholder: 'No peak areas selected'
+          placeholder: 'No bands integrated'
         });
       } else if (typeof runtime.peakIntegrationTable.setData === 'function') {
         runtime.peakIntegrationTable.setData(tableRows);
@@ -160,16 +169,7 @@ export function createPeakEditorController({
 
     const rowsHtml = tableRows.map((row) => `
       <tr>
-        <td class="num">${safeText(row.laneIndex)}</td>
-        <td class="num">${safeText(row.baselineIndex)}</td>
-        <td class="num">${safeText(row.peakIndex)}</td>
-        <td class="num">${safeText(row.startRow)}</td>
-        <td class="num">${safeText(row.endRow)}</td>
-        <td class="num">${safeText(row.apexRow)}</td>
-        <td class="num">${safeText(row.apexValue)}</td>
-        <td class="num">${safeText(row.area)}</td>
-        <td class="num">${safeText(row.rawArea)}</td>
-        <td class="num">${safeText(row.baselineArea)}</td>
+        ${PEAK_EDITOR_COLUMNS.map(column => `<td class="num">${safeText(row[column.field])}</td>`).join('') }
       </tr>
     `).join('');
     host.innerHTML = `
@@ -179,7 +179,7 @@ export function createPeakEditorController({
             ${PEAK_EDITOR_COLUMNS.map((column) => `<th>${safeText(column.title)}</th>`).join('')}
           </tr>
         </thead>
-        <tbody>${rowsHtml || '<tr><td colspan="10">No peak areas selected</td></tr>'}</tbody>
+        <tbody>${rowsHtml || `<tr><td colspan="${PEAK_EDITOR_COLUMNS.length}">No bands integrated</td></tr>`}</tbody>
       </table>
     `;
   }
@@ -222,18 +222,18 @@ export function createPeakEditorController({
         profile,
         laneIntegrations,
         state.hoverRow,
-        state.mode
+        state.mode,
+        selectedBandMeasurement(selectedLane?.laneIndex)
       );
     }
 
     renderPeakIntegrationTable(getAllPeakIntegrationRows());
-    // Only the guidance stays; the per-lane counts are already in the table below.
     setPeakEditorStatus(selectedLane ? '' : 'Divide the gel into lanes before editing peak areas.');
   }
 
   function onPeakEditorOpen() {
     if (!runtime.currentImage) {
-      deps.setStatus?.('Load a gel image before opening the peak editor.');
+      deps.setStatus?.('Load a gel image before opening Band integration.');
       return;
     }
     const state = ensurePeakEditorState();
@@ -396,7 +396,13 @@ export function createPeakEditorController({
     renderPeakEditor();
   }
 
+  const chartView = elements.gelPeakEditorChart?.ownerDocument?.defaultView;
+  const chartResizeObserver = chartView?.ResizeObserver
+    ? new chartView.ResizeObserver(() => renderPeakEditorChartOnly()) : null;
+  if (elements.gelPeakEditorChart) chartResizeObserver?.observe(elements.gelPeakEditorChart);
+
   return {
+    destroy: () => chartResizeObserver?.disconnect(),
     onPeakEditorChartClick,
     onPeakEditorChartMouseLeave,
     onPeakEditorChartMouseMove,

@@ -109,7 +109,9 @@ async function verifyReusableAssets({ tool, evaluate, check, win, pause, temp })
     && placed.objects[2].fontSize === 25 && placed.objects[1].dataUrl === raster, 'UI reuse preserves independent types, rotations, dimensions, typography and embedded raster bytes');
   const textId = placed.objects.find(o => o.type === 'text').id;
   await evaluate(`document.querySelector('#main-canvas [data-object-id="${textId}"]').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}))`);
-  check(await evaluate('!document.getElementById("layers-panel").hidden && document.activeElement.id==="label-content"'), 'Double-clicking a placed label opens its text controls while Assets is active');
+  check(await evaluate('!document.getElementById("assets-panel").hidden && document.activeElement.id==="canvas-text-editor"'), 'Double-clicking a placed label edits inline without switching away from Assets');
+  await evaluate('document.activeElement.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}))');
+  await clickSwitch('layers');
   await expectRail('layers');
   await evaluate(`document.querySelector('[data-layer-id="${textId}"] .layer-select').click();document.getElementById('label-content').value='Edited copy';document.getElementById('label-content').dispatchEvent(new Event('change',{bubbles:true}))`); await settle();
   check((await read()).objects.find(o => o.id === textId).text === 'Edited copy' && (await tool({ action: 'asset_read', asset_id: entry.id })).component.objects.find(o => o.type === 'text').text === 'Cell α', 'Placed child labels remain editable without changing the saved original');

@@ -56,7 +56,7 @@
   gap: var(--space-6);
 }
 
-#lab-common-inventory-view button[data-hover-caption] {
+#lab-common-inventory-view button[data-hover-caption]:not(.app-dialog-close-btn) {
   position: relative;
 }
 

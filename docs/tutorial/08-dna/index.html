@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="A detailed illustrated tutorial for Hikari DNA, with highlighted screenshots and step-by-step instructions."><title>DNA · Hikari tutorials</title><link rel="stylesheet" href="tutorial.css"></head>
+<body><a class="skip-link" href="#chapter">Skip to tutorial</a>
+<aside class="sidebar"><a class="brand" href="../index.html">Hikari <span>/ Tutorials</span></a><p class="chapter-number">CHAPTER 08</p><p class="chapter-name">DNA</p><nav aria-label="Chapter contents"><a href="#1-open-dna-and-find-a-sequence">1. Open DNA and find a sequence</a>
+<a href="#2-load-sequence-text-or-a-file">2. Load sequence text or a file</a>
+<a href="#3-save-a-sequence">3. Save a sequence</a>
+<a href="#4-read-and-select-bases">4. Read and select bases</a>
+<a href="#5-add-and-edit-annotations">5. Add and edit annotations</a>
+<a href="#6-insert-replace-or-delete-bases">6. Insert, replace, or delete bases</a>
+<a href="#7-view-orfs-and-translation">7. View ORFs and translation</a>
+<a href="#8-show-restriction-sites-and-primers">8. Show restriction sites and primers</a>
+<a href="#9-align-a-read-to-a-reference">9. Align a read to a reference</a>
+<a href="#10-use-vector-builder">10. Use Vector Builder</a>
+<a href="#11-build-a-protein-construct">11. Build a protein construct</a>
+<a href="#12-review-a-cloning-design">12. Review a cloning design</a>
+<a href="#13-save-and-export-primers">13. Save and export primers</a>
+<a href="#14-organize-the-sequence-library">14. Organize the sequence library</a></nav></aside>
+<main id="chapter"><div class="eyebrow">HIKARI / ILLUSTRATED TUTORIAL</div><article><h1>DNA</h1>
+<p>How to open, edit, compare, and organize DNA sequences.</p>
+<p><strong>Follow the numbered steps and the highlighted controls in each screenshot.</strong></p>
+<p>Screenshots use fictional teaching sequences. They demonstrate the controls rather than a validated experimental construct.</p>
+<h2 id="1-open-dna-and-find-a-sequence">1. Open DNA and find a sequence<a class="heading-link" href="#1-open-dna-and-find-a-sequence" aria-label="Link to 1. Open DNA and find a sequence">#</a></h2>
+<ol>
+<li>Click <strong>DNA</strong>, the double-helix icon in the top navigation bar. If it is outside the visible bar, open <strong>More modules</strong> and select <strong>DNA</strong>.</li>
+<li>Choose <strong>Saved</strong> or <strong>Unsaved</strong> in the library on the left.</li>
+<li>Expand a folder to see its sequences. Use <strong>Search sequences</strong> to filter names.</li>
+<li>Click a sequence once to preview its map on the right.</li>
+<li>Double-click the sequence to open its bases and feature tracks.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 1"><img loading="lazy" src="images/01-dna-library.png" alt="Choose Saved or Unsaved, select an entry in the library, and inspect its map preview."></button><figcaption><span>Figure 1.</span> Choose Saved or Unsaved, select an entry in the library, and inspect its map preview. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Circular records appear as a ring; linear records appear as a linear map. Hover over feature shapes to identify them. Use a pinch gesture or <strong>Ctrl + scroll</strong> over a map to zoom, then scroll to reach the area you want.</p>
+<h2 id="2-load-sequence-text-or-a-file">2. Load sequence text or a file<a class="heading-link" href="#2-load-sequence-text-or-a-file" aria-label="Link to 2. Load sequence text or a file">#</a></h2>
+<h3 id="paste-sequence-text">Paste sequence text<a class="heading-link" href="#paste-sequence-text" aria-label="Link to Paste sequence text">#</a></h3>
+<ol>
+<li>Click <strong>New</strong> in the left rail.</li>
+<li>Paste raw DNA, FASTA, FASTQ, or GenBank text into <strong>DNA Sequence</strong>.</li>
+<li>Choose <strong>Linear</strong> or <strong>Circular</strong> to match the sequence.</li>
+<li>Click <strong>Load Sequence</strong>.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 2"><img loading="lazy" src="images/02-new-sequence.png" alt="Paste sequence text, choose Linear or Circular, and click Load Sequence."></button><figcaption><span>Figure 2.</span> Paste sequence text, choose Linear or Circular, and click Load Sequence. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>For a short practice record, paste:</p>
+<pre><code class="language-text">&gt;PracticeDNA
+ATGGCTGGTGAACTGAAACAGGCTGGTGAACTGAAACAGGCTGGTGAACTGAAACAGTAA
+</code></pre>
+<h3 id="open-a-file">Open a file<a class="heading-link" href="#open-a-file" aria-label="Link to Open a file">#</a></h3>
+<ol>
+<li>Click <strong>Open</strong> in the left rail.</li>
+<li>Choose a supported sequence file, such as GenBank, FASTA, FASTQ, or a plain sequence text file.</li>
+<li>Read the loaded sequence in the viewer. Use <strong>Save</strong> to keep it in the Saved library.</li>
+</ol>
+<p>You can also use <a href="examples/teaching-vector.gbk">the example GenBank file</a> supplied with this tutorial. It includes a circular map and example features.</p>
+<h2 id="3-save-a-sequence">3. Save a sequence<a class="heading-link" href="#3-save-a-sequence" aria-label="Link to 3. Save a sequence">#</a></h2>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 3"><img loading="lazy" src="images/03-save-sequence.png" alt="Use Save to keep the loaded record; the toolbar also provides Annotate, and the left rail opens Vector Builder."></button><figcaption><span>Figure 3.</span> Use Save to keep the loaded record; the toolbar also provides Annotate, and the left rail opens Vector Builder. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<ol>
+<li>Load or open the sequence you want to keep.</li>
+<li>Click <strong>Save</strong>, the disk icon in the DNA toolbar.</li>
+<li>Choose <strong>Saved</strong> in the library and find the record.</li>
+<li>To change its name, right-click its library row and choose <strong>Rename Sequence</strong>. Enter the name and press <strong>Enter</strong>.</li>
+</ol>
+<p><strong>Saved</strong> contains records you explicitly saved. <strong>Unsaved</strong> contains automatically retained working records, including imported GenBank records and newly confirmed designs. Promote a working record to Saved with <strong>Save</strong>.</p>
+<p>For records already in the library, annotation and base changes are saved back to the active record. Keep a separate copy of a sequence file when you want to preserve the original before editing.</p>
+<h2 id="4-read-and-select-bases">4. Read and select bases<a class="heading-link" href="#4-read-and-select-bases" aria-label="Link to 4. Read and select bases">#</a></h2>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 4"><img loading="lazy" src="images/04-sequence-viewer.png" alt="Read the DNA toolbar, base coordinates, strands, and feature tracks in the sequence viewer."></button><figcaption><span>Figure 4.</span> Read the DNA toolbar, base coordinates, strands, and feature tracks in the sequence viewer. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<ol>
+<li>Double-click a library record to open the sequence viewer.</li>
+<li>Scroll through the sequence. Use the coordinate labels to locate bases, and compare the top strand with its complementary strand below.</li>
+<li>Click a feature bar to select its range and inspect its details.</li>
+<li>To select a custom range, drag across the bases from the beginning to the end of the range.</li>
+<li>Right-click the highlighted range to open its actions.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 5"><img loading="lazy" src="images/05-selection-menu.png" alt="After selecting bases, right-click to add a feature or design a primer."></button><figcaption><span>Figure 5.</span> After selecting bases, right-click to add a feature or design a primer. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>To return to the map-preview library, click <strong>DNA</strong> in the top navigation bar.</p>
+<h2 id="5-add-and-edit-annotations">5. Add and edit annotations<a class="heading-link" href="#5-add-and-edit-annotations" aria-label="Link to 5. Add and edit annotations">#</a></h2>
+<h3 id="add-a-feature">Add a feature<a class="heading-link" href="#add-a-feature" aria-label="Link to Add a feature">#</a></h3>
+<ol>
+<li>Select a range of bases.</li>
+<li>Right-click the selection and choose <strong>Add Feature</strong>.</li>
+<li>Enter a <strong>Name</strong> and <strong>Type</strong>, such as <code>misc_feature</code> for a general annotation.</li>
+<li>Check <strong>Strand</strong>, <strong>Start</strong>, and <strong>End</strong> against the range you intend to annotate.</li>
+<li>Add a <strong>Description</strong> if useful.</li>
+<li>Click <strong>Save Feature</strong>.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 6"><img loading="lazy" src="images/06-feature-editor.png" alt="Enter feature metadata, check the strand and coordinates, and click Save Feature."></button><figcaption><span>Figure 6.</span> Enter feature metadata, check the strand and coordinates, and click Save Feature. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<h3 id="change-or-remove-an-annotation">Change or remove an annotation<a class="heading-link" href="#change-or-remove-an-annotation" aria-label="Link to Change or remove an annotation">#</a></h3>
+<ol>
+<li>Select the feature in the sequence tracks.</li>
+<li>Right-click it and choose <strong>Edit</strong> followed by the feature&#39;s name, or <strong>Delete</strong> followed by its name.</li>
+<li>For an edit, update the metadata and click <strong>Save Feature</strong>.</li>
+</ol>
+<p>Deleting a feature removes its annotation. To remove DNA bases, use the sequence-editing controls instead.</p>
+<h3 id="match-features-from-your-library">Match features from your library<a class="heading-link" href="#match-features-from-your-library" aria-label="Link to Match features from your library">#</a></h3>
+<p>Click <strong>Annotate</strong> in the DNA toolbar to look for matching DNA and protein features in your stored sequence library. Inspect the resulting annotations before continuing. If no stored features match, the sequence may receive no new annotations.</p>
+<h2 id="6-insert-replace-or-delete-bases">6. Insert, replace, or delete bases<a class="heading-link" href="#6-insert-replace-or-delete-bases" aria-label="Link to 6. Insert, replace, or delete bases">#</a></h2>
+<h3 id="insert-bases">Insert bases<a class="heading-link" href="#insert-bases" aria-label="Link to Insert bases">#</a></h3>
+<ol>
+<li>Right-click the base boundary where you want to insert DNA, without leaving a range selected.</li>
+<li>Choose <strong>Insert Sequence…</strong>.</li>
+<li>Enter the DNA bases in <strong>Sequence</strong>.</li>
+<li>Check the edit action and click <strong>Apply</strong>.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 7"><img loading="lazy" src="images/07-edit-bases.png" alt="Enter DNA in the Insert Bases dialog and click Apply to make the edit."></button><figcaption><span>Figure 7.</span> Enter DNA in the Insert Bases dialog and click Apply to make the edit. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>The insertion dialog also offers <strong>Common peptides</strong>. Choose a listed peptide when you want its coding DNA, and check the ORF reference, orientation, and any codon-boundary feedback shown before applying it.</p>
+<h3 id="replace-or-delete-a-range">Replace or delete a range<a class="heading-link" href="#replace-or-delete-a-range" aria-label="Link to Replace or delete a range">#</a></h3>
+<ol>
+<li>Drag across the bases you want to change.</li>
+<li>Type replacement DNA to open the replacement dialog, or press <strong>Delete</strong> / <strong>Backspace</strong> to open the deletion dialog.</li>
+<li>Review the replacement or deletion and apply it.</li>
+</ol>
+<p>You can also select the range in <strong>Vector Builder</strong>, right-click it, and use its base-edit actions.</p>
+<p>For a circular sequence, right-click a base boundary and choose <strong>Set Sequence Start Here</strong> to make that position the start of the record. This changes the displayed origin and coordinates.</p>
+<h2 id="7-view-orfs-and-translation">7. View ORFs and translation<a class="heading-link" href="#7-view-orfs-and-translation" aria-label="Link to 7. View ORFs and translation">#</a></h2>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 8"><img loading="lazy" src="images/08-orf-options.png" alt="Use ORF View to show predicted ORFs and choose the stop codons and reading frames displayed."></button><figcaption><span>Figure 8.</span> Use ORF View to show predicted ORFs and choose the stop codons and reading frames displayed. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<ol>
+<li>Click <strong>ORF View</strong> in the DNA toolbar.</li>
+<li>Enable the ORF display option.</li>
+<li>Select the stop codons you want included: <strong>TAG</strong>, <strong>TAA</strong>, and <strong>TGA</strong>.</li>
+<li>Select the forward and reverse reading frames to display: <strong>+1</strong>, <strong>+2</strong>, <strong>+3</strong>, <strong>−1</strong>, <strong>−2</strong>, and <strong>−3</strong>.</li>
+<li>Close the menu and select an ORF track to inspect its amino-acid translation.</li>
+</ol>
+<p>Use the frame and stop-codon controls to narrow the displayed tracks when the view becomes crowded.</p>
+<h2 id="8-show-restriction-sites-and-primers">8. Show restriction sites and primers<a class="heading-link" href="#8-show-restriction-sites-and-primers" aria-label="Link to 8. Show restriction sites and primers">#</a></h2>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 9"><img loading="lazy" src="images/09-restriction-cutters.png" alt="Use the NEB and Thermo toggles to control the unique restriction cutter sites displayed."></button><figcaption><span>Figure 9.</span> Use the NEB and Thermo toggles to control the unique restriction cutter sites displayed. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<ol>
+<li>Click <strong>Cutters</strong> in the DNA toolbar.</li>
+<li>Enable <strong>NEB</strong>, <strong>Thermo</strong>, or both to show unique cutter sites from those catalogs.</li>
+<li>Close the menu and inspect the site labels at their sequence positions.</li>
+<li>Use the <strong>Primers</strong> checkbox beside the toolbar menus to show or hide primer-binding tracks.</li>
+</ol>
+<p>Hover over a displayed primer to inspect its name and sequence. The primer&#39;s hover card provides copy and Primer Library controls.</p>
+<h2 id="9-align-a-read-to-a-reference">9. Align a read to a reference<a class="heading-link" href="#9-align-a-read-to-a-reference" aria-label="Link to 9. Align a read to a reference">#</a></h2>
+<ol>
+<li>Open the sequence that will serve as the reference.</li>
+<li>Click <strong>Alignment</strong>, then <strong>Open Sequence</strong>.</li>
+<li>Choose <strong>Align Copied Sequence</strong> and paste your query, or choose <strong>Align With File</strong> and select the read file. The file picker also supports AB1 / ABI sequencing reads.</li>
+<li>If the input contains multiple records, choose the intended <strong>Query Record</strong>.</li>
+<li>Click <strong>Run Alignment</strong>.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 10"><img loading="lazy" src="images/10-alignment-query.png" alt="Paste an alignment query or choose a read file, then click Run Alignment."></button><figcaption><span>Figure 10.</span> Paste an alignment query or choose a read file, then click Run Alignment. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<ol start="6">
+<li>Compare the aligned query row with the reference at the same coordinates. Scroll through the aligned region to inspect differences.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 11"><img loading="lazy" src="images/11-alignment-result.png" alt="Compare the reference strand and the aligned query row at the same base positions."></button><figcaption><span>Figure 11.</span> Compare the reference strand and the aligned query row at the same base positions. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<ol start="7">
+<li>Open <strong>Alignment</strong> again to use <strong>Show Alignment</strong>, or choose an available result from <strong>Saved</strong>.</li>
+</ol>
+<p>To compare another read, use <strong>Open Sequence</strong> again. Keep the intended reference record open while loading the query.</p>
+<h2 id="10-use-vector-builder">10. Use Vector Builder<a class="heading-link" href="#10-use-vector-builder" aria-label="Link to 10. Use Vector Builder">#</a></h2>
+<ol>
+<li>Open the sequence you want to work on.</li>
+<li>Click <strong>Vector Builder</strong> in the left rail.</li>
+<li>Click a feature on the map to locate its range in the <strong>Bases</strong> panel.</li>
+<li>Pinch or use <strong>Ctrl + scroll</strong> to zoom the map. Scroll the map area to move around it.</li>
+<li>Use the <strong>Cutters</strong> and <strong>Primers</strong> switches above the map to control those tracks.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 12"><img loading="lazy" src="images/12-vector-builder.png" alt="Use the Vector Builder map and Bases panel together, or open Protein Builder from its toolbar."></button><figcaption><span>Figure 12.</span> Use the Vector Builder map and Bases panel together, or open Protein Builder from its toolbar. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<ol start="6">
+<li>Right-click a feature or a selected range to open its actions.</li>
+<li>Choose the operation you need, such as inserting bases before or after the selected feature, deleting the selected bases, or replacing the feature.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 13"><img loading="lazy" src="images/13-map-actions.png" alt="Right-click a map selection to replace a feature, delete bases, or build a protein replacement."></button><figcaption><span>Figure 13.</span> Right-click a map selection to replace a feature, delete bases, or build a protein replacement. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>For <strong>Replace Feature…</strong>, search the stored feature library, choose the feature and its source, inspect the preview, and click <strong>Confirm</strong>.</p>
+<p>Use the back arrow labeled <strong>Back to DNA</strong> to return to the sequence viewer.</p>
+<h2 id="11-build-a-protein-construct">11. Build a protein construct<a class="heading-link" href="#11-build-a-protein-construct" aria-label="Link to 11. Build a protein construct">#</a></h2>
+<h3 id="add-blocks">Add blocks<a class="heading-link" href="#add-blocks" aria-label="Link to Add blocks">#</a></h3>
+<ol>
+<li>Open <strong>Vector Builder</strong>, then click <strong>Protein Builder</strong> in its toolbar.</li>
+<li>Inspect the starting <strong>Assembly Chain</strong>. It can already contain the current DNA&#39;s coding sequence, a tag, and a cleavage site. Hover over a block to reveal its controls, and remove any blocks you do not want.</li>
+<li>Click <strong>+ Protein</strong> beside <strong>Assembly Chain</strong>.</li>
+<li>Under <strong>Enter sequence</strong>, provide a <strong>Protein name</strong> and choose <strong>Amino-acid sequence</strong> or <strong>DNA coding sequence</strong>.</li>
+<li>Paste the sequence and click <strong>Add to Chain</strong>.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 14"><img loading="lazy" src="images/14-add-protein.png" alt="Name a protein block, choose its sequence type, enter the sequence, and add it to the chain."></button><figcaption><span>Figure 14.</span> Name a protein block, choose its sequence type, enter the sequence, and add it to the chain. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>You can use <strong>Search UniProt</strong> instead: enter a query, run the search, select a result, choose the sequence or region, and add it to the chain.</p>
+<ol start="6">
+<li>Expand a group under <strong>Common Blocks</strong> and click a tag, linker, protease site, or 2A peptide to add it.</li>
+<li>Use each block&#39;s move controls to arrange the chain from N terminus to C terminus. Use its edit or remove control when needed.</li>
+<li>Review the assembled amino-acid sequence. Click the sequence to edit it directly if required.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 15"><img loading="lazy" src="images/15-protein-builder.png" alt="Arrange the assembly chain, review the protein sequence, and choose codon usage for its DNA."></button><figcaption><span>Figure 15.</span> Arrange the assembly chain, review the protein sequence, and choose codon usage for its DNA. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<h3 id="review-dna-and-continue">Review DNA and continue<a class="heading-link" href="#review-dna-and-continue" aria-label="Link to Review DNA and continue">#</a></h3>
+<ol>
+<li>Choose the <strong>Codon usage table</strong> for the DNA output. Enable <strong>Codon-optimize</strong> when you want to regenerate stored coding DNA using that table.</li>
+<li>Click <strong>Build DNA Sequence</strong> and inspect the DNA output.</li>
+<li>Use the copy controls to copy the assembled protein or DNA sequence.</li>
+<li>To continue with a stored backbone, click <strong>Assemble Plasmid</strong>, choose the backbone, review the assembly summary, and use <strong>Next Step</strong>.</li>
+<li>If you opened Protein Builder from a map insertion or replacement action, use <strong>Insert Into Vector</strong> to apply the construct at that target instead.</li>
+<li>Continue through the cloning review before confirming the design.</li>
+</ol>
+<h2 id="12-review-a-cloning-design">12. Review a cloning design<a class="heading-link" href="#12-review-a-cloning-design" aria-label="Link to 12. Review a cloning design">#</a></h2>
+<ol>
+<li>Make the intended sequence edit, or build an insertion through Protein Builder.</li>
+<li>Click <strong>Cloning Design</strong> when it is available. It is also accessible from the Vector Builder toolbar.</li>
+<li>Choose a <strong>Route</strong> from the left panel.</li>
+<li>Click <strong>Design Primers</strong>.</li>
+<li>Read the plan, primer information, and any warnings or review messages. Select another route and run <strong>Design Primers</strong> again if needed.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 16"><img loading="lazy" src="images/16-cloning-design.png" alt="Choose a cloning route, design primers, and review the result before using Confirm Design."></button><figcaption><span>Figure 16.</span> Choose a cloning route, design primers, and review the result before using Confirm Design. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<ol start="6">
+<li>Use <strong>Save All to Primer Library</strong> to keep the displayed primers when that action is available.</li>
+<li>Click <strong>Confirm Design</strong> when you want to save the working product and generated primer record. Find the resulting records under <strong>Unsaved</strong>, inspect them, and use <strong>Save</strong> for records you want in Saved.</li>
+</ol>
+<p>A plan can retain a review status after confirmation. Read its messages; confirmation does not clear them. <strong>Order Primers</strong> is offered only for a feasible plan.</p>
+<p>Use <strong>Back to Sequence</strong> to return without confirming the design.</p>
+<h2 id="13-save-and-export-primers">13. Save and export primers<a class="heading-link" href="#13-save-and-export-primers" aria-label="Link to 13. Save and export primers">#</a></h2>
+<h3 id="save-a-primer">Save a primer<a class="heading-link" href="#save-a-primer" aria-label="Link to Save a primer">#</a></h3>
+<ol>
+<li>Show the <strong>Primers</strong> track in the sequence viewer or Vector Builder.</li>
+<li>Hover over a primer-binding feature to open its card.</li>
+<li>Use the save-to-library control in that card to keep the full oligo in <strong>Primer Library</strong>.</li>
+</ol>
+<p>To design a primer for a selected range, right-click the range and choose <strong>Design Primer</strong>, then inspect the displayed primer information.</p>
+<h3 id="select-primers">Select primers<a class="heading-link" href="#select-primers" aria-label="Link to Select primers">#</a></h3>
+<ol>
+<li>Click <strong>Primers</strong> beside the library&#39;s <strong>Saved</strong> and <strong>Unsaved</strong> buttons.</li>
+<li>Use <strong>Search primers</strong> to find an entry.</li>
+<li>Edit the name in its row if needed, and check the sequence.</li>
+<li>Tick the primers you want to export, or use the header checkbox to select the visible entries.</li>
+<li>Click <strong>Export Selected to IDT</strong>.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 17"><img loading="lazy" src="images/17-primer-library.png" alt="Search Primer Library, check primer names and sequences, and export the selected entries."></button><figcaption><span>Figure 17.</span> Search Primer Library, check primer names and sequences, and export the selected entries. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<h3 id="copy-the-order-block">Copy the order block<a class="heading-link" href="#copy-the-order-block" aria-label="Link to Copy the order block">#</a></h3>
+<ol>
+<li>Choose <strong>Scale</strong> and <strong>Purification</strong> in <strong>Order Primers</strong>.</li>
+<li>Review the <strong>Order block</strong> and any messages above it.</li>
+<li>Click <strong>Copy IDT Block</strong> or <strong>Copy CSV</strong>.</li>
+<li>Paste the copied text into the ordering workflow you use and review it there before submitting an order.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 18"><img loading="lazy" src="images/18-primer-order.png" alt="Choose scale and purification, inspect the order block, and copy the selected primer details."></button><figcaption><span>Figure 18.</span> Choose scale and purification, inspect the order block, and copy the selected primer details. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Copying the block does not place an order. To remove library entries, select them in Primer Library and click <strong>Remove Selected</strong>.</p>
+<h2 id="14-organize-the-sequence-library">14. Organize the sequence library<a class="heading-link" href="#14-organize-the-sequence-library" aria-label="Link to 14. Organize the sequence library">#</a></h2>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 19"><img loading="lazy" src="images/19-library-actions.png" alt="Right-click a sequence entry to create a folder, rename the record, or move it into a folder."></button><figcaption><span>Figure 19.</span> Right-click a sequence entry to create a folder, rename the record, or move it into a folder. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<h3 id="rename-an-entry">Rename an entry<a class="heading-link" href="#rename-an-entry" aria-label="Link to Rename an entry">#</a></h3>
+<ol>
+<li>Right-click the sequence&#39;s row in the library.</li>
+<li>Choose <strong>Rename Sequence</strong>.</li>
+<li>Type the new name in the row and press <strong>Enter</strong>. Press <strong>Escape</strong> to cancel the rename.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 20"><img loading="lazy" src="images/20-rename-sequence.png" alt="Type a new name in the library row and press Enter to keep it."></button><figcaption><span>Figure 20.</span> Type a new name in the library row and press Enter to keep it. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<h3 id="use-folders">Use folders<a class="heading-link" href="#use-folders" aria-label="Link to Use folders">#</a></h3>
+<ol>
+<li>Right-click in the library and choose <strong>New Folder</strong>.</li>
+<li>Type the folder name and press <strong>Enter</strong>.</li>
+<li>Right-click an entry and choose <strong>Move to Folder</strong>, then enter the destination folder name in the prompt. You can also drag an entry onto a folder.</li>
+<li>Expand or collapse a folder with its disclosure arrow.</li>
+<li>To rename a folder, right-click its row and choose <strong>Rename Folder</strong>.</li>
+</ol>
+<p>For a regular folder, <strong>Delete Folder</strong> removes the folder and returns its entries to the unfiled library; it does not delete their sequence records. Project-linked folders are managed with their projects.</p>
+<hr>
+<p><a href="../07-workflows/index.html">Previous tutorial: Workflows</a> · <a href="../09-plate/index.html">Next tutorial: Plate</a> · <a href="../index.html">All tutorials</a></p>
+</article><footer class="page-footer">Hikari tutorials · Chapter 08 · DNA</footer></main>
+<dialog id="image-viewer" aria-label="Enlarged tutorial screenshot"><div class="viewer-toolbar"><span id="viewer-label">Screenshot</span><button id="viewer-zoom" type="button">Actual size</button><button id="viewer-close" type="button" aria-label="Close enlarged screenshot">Close ×</button></div><div class="viewer-body"><img id="viewer-image" alt=""></div></dialog>
+<script>
+const viewer = document.getElementById('image-viewer');
+const enlarged = document.getElementById('viewer-image');
+const zoom = document.getElementById('viewer-zoom');
+for (const button of document.querySelectorAll('.screenshot')) button.addEventListener('click', () => {
+  const img = button.querySelector('img'); enlarged.src = img.src; enlarged.alt = img.alt;
+  document.getElementById('viewer-label').textContent = button.closest('figure').querySelector('figcaption span').textContent;
+  viewer.classList.remove('actual-size'); zoom.textContent = 'Actual size'; viewer.showModal();
+});
+document.getElementById('viewer-close').addEventListener('click', () => viewer.close());
+zoom.addEventListener('click', () => { const actual = viewer.classList.toggle('actual-size'); zoom.textContent = actual ? 'Fit to window' : 'Actual size'; });
+viewer.addEventListener('click', event => { if (event.target === viewer) viewer.close(); });
+if ('IntersectionObserver' in window) {
+  const links = [...document.querySelectorAll('.sidebar nav a')];
+  const observer = new IntersectionObserver(entries => {
+    for (const entry of entries) if (entry.isIntersecting) {
+      for (const link of links) { const active = link.hash === '#' + entry.target.id; link.classList.toggle('current', active); if (active) link.setAttribute('aria-current', 'location'); else link.removeAttribute('aria-current'); }
+    }
+  }, { rootMargin: '-5% 0px -75% 0px' });
+  document.querySelectorAll('article h2').forEach(heading => observer.observe(heading));
+}
+</script></body></html>

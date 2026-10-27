@@ -1,3 +1,5 @@
+import { addLadderLabelsToSlide } from './ladder-labels.js';
+
 const EMU_PER_INCH = 914400;
 const SLIDE_WIDTH_EMU = 12192000;
 const SLIDE_HEIGHT_EMU = 6858000;
@@ -19,6 +21,7 @@ function toInches(value) {
 function resolvePowerPointLayout(plan) {
   const gelWidthPx = Math.max(1, Number(plan?.gelWidth) || 0);
   const gelHeightPx = Math.max(1, Number(plan?.sourceHeight) || 0);
+  const annotation = plan.ladderLabels || { width: 0, height: gelHeightPx, imageTop: 0 };
   const rowCount = Math.max(0, plan?.rows?.length || 0);
   const tableHeight = rowCount * TABLE_ROW_HEIGHT_EMU;
   // No table rows means no table and no label column: the slide is just the gel.
@@ -35,18 +38,22 @@ function resolvePowerPointLayout(plan) {
       MAX_LABEL_WIDTH_EMU
     )
     : 0;
-  const maxGelWidth = SLIDE_WIDTH_EMU - (SLIDE_MARGIN_EMU * 2) - labelWidth;
+  const maxGelWidth = (SLIDE_WIDTH_EMU - (SLIDE_MARGIN_EMU * 2) - labelWidth)
+    / (1 + annotation.width / gelWidthPx);
   const gelWidth = Math.max(
-    EMU_PER_INCH,
-    Math.min(maxGelWidth, Math.round(maxGelHeight * (gelWidthPx / gelHeightPx)))
+    annotation.width ? 1 : EMU_PER_INCH,
+    Math.min(maxGelWidth, Math.round(maxGelHeight * (gelWidthPx / annotation.height)))
   );
   const gelHeight = Math.max(1, Math.round(gelWidth * (gelHeightPx / gelWidthPx)));
-  const tableWidth = labelWidth + gelWidth;
+  const annotationWidth = annotation.width / gelWidthPx * gelWidth;
+  const annotationHeight = annotation.height / gelWidthPx * gelWidth;
+  const tableWidth = labelWidth + annotationWidth + gelWidth;
   const groupLeft = Math.round((SLIDE_WIDTH_EMU - tableWidth) / 2);
-  const groupHeight = tableHeight + tableGelGap + gelHeight;
+  const groupHeight = tableHeight + tableGelGap + annotationHeight;
   const tableTop = Math.max(SLIDE_MARGIN_EMU, Math.round((SLIDE_HEIGHT_EMU - groupHeight) / 2));
 
   const columnWidths = [labelWidth];
+  if (annotation.width) columnWidths.push(annotationWidth);
   let assignedGelWidth = 0;
   (plan.slices || []).forEach((slice, index, all) => {
     const width = index === all.length - 1
@@ -64,8 +71,10 @@ function resolvePowerPointLayout(plan) {
     tableWidth,
     tableHeight,
     tableRowHeight: TABLE_ROW_HEIGHT_EMU,
-    gelLeft: groupLeft + labelWidth,
-    gelTop: tableTop + tableHeight + tableGelGap,
+    annotationLeft: groupLeft + labelWidth,
+    annotationTop: tableTop + tableHeight + tableGelGap,
+    gelLeft: groupLeft + labelWidth + annotationWidth,
+    gelTop: tableTop + tableHeight + tableGelGap + annotation.imageTop / gelWidthPx * gelWidth,
     gelWidth,
     gelHeight,
     columnWidths
@@ -73,7 +82,7 @@ function resolvePowerPointLayout(plan) {
 }
 
 function toTableRows(plan) {
-  return plan.rows.map((row) => [row.label, ...row.values].map((value) => ({
+  return plan.rows.map((row) => [row.label, ...(plan.ladderLabels?.width ? [''] : []), ...row.values].map((value) => ({
     text: String(value ?? ''),
     options: {
       align: 'center',
@@ -175,6 +184,8 @@ export async function createGelPowerPoint({
     objectName: 'Cropped gel image',
     altText: 'Cropped gel lanes'
   });
+  addLadderLabelsToSlide(slide, plan.ladderLabels, toInches(layout.annotationLeft),
+    toInches(layout.annotationTop), toInches(layout.gelWidth) / plan.gelWidth);
 
   const generatedBuffer = await presentation.write({ outputType: 'arraybuffer', compression: true });
   const arrayBuffer = await normalizePowerPointXml(generatedBuffer, JSZip);

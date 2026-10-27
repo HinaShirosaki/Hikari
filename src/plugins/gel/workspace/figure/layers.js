@@ -71,12 +71,19 @@ export function startGelNavigationRename(button, { value, label, onCommit, onFin
   const editor = documentObject.createElement('div');
   editor.className = `${button.className} gel-figure-rename-row`;
   editor.style.padding = documentObject.defaultView.getComputedStyle(button).padding;
+  editor.style.setProperty('--gel-rename-row-height', `${button.getBoundingClientRect().height}px`);
   editor.setAttribute('role', 'group'); editor.setAttribute('aria-label', label);
+  const nameSlot = documentObject.createElement('span');
+  nameSlot.className = `${names.className} gel-figure-rename-name`;
   const input = documentObject.createElement('input');
-  input.type = 'text'; input.className = `${names.className} folder-tree-template__rename-input`;
+  input.type = 'text'; input.className = 'folder-tree-template__rename-input gel-figure-rename-input';
   input.value = value; input.maxLength = 120; input.setAttribute('aria-label', label);
+  input.autocomplete = 'off'; input.spellcheck = false; input.enterKeyHint = 'done';
   input.dataset.gelNavigationRename = '';
-  for (const child of button.children) editor.append(child === names ? input : child.cloneNode(true));
+  // Keep the label's line box; the padded field surrounds its original text
+  // position without growing the row or shifting its icon and tree connector.
+  nameSlot.append('\u00a0', input);
+  for (const child of button.children) editor.append(child === names ? nameSlot : child.cloneNode(true));
   const previousDisplay = button.style.display;
   button.style.display = 'none'; button.before(editor);
   let settled = false;
@@ -90,6 +97,7 @@ export function startGelNavigationRename(button, { value, label, onCommit, onFin
     if (refocus) target?.focus();
   }
   input.addEventListener('keydown', event => {
+    if (event.isComposing) return;
     if (!['Enter', 'Escape'].includes(event.key)) return;
     event.preventDefault(); event.stopPropagation(); finish(event.key === 'Enter', true);
   });

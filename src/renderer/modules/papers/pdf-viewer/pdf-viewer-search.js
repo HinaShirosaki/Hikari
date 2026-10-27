@@ -29,8 +29,10 @@ export function buildHighlightCommentPopoverMarkup(comment = {}) {
   const author = String(comment.author || 'Local user').trim() || 'Local user';
   const text = String(comment.text || '').trim();
   return `
+    <div class="papers-highlight-comment-content">
       <p><strong>${escapeHtml(author)}</strong></p>
       <p>${escapeHtml(text)}</p>
+    </div>
     `;
 }
 
@@ -67,12 +69,16 @@ export async function copyPdfHighlightText(value = '', navigatorRef = globalThis
   }
 }
 
-export function buildHighlightPopoverMarkup(highlight = {}) {
+export function buildHighlightPopoverMarkup(highlight = {}, { comment = null, canDelete = true } = {}) {
   const text = normalizePdfHighlightText(highlight?.text);
   if (!text) {
     return '';
   }
+  const annotationLabel = highlight.kind === 'underline' ? 'underline' : 'highlight';
+  const deleteLabel = `Delete ${annotationLabel}${comment ? ' and comment' : ''}`;
   return `
+    ${comment ? buildHighlightCommentPopoverMarkup(comment) : ''}
+    <div class="papers-highlight-actions">
       <button
         type="button"
         class="ghost-btn papers-selection-action-btn"
@@ -100,6 +106,19 @@ export function buildHighlightPopoverMarkup(highlight = {}) {
         </svg>
         <span class="sr-only">Copy highlighted text</span>
       </button>
+      ${canDelete ? `<button
+        type="button"
+        class="ghost-btn papers-selection-action-btn"
+        data-paper-highlight-delete
+        aria-label="${deleteLabel}"
+        title="${deleteLabel}"
+      >
+        <svg class="papers-selection-action-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+          <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7M14 10v7"></path>
+        </svg>
+        <span class="sr-only">${deleteLabel}</span>
+      </button>` : ''}
+    </div>
     `;
 }
 

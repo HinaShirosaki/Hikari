@@ -1,9 +1,32 @@
 import { cropGray, decodeImageFile, decodeImageSource, isTiffFile, normalizeDecodedImage } from './image-io.js';
-import { normalizeEnhancementSettings, preprocessWithJs } from '../analysis/image-processing.js';
+import { normalizeEnhancementSettings } from '../analysis/image-processing.js';
+import { createBackgroundPreprocessor } from '../analysis/background-processing.js';
 import { createEmptyManualOverrides } from '../shared.js';
 
 export function createImageController({ runtime, elements, deps }) {
+  const processor = deps.processor || createBackgroundPreprocessor();
+  let disposed = false;
+  let generation = 0;
+  let preparing = null;
+  const stage = elements.gelViewerStage;
+  const notice = stage?.ownerDocument?.createElement('div');
+  if (notice) {
+    notice.className = 'gel-processing-notice'; notice.textContent = 'Processing…';
+    notice.setAttribute('role', 'status'); notice.setAttribute('aria-live', 'polite');
+    notice.hidden = true; stage.append(notice);
+  }
+  function showProcessing(busy) {
+    const visible = busy && runtime.viewerMode === 'processed';
+    if (notice) notice.hidden = !visible;
+    stage?.setAttribute('aria-busy', String(visible));
+  }
+  let previewFrame = null;
+  function cancelPreview() {
+    if (previewFrame !== null) window.cancelAnimationFrame(previewFrame);
+    previewFrame = null;
+  }
   function setCurrentImage(nextImage) {
+    cancelPreview(); generation++; preparing = null; showProcessing(false);
     runtime.currentImage = nextImage;
     runtime.imageRevision += 1;
     runtime.preprocessedCache = null;
@@ -11,6 +34,7 @@ export function createImageController({ runtime, elements, deps }) {
       window.clearTimeout(runtime.enhancementRerunTimer);
       runtime.enhancementRerunTimer = null;
     }
+    if (nextImage) void prepareCurrentImage().catch(() => {});
   }
 
   function copyNormalizedImage(image) {
@@ -56,40 +80,55 @@ export function createImageController({ runtime, elements, deps }) {
     }
   }
 
-  function getPreprocessedImageForCurrentSettings() {
-    if (!runtime.currentImage) {
-      return null;
-    }
+  function isCurrent(image, enhancement, revision) {
+    return !disposed && runtime.currentImage === image && runtime.imageRevision === revision
+      && JSON.stringify(readEnhancementSettingsFromUi()) === JSON.stringify(enhancement);
+  }
+  function prepareCurrentImage() {
+    if (!runtime.currentImage || disposed) return Promise.resolve(null);
+    const image = runtime.currentImage, revision = runtime.imageRevision;
     const enhancement = readEnhancementSettingsFromUi();
-    const cache = runtime.preprocessedCache;
-    if (
-      cache
-      && cache.imageRevision === runtime.imageRevision
-      && cache.enhancement?.denoiseStrength === enhancement.denoiseStrength
-      && cache.enhancement?.contrastBoost === enhancement.contrastBoost
-    ) {
-      return cache.result;
+    const key = JSON.stringify([generation, enhancement]);
+    const cached = processor.peek(image.gray, image.width, image.height, enhancement);
+    if (cached) {
+      runtime.preprocessedCache = { imageRevision: revision, enhancement, result: cached };
+      showProcessing(false); return Promise.resolve(cached);
     }
-
-    const result = preprocessWithJs(
-      runtime.currentImage.gray,
-      runtime.currentImage.width,
-      runtime.currentImage.height,
-      enhancement
-    );
-    runtime.preprocessedCache = {
-      imageRevision: runtime.imageRevision,
-      enhancement,
-      result
-    };
-    return result;
+    showProcessing(true);
+    if (preparing?.key === key) return preparing.promise;
+    const task = { key };
+    task.promise = processor.request(image.gray, image.width, image.height, enhancement).then(result => {
+      if (!result || !isCurrent(image, enhancement, revision)) return null;
+      runtime.preprocessedCache = { imageRevision: revision, enhancement, result };
+      showProcessing(false);
+      deps.renderCanvas();
+      return result;
+    }).catch(error => {
+      if (isCurrent(image, enhancement, revision)) { showProcessing(false); deps.setStatus?.(error.message); }
+      throw error;
+    }).finally(() => { if (preparing === task) preparing = null; });
+    preparing = task;
+    return task.promise;
+  }
+  function getPreprocessedImageForCurrentSettings() {
+    if (!runtime.currentImage) return null;
+    const enhancement = readEnhancementSettingsFromUi(), image = runtime.currentImage;
+    const result = processor.peek(image.gray, image.width, image.height, enhancement);
+    if (result) { showProcessing(false); return result; }
+    void prepareCurrentImage().catch(() => {});
+    // Keep the last preview while a slider update runs. Analysis and export
+    // await prepareCurrentImage and can never consume this display placeholder.
+    return runtime.preprocessedCache?.imageRevision === runtime.imageRevision ? runtime.preprocessedCache.result : null;
   }
 
   function onEnhancementChanged() {
     renderEnhancementValues();
-    runtime.preprocessedCache = null;
-    if (runtime.currentImage) {
-      deps.renderCanvas();
+    if (runtime.currentImage && previewFrame === null) {
+      // Multiple slider events before the next frame need only the final value.
+      previewFrame = window.requestAnimationFrame(() => {
+        previewFrame = null;
+        deps.renderCanvas();
+      });
     }
     if (runtime.currentReport) {
       if (runtime.enhancementRerunTimer) {
@@ -167,6 +206,12 @@ export function createImageController({ runtime, elements, deps }) {
   }
 
   return {
+    updateProcessingNotice: () => showProcessing(Boolean(preparing)),
+    prepareCurrentImage,
+    prepareImage: processor.request,
+    peekProcessedImage: processor.peek,
+    getProcessingStats: processor.getStats,
+    destroy() { disposed = true; generation++; cancelPreview(); processor.destroy(); notice?.remove(); stage?.removeAttribute('aria-busy'); },
     copyNormalizedImage,
     decodeImageSource,
     getPreprocessedImageForCurrentSettings,

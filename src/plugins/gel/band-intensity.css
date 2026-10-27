@@ -1,0 +1,66 @@
+#gel-view #gel-cell-table-panel {
+  inset: 12px auto auto 12px;
+  width: 640px;
+  max-width: calc(100% - 24px);
+  overflow: hidden;
+}
+
+#gel-view #gel-cell-table-panel .gel-floating-head h3 { flex: 1; }
+
+#gel-view .gel-band-intensity-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 12px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+#gel-view #gel-band-intensity-empty { margin: 0; }
+#gel-view #gel-band-intensity-empty[hidden] { display: none; }
+#gel-view .gel-band-intensity-body > .gel-result-head { flex: 0 0 auto; flex-wrap: wrap; }
+#gel-view .gel-band-intensity-chart-shell { flex: 0 0 auto; min-width: 0; overflow-x: auto; }
+#gel-view .gel-band-intensity-chart {
+  display: block;
+  min-width: 100%;
+  max-width: none;
+  height: 240px;
+  font: 11px system-ui, sans-serif;
+}
+#gel-view .gel-band-intensity-chart[hidden],
+#gel-view .gel-band-intensity-chart-shell:has(> [hidden]) { display: none; }
+#gel-view .gel-intensity-grid { stroke: var(--theme-border-soft); stroke-width: 1; }
+#gel-view .gel-intensity-zero { stroke: var(--theme-text-muted); stroke-width: 1; }
+#gel-view .gel-intensity-bar { fill: var(--theme-accent); }
+#gel-view .gel-intensity-axis { fill: var(--theme-text-muted); }
+#gel-view .gel-intensity-value { fill: var(--theme-text); font-variant-numeric: tabular-nums; }
+#gel-view #gel-cell-table-panel .gel-cell-table-host { flex: 0 0 auto; max-height: 240px; user-select: text; }
+#gel-view #gel-cell-table-panel .gel-cell-table { min-width: 280px; }
+#gel-view #gel-cell-table-panel .gel-cell-table th { position: sticky; top: 0; background: var(--theme-surface); }
+#gel-view .gel-intensity-review { display: block; color: var(--theme-warning); font-size: 11px; font-weight: 400; }
+#gel-view .gel-intensity-bar[data-review='true'] { fill: var(--theme-warning); }
+#gel-view .gel-band-baseline-help { margin: 0; line-height: 1.5; }
+#gel-view .peak-editor-target-window { fill: var(--theme-accent); opacity: .08; pointer-events: none; }
+#gel-view .peak-editor-target-baseline { stroke: var(--theme-warning); stroke-width: 2; stroke-dasharray: 5 3; pointer-events: none; }
+
+/* Keep integration headers and full-precision values readable. The table scrolls
+   horizontally when its columns exceed the floating window's available width. */
+#gel-view .gel-peak-editor-table { font-variant-numeric: tabular-nums; }
+#gel-view #gel-peak-editor-table .tabulator-header,
+#gel-view #gel-peak-editor-table .tabulator-header .tabulator-col {
+  color: var(--theme-text);
+}
+#gel-view .gel-peak-editor-table .tabulator-col-title {
+  white-space: normal;
+  text-overflow: clip;
+  line-height: 1.3;
+  font-weight: 600;
+}
+#gel-view .gel-peak-editor-table .tabulator-col-content { padding: 8px; }
+#gel-view .gel-peak-editor-table .tabulator-cell { padding: 6px 8px; }
+#gel-view .gel-peak-table { min-width: 776px; }
+#gel-view .gel-peak-table th { white-space: normal; }
+#gel-view #gel-peak-editor-overlay .gel-peak-editor-dialog {
+  grid-template-rows: auto auto minmax(80px, 2fr) minmax(104px, 1fr);
+}

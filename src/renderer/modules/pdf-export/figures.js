@@ -1,6 +1,7 @@
-import { LINE_HEIGHT, PLATE_DEFINITIONS } from './constants.js';
-import { ensureSpace } from './doc-context.js';
-import { writeParagraph } from './text-blocks.js';
+import { BODY_FONT_SIZE, LINE_HEIGHT, PLATE_DEFINITIONS } from './constants.js';
+import { contentBottom, ensureSpace, font, splitWrappedLines } from './doc-context.js';
+import { writeHeading, writeMinorHeading, writeParagraph } from './text-blocks.js';
+import { writeSimpleTable } from './tables.js';
 import { toRowLabel } from '../../lib/plate-wells.js';
 
 function inferPdfImageFormat(dataUrl) {
@@ -94,14 +95,22 @@ async function preparePdfImageAsset(dataUrl, { maxWidthPt = 0, maxHeightPt = 0 }
   });
 }
 
-async function writeImageFigure(ctx, dataUrl, { caption = '', maxHeight = 260 } = {}) {
-  const availableHeight = Math.max(80, ctx.pageHeight - ctx.marginTop - ctx.marginBottom - 20);
+async function writeImageFigure(ctx, dataUrl, { caption = '', maxHeight = 260, heading = '', sectionHeading = '', description = '' } = {}) {
+  font(ctx, 'normal');
+  ctx.doc.setFontSize(BODY_FONT_SIZE);
+  const captionHeight = caption ? splitWrappedLines(ctx.doc, caption, ctx.maxWidth).length * LINE_HEIGHT + 10 : 8;
+  const headingHeight = (heading ? 24 : 0) + (sectionHeading ? 35 : 0);
+  const descriptionHeight = description ? splitWrappedLines(ctx.doc, description, ctx.maxWidth).length * LINE_HEIGHT + 4 : 0;
+  const availableHeight = Math.max(40, contentBottom(ctx) - ctx.marginTop - 29 - captionHeight - headingHeight - descriptionHeight);
   const targetMaxHeight = Math.min(maxHeight, availableHeight);
   const asset = await preparePdfImageAsset(dataUrl, {
     maxWidthPt: ctx.maxWidth,
     maxHeightPt: targetMaxHeight
   });
   if (!asset) {
+    if (sectionHeading) writeHeading(ctx, sectionHeading);
+    if (heading) writeMinorHeading(ctx, heading);
+    if (description) writeParagraph(ctx, description);
     if (caption) {
       writeParagraph(ctx, caption);
     }
@@ -111,10 +120,18 @@ async function writeImageFigure(ctx, dataUrl, { caption = '', maxHeight = 260 } 
   const widthScale = ctx.maxWidth / asset.width;
   const heightScale = targetMaxHeight / asset.height;
   const scale = Math.min(widthScale, heightScale, 1);
-  const drawWidth = Math.max(1, asset.width * scale);
-  const drawHeight = Math.max(1, asset.height * scale);
+  let drawWidth = Math.max(1, asset.width * scale);
+  let drawHeight = Math.max(1, asset.height * scale);
+  const roomHere = contentBottom(ctx) - ctx.y - captionHeight - headingHeight - descriptionHeight;
+  if (ctx.compact && roomHere >= drawHeight * 0.72 && roomHere < drawHeight) {
+    drawWidth *= roomHere / drawHeight;
+    drawHeight = roomHere;
+  }
 
-  ensureSpace(ctx, drawHeight + (caption ? LINE_HEIGHT + 8 : 8));
+  ensureSpace(ctx, drawHeight + captionHeight + headingHeight + descriptionHeight);
+  if (sectionHeading) writeHeading(ctx, sectionHeading);
+  if (heading) writeMinorHeading(ctx, heading);
+  if (description) writeParagraph(ctx, description);
   ctx.doc.addImage(asset.dataUrl, asset.format, ctx.margin, ctx.y, drawWidth, drawHeight);
   ctx.y += drawHeight + 6;
   if (caption) {
@@ -151,18 +168,50 @@ function resolveAssayDefinition(assay) {
 
 function assayPlotMetrics(ctx, def) {
   const totalWells = def.rows * def.columns;
-  const maxRows = totalWells > 384 ? Math.min(16, def.rows) : def.rows;
-  const maxColumns = totalWells > 384 ? Math.min(24, def.columns) : def.columns;
+  const maxRows = def.rows;
+  const maxColumns = def.columns;
   const rowHeaderWidth = 20;
   const colHeaderHeight = 16;
   const maxPlotWidth = ctx.maxWidth - rowHeaderWidth;
-  const naturalCellSize = Math.floor(maxPlotWidth / maxColumns);
-  const cellSize = Math.max(8, ctx.visualStyle === 'editorial'
-    ? Math.min(72, naturalCellSize)
-    : naturalCellSize);
+  const naturalCellSize = maxPlotWidth / maxColumns;
+  const plotHeightCap = Math.max(40, Math.min(totalWells > 96 ? 210 : 330,
+    contentBottom(ctx) - ctx.marginTop - 150));
+  const cellSize = Math.min(naturalCellSize, plotHeightCap / maxRows,
+    ctx.visualStyle === 'editorial' ? 42 : Infinity);
   const plotHeight = cellSize * maxRows;
   const neededHeight = plotHeight + colHeaderHeight + 24;
   return { maxRows, maxColumns, rowHeaderWidth, colHeaderHeight, cellSize, plotHeight, neededHeight };
+}
+
+function writeAssayAssignments(ctx, map, def) {
+  const at = (row, col) => map[wellIdFor(row, col)] || {};
+  const modes = ['row', 'column'];
+  const mode = modes.find(axis => Array.from({ length: def.rows }, (_, row) =>
+    Array.from({ length: def.columns }, (_, col) => {
+      const sample = axis === 'row' ? at(row, 0).sampleId : at(0, col).sampleId;
+      const concentration = axis === 'row' ? at(0, col).concentration : at(row, 0).concentration;
+      return at(row, col).sampleId === sample && at(row, col).concentration === concentration;
+    }).every(Boolean)).every(Boolean));
+  if (mode) {
+    for (const axis of ['row', 'column']) {
+      const count = axis === 'row' ? def.rows : def.columns;
+      const isSample = axis === mode;
+      const items = Array.from({ length: count }, (_, index) => [
+        axis === 'row' ? toRowLabel(index) : String(index + 1),
+        (axis === 'row' ? at(index, 0) : at(0, index))[isSample ? 'sampleId' : 'concentration'] || '-'
+      ]);
+      const paired = [];
+      const half = Math.ceil(items.length / 2);
+      for (let index = 0; index < half; index++) paired.push([...items[index], ...(items[index + half] || ['', ''])]);
+      const axisLabel = axis === 'row' ? 'Row' : 'Column';
+      const valueLabel = isSample ? 'Sample' : 'Concentration';
+      writeSimpleTable(ctx, [axisLabel, valueLabel, axisLabel, valueLabel], paired, { heading: valueLabel + ' assignments' });
+    }
+    return;
+  }
+  writeSimpleTable(ctx, ['Well', 'Sample', 'Concentration'], Object.entries(map)
+    .filter(([_well, value]) => value.sampleId || value.concentration)
+    .map(([well, value]) => [well, value.sampleId, value.concentration]), { heading: 'Well assignments' });
 }
 
 function estimateAssayPlotHeight(ctx, def) {
@@ -197,24 +246,28 @@ function renderAssayPlot(ctx, assay, def) {
     };
   });
 
-  const cellLabelFontSize = Math.max(4.5, Math.min(6.5, cellSize * 0.18));
-  const cellLabelLineHeight = Math.max(5, Math.min(7, cellSize * 0.19));
+  const dense = cellSize < 30;
+  const cellLabelFontSize = 7;
+  const cellLabelLineHeight = 8;
   const cellLabelMaxCharacters = Math.max(
     3,
     Math.floor((cellSize - 4) / (cellLabelFontSize * 0.54))
   );
   let mappedCount = 0;
+  let shortened = false;
 
   ctx.doc.setFont(ctx.serif ? 'times' : 'helvetica', 'normal');
-  ctx.doc.setFontSize(8);
+  ctx.doc.setFontSize(7);
 
   for (let col = 0; col < maxColumns; col += 1) {
+    if (col % Math.max(1, Math.ceil(12 / cellSize)) && col !== maxColumns - 1) continue;
     const label = String(col + 1);
     const x = startX + (col * cellSize) + (cellSize / 2);
     ctx.doc.text(label, x, ctx.y + 11, { align: 'center' });
   }
 
   for (let row = 0; row < maxRows; row += 1) {
+    if (row % Math.max(1, Math.ceil(9 / cellSize)) && row !== maxRows - 1) continue;
     const rowLabel = toRowLabel(row);
     const y = startY + (row * cellSize) + (cellSize / 2) + 3;
     ctx.doc.text(rowLabel, ctx.margin + 10, y, { align: 'center' });
@@ -240,8 +293,12 @@ function renderAssayPlot(ctx, assay, def) {
 
       const labels = [sampleId, concentration]
         .filter(Boolean)
-        .map((value) => compactPlateCellLabel(value, cellLabelMaxCharacters));
-      if (labels.length) {
+        .map((value) => {
+          const label = compactPlateCellLabel(value, cellLabelMaxCharacters);
+          shortened ||= label !== value;
+          return label;
+        });
+      if (labels.length && !dense) {
         const labelBlockHeight = (labels.length - 1) * cellLabelLineHeight;
         const labelStartY = y + (cellSize / 2) - (labelBlockHeight / 2) + (cellLabelFontSize * 0.34);
         ctx.doc.setFont(ctx.serif ? 'times' : 'helvetica', 'normal');
@@ -258,7 +315,10 @@ function renderAssayPlot(ctx, assay, def) {
   ctx.doc.setTextColor(0, 0, 0);
   ctx.doc.setFontSize(9);
   const mappedLabel = `${mappedCount} mapped well${mappedCount === 1 ? '' : 's'}`;
-  writeParagraph(ctx, `Legend: ${monochrome ? 'shaded' : 'blue'} cells show saved sample (top) and concentration (bottom); white = empty well. ${mappedLabel}.`);
+  writeParagraph(ctx, dense
+    ? `Legend: ${monochrome ? 'shaded' : 'blue'} = mapped well; white = empty. ${mappedLabel}. Full sample and concentration assignments follow.`
+    : `Legend: ${monochrome ? 'shaded' : 'blue'} cells show saved sample (top) and concentration (bottom); white = empty well. ${mappedLabel}.`);
+  if (mappedCount && (dense || shortened)) writeAssayAssignments(ctx, map, def);
 }
 
 export {

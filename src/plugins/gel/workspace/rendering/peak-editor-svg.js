@@ -11,23 +11,20 @@ import {
 const PEAK_EDITOR_VIEWBOX = Object.freeze({
   width: 920,
   height: 440,
-  plotLeft: 58,
-  plotTop: 28,
-  plotRight: 884,
-  plotBottom: 372
+  plotLeft: 16,
+  plotTop: 20,
+  plotRight: 904,
+  plotBottom: 408
 });
 
 const PEAK_EDITOR_COLUMNS = Object.freeze([
-  { title: 'Lane', field: 'laneIndex', hozAlign: 'right', width: 72 },
-  { title: 'Baseline', field: 'baselineIndex', hozAlign: 'right', width: 96 },
-  { title: 'Peak', field: 'peakIndex', hozAlign: 'right', width: 72 },
-  { title: 'Start row', field: 'startRow', hozAlign: 'right' },
-  { title: 'End row', field: 'endRow', hozAlign: 'right' },
-  { title: 'Apex row', field: 'apexRow', hozAlign: 'right' },
-  { title: 'Apex signal', field: 'apexValue', hozAlign: 'right' },
-  { title: 'Area', field: 'area', hozAlign: 'right' },
-  { title: 'Raw area', field: 'rawArea', hozAlign: 'right' },
-  { title: 'Baseline area', field: 'baselineArea', hozAlign: 'right' }
+  { title: 'Lane', field: 'laneIndex', hozAlign: 'right', width: 84, minWidth: 84 },
+  { title: 'Baseline', field: 'baselineIndex', hozAlign: 'right', width: 124, minWidth: 124 },
+  { title: 'Band', field: 'peakIndex', hozAlign: 'right', width: 84, minWidth: 84 },
+  { title: 'Band area', field: 'area', hozAlign: 'right', minWidth: 124 },
+  { title: 'Peak signal', field: 'apexValue', hozAlign: 'right', minWidth: 112 },
+  { title: 'Raw area', field: 'rawArea', hozAlign: 'right', minWidth: 124 },
+  { title: 'Baseline area', field: 'baselineArea', hozAlign: 'right', minWidth: 124 }
 ]);
 
 function calculatePeakIntegrationRows(profile, integrations = []) {
@@ -117,13 +114,25 @@ function getPeakEditorProfilePoints(values) {
   return downsampleLaneProfile(values, exactPointLimit);
 }
 
-function getPeakEditorScales(profile) {
+// One SVG unit is one displayed CSS pixel. Curves, overlays, labels and pointer
+// sampling share these bounds even when the floating window changes shape.
+function getPeakEditorLayout(svg, measured = false) {
+  const rect = measured ? svg?.getBoundingClientRect?.() : null;
+  const viewBox = String(svg?.getAttribute?.('viewBox') || '').trim().split(/\s+/).map(Number);
+  const width = rect?.width > 0 ? rect.width : !measured && viewBox[2] > 0 ? viewBox[2] : PEAK_EDITOR_VIEWBOX.width;
+  const height = rect?.height > 0 ? rect.height : !measured && viewBox[3] > 0 ? viewBox[3] : PEAK_EDITOR_VIEWBOX.height;
+  const side = Math.min(16, width / 4);
+  return { width, height, plotLeft: side, plotRight: width - side,
+    plotTop: Math.min(20, height / 4), plotBottom: height - Math.min(32, height / 3) };
+}
+
+function getPeakEditorScales(profile, svg = null) {
   const {
     plotLeft,
     plotTop,
     plotRight,
     plotBottom
-  } = PEAK_EDITOR_VIEWBOX;
+  } = getPeakEditorLayout(svg);
   const plotWidth = plotRight - plotLeft;
   const plotHeight = plotBottom - plotTop;
   const rowMax = Math.max(1, (profile?.values?.length || 1) - 1);
@@ -143,18 +152,19 @@ function getPeakEditorSvgXFromEvent(svg, event) {
   }
 
   const rect = svg?.getBoundingClientRect?.();
+  const { width, height } = getPeakEditorLayout(svg);
   if (rect?.width && rect?.height) {
     const preserveAspectRatio = String(svg?.getAttribute?.('preserveAspectRatio') || '');
     if (preserveAspectRatio.includes('none')) {
-      return ((clientX - rect.left) / rect.width) * PEAK_EDITOR_VIEWBOX.width;
+      return ((clientX - rect.left) / rect.width) * width;
     }
 
     const scale = Math.min(
-      rect.width / PEAK_EDITOR_VIEWBOX.width,
-      rect.height / PEAK_EDITOR_VIEWBOX.height
+      rect.width / width,
+      rect.height / height
     );
     if (Number.isFinite(scale) && scale > 0) {
-      const renderedWidth = PEAK_EDITOR_VIEWBOX.width * scale;
+      const renderedWidth = width * scale;
       const offsetX = (rect.width - renderedWidth) / 2;
       return (clientX - rect.left - offsetX) / scale;
     }
@@ -184,15 +194,12 @@ function renderPeakEditorPlaceholder(svg) {
     width,
     height,
     plotLeft,
-    plotTop,
     plotRight,
     plotBottom
-  } = PEAK_EDITOR_VIEWBOX;
+  } = getPeakEditorLayout(svg, true);
   svg.setAttribute('preserveAspectRatio', 'none');
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
   svg.innerHTML = `
-    <rect class="peak-editor-frame" x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="10" />
-    <line class="peak-editor-grid" x1="${plotLeft}" y1="${plotTop}" x2="${plotLeft}" y2="${plotBottom}" />
     <line class="peak-editor-grid" x1="${plotLeft}" y1="${plotBottom}" x2="${plotRight}" y2="${plotBottom}" />
   `;
 }
@@ -229,7 +236,7 @@ function buildPeakAreaPath(profile, integration, startRow, endRow, scales) {
   return `${curvePath} L ${scales.rowToX(endRow)} ${scales.valueToY(baselineValueAt(endRow))} L ${scales.rowToX(startRow)} ${scales.valueToY(baselineValueAt(startRow))} Z`;
 }
 
-function renderPeakEditorSvg(svg, profile, integrations = [], hoverRow = null, mode = 'baseline') {
+function renderPeakEditorSvg(svg, profile, integrations = [], hoverRow = null, mode = 'baseline', measurement = null) {
   const {
     width,
     height,
@@ -237,13 +244,16 @@ function renderPeakEditorSvg(svg, profile, integrations = [], hoverRow = null, m
     plotTop,
     plotRight,
     plotBottom
-  } = PEAK_EDITOR_VIEWBOX;
+  } = getPeakEditorLayout(svg, true);
   if (!profile) {
     renderPeakEditorPlaceholder(svg);
     return;
   }
 
-  const scales = getPeakEditorScales(profile);
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  const scales = getPeakEditorScales(profile, svg);
+  const labelAnchor = x => x < plotLeft + 28 ? 'start' : x > plotRight - 28 ? 'end' : 'middle';
   const points = getPeakEditorProfilePoints(profile.values).map((point) => ({
     x: scales.rowToX(point.row),
     y: scales.valueToY(point.value)
@@ -254,6 +264,17 @@ function renderPeakEditorSvg(svg, profile, integrations = [], hoverRow = null, m
 
   const areaMarkup = [];
   const overlayMarkup = [];
+  let targetMarkup = '';
+  if (Number.isFinite(measurement?.top) && Number.isFinite(measurement?.bottom)) {
+    const start = scales.rowToX(measurement.top), end = scales.rowToX(measurement.bottom);
+    targetMarkup = `<rect class="peak-editor-target-window" x="${start}" y="${plotTop}" width="${Math.max(1, end - start)}" height="${plotBottom - plotTop}" />`;
+    const anchors = (measurement.baselineAnchors || []).filter(point => Number.isFinite(point.row) && Number.isFinite(point.value));
+    if (anchors.length) {
+      const a = anchors[0], b = anchors[anchors.length - 1];
+      const value = row => a.value + (b.value - a.value) * (row - a.row) / (b.row - a.row || 1);
+      targetMarkup += `<line class="peak-editor-target-baseline" data-band-baseline="${measurement.baselineMode === 'manual-peak' ? 'manual' : 'auto'}" x1="${start}" y1="${scales.valueToY(value(measurement.top))}" x2="${end}" y2="${scales.valueToY(value(measurement.bottom))}" />`;
+    }
+  }
   let hoverMarkup = '';
   integrations.forEach((integration, integrationIndex) => {
     if (!integration?.left) {
@@ -283,10 +304,10 @@ function renderPeakEditorSvg(svg, profile, integrations = [], hoverRow = null, m
       dividers.forEach((divider) => {
         const dividerX = scales.rowToX(divider);
         overlayMarkup.push(`<line class="peak-editor-divider" x1="${dividerX}" y1="${plotTop}" x2="${dividerX}" y2="${plotBottom}" />`);
-        overlayMarkup.push(`<text class="peak-editor-divider-label" x="${dividerX}" y="${plotTop - 8}" text-anchor="middle">${divider}</text>`);
+        overlayMarkup.push(`<text class="peak-editor-divider-label" x="${dividerX}" y="${Math.max(12, plotTop - 8)}" text-anchor="${labelAnchor(dividerX)}">${divider}</text>`);
       });
       overlayMarkup.push(`<line class="peak-editor-baseline" x1="${leftX}" y1="${leftY}" x2="${rightX}" y2="${rightY}" />`);
-      overlayMarkup.push(`<text class="peak-editor-baseline-label" x="${(leftX + rightX) / 2}" y="${Math.min(leftY, rightY) - 8}" text-anchor="middle">B${baselineLabel}</text>`);
+      overlayMarkup.push(`<text class="peak-editor-baseline-label" x="${(leftX + rightX) / 2}" y="${Math.max(12, Math.min(leftY, rightY) - 8)}" text-anchor="${labelAnchor((leftX + rightX) / 2)}">B${baselineLabel}</text>`);
     }
 
     overlayMarkup.push(`<circle class="peak-editor-baseline-dot" cx="${leftX}" cy="${leftY}" r="6" />`);
@@ -302,7 +323,7 @@ function renderPeakEditorSvg(svg, profile, integrations = [], hoverRow = null, m
     hoverMarkup = `
       <g class="peak-editor-hover">
         <circle class="peak-editor-hover-dot" cx="${hoverX}" cy="${hoverY}" r="7" />
-        <text class="peak-editor-hover-label" x="${hoverX}" y="${Math.max(plotTop + 14, hoverY - 12)}" text-anchor="middle">${hoverPoint.row}</text>
+        <text class="peak-editor-hover-label" x="${hoverX}" y="${Math.max(12, hoverY - 10)}" text-anchor="${labelAnchor(hoverX)}">${hoverPoint.row}</text>
       </g>
     `;
   }
@@ -310,26 +331,25 @@ function renderPeakEditorSvg(svg, profile, integrations = [], hoverRow = null, m
   svg.setAttribute('preserveAspectRatio', 'none');
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
   svg.innerHTML = `
-    <rect class="peak-editor-frame" x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="10" />
-    <line class="peak-editor-grid" x1="${plotLeft}" y1="${plotTop}" x2="${plotLeft}" y2="${plotBottom}" />
     <line class="peak-editor-grid" x1="${plotLeft}" y1="${plotBottom}" x2="${plotRight}" y2="${plotBottom}" />
     <line class="peak-editor-grid" x1="${plotLeft}" y1="${plotTop + ((plotBottom - plotTop) / 4)}" x2="${plotRight}" y2="${plotTop + ((plotBottom - plotTop) / 4)}" />
     <line class="peak-editor-grid" x1="${plotLeft}" y1="${plotTop + ((plotBottom - plotTop) / 2)}" x2="${plotRight}" y2="${plotTop + ((plotBottom - plotTop) / 2)}" />
     <line class="peak-editor-grid" x1="${plotLeft}" y1="${plotTop + (((plotBottom - plotTop) * 3) / 4)}" x2="${plotRight}" y2="${plotTop + (((plotBottom - plotTop) * 3) / 4)}" />
+    ${targetMarkup}
     ${areaMarkup.join('')}
-    <path class="peak-editor-path-shadow" d="${path}" />
     <path class="peak-editor-path" d="${path}" />
     <circle class="peak-editor-apex" cx="${peakX}" cy="${peakY}" r="5" />
     ${overlayMarkup.join('')}
     ${hoverMarkup}
-    <text class="peak-editor-axis-label" x="${plotLeft}" y="${height - 22}">Top</text>
-    <text class="peak-editor-axis-label" x="${plotRight}" y="${height - 22}" text-anchor="end">Bottom</text>
+    <text class="peak-editor-axis-label" x="${plotLeft}" y="${height - Math.min(10, height / 8)}">Top</text>
+    <text class="peak-editor-axis-label" x="${plotRight}" y="${height - Math.min(10, height / 8)}" text-anchor="end">Bottom</text>
   `;
 }
 
 export {
   PEAK_EDITOR_COLUMNS,
   calculatePeakIntegrationRows,
+  getPeakEditorProfilePoints,
   getPeakEditorScales,
   getPeakEditorSvgXFromEvent,
   renderPeakEditorSvg

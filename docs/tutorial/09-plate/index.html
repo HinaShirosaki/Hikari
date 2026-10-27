@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="A detailed illustrated tutorial for Hikari Plate, with highlighted screenshots and step-by-step instructions."><title>Plate · Hikari tutorials</title><link rel="stylesheet" href="tutorial.css"></head>
+<body><a class="skip-link" href="#chapter">Skip to tutorial</a>
+<aside class="sidebar"><a class="brand" href="../index.html">Hikari <span>/ Tutorials</span></a><p class="chapter-number">CHAPTER 09</p><p class="chapter-name">Plate</p><nav aria-label="Chapter contents"><a href="#1-open-plate">1. Open Plate</a>
+<a href="#2-create-a-plate">2. Create a plate</a>
+<a href="#3-map-samples-to-wells">3. Map samples to wells</a>
+<a href="#4-fill-a-concentration-series">4. Fill a concentration series</a>
+<a href="#5-review-a-serial-dilution-plan">5. Review a serial dilution plan</a>
+<a href="#6-import-or-export-a-layout-csv-and-save">6. Import or export a layout CSV and save</a>
+<a href="#7-enter-results-in-analyze">7. Enter results in Analyze</a>
+<a href="#8-import-a-result-file">8. Import a result file</a>
+<a href="#9-calculate-a-transformed-plate">9. Calculate a transformed plate</a>
+<a href="#10-create-custom-row-or-column-groups">10. Create custom row or column groups</a>
+<a href="#11-choose-an-analysis-and-inspect-the-summary">11. Choose an analysis and inspect the summary</a>
+<a href="#12-format-the-chart">12. Format the chart</a>
+<a href="#13-export-or-enlarge-a-chart">13. Export or enlarge a chart</a>
+<a href="#14-find-edit-or-delete-an-existing-plate">14. Find, edit, or delete an existing plate</a></nav></aside>
+<main id="chapter"><div class="eyebrow">HIKARI / ILLUSTRATED TUTORIAL</div><article><h1>Plate</h1>
+<p>How to define an assay plate, enter results, calculate transformed values, and prepare a chart.</p>
+<p><strong>Follow the numbered steps and the highlighted controls in each screenshot.</strong></p>
+<p>The screenshots use a fictional 24-well plate with Sample A and Sample B. The numbers are for learning the interface.</p>
+<h2 id="1-open-plate">1. Open Plate<a class="heading-link" href="#1-open-plate" aria-label="Link to 1. Open Plate">#</a></h2>
+<ol>
+<li>Click <strong>Plate</strong> in the top navigation bar. If it is outside the visible bar, open <strong>More modules</strong> and choose <strong>Plate</strong>.</li>
+<li>Choose <strong>Setup</strong> to define the plate layout, sample IDs, and concentrations.</li>
+<li>Choose <strong>Analyze</strong> to enter measurements, transform values, group wells, and plot the results.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 1"><img loading="lazy" src="images/01-plate-workspace.png" alt="Choose Setup or Analyze in the left rail; Setup shows the assay details and editable well map."></button><figcaption><span>Figure 1.</span> Choose Setup or Analyze in the left rail; Setup shows the assay details and editable well map. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Saved plate records are called <strong>assays</strong> in the interface. Use the disclosure arrows beside sections such as <strong>Existing Assays</strong> and <strong>Data Analysis</strong> to expand or collapse them.</p>
+<h2 id="2-create-a-plate">2. Create a plate<a class="heading-link" href="#2-create-a-plate" aria-label="Link to 2. Create a plate">#</a></h2>
+<ol>
+<li>In <strong>Setup</strong>, click <strong>Create new assay</strong>, the plus icon at the top of the left rail.</li>
+<li>Choose the <strong>Plate Type</strong>: 6, 12, 24, 48, 96, 384, or 1536 wells. Choose <strong>24 well</strong> to follow this example.</li>
+<li>Enter an <strong>Assay Name</strong>, such as <code>Plate tutorial · practice</code>.</li>
+<li>Choose a <strong>Project</strong> if you want to associate the assay with one.</li>
+<li>Continue with the mapping steps below, then click <strong>Save</strong> when the layout is ready.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 2"><img loading="lazy" src="images/02-create-plate.png" alt="Choose a plate size, enter an assay name, and select its project."></button><figcaption><span>Figure 2.</span> Choose a plate size, enter an assay name, and select its project. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>The <strong>Assay Number</strong> identifies the record. Use the assay name to describe the run so you can find it later.</p>
+<h2 id="3-map-samples-to-wells">3. Map samples to wells<a class="heading-link" href="#3-map-samples-to-wells" aria-label="Link to 3. Map samples to wells">#</a></h2>
+<h3 id="fill-an-entire-row-or-column">Fill an entire row or column<a class="heading-link" href="#fill-an-entire-row-or-column" aria-label="Link to Fill an entire row or column">#</a></h3>
+<ol>
+<li>Under <strong>Sample ID Axis</strong>, choose <strong>Row</strong> or <strong>Column</strong>. The concentration axis uses the other direction.</li>
+<li>Enter sample IDs in the editable headers beside the plate.</li>
+<li>Repeat a sample ID when more than one row or column belongs to that sample. In this example, rows A and B use <code>Sample A</code>; rows C and D use <code>Sample B</code>.</li>
+<li>Check the well labels in the preview before proceeding.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 3"><img loading="lazy" src="images/03-axis-mapping.png" alt="Choose the sample-ID axis and enter sample labels in the plate headers."></button><figcaption><span>Figure 3.</span> Choose the sample-ID axis and enter sample labels in the plate headers. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Changing a header applies its value along that axis. For a sample arranged across columns instead, choose <strong>Column</strong> before entering the labels.</p>
+<h3 id="change-one-well">Change one well<a class="heading-link" href="#change-one-well" aria-label="Link to Change one well">#</a></h3>
+<ol>
+<li>Above the plate, choose <strong>Sample ID</strong> or <strong>Concentration</strong>, depending on the value you want to change.</li>
+<li>Click inside the individual well&#39;s field.</li>
+<li>Enter the replacement value. For example, change D6&#39;s sample ID to <code>Blank</code> when that is the label you intend to use.</li>
+<li>Inspect the neighboring wells to confirm the change belongs to the intended position.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 4"><img loading="lazy" src="images/04-edit-well.png" alt="Choose the field to edit, then enter an override directly in a well."></button><figcaption><span>Figure 4.</span> Choose the field to edit, then enter an override directly in a well. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p><strong>Clear mappings</strong> removes the current well assignments. Use it when you want to rebuild the layout, then save the revised plate.</p>
+<h2 id="4-fill-a-concentration-series">4. Fill a concentration series<a class="heading-link" href="#4-fill-a-concentration-series" aria-label="Link to 4. Fill a concentration series">#</a></h2>
+<ol>
+<li>Choose <strong>Concentration</strong> above the plate.</li>
+<li>Enter a starting concentration in the first concentration header. This example uses <code>100 uM</code>.</li>
+<li>Choose <strong>Dilution ÷</strong> in the fill-method menu.</li>
+<li>Enter the <strong>Factor</strong>. A factor of <code>2</code> divides each successive value by two.</li>
+<li>Click <strong>Fill</strong> and inspect the completed headers and wells.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 5"><img loading="lazy" src="images/05-fill-concentrations.png" alt="Enter a starting concentration, choose a fill method, and click Fill."></button><figcaption><span>Figure 5.</span> Enter a starting concentration, choose a fill method, and click Fill. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>For the six columns in this example, the series becomes <code>100</code>, <code>50</code>, <code>25</code>, <code>12.5</code>, <code>6.25</code>, and <code>3.125 uM</code>.</p>
+<p>The fill-method menu also offers:</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Method</th>
+<th>What to enter</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Dilution ÷</strong></td>
+<td>A starting concentration and a positive division factor.</td>
+</tr>
+<tr>
+<td><strong>Linear</strong></td>
+<td>Concentrations at the start and end of the intended range; intermediate values are evenly spaced.</td>
+</tr>
+<tr>
+<td><strong>Log</strong></td>
+<td>Positive concentrations at the start and end of the range; intermediate values are spaced logarithmically.</td>
+</tr>
+</tbody></table></div>
+<p>Use consistent concentration units, and review the resulting values after filling or changing a header.</p>
+<h2 id="5-review-a-serial-dilution-plan">5. Review a serial dilution plan<a class="heading-link" href="#5-review-a-serial-dilution-plan" aria-label="Link to 5. Review a serial dilution plan">#</a></h2>
+<ol>
+<li>Finish the sample IDs and concentration series in <strong>Setup</strong>.</li>
+<li>Click <strong>Serial Dilution</strong> above the plate.</li>
+<li>Enter <strong>Volume per well</strong>.</li>
+<li>Enter the stock concentration for each listed sample.</li>
+<li>Read the calculated dilution tables and the messages above them. Check the concentration units and the direction of the series.</li>
+<li>Close the dialog with its top-right <strong>Close</strong> button. Save the assay when you have finished editing its setup.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 6"><img loading="lazy" src="images/06-serial-dilution.png" alt="Enter the volume per well and stock concentrations, then review the calculated dilution tables."></button><figcaption><span>Figure 6.</span> Enter the volume per well and stock concentrations, then review the calculated dilution tables. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>The example shows <code>100</code> for volume per well and <code>1000 uM</code> stocks solely to demonstrate where these fields appear. Enter the values appropriate to your own plate when using the planner.</p>
+<h2 id="6-import-or-export-a-layout-csv-and-save">6. Import or export a layout CSV and save<a class="heading-link" href="#6-import-or-export-a-layout-csv-and-save" aria-label="Link to 6. Import or export a layout CSV and save">#</a></h2>
+<h3 id="prepare-or-reuse-a-layout">Prepare or reuse a layout<a class="heading-link" href="#prepare-or-reuse-a-layout" aria-label="Link to Prepare or reuse a layout">#</a></h3>
+<ol>
+<li>In <strong>Setup</strong>, click <strong>Export CSV template</strong>, the downward-arrow icon in the left rail.</li>
+<li>Open the downloaded CSV and fill or revise the well assignments.</li>
+<li>Click <strong>Import CSV</strong>, the upward-arrow icon, and choose the layout file.</li>
+<li>Read the import status beneath the setup fields and inspect the plate preview.</li>
+<li>Click <strong>Save</strong>, the disk icon, to keep the assay definition.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 7"><img loading="lazy" src="images/07-layout-csv-save.png" alt="Export a CSV template, import a completed layout, and save the assay."></button><figcaption><span>Figure 7.</span> Export a CSV template, import a completed layout, and save the assay. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>The template uses these headers:</p>
+<pre><code class="language-csv">well,row,column,sample_id,concentration
+A1,A,1,Sample A,100 uM
+A2,A,2,Sample A,50 uM
+</code></pre>
+<p>You can practice with <a href="examples/plate-layout.csv">plate-layout.csv</a>. Select <strong>24 well</strong> before importing this example, then check that its 24 positions match the preview.</p>
+<p>The Setup CSV contains sample and concentration mappings. Use the <strong>Import</strong> control in <strong>Analyze</strong> for measurement results.</p>
+<h2 id="7-enter-results-in-analyze">7. Enter results in Analyze<a class="heading-link" href="#7-enter-results-in-analyze" aria-label="Link to 7. Enter results in Analyze">#</a></h2>
+<ol>
+<li>Save the plate setup, then click <strong>Analyze</strong>.</li>
+<li>Expand <strong>Existing Assays</strong> and choose the plate you want to analyze.</li>
+<li>Find <strong>Plate results · Table1</strong> in the lower workspace. The chart appears above it, with <strong>Data Analysis</strong> controls in the left rail.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 8"><img loading="lazy" src="images/08-analyze-workspace.png" alt="Select the assay, use the analysis controls on the left, and read the chart and tables on the right."></button><figcaption><span>Figure 8.</span> Select the assay, use the analysis controls on the left, and read the chart and tables on the right. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<h3 id="type-or-paste-measurements">Type or paste measurements<a class="heading-link" href="#type-or-paste-measurements" aria-label="Link to Type or paste measurements">#</a></h3>
+<ol>
+<li>Click a mapped well&#39;s result cell to edit it.</li>
+<li>Type the measurement and press <strong>Enter</strong> to finish the edit.</li>
+<li>To enter a block from a spreadsheet, copy the numeric cells, select the destination starting well in Table1, and paste.</li>
+<li>Check the row and column positions against the original data. Values for unmapped wells are skipped.</li>
+<li>Use <strong>Save results</strong>, the disk icon beside the chart title, after reviewing the plate.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 9"><img loading="lazy" src="images/09-enter-results.png" alt="Enter a numeric result in a well cell and use Save results beside the chart title."></button><figcaption><span>Figure 9.</span> Enter a numeric result in a well cell and use Save results beside the chart title. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Result edits are saved as you finish each edit or paste. Analysis updates from the current values. The <strong>Clear results</strong> trash icon under <strong>Result data</strong> removes the plate&#39;s entered measurements; check the selected assay before using it.</p>
+<h2 id="8-import-a-result-file">8. Import a result file<a class="heading-link" href="#8-import-a-result-file" aria-label="Link to 8. Import a result file">#</a></h2>
+<ol>
+<li>Select the correct assay in <strong>Analyze</strong>.</li>
+<li>Under <strong>Data Analysis &gt; Result data</strong>, click <strong>Import</strong>.</li>
+<li>Choose a CSV or Excel file (<code>.csv</code>, <code>.xls</code>, or <code>.xlsx</code>).</li>
+<li>If several possible result matrices are found, choose one in <strong>Select Result Matrix</strong>.</li>
+<li>Compare its preview with your plate: check the row labels, column labels, dimensions, and values.</li>
+<li>Click <strong>Use This Matrix</strong>.</li>
+<li>Inspect the imported values in Table1 and the updated chart.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 10"><img loading="lazy" src="images/10-import-results.png" alt="Choose a detected result matrix, verify its preview, and click Use This Matrix."></button><figcaption><span>Figure 10.</span> Choose a detected result matrix, verify its preview, and click Use This Matrix. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>If the file has only one detected matrix, the import can proceed directly. Importing fills the matched wells and keeps the source file as an attachment to the assay.</p>
+<p>The supplied <a href="examples/result-matrices.csv">result-matrices.csv</a> contains two fictional 4 × 6 blocks so you can practice selecting a matrix. Use it with the example 24-well layout. Review existing results before importing another file into the same assay.</p>
+<h2 id="9-calculate-a-transformed-plate">9. Calculate a transformed plate<a class="heading-link" href="#9-calculate-a-transformed-plate" aria-label="Link to 9. Calculate a transformed plate">#</a></h2>
+<ol>
+<li>Under <strong>Result data</strong>, click <strong>Transform</strong>.</li>
+<li>Open the <strong>Transformed</strong> table tab. This is <strong>Table2</strong>; the original measurements remain in Table1.</li>
+<li>Click a Table2 well cell and enter a formula beginning with <code>=</code>.</li>
+<li>Press <strong>Enter</strong> to calculate it.</li>
+<li>Check the displayed value and any error notice before filling more wells.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 11"><img loading="lazy" src="images/11-transform-formula.png" alt="Open the transformed plate and enter a formula in a Table2 well cell."></button><figcaption><span>Figure 11.</span> Open the transformed plate and enter a formula in a Table2 well cell. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>For example, entering <code>=A1*2</code> in Table2&#39;s A1 cell doubles the measurement in Table1&#39;s A1 cell. A bare well reference such as <code>A1</code> reads Table1.</p>
+<p>Use explicit table references when needed:</p>
+<div class="table-scroll"><table>
+<thead>
+<tr>
+<th>Formula</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>=Table1:A1*2</code></td>
+<td>Double the original A1 measurement.</td>
+</tr>
+<tr>
+<td><code>=Table2:A1+1</code></td>
+<td>Use the calculated value from Table2&#39;s A1 in another cell.</td>
+</tr>
+</tbody></table></div>
+<p>Avoid formulas that refer back to themselves. Correct cells marked with formula errors before analyzing their transformed values.</p>
+<h3 id="choose-the-analysis-data-source">Choose the analysis data source<a class="heading-link" href="#choose-the-analysis-data-source" aria-label="Link to Choose the analysis data source">#</a></h3>
+<ol>
+<li>Expand <strong>Data source</strong> in the left rail.</li>
+<li>Choose <strong>Plate results · Table1</strong> to analyze the original measurements, or <strong>Transformed plate · Table2</strong> to analyze the calculated values.</li>
+<li>Check the chart and <strong>Summary</strong> after switching sources.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 12"><img loading="lazy" src="images/12-analysis-source.png" alt="Choose Table1 or Table2 in Data source to control which values feed the analysis."></button><figcaption><span>Figure 12.</span> Choose Table1 or Table2 in Data source to control which values feed the analysis. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Only numeric transformed cells contribute when Table2 is selected. Fill all the transformed wells you intend to analyze; blank Table2 cells do not automatically borrow Table1 values. Formula edits save as you finish editing. To remove the transformed plate, use its <strong>Remove transform</strong> trash icon.</p>
+<h2 id="10-create-custom-row-or-column-groups">10. Create custom row or column groups<a class="heading-link" href="#10-create-custom-row-or-column-groups" aria-label="Link to 10. Create custom row or column groups">#</a></h2>
+<ol>
+<li>Open the <strong>Plate results</strong> table.</li>
+<li>Drag across the well cells covering the rows or columns you want to group.</li>
+<li>Under <strong>Data Analysis &gt; Groups</strong>, click <strong>Rows</strong> to add the selected rows as a group, or <strong>Columns</strong> to group the selected columns.</li>
+<li>Repeat with other selections as needed.</li>
+<li>Under <strong>Fit &amp; summary</strong>, choose <strong>Custom groups</strong> in <strong>Group by</strong> to use those groups in the analysis.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 13"><img loading="lazy" src="images/13-custom-groups.png" alt="Select wells in the table, then add their rows or columns as groups; the trash icon clears custom groups."></button><figcaption><span>Figure 13.</span> Select wells in the table, then add their rows or columns as groups; the trash icon clears custom groups. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>For example, selecting A1 through B6 and clicking <strong>Rows</strong> groups rows A and B. Use <strong>Clear groups</strong>, the trash icon beside Rows and Columns, to discard custom group definitions and start again.</p>
+<h2 id="11-choose-an-analysis-and-inspect-the-summary">11. Choose an analysis and inspect the summary<a class="heading-link" href="#11-choose-an-analysis-and-inspect-the-summary" aria-label="Link to 11. Choose an analysis and inspect the summary">#</a></h2>
+<h3 id="summarize-replicates">Summarize replicates<a class="heading-link" href="#summarize-replicates" aria-label="Link to Summarize replicates">#</a></h3>
+<ol>
+<li>Expand <strong>Data Analysis &gt; Fit &amp; summary</strong>.</li>
+<li>Choose <strong>Group by</strong>. For the example plate, <strong>Sample ID × Concentration</strong> keeps each sample and concentration combination together.</li>
+<li>Choose <strong>Summary statistics</strong> under <strong>Method</strong>.</li>
+<li>Leave <strong>Show SD error bars</strong> selected if you want them in the chart.</li>
+<li>Open the <strong>Summary</strong> table tab to inspect the calculated results.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 14"><img loading="lazy" src="images/14-summary-analysis.png" alt="Choose how to group wells and which analysis method to use, then inspect the chart and Summary table."></button><figcaption><span>Figure 14.</span> Choose how to group wells and which analysis method to use, then inspect the chart and Summary table. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>The controls update the analysis as you change them. Other grouping choices include sample ID, concentration, plate row, and plate column.</p>
+<h3 id="fit-a-curve">Fit a curve<a class="heading-link" href="#fit-a-curve" aria-label="Link to Fit a curve">#</a></h3>
+<ol>
+<li>Choose a grouping that separates the series you want to compare, such as <strong>Sample ID</strong>.</li>
+<li>Choose a fitting method. The example uses <strong>Linear fit</strong> to demonstrate the controls.</li>
+<li>Set <strong>X Axis</strong>, such as <strong>Concentration</strong>.</li>
+<li>Inspect the data points and fitted curves in the chart.</li>
+<li>Read <strong>Summary</strong> for the fit output. Review any message about missing values or an unsuccessful fit.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 15"><img loading="lazy" src="images/15-curve-fit.png" alt="Inspect the plotted measurements and fitted curves, then open Summary or Chart Format."></button><figcaption><span>Figure 15.</span> Inspect the plotted measurements and fitted curves, then open Summary or Chart Format. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>The Method menu also contains sigmoidal, hyperbola, polynomial, Padé, and one-phase exponential fits, plus plate QC, Z-scores, comparisons to a control, and normalization. Choose the method that fits your intended analysis.</p>
+<p>When a method shows <strong>High control (100%)</strong> or <strong>Low control (0%)</strong>, enter the corresponding group label or sample ID from your plate. For a sigmoidal fit, <strong>Asymmetric (5PL)</strong> enables the five-parameter option; polynomial fits show <strong>Polynomial Order</strong>. Recheck the summary whenever you change a method or control assignment.</p>
+<h2 id="12-format-the-chart">12. Format the chart<a class="heading-link" href="#12-format-the-chart" aria-label="Link to 12. Format the chart">#</a></h2>
+<ol>
+<li>Click <strong>Chart Format</strong> beside the chart title.</li>
+<li>Use its tabs to choose the part of the chart you want to change.</li>
+<li>In <strong>Frame</strong>, adjust the background and frame settings.</li>
+<li>Click <strong>Save preset as…</strong>, the disk icon beside <strong>Preset</strong>, when you want to reuse the current formatting. Give the preset a name in the prompt.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 16"><img loading="lazy" src="images/16-format-frame.png" alt="Open Chart Format, choose a format tab, and adjust the chart frame or save a preset."></button><figcaption><span>Figure 16.</span> Open Chart Format, choose a format tab, and adjust the chart frame or save a preset. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>The format sections are <strong>Frame</strong>, <strong>Axis</strong>, <strong>Data Series</strong>, <strong>Text</strong>, and <strong>Elements</strong>. Expand the relevant section and inspect the chart as you change its controls.</p>
+<h3 id="change-axes">Change axes<a class="heading-link" href="#change-axes" aria-label="Link to Change axes">#</a></h3>
+<ol>
+<li>Open the <strong>Axis</strong> tab.</li>
+<li>Choose the X-axis and Y-axis scales. Options include linear and logarithmic scales.</li>
+<li>Keep the automatic range selected, or turn it off and enter the desired limits.</li>
+<li>Inspect the chart to make sure the intended points remain visible. Logarithmic axes require positive values.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 17"><img loading="lazy" src="images/17-format-axis.png" alt="Choose axis scales and use automatic limits or enter a range."></button><figcaption><span>Figure 17.</span> Choose axis scales and use automatic limits or enter a range. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Formatting is retained with the assay. Use the preset and reset controls when you want to apply a saved style or return settings to their defaults.</p>
+<h2 id="13-export-or-enlarge-a-chart">13. Export or enlarge a chart<a class="heading-link" href="#13-export-or-enlarge-a-chart" aria-label="Link to 13. Export or enlarge a chart">#</a></h2>
+<ol>
+<li>Check the selected assay, data source, analysis method, and chart formatting.</li>
+<li>Click <strong>PNG</strong> above the chart to export a raster image, or <strong>SVG</strong> to export a vector image.</li>
+<li>Follow the save or download prompt and open the exported image to inspect it.</li>
+<li>For a larger view while working, click <strong>Focus chart</strong>, the expand icon at the top-right of the chart. Click it again to return to the regular workspace.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 18"><img loading="lazy" src="images/18-export-chart.png" alt="Export the chart as PNG or SVG, or use Focus chart for a larger view."></button><figcaption><span>Figure 18.</span> Export the chart as PNG or SVG, or use Focus chart for a larger view. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<h2 id="14-find-edit-or-delete-an-existing-plate">14. Find, edit, or delete an existing plate<a class="heading-link" href="#14-find-edit-or-delete-an-existing-plate" aria-label="Link to 14. Find, edit, or delete an existing plate">#</a></h2>
+<h3 id="reopen-and-edit">Reopen and edit<a class="heading-link" href="#reopen-and-edit" aria-label="Link to Reopen and edit">#</a></h3>
+<ol>
+<li>Return to <strong>Setup</strong> and expand <strong>Existing Assays</strong>.</li>
+<li>Search by assay name, project, or notes.</li>
+<li>Find the intended record and click its <strong>Edit</strong> pencil icon.</li>
+<li>Update the name, project, sample mappings, or concentrations.</li>
+<li>Click <strong>Save</strong> to keep those setup changes.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 19"><img loading="lazy" src="images/19-existing-plates.png" alt="Search Existing Assays and use the pencil icon to reopen a saved plate for editing."></button><figcaption><span>Figure 19.</span> Search Existing Assays and use the pencil icon to reopen a saved plate for editing. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>In <strong>Analyze</strong>, use its Existing Assays list to switch the plate whose results and chart you are viewing.</p>
+<h3 id="delete-a-record">Delete a record<a class="heading-link" href="#delete-a-record" aria-label="Link to Delete a record">#</a></h3>
+<ol>
+<li>In Setup&#39;s <strong>Existing Assays</strong> list, find the assay you intend to remove.</li>
+<li>Check its name and assay number.</li>
+<li>Click that row&#39;s <strong>Delete</strong> trash icon. The record is removed from the list.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 20"><img loading="lazy" src="images/20-delete-plate.png" alt="Use the trash icon on the intended assay row to delete its record."></button><figcaption><span>Figure 20.</span> Use the trash icon on the intended assay row to delete its record. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<hr>
+<p><a href="../08-dna/index.html">Previous tutorial: DNA</a> · <a href="../10-gel/index.html">Next tutorial: Gel</a> · <a href="../index.html">All tutorials</a></p>
+</article><footer class="page-footer">Hikari tutorials · Chapter 09 · Plate</footer></main>
+<dialog id="image-viewer" aria-label="Enlarged tutorial screenshot"><div class="viewer-toolbar"><span id="viewer-label">Screenshot</span><button id="viewer-zoom" type="button">Actual size</button><button id="viewer-close" type="button" aria-label="Close enlarged screenshot">Close ×</button></div><div class="viewer-body"><img id="viewer-image" alt=""></div></dialog>
+<script>
+const viewer = document.getElementById('image-viewer');
+const enlarged = document.getElementById('viewer-image');
+const zoom = document.getElementById('viewer-zoom');
+for (const button of document.querySelectorAll('.screenshot')) button.addEventListener('click', () => {
+  const img = button.querySelector('img'); enlarged.src = img.src; enlarged.alt = img.alt;
+  document.getElementById('viewer-label').textContent = button.closest('figure').querySelector('figcaption span').textContent;
+  viewer.classList.remove('actual-size'); zoom.textContent = 'Actual size'; viewer.showModal();
+});
+document.getElementById('viewer-close').addEventListener('click', () => viewer.close());
+zoom.addEventListener('click', () => { const actual = viewer.classList.toggle('actual-size'); zoom.textContent = actual ? 'Fit to window' : 'Actual size'; });
+viewer.addEventListener('click', event => { if (event.target === viewer) viewer.close(); });
+if ('IntersectionObserver' in window) {
+  const links = [...document.querySelectorAll('.sidebar nav a')];
+  const observer = new IntersectionObserver(entries => {
+    for (const entry of entries) if (entry.isIntersecting) {
+      for (const link of links) { const active = link.hash === '#' + entry.target.id; link.classList.toggle('current', active); if (active) link.setAttribute('aria-current', 'location'); else link.removeAttribute('aria-current'); }
+    }
+  }, { rootMargin: '-5% 0px -75% 0px' });
+  document.querySelectorAll('article h2').forEach(heading => observer.observe(heading));
+}
+</script></body></html>

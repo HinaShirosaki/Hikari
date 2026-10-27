@@ -58,6 +58,9 @@
                       <svg class="gel-card-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 18 6-6-6-6"></path></svg>
                     </button>
                     <div id="gel-export-menu" class="gel-menu" popover role="menu" aria-label="Export">
+                      <label class="gel-export-option" title="Add marked ladder sizes beside PNG and PowerPoint clips.">
+                        <span>Ladder labels</span><input id="gel-export-ladder-labels" type="checkbox" role="switch" />
+                      </label>
                       <button type="button" id="gel-export-image-btn" role="menuitem" disabled title="Export the gel lanes (and the table, if present) as a PNG">Image (PNG)</button>
                       <button type="button" id="gel-export-pptx-btn" role="menuitem" disabled title="Export the gel lanes (and the table, if present) as an editable PowerPoint">PowerPoint (PPTX)</button>
                       <button type="button" id="gel-export-csv-btn" role="menuitem" title="Export the measured bands as CSV">Bands (CSV)</button>
@@ -161,31 +164,33 @@
                         <details class="gel-tool-group" open>
                           <summary>Results</summary>
                           <div class="gel-tool-body">
-                            <section id="gel-cell-table-panel" class="gel-result-block" aria-labelledby="gel-cell-table-title">
-                              <div class="gel-result-head">
-                                <h4 id="gel-cell-table-title">Band intensity</h4>
-                                <button type="button" id="gel-cell-table-copy-btn" class="ghost-btn" title="Copy all rows and headers for pasting into a spreadsheet" disabled>Copy</button>
-                              </div>
-                              <span id="gel-cell-table-copy-status" class="small-note" role="status" aria-live="polite"></span>
-                              <div id="gel-cell-table-host" class="gel-cell-table-host"></div>
-                            </section>
+                            <div class="gel-results-actions" role="group" aria-label="Result windows">
+                              <button type="button" id="gel-open-band-intensity-btn" class="ghost-btn" aria-controls="gel-cell-table-panel" aria-expanded="false" aria-haspopup="dialog" disabled>
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3v17h17M8 16v-5M13 16V7M18 16V4"/></svg>
+                                <span>Band intensity</span>
+                                <svg class="gel-result-launch-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+                              </button>
+                              <button type="button" id="gel-open-peak-editor-btn" class="ghost-btn" aria-controls="gel-peak-editor-overlay" aria-expanded="false" aria-haspopup="dialog">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h18M3 16c4 0 4-11 7-11s3 11 6 11 3-7 5-7"/></svg>
+                                <span>Band integration</span>
+                                <svg class="gel-result-launch-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+                              </button>
+                            </div>
                             <section id="gel-lane-profile-panel" class="gel-result-block gel-lane-profile-panel" aria-labelledby="gel-profile-title">
                               <div class="gel-result-head">
                                 <h4 id="gel-profile-title">Lane intensity</h4>
-                                <label class="gel-lane-profile-picker">
-                                  <span class="sr-only">Lane</span>
-                                  <select id="gel-lane-profile-select" disabled>
-                                    <option value="">Select lane</option>
-                                  </select>
-                                </label>
                               </div>
-                              <div class="gel-lane-profile-chart-shell">
+                              <label class="gel-lane-profile-picker">
+                                <span class="sr-only">Lane</span>
+                                <select id="gel-lane-profile-select" disabled>
+                                  <option value="">Select lane</option>
+                                </select>
+                              </label>
+                              <p id="gel-lane-profile-empty" class="small-note">Finish lane dividers to view the profile.</p>
+                              <div id="gel-lane-profile-chart-shell" class="gel-lane-profile-chart-shell" hidden>
                                 <svg id="gel-lane-profile-chart" class="gel-lane-profile-chart" viewBox="0 0 320 190" role="img" aria-label="Lane intensity profile"></svg>
                               </div>
                             </section>
-                            <div class="gel-tool-actions">
-                              <button type="button" id="gel-open-peak-editor-btn" class="ghost-btn gel-tool-wide" aria-controls="gel-peak-editor-overlay" aria-expanded="false">Peak editor</button>
-                            </div>
                           </div>
                         </details>
                       </div>
@@ -196,13 +201,6 @@
                         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"></path><path d="M7 3v6h10V3M7 21v-8h10v8"></path></svg>
                         <span data-gel-action-label>Save</span>
                       </button>
-                      <button type="button" id="gel-record-menu-btn" class="ghost-btn gel-record-btn" popovertarget="gel-record-menu" aria-haspopup="menu" aria-label="More gel actions" title="More gel actions">
-                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1"></circle><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle></svg>
-                        <span class="gel-card-label">More</span>
-                      </button>
-                      <div id="gel-record-menu" class="gel-menu" popover role="menu" aria-label="Gel actions">
-                        <button type="button" id="gel-remove-gel-btn" role="menuitem">Remove gel</button>
-                      </div>
                     </div>
                   </form>
                 </section>
@@ -214,16 +212,35 @@
             </div>
           </div>
 
+          <section id="gel-cell-table-panel" class="gel-band-intensity-window" data-gel-window="intensity" role="dialog" aria-modal="false" aria-labelledby="gel-cell-table-title" hidden>
+            <header class="gel-floating-head" data-gel-window-handle>
+              <h3 id="gel-cell-table-title">Band intensity</h3>
+              <button type="button" class="app-dialog-close-btn" data-gel-window-close aria-label="Close band intensity" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            </header>
+            <div class="gel-band-intensity-body">
+              <p id="gel-band-intensity-empty" class="small-note">Set a band’s top and bottom edges to measure intensity.</p>
+              <div class="gel-band-intensity-chart-shell">
+                <svg id="gel-band-intensity-chart" class="gel-band-intensity-chart" viewBox="0 0 560 240" role="img" aria-label="Background-corrected band intensity by lane" hidden></svg>
+              </div>
+              <div class="gel-result-head">
+                <h4>Measurements</h4>
+                <button type="button" id="gel-cell-table-copy-btn" class="ghost-btn" title="Copy all rows and headers for pasting into a spreadsheet" disabled>Copy table</button>
+              </div>
+              <span id="gel-cell-table-copy-status" class="small-note" role="status" aria-live="polite"></span>
+              <div id="gel-cell-table-host" class="gel-cell-table-host"></div>
+            </div>
+          </section>
+
           <div id="gel-peak-editor-overlay" class="gel-peak-editor-overlay" data-gel-window="peak" hidden>
             <section class="gel-peak-editor-dialog" role="dialog" aria-modal="false" aria-labelledby="gel-peak-editor-title">
               <header class="gel-peak-editor-header gel-floating-head" data-gel-window-handle>
                 <div>
-                  <h3 id="gel-peak-editor-title">Lane Peak Area</h3>
-                  <div id="gel-peak-editor-summary" class="small-note"></div>
+                  <h3 id="gel-peak-editor-title">Band integration</h3>
+                  <div id="gel-peak-editor-summary" class="small-note" hidden></div>
                 </div>
-                <button type="button" id="gel-peak-editor-close-btn" class="app-dialog-close-btn" aria-label="Close lane peak area dialog" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                <button type="button" id="gel-peak-editor-close-btn" class="app-dialog-close-btn" aria-label="Close Band integration" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
               </header>
-              <div class="gel-peak-editor-toolbar" role="toolbar" aria-label="Peak area tools">
+              <div class="gel-peak-editor-toolbar" role="toolbar" aria-label="Band integration tools">
                 <label class="gel-peak-editor-lane-picker small-note">
                   Lane
                   <select id="gel-peak-editor-lane-select"></select>
@@ -236,7 +253,7 @@
                 <button type="button" id="gel-peak-editor-clear-all-btn" class="ghost-btn">Clear all</button>
               </div>
               <div class="gel-peak-editor-chart-shell">
-                <svg id="gel-peak-editor-chart" class="gel-peak-editor-chart" viewBox="0 0 920 440" preserveAspectRatio="none" role="img" aria-label="Manual peak area editor"></svg>
+                <svg id="gel-peak-editor-chart" class="gel-peak-editor-chart" viewBox="0 0 920 440" preserveAspectRatio="none" role="img" aria-label="Band integration profile"></svg>
               </div>
               <div id="gel-peak-editor-table" class="gel-peak-editor-table"></div>
             </section>

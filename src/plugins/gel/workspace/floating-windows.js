@@ -4,14 +4,17 @@ export function createFloatingWindows({ documentObject, onOpen = {}, onClose = {
   const main = documentObject.querySelector?.('.gel-main');
   const stage = documentObject.getElementById('gel-viewer-stage');
   const view = documentObject.defaultView;
-  if (!main || !stage) return { open() {}, close() {}, destroy() {} };
+  if (!main || !stage) return { open() {}, close() {}, closeAll() {}, destroy() {} };
 
   const layer = documentObject.createElement('div');
   layer.className = 'gel-floating-layer';
   main.append(layer);
-  // The peak editor needs ~780 px, so it is the one tool that stays a window;
-  // everything else lives in the rail's sections.
-  const triggers = { peak: 'gel-open-peak-editor-btn' };
+  // Band results may overlap the docked lane table; a thin image row must not
+  // reduce the graph and table to a title bar. The peak editor keeps its bounds.
+  const intensityLayer = documentObject.createElement('div');
+  intensityLayer.className = 'gel-floating-layer gel-floating-layer--intensity';
+  main.append(intensityLayer);
+  const triggers = { peak: 'gel-open-peak-editor-btn', intensity: 'gel-open-band-intensity-btn' };
   const windows = new Map();
   const disposers = [];
   let order = 0;
@@ -25,13 +28,14 @@ export function createFloatingWindows({ documentObject, onOpen = {}, onClose = {
 
   function raise(entry) {
     entry.node.style.zIndex = String(++order);
+    entry.layer.style.zIndex = String(5 + order);
   }
 
   function clamp(entry, x = entry.node.offsetLeft, y = entry.node.offsetTop) {
-    const { node } = entry;
+    const { node, layer: bounds } = entry;
     if (node.hidden) return;
-    node.style.left = `${Math.max(0, Math.min(x, layer.clientWidth - node.offsetWidth))}px`;
-    node.style.top = `${Math.max(0, Math.min(y, layer.clientHeight - node.offsetHeight))}px`;
+    node.style.left = `${Math.max(0, Math.min(x, bounds.clientWidth - node.offsetWidth))}px`;
+    node.style.top = `${Math.max(0, Math.min(y, bounds.clientHeight - node.offsetHeight))}px`;
     node.style.right = 'auto';
     node.style.bottom = 'auto';
   }
@@ -79,9 +83,9 @@ export function createFloatingWindows({ documentObject, onOpen = {}, onClose = {
     const key = node.dataset.gelWindow;
     const handle = node.querySelector('[data-gel-window-handle]');
     const trigger = documentObject.getElementById(triggers[key]);
-    const entry = { node, handle, trigger, visible: false };
+    const entry = { node, handle, trigger, visible: false, layer: key === 'intensity' ? intensityLayer : layer };
     windows.set(key, entry);
-    layer.append(node);
+    entry.layer.append(node);
     node.classList.add('gel-floating-window');
     if (handle) {
       handle.tabIndex = 0;
@@ -127,6 +131,10 @@ export function createFloatingWindows({ documentObject, onOpen = {}, onClose = {
     layer.style.top = `${Math.max(0, top - bounds.top)}px`;
     layer.style.width = `${Math.max(0, viewport.width)}px`;
     layer.style.height = `${Math.max(0, height)}px`;
+    intensityLayer.style.left = `${Math.max(0, viewport.left - bounds.left)}px`;
+    intensityLayer.style.top = `${Math.max(0, viewport.top - bounds.top)}px`;
+    intensityLayer.style.width = `${Math.max(0, viewport.width)}px`;
+    intensityLayer.style.height = `${Math.max(0, viewport.height)}px`;
     windows.forEach((entry) => { sync(entry); clamp(entry); });
   }
 
@@ -158,6 +166,7 @@ export function createFloatingWindows({ documentObject, onOpen = {}, onClose = {
 
   return {
     open, close,
+    closeAll() { windows.forEach((_entry, key) => close(key, false)); },
     destroy() {
       destroyed = true;
       endDrag();
@@ -167,6 +176,7 @@ export function createFloatingWindows({ documentObject, onOpen = {}, onClose = {
       // The caller owns the markup, including the windows, after disposal.
       windows.forEach(({ node }) => main.append(node));
       layer.remove();
+      intensityLayer.remove();
     }
   };
 }

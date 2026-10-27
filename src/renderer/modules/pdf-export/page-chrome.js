@@ -41,6 +41,7 @@ function createContext({
   margins = null,
   cornerIconDataUrl = '',
   serif = false,
+  compact = false,
   visualStyle = 'classic'
 }) {
   const JsPdf = getJsPdfCtor();
@@ -79,6 +80,7 @@ function createContext({
     format,
     y: pageMargins.top,
     serif,
+    compact,
     visualStyle,
     cornerIconDataUrl: String(cornerIconDataUrl || ''),
     footerLabel: String(footerLabel || title || ''),
@@ -138,7 +140,7 @@ function writeMetaGrid(ctx, meta) {
     ctx.doc.setFontSize(editorial ? 9.25 : 9.5);
     const valueLines = row.map((cell) => ctx.doc.splitTextToSize(safeValue(cell.value), cellWidth - 8));
     const rowHeight = editorial
-      ? Math.max(43, 31 + Math.max(...valueLines.map((lines) => lines.length)) * 12)
+      ? Math.max(ctx.compact ? 33 : 43, (ctx.compact ? 21 : 31) + Math.max(...valueLines.map((lines) => lines.length)) * 12)
       : 26;
     ensureSpace(ctx, rowHeight + 4);
     const rule = editorial ? EDITORIAL_RULE : RULE_COLOR;
@@ -147,13 +149,13 @@ function writeMetaGrid(ctx, meta) {
     ctx.doc.line(ctx.margin, ctx.y, ctx.margin + ctx.maxWidth, ctx.y);
     row.forEach((cell, index) => {
       const x = ctx.margin + (index * cellWidth);
-      writeLabel(ctx, cell.label, x, ctx.y + (editorial ? 16 : 10));
+      writeLabel(ctx, cell.label, x, ctx.y + (editorial && !ctx.compact ? 16 : 10));
       font(ctx, 'normal');
       ctx.doc.setFontSize(editorial ? 9.25 : 9.5);
       const lines = valueLines[index];
       if (editorial) {
         lines.forEach((value, lineIndex) => {
-          ctx.doc.text(value, x, ctx.y + 34 + lineIndex * 12);
+          ctx.doc.text(value, x, ctx.y + (ctx.compact ? 24 : 34) + lineIndex * 12);
         });
       } else {
         ctx.doc.text(lines[0] || '-', x, ctx.y + 21);
@@ -162,7 +164,7 @@ function writeMetaGrid(ctx, meta) {
     ctx.y += rowHeight;
     ctx.doc.line(ctx.margin, ctx.y, ctx.margin + ctx.maxWidth, ctx.y);
   }
-  ctx.y += editorial ? 24 : 28;
+  ctx.y += editorial ? (ctx.compact ? 12 : 24) : 28;
 }
 
 function writeDocumentHeader(ctx, { title, eyebrow = '', badge = '', meta = [] }) {
@@ -177,13 +179,20 @@ function writeDocumentHeader(ctx, { title, eyebrow = '', badge = '', meta = [] }
       setTextColor(ctx, EDITORIAL_INK);
       ctx.doc.text(`HIKARI  /  ${eyebrowText.toUpperCase()}`, ctx.margin + 28, ctx.y);
       drawBadge(ctx, badge, ctx.margin + ctx.maxWidth, ctx.y);
-      ctx.y += 30;
+      ctx.y += ctx.compact ? 18 : 30;
     }
     ctx.doc.setFont('times', 'bold');
-    ctx.doc.setFontSize(25);
+    const titleSize = ctx.compact ? 22 : 25;
+    ctx.doc.setFontSize(titleSize);
     setTextColor(ctx, EDITORIAL_INK);
-    ctx.y = writeWrappedLines(ctx.doc, String(title || 'Export'), ctx.margin, ctx.y + 9, ctx.maxWidth, 31);
-    ctx.y += 11;
+    ctx.y += 9;
+    const titleLines = ctx.doc.splitTextToSize(String(title || 'Export'), ctx.maxWidth);
+    for (const line of titleLines) {
+      ensureSpace(ctx, titleSize + 5);
+      ctx.doc.text(line, ctx.margin, ctx.y);
+      ctx.y += titleSize + 6;
+    }
+    ctx.y += ctx.compact ? 5 : 11;
     writeMetaGrid(ctx, meta);
     return;
   }

@@ -151,7 +151,7 @@ export function createNotebookResultTableFromPlaceholder(createId, {
 } = {}) {
   const variableColumn = {
     field: buildFieldId(createId, 'variable', 0),
-    title: 'Variable'
+    title: String(name ?? '').trim() || 'Variable'
   };
   const valueColumn = {
     field: buildFieldId(createId, 'value', 1),

@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { pathToFileURL } = require('node:url');
 
 function createMemoryStorage() {
   const store = new Map();
@@ -63,6 +64,7 @@ function loadEsmStyleModule(filePath, extraGlobals = {}, additionalExports = [],
   };
 
   let transformed = source
+    .replace(/\bimport\.meta\.url\b/g, JSON.stringify(pathToFileURL(filePath).href))
     .replace(/^\s*import\s+\{([^}]+)\}\s+from\s+['"]([^'"]+)['"]\s*;?\s*$/gm, (_match, names, specifier) => {
       const importedNames = names
         .split(',')
@@ -158,6 +160,8 @@ function loadEsmStyleModule(filePath, extraGlobals = {}, additionalExports = [],
     require,
     console,
     Date,
+    URL,
+    performance,
     Math,
     JSON,
     Array,

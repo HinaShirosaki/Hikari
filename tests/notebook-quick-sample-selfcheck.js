@@ -119,7 +119,7 @@ const controller = quickSampleModule.createNotebookQuickSampleController({
   assert.equal(state.samples[1].location.position, 'W5');
   assert.equal(createdPayload.sampleLink.source, 'notebook-quick-add');
   assert.equal(createdPayload.sampleLink.sampleCode, 'NB-PLASMID-1');
-  assert.match(createdPayload.note, /Saved sample NB-PLASMID-1 - Notebook plasmid/);
+  assert.match(createdPayload.note, /^Saved sample NB-PLASMID-1 - Notebook plasmid/);
   assert.equal(overlay.hidden, true);
   console.log('notebook quick sample selfcheck OK');
 })().catch((error) => {
