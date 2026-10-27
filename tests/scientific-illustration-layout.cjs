@@ -25,13 +25,16 @@ async function verifyCanvasLayout({ tool, evaluate, check, win, pause, temp }) {
       'Pointer selection keeps the inspector closed and the fitted canvas transform steady');
     for (const type of ['mousePressed', 'mouseReleased']) await win.webContents.debugger.sendCommand('Input.dispatchMouseEvent', { type, ...target, button: 'left', buttons: type === 'mousePressed' ? 1 : 0, clickCount: 2 });
     await pause(80);
-    check(!(await measure()).hidden && await evaluate('document.activeElement.id==="label-content"'),
-      `Double-clicking text opens its independent editing controls and focuses the label: ${JSON.stringify({target, panel:await measure(), focus:await evaluate('document.activeElement.id')})}`);
+    check((await measure()).hidden && JSON.stringify(await matrix()) === JSON.stringify(initialMatrix)
+      && await evaluate('document.activeElement.id==="canvas-text-editor"'),
+    `Double-clicking text opens its inline editor without refitting the canvas: ${JSON.stringify({target, panel:await measure(), focus:await evaluate('document.activeElement.id')})}`);
   } finally { win.webContents.debugger.detach(); }
+  await evaluate('document.activeElement.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}));document.getElementById("layers-tab").click()');
+  await pause(80);
   const opened = await measure();
   check(Math.abs(closed.stage.width - opened.stage.width - opened.panel.width - 2*opened.work.gap + closed.work.gap) < 1, 'Desktop Layers docks beside the canvas using only its panel width and gutters');
   await fs.writeFile(path.join(temp, 'canvas-layout-properties.png'), (await win.webContents.capturePage()).toPNG());
-  await evaluate('document.getElementById("close-layers").click()'); await pause(80);
+  await evaluate('document.getElementById("close-layers").focus();document.getElementById("close-layers").click()'); await pause(80);
   check(await evaluate('document.activeElement.id==="layers-tab"') && (await measure()).stage.width === closed.stage.width,
     'Closing the property panel restores canvas width and returns focus to its reopen button');
   win.webContents.debugger.attach('1.3');

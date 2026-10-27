@@ -21,12 +21,12 @@
       <header class="toolbar">
         <button id="toggle-illustrations" class="icon-button" data-icon="rail" type="button" title="Hide illustrations" aria-label="Hide illustrations" aria-expanded="true" aria-controls="illustrations-rail" hidden></button>
         <input id="figure-title" aria-label="Figure title" value="Untitled figure" maxlength="200">
-        <div class="canvas-heading canvas-controls">
+        <div class="canvas-heading canvas-controls" role="group" aria-label="Canvas size">
           <select hidden id="selection-tool" aria-label="Selection tool" title="Drag empty space to select; drag components to move; use handles to resize. Shift adds; Alt selects individual group members.">
             <option value="pointer">Select &amp; move · V</option>
             <option value="freehand">Freehand select · L</option>
           </select>
-          <span class="canvas-label">Canvas</span>
+          <span class="canvas-label" data-icon="canvas" aria-hidden="true"></span>
           <select id="canvas-size" aria-label="Main canvas size" title="Main canvas size">
             <option value="1200x800">Landscape · 1200 × 800</option>
             <option value="800x1200">Portrait · 800 × 1200</option>
@@ -35,24 +35,31 @@
             <option value="500x350">Small · 500 × 350</option>
             <option value="custom">Custom…</option>
           </select>
-          <details class="popover canvas-options"><summary id="canvas-settings" class="icon-button" data-icon="more" title="Custom canvas size" aria-label="Custom canvas size"></summary><div class="popover-panel">
+          <details class="popover canvas-options"><summary id="canvas-settings" class="icon-button" data-icon="ruler" title="Custom canvas size" aria-label="Custom canvas size"></summary><div class="popover-panel">
             <form id="canvas-properties"><p id="canvas-settings-title">Main canvas</p><div class="field-grid"><label>Width<input name="width" type="number" min="64" max="8000" required></label><label>Height<input name="height" type="number" min="64" max="8000" required></label></div></form>
           </div></details>
 
         </div>
         <div class="toolbar-actions">
-          <label class="complexity-control" for="complexity"><span class="sr-only">Illustration complexity</span><select id="complexity" aria-label="Illustration complexity"><option value="simple">Simple</option><option value="standard" selected>Standard</option><option value="detailed">Detailed</option></select></label>
-          <details class="popover" id="figure-menu"><summary class="icon-button" data-icon="more" aria-label="Figure options" title="Figure options"></summary><div class="popover-panel">
+          <div class="generation-controls" role="group" aria-label="Illustration generation">
+          <label class="complexity-control" for="complexity"><span class="control-caption">Detail</span><select id="complexity" aria-label="Illustration complexity"><option value="simple">Simple</option><option value="standard" selected>Standard</option><option value="detailed">Detailed</option></select></label>
+          <details class="popover" id="figure-menu"><summary class="icon-button" data-icon="settings" aria-label="Image generation settings" title="Image generation settings"></summary><div class="popover-panel">
             <section class="image-generation-control" aria-label="Image generation">
-              <label class="image-generation-toggle" for="image-generation-enabled"><span>Image generation</span><input id="image-generation-enabled" type="checkbox" role="switch" aria-label="Set image generation percentage" aria-describedby="image-generation-help"></label>
+              <div class="image-generation-toggle">
+                <label for="image-generation-enabled">Image generation</label>
+                <span class="image-generation-info">
+                  <button id="image-generation-info" class="image-generation-info-button" type="button" data-icon="info" aria-label="About image generation" aria-describedby="image-generation-help"></button>
+                  <span id="image-generation-help" role="tooltip"><span id="image-generation-summary">Automatic · SVG first</span>. Boxes and arrows stay SVG; labels stay editable text.</span>
+                </span>
+                <input id="image-generation-enabled" type="checkbox" role="switch" aria-label="Set image generation percentage" aria-describedby="image-generation-help">
+              </div>
               <div class="image-generation-range"><label class="sr-only" for="image-generation-percent">Image-generated content percentage</label><input id="image-generation-percent" type="range" min="0" max="100" step="25" value="50" disabled list="image-generation-steps" aria-describedby="image-generation-help"><output id="image-generation-value" for="image-generation-percent">Auto</output><datalist id="image-generation-steps"><option value="0"></option><option value="25"></option><option value="50"></option><option value="75"></option><option value="100"></option></datalist></div>
-              <p id="image-generation-help"><span id="image-generation-summary">Automatic · SVG first</span>. Boxes and arrows stay SVG; labels stay editable text.</p>
               <label class="image-style-field" for="image-generation-style">Image style<select id="image-generation-style" aria-describedby="image-style-help"></select></label>
               <label class="image-style-field" for="image-generation-style-prompt"><span>Style notes <span class="image-style-optional">(optional)</span></span><textarea id="image-generation-style-prompt" rows="2" maxlength="1000" placeholder="Palette, lighting, materials…" aria-describedby="image-style-help"></textarea></label>
               <p id="image-style-help">Applies to newly generated artwork.</p>
             </section>
-            <button id="duplicate-illustration" type="button">Duplicate illustration</button>
           </div></details>
+          </div>
           <details class="popover" id="export-menu"><summary class="export-button" aria-label="Export" title="Export"><span class="export-mark" data-icon="download"></span><span class="export-label">Export</span><span class="export-chevron" data-icon="down"></span></summary><div class="popover-panel">
             <button id="export-svg" type="button">SVG <small>Editable figure</small></button>
             <button id="export-png" type="button">PNG <small>Image</small></button>

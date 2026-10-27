@@ -20,8 +20,8 @@ are preserved. These entry points require a Hikari host with the context-action
 API; older hosts still support drawing from the plugin's own composer.
 
 The **Illustrations** left rail contains saved figures. Use **+** to create
-one, the title field to rename it, and **Figure options → Duplicate illustration** to copy
-the entire figure. Search filters titles; selecting a row opens its canvas. Each illustration saves independently. Your existing figure
+one and the title field to rename it. Search filters titles; selecting a row
+opens its canvas. Each illustration saves independently. Your existing figure
 is added to this library automatically. The canvas uses the full editing width
 when a figure opens. The **Layers / Assets** buttons in the right toolbar open
 either panel in the shared rail beside it. Click the active button again or
@@ -52,6 +52,9 @@ visible components underneath. On empty canvas they begin area selection.
 Text keeps a fixed aspect ratio with every handle; its box and font scale together.
 Changing a text layer's Width or Height also scales both dimensions and its font.
 The font-size control remains independently editable.
+Double-click a text label on the canvas or its row in Layers to change its text
+directly on the canvas. Press Enter to save, Shift+Enter for a new line, or Escape
+to cancel. Clicking elsewhere also saves. Each change can be undone in one step.
 Text selection outlines and click targets fit the rendered label, so blank
 space in its layout box does not interfere with nearby components. Alignment,
 anchoring, and saved placement remain unchanged.
@@ -117,7 +120,7 @@ The region is temporary and never appears in exports or agent readback.
 The inspector shows the selected component's relevant controls first. Select a
 canvas object and open **Layers** from the toolbar, or select its layer row. Selecting or dragging
 on the canvas keeps the current panel layout steady. Double-click a label to
-open its independent text controls, then use the compact font,
+edit its text inline without changing the canvas zoom. Open Layers for the compact font,
 size, color, bold/italic/underline, alignment, weight and anchor controls.
 Rotation and opacity stay visible; expand **Position & size** for exact
 coordinates, dimensions and canvas membership. Vector source and fill/stroke
@@ -136,18 +139,19 @@ visible while scrolling a long property panel. Use Hikari's system Undo and Redo
 buttons; they enable only when the focused Figura editor has history available,
 including edits made from the shared toolbar. Figura's toolbar has no duplicate
 history icons. ⌘/Ctrl+Z undoes, ⌘/Ctrl+Shift+Z or Ctrl+Y redoes. Text fields keep
-their native text undo. The top toolbar holds the compact title field,
-active canvas and size controls; zoom and Fit are in the right toolbar.
+their native text undo. The top toolbar holds the compact title field, a group
+for canvas size, a group for detail and image-generation settings, and Export.
+Zoom and Fit are in the right toolbar.
 In narrow workspaces, canvas controls wrap within the same toolbar.
 The canvas-size dropdown offers Landscape,
 Portrait, Square, Widescreen and Small presets. Select **Custom…** for exact
-width and height; the adjacent options button also opens size/background
-settings. These controls apply to the active canvas: select its heading or a
+width and height; the adjacent ruler button also opens exact dimensions.
+These controls apply to the active canvas: select its heading or a
 layer first. Resizing changes the canvas bounds while preserving object
 coordinates and sizes; it does not scale the artwork. Undo restores the prior
 canvas size. Agent edits and saved custom sizes appear in the dropdown too.
 
-The toolbar offers three **Complexity** levels, saved per illustration:
+The toolbar's **Detail** dropdown offers three complexity levels, saved per illustration:
 
 - **Simple:** essential shapes, relationships and labels, with minimal visual detail.
 - **Standard:** recognizable components and useful internal features, with balanced detail.
@@ -231,7 +235,7 @@ mitochondrion portrait can use image generation, with its labels and arrows
 added independently. Simple / Standard / Detailed controls detail, not renderer
 selection; a large number of objects does not justify rasterizing the figure.
 
-Open **Figure options (⋯)** and turn on **Image generation** to choose
+Open the **Image generation settings** sliders button beside **Detail** and turn on **Image generation** to choose
 0%, 25%, 50%, 75% or 100%. Off keeps Automatic SVG-first choice; 0% disables new
 image generation. The percentage describes the approximate visual area of
 eligible illustrative artwork, excluding boxes, arrows, connectors, panel
@@ -259,7 +263,7 @@ restyling must have its own layer; pixels inside a raster object cannot be
 edited individually. Generated artwork cannot establish measured data or exact
 molecular structure.
 
-**Figure options → Image style** controls the appearance of generated components:
+**Image generation settings → Image style** controls the appearance of generated components:
 Automatic, Scientific illustration, Flat illustration, 3D render,
 Photorealistic, Watercolor or Pen and ink. Add optional **Style notes** for a
 palette, lighting, materials or other art direction (up to 1000 characters).

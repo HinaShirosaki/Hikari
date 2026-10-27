@@ -97,7 +97,7 @@ files stay intact. Direct raster imports are archived automatically. Final
 inspection archives compound groups with at least two artwork layers and their
 independent labels. Identical content is deduplicated, and changed versions keep
 the original snapshots. An asset-write failure blocks completion.
-The left rail lists saved illustrations with search, creation, duplication,
+The left rail lists saved illustrations with search, creation,
 and selection. The chevron beside the figure title hides or shows the rail;
 Hikari saves that preference through the `layout` API. Existing single-figure
 workspaces migrate automatically.
@@ -110,8 +110,9 @@ in the right toolbar open either panel in the shared editing rail. Only one pane
 can be open at a time. Clicking its active button again folds the rail and
 gives that space back to the canvas. The buttons stay visible at narrow widths.
 Layers provides component previews, visibility and property controls.
-Adding a layer or double-clicking a text
-label opens its controls. Canvas selection and size share the top toolbar with
+Adding a layer opens its controls. Double-click a text label on the canvas or
+its row in Layers to edit it directly on the canvas. Enter saves, Shift+Enter
+adds a line, and Escape cancels; clicking elsewhere also saves. Canvas selection and size share the top toolbar with
 the compact title field; zoom and Fit are in the right toolbar. At narrow widths the panel overlays the canvas and scrolls
 independently.
 Zoom controls and Fit adjust the editing view on the canvas.
@@ -153,7 +154,7 @@ Choose Simple, Standard or Detailed complexity in the toolbar. The setting
 is saved with each figure and supplies matching instructions for the agent
 to form its illustration brief. Standard is the default for existing figures.
 
-**Figure options (⋯) → Image generation** enables a target of 0%, 25%, 50%, 75%
+The **Image generation settings** sliders button beside **Detail** enables a target of 0%, 25%, 50%, 75%
 or 100% for the approximate visual share of eligible illustrative artwork made with Codex
 image generation. Off means Automatic (SVG first); 0% requests no new image
 generation. The target saves per illustration and applies to new or requested

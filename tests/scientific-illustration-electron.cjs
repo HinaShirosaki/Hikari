@@ -13,6 +13,7 @@ const { verifyPlacement } = require('./scientific-illustration-placement.cjs');
 const { verifyCanvasInteraction } = require('./scientific-illustration-interaction.cjs');
 const { verifyTextResize } = require('./scientific-illustration-text-resize.cjs');
 const { verifyTextBounds } = require('./scientific-illustration-text-bounds.cjs');
+const { verifyTextEditing } = require('./scientific-illustration-text-editing.cjs');
 const { verifyRailFolding } = require('./scientific-illustration-rail.cjs');
 const { verifyCanvasLayout } = require('./scientific-illustration-layout.cjs');
 const { verifyGrouping } = require('./scientific-illustration-grouping.cjs');
@@ -173,6 +174,13 @@ async function run() {
     const result = await client.callTool({ name: 'plugin_canvas', arguments: { plugin_id: 'scientific-illustration', request, ...(assets ? { assets } : {}) } });
     return { ...result.structuredContent, content: result.content };
   };
+  if (process.env.HIKARI_TEXT_EDITING_QA_ONLY === '1') {
+    await verifyTextResize({ tool, evaluate, check, win, pause, temp });
+    await verifyTextBounds({ tool, evaluate, check, win, pause, temp });
+    await verifyTextEditing({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura text editing: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
   if (process.env.HIKARI_FIGURA_STRESS_QA_ONLY === '1') {
     await verifyFiguraStress({ tool, evaluate, check, win, pause, temp, reloadPlugin: async () => {
       await evaluate('location.reload()'); await pause(350);
@@ -434,7 +442,8 @@ async function run() {
   await evaluate('document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}))');
   check(await evaluate('document.getElementById("properties").hidden'), 'Escape clears the current selection');
   await evaluate('document.querySelector("#main-canvas [data-object-id=label]").dispatchEvent(new MouseEvent("dblclick",{bubbles:true}))');
-  check(await evaluate('document.activeElement.id==="label-content" && document.getElementById("label-content").selectionEnd===4'), 'Double-clicking text opens its separate editable label');
+  check(await evaluate('document.activeElement.id==="canvas-text-editor" && document.activeElement.selectionEnd===4'), 'Double-clicking text opens its inline editor');
+  await evaluate('document.activeElement.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}))');
   await evaluate('document.getElementById("export-menu").open=true'); await pause(40);
   await evaluate('document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}))');
   check(await evaluate('!document.getElementById("export-menu").open && document.activeElement===document.querySelector("#export-menu summary")'), 'Escape closes menus and restores trigger focus');
@@ -477,10 +486,11 @@ async function run() {
   const saved = JSON.parse(await fs.readFile(path.join(pluginStorage, index.illustrations.find(item => item.id === originalId).path), 'utf8'));
   check(saved.revision === revision, 'Scene is saved in the plugin file namespace');
   check(await evaluate('document.querySelector(".illustration-row.is-active").textContent==="Cell signaling"'), 'Illustration rail reflects the current title');
-  await evaluate('document.getElementById("duplicate-illustration").click()');
-  await waitFor(async () => (await tool({ action: 'list' })).illustrations.length === 2, 'Duplicate illustration did not save');
+  const libraryForCopy = await tool({ action: 'list' });
+  check((await tool({ action: 'duplicate', illustration_id: originalId, expected_library_revision: libraryForCopy.library_revision,
+    request_id: randomUUID() })).ok, 'Duplicate the scene through the canvas API');
   current = await tool({ action: 'read' });
-  check(current.illustration_id !== originalId && current.objects.length === 3 && current.title === 'Cell signaling copy', 'UI duplicates independent scenes');
+  check(current.illustration_id !== originalId && current.objects.length === 3 && current.title === 'Cell signaling copy', 'The canvas API duplicates independent scenes');
   await waitFor(async () => await win.webContents.executeJavaScript(`qaScopedState.agentChatContext.pluginContextId===${JSON.stringify(current.illustration_id)}`), 'Chat did not follow duplicate selection');
   check(await win.webContents.executeJavaScript('qaScopedState.agentChat.messages.length===0 && !qaScopedState.agentChat.currentSessionId && !document.getElementById("agent-rail-message-input").value'), 'Duplicated figures start with empty independent chats and drafts');
   await evaluate('document.getElementById("new-illustration").click()');
@@ -585,6 +595,7 @@ async function run() {
   await verifyCanvasInteraction({ tool, evaluate, check, win, pause, temp });
   await verifyTextResize({ tool, evaluate, check, win, pause, temp });
   await verifyTextBounds({ tool, evaluate, check, win, pause, temp });
+  await verifyTextEditing({ tool, evaluate, check, win, pause, temp });
   await verifyGrouping({ tool, evaluate, check, win, pause, temp });
   await verifyPlacement({ tool, evaluate, check, win, pause, temp });
   const review = { layout: 'Inspected the preview for clipping and overlap.', labels: 'Text stays separate and legible.',
