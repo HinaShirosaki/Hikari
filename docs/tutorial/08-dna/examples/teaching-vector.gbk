@@ -1,0 +1,44 @@
+LOCUS       Teaching_vector_       1202 bp    DNA     circular SYN 25-OCT-2026
+DEFINITION  Teaching vector · example
+ACCESSION   .
+VERSION     .
+KEYWORDS    .
+SOURCE      synthetic DNA construct
+  ORGANISM  synthetic DNA construct
+            .
+COMMENT     Exported from Sequence Viewer (GENBANK).
+FEATURES             Location/Qualifiers
+     promoter        41..140
+                     /label="Example promoter"
+     CDS             181..582
+                     /label="Teaching CDS"
+     misc_feature    complement(821..1050)
+                     /label="Reference region"
+     primer_bind     21..44
+                     /label="Teaching F"
+                     /primer_sequence="GATTCCGCTCTCTCCGAGGCTGGA"
+     primer_bind     complement(701..724)
+                     /label="Teaching R"
+ORIGIN
+        1 atccgtatcg cagatttgcg gattccgctc tctccgaggc tggaagggag gcatatggct
+       61 agtcctttct ttgagcatct catcatagcg tgccacacgc cgtgagtgat agaggttcgt
+      121 agttccctta gcctttcggc ccaagctcgg ttcaacattt gcgtgggatc tcgaggtcac
+      181 atggctggtg aactgaaaca ggctggtgaa ctgaaacagg ctggtgaact gaaacaggct
+      241 ggtgaactga aacaggctgg tgaactgaaa caggctggtg aactgaaaca ggctggtgaa
+      301 ctgaaacagg ctggtgaact gaaacaggct ggtgaactga aacaggctgg tgaactgaaa
+      361 caggctggtg aactgaaaca ggctggtgaa ctgaaacagg ctggtgaact gaaacaggct
+      421 ggtgaactga aacaggctgg tgaactgaaa caggctggtg aactgaaaca ggctggtgaa
+      481 ctgaaacagg ctggtgaact gaaacaggct ggtgaactga aacaggctgg tgaactgaaa
+      541 caggctggtg aactgaaaca ggctggtgaa ctgaaacagt aagcgtacca agaccccatc
+      601 gataaccgag gccatcaggc aggactgtgt gatgcagttt gggttcccgc cgatctgcta
+      661 gtatgcgcag actgcctaac tacattgtgc ccatcaatga aatgtcctag ttggttgggg
+      721 ttagaacttg gcggcgctta tatcctggat gcgaacagca gcatacccgg ggtgtcatct
+      781 catgccccgc gtcgtgcgaa ccctagatta ataataatag agagattcga tgaactgcag
+      841 gatcccaaca gcggttggtt gatccactag gacaccccac tagcacattc ggtaaggaca
+      901 aaagaaccct cctccatgtc tgagtatttc tcgtgcaact ggtggaggaa tggattgctt
+      961 gccccctgcg cgcacgcacg ttaaccgatg atggggtcta aatgagtttg gagcagcctg
+     1021 gaagggacgc agggccggtg ccgcttggcg gtaagggaac acgtatacac tccgtgaaac
+     1081 gagttggatg ctaggatcgg ttttcgctat cgtaaagaaa atgtagaacc aattaaaaga
+     1141 tgaagatggt gctgaaattg gcgggtgcta ttaaaagaca acgggcgagg gtctacattg
+     1201 gc
+//

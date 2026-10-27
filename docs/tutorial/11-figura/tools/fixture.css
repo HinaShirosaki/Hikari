@@ -1,0 +1,3 @@
+/* Frame boundary around the real host tool renderer; no document styling overrides. */
+body { width: calc(100vw - 48px); }
+#tutorial-host-tools { position: fixed; inset: 0 0 0 auto; width: 48px; border-left: 1px solid var(--theme-border-soft); }

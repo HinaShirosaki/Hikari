@@ -1,0 +1,914 @@
+{
+  "sourceVersion": "1.1.0-beta.9",
+  "exampleDate": "2026-10-25",
+  "timezone": "America/Chicago",
+  "viewport": [
+    1600,
+    1000
+  ],
+  "mode": "Real Gel renderer; simulated gel images; in-memory desktop adapters; no research workspace opened.",
+  "screenshots": [
+    {
+      "name": "01-import-image",
+      "title": "Open Gel and import an image",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "targets": [
+        {
+          "selector": "#gel-figure-add-btn",
+          "label": "Open Add gel",
+          "rect": {
+            "x": 185,
+            "y": 14,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "selector": "[data-figure-action=import]",
+          "label": "Choose image files",
+          "rect": {
+            "x": 62,
+            "y": 55,
+            "width": 150,
+            "height": 31
+          }
+        }
+      ]
+    },
+    {
+      "name": "02-gel-workspace",
+      "title": "Find the gel navigator, canvas, and tools",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "targets": [
+        {
+          "selector": "#gel-navigation",
+          "label": "Select a gel",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "width": 280,
+            "height": 1000
+          }
+        },
+        {
+          "selector": "#gel-canvas",
+          "label": "Inspect the image",
+          "rect": {
+            "x": 298,
+            "y": 190,
+            "width": 916,
+            "height": 620
+          }
+        },
+        {
+          "selector": ".gel-viewer-toolbar",
+          "label": "Choose an editing tool",
+          "rect": {
+            "x": 1522,
+            "y": 22,
+            "width": 56,
+            "height": 527
+          }
+        }
+      ]
+    },
+    {
+      "name": "03-name-and-type",
+      "title": "Name the gel and choose its analysis type",
+      "crop": {
+        "x": 1208,
+        "y": 0,
+        "width": 316,
+        "height": 253
+      },
+      "targets": [
+        {
+          "selector": "#gel-name",
+          "label": "Enter the gel name",
+          "rect": {
+            "x": 1241,
+            "y": 106,
+            "width": 237,
+            "height": 37
+          }
+        },
+        {
+          "selector": "#gel-type",
+          "label": "Choose the analysis type",
+          "rect": {
+            "x": 1241,
+            "y": 184,
+            "width": 237,
+            "height": 35
+          }
+        }
+      ]
+    },
+    {
+      "name": "04-crop-and-rotate",
+      "title": "Crop and straighten the image",
+      "crop": {
+        "x": 292,
+        "y": 0,
+        "width": 1232,
+        "height": 816
+      },
+      "targets": [
+        {
+          "selector": ".cropper-crop-box",
+          "label": "Drag the crop handles",
+          "rect": {
+            "x": 316,
+            "y": 202,
+            "width": 880,
+            "height": 596
+          }
+        },
+        {
+          "selector": "#gel-crop-angle",
+          "label": "Straighten the image",
+          "rect": {
+            "x": 1243,
+            "y": 106,
+            "width": 246,
+            "height": 36
+          }
+        },
+        {
+          "selector": "#gel-apply-crop-btn",
+          "label": "Done keeps the crop",
+          "rect": {
+            "x": 1369,
+            "y": 188,
+            "width": 120,
+            "height": 30
+          }
+        }
+      ]
+    },
+    {
+      "name": "05-processed-preview",
+      "title": "Adjust and compare the processed image",
+      "crop": {
+        "x": 280,
+        "y": 0,
+        "width": 1244,
+        "height": 828
+      },
+      "targets": [
+        {
+          "selector": "#gel-processed-preview",
+          "label": "Compare original and processed",
+          "rect": {
+            "x": 1245,
+            "y": 88,
+            "width": 16,
+            "height": 16
+          }
+        },
+        {
+          "selector": "#gel-denoise-strength",
+          "label": "Adjust denoise",
+          "rect": {
+            "x": 1241,
+            "y": 144,
+            "width": 237,
+            "height": 18
+          }
+        },
+        {
+          "selector": "#gel-contrast-strength",
+          "label": "Adjust contrast",
+          "rect": {
+            "x": 1241,
+            "y": 197,
+            "width": 237,
+            "height": 18
+          }
+        }
+      ]
+    },
+    {
+      "name": "06-detect-lanes",
+      "title": "Detect the lanes",
+      "crop": {
+        "x": 280,
+        "y": 0,
+        "width": 1244,
+        "height": 828
+      },
+      "targets": [
+        {
+          "selector": "#gel-expected-lane-count",
+          "label": "Enter the expected lane count",
+          "rect": {
+            "x": 1281,
+            "y": 83,
+            "width": 76,
+            "height": 32
+          }
+        },
+        {
+          "selector": "#gel-auto-detect-lanes-btn",
+          "label": "Auto-detect the dividers",
+          "rect": {
+            "x": 1362,
+            "y": 82,
+            "width": 116,
+            "height": 34
+          }
+        }
+      ]
+    },
+    {
+      "name": "07-adjust-dividers",
+      "title": "Adjust and finish lane dividers",
+      "crop": {
+        "x": 280,
+        "y": 0,
+        "width": 1244,
+        "height": 828
+      },
+      "targets": [
+        {
+          "selector": "#gel-canvas",
+          "label": "Inspect and adjust lane boundaries",
+          "rect": {
+            "x": 298,
+            "y": 190,
+            "width": 916,
+            "height": 620
+          }
+        },
+        {
+          "selector": "#gel-finish-dividers-btn",
+          "label": "Finish dividers",
+          "rect": {
+            "x": 1239,
+            "y": 78,
+            "width": 254,
+            "height": 34
+          }
+        }
+      ]
+    },
+    {
+      "name": "08-lane-vertices",
+      "title": "Correct a tilted lane with Vertices",
+      "crop": {
+        "x": 280,
+        "y": 0,
+        "width": 1244,
+        "height": 828
+      },
+      "targets": [
+        {
+          "selector": "#gel-tool-lane-vertices-btn",
+          "label": "Toggle Vertices",
+          "rect": {
+            "x": 1322,
+            "y": 122,
+            "width": 75,
+            "height": 34
+          }
+        },
+        {
+          "selector": "#gel-canvas",
+          "label": "Drag a lane corner horizontally",
+          "rect": {
+            "x": 298,
+            "y": 190,
+            "width": 916,
+            "height": 620
+          }
+        }
+      ]
+    },
+    {
+      "name": "09-ladder-setup",
+      "title": "Select the ladder lane and preset",
+      "crop": {
+        "x": 280,
+        "y": 0,
+        "width": 1244,
+        "height": 828
+      },
+      "targets": [
+        {
+          "selector": "#gel-ladder-preset",
+          "label": "Choose the matching ladder preset",
+          "rect": {
+            "x": 1241,
+            "y": 106,
+            "width": 237,
+            "height": 35
+          }
+        },
+        {
+          "selector": "#gel-tool-ladder-lane-btn",
+          "label": "Pick the ladder lane",
+          "rect": {
+            "x": 1241,
+            "y": 151,
+            "width": 75,
+            "height": 34
+          }
+        },
+        {
+          "selector": "#gel-detect-ladder-btn",
+          "label": "Detect ladder bands",
+          "rect": {
+            "x": 1322,
+            "y": 151,
+            "width": 75,
+            "height": 34
+          }
+        }
+      ]
+    },
+    {
+      "name": "10-ladder-mw",
+      "title": "Enter or correct a ladder label",
+      "crop": {
+        "x": 280,
+        "y": 0,
+        "width": 1244,
+        "height": 828
+      },
+      "targets": [
+        {
+          "selector": "#gel-tool-ladder-mw-btn",
+          "label": "Enable Set MW",
+          "rect": {
+            "x": 1403,
+            "y": 151,
+            "width": 75,
+            "height": 34
+          }
+        },
+        {
+          "selector": "#gel-ladder-band-mw",
+          "label": "Enter the known band size",
+          "rect": {
+            "x": 383,
+            "y": 282,
+            "width": 88,
+            "height": 30
+          }
+        }
+      ]
+    },
+    {
+      "name": "11-band-window",
+      "title": "Set the target band window",
+      "crop": {
+        "x": 280,
+        "y": 0,
+        "width": 1244,
+        "height": 828
+      },
+      "targets": [
+        {
+          "selector": "#gel-tool-band-top-btn",
+          "label": "Set the top edge",
+          "rect": {
+            "x": 1241,
+            "y": 82,
+            "width": 75,
+            "height": 34
+          }
+        },
+        {
+          "selector": "#gel-tool-band-bottom-btn",
+          "label": "Set the bottom edge",
+          "rect": {
+            "x": 1322,
+            "y": 82,
+            "width": 75,
+            "height": 34
+          }
+        },
+        {
+          "selector": "#gel-canvas",
+          "label": "Review the selected band window",
+          "rect": {
+            "x": 298,
+            "y": 190,
+            "width": 916,
+            "height": 620
+          }
+        }
+      ]
+    },
+    {
+      "name": "12-per-lane-window",
+      "title": "Set a different band window for each lane",
+      "crop": {
+        "x": 280,
+        "y": 0,
+        "width": 1244,
+        "height": 828
+      },
+      "targets": [
+        {
+          "selector": "#gel-lane-band-mode-btn",
+          "label": "Use separate per-lane windows",
+          "rect": {
+            "x": 1403,
+            "y": 82,
+            "width": 75,
+            "height": 34
+          }
+        },
+        {
+          "selector": "#gel-canvas",
+          "label": "Place each lane window",
+          "rect": {
+            "x": 298,
+            "y": 190,
+            "width": 916,
+            "height": 620
+          }
+        }
+      ]
+    },
+    {
+      "name": "13-band-intensity",
+      "title": "Read and copy band intensities",
+      "crop": {
+        "x": 292,
+        "y": 12,
+        "width": 676,
+        "height": 588
+      },
+      "targets": [
+        {
+          "selector": "#gel-band-intensity-chart",
+          "label": "Compare the measured intensities",
+          "rect": {
+            "x": 323,
+            "y": 92,
+            "width": 614,
+            "height": 240
+          }
+        },
+        {
+          "selector": "#gel-cell-table-host",
+          "label": "Read the measurement table",
+          "rect": {
+            "x": 323,
+            "y": 384,
+            "width": 614,
+            "height": 185
+          }
+        },
+        {
+          "selector": "#gel-cell-table-copy-btn",
+          "label": "Copy the full table",
+          "rect": {
+            "x": 854,
+            "y": 344,
+            "width": 83,
+            "height": 28
+          }
+        }
+      ]
+    },
+    {
+      "name": "14-lane-profile",
+      "title": "Inspect a lane intensity profile",
+      "crop": {
+        "x": 1208,
+        "y": 0,
+        "width": 316,
+        "height": 430
+      },
+      "targets": [
+        {
+          "selector": "#gel-lane-profile-select",
+          "label": "Choose the lane",
+          "rect": {
+            "x": 1241,
+            "y": 217,
+            "width": 237,
+            "height": 30
+          }
+        },
+        {
+          "selector": "#gel-lane-profile-chart",
+          "label": "Inspect its intensity profile",
+          "rect": {
+            "x": 1241,
+            "y": 255,
+            "width": 237,
+            "height": 141
+          }
+        },
+        {
+          "selector": "#gel-open-peak-editor-btn",
+          "label": "Open the peak editor",
+          "rect": {
+            "x": 1241,
+            "y": 124,
+            "width": 237,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "15-peak-baseline",
+      "title": "Define a peak integration baseline",
+      "crop": {
+        "x": 292,
+        "y": 12,
+        "width": 816,
+        "height": 576
+      },
+      "targets": [
+        {
+          "selector": "#gel-peak-editor-lane-select",
+          "label": "Choose the lane",
+          "rect": {
+            "x": 360,
+            "y": 90,
+            "width": 112,
+            "height": 37
+          }
+        },
+        {
+          "selector": "#gel-peak-editor-baseline-mode-btn",
+          "label": "Use Baseline mode",
+          "rect": {
+            "x": 478,
+            "y": 90,
+            "width": 77,
+            "height": 37
+          }
+        },
+        {
+          "selector": "#gel-peak-editor-chart",
+          "label": "Click two baseline endpoints",
+          "rect": {
+            "x": 323,
+            "y": 137,
+            "width": 754,
+            "height": 274
+          }
+        }
+      ]
+    },
+    {
+      "name": "16-peak-divider",
+      "title": "Split a selected integration region",
+      "crop": {
+        "x": 292,
+        "y": 12,
+        "width": 816,
+        "height": 576
+      },
+      "targets": [
+        {
+          "selector": "#gel-peak-editor-divider-mode-btn",
+          "label": "Add a vertical divider",
+          "rect": {
+            "x": 561,
+            "y": 90,
+            "width": 69,
+            "height": 37
+          }
+        },
+        {
+          "selector": "#gel-peak-editor-table",
+          "label": "Read the calculated peak areas",
+          "rect": {
+            "x": 323,
+            "y": 420,
+            "width": 754,
+            "height": 137
+          }
+        },
+        {
+          "selector": "#gel-peak-editor-clear-lane-btn",
+          "label": "Clear this lane if needed",
+          "rect": {
+            "x": 636,
+            "y": 90,
+            "width": 87,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "17-lane-table",
+      "title": "Add lane labels to the figure",
+      "crop": {
+        "x": 280,
+        "y": 143,
+        "width": 952,
+        "height": 713
+      },
+      "targets": [
+        {
+          "selector": "[data-gel-table-role=label]",
+          "label": "Name the table row",
+          "rect": {
+            "x": 299,
+            "y": 244,
+            "width": 116,
+            "height": 40
+          }
+        },
+        {
+          "selector": ".gel-lane-table-grid-shell",
+          "label": "Enter each lane label",
+          "rect": {
+            "x": 416,
+            "y": 243,
+            "width": 798,
+            "height": 42
+          }
+        },
+        {
+          "selector": "[data-gel-table-add-row]",
+          "label": "Add another table row",
+          "rect": {
+            "x": 442,
+            "y": 197,
+            "width": 76,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "18-save-gel",
+      "title": "Save and reopen a gel",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "targets": [
+        {
+          "selector": "#gel-save-btn",
+          "label": "Save the gel record",
+          "rect": {
+            "x": 1521,
+            "y": 461,
+            "width": 58,
+            "height": 42
+          }
+        },
+        {
+          "selector": "[data-figure-row]",
+          "label": "Reopen the gel from its row",
+          "rect": {
+            "x": 16,
+            "y": 67,
+            "width": 236,
+            "height": 36
+          }
+        }
+      ]
+    },
+    {
+      "name": "19-create-stack",
+      "title": "Create a stack for related gels",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 297,
+        "height": 159
+      },
+      "targets": [
+        {
+          "selector": "#gel-figure-stack-btn",
+          "label": "Add stack",
+          "rect": {
+            "x": 223,
+            "y": 14,
+            "width": 32,
+            "height": 32
+          }
+        },
+        {
+          "selector": "[data-figure-row]",
+          "label": "Drag gel entries into a stack",
+          "rect": {
+            "x": 16,
+            "y": 67,
+            "width": 236,
+            "height": 74
+          }
+        }
+      ]
+    },
+    {
+      "name": "20-stack-layout",
+      "title": "Arrange gels in a stack",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 1597,
+        "height": 358
+      },
+      "targets": [
+        {
+          "selector": "[data-figure-stack-view]",
+          "label": "Open the stack preview",
+          "rect": {
+            "x": 16,
+            "y": 103,
+            "width": 236,
+            "height": 36
+          }
+        },
+        {
+          "selector": "#gel-figure-preview canvas",
+          "label": "Drag blots to arrange the figure",
+          "rect": {
+            "x": 311,
+            "y": 62,
+            "width": 890,
+            "height": 203
+          }
+        },
+        {
+          "selector": "#gel-open-figure-btn",
+          "label": "Open or close Layout tools",
+          "rect": {
+            "x": 1521,
+            "y": 298,
+            "width": 58,
+            "height": 42
+          }
+        }
+      ]
+    },
+    {
+      "name": "21-stack-trim",
+      "title": "Trim every blot to the same horizontal edges",
+      "crop": {
+        "x": 293,
+        "y": 0,
+        "width": 1231,
+        "height": 283
+      },
+      "targets": [
+        {
+          "selector": "[data-trim-edge=left]",
+          "label": "Set the left edge",
+          "rect": {
+            "x": 464,
+            "y": 62,
+            "width": 24,
+            "height": 203
+          }
+        },
+        {
+          "selector": "[data-trim-edge=right]",
+          "label": "Set the right edge",
+          "rect": {
+            "x": 1170,
+            "y": 62,
+            "width": 24,
+            "height": 203
+          }
+        },
+        {
+          "selector": "[data-figure-action=apply-trim]",
+          "label": "Apply trim",
+          "rect": {
+            "x": 1241,
+            "y": 210,
+            "width": 89,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "22-export-menu",
+      "title": "Export a gel or the current stack",
+      "crop": {
+        "x": 1333,
+        "y": 330,
+        "width": 196,
+        "height": 139
+      },
+      "targets": [
+        {
+          "selector": "#gel-export-image-btn",
+          "label": "Export Image (PNG)",
+          "rect": {
+            "x": 1356,
+            "y": 353,
+            "width": 150,
+            "height": 31
+          }
+        },
+        {
+          "selector": "#gel-export-pptx-btn",
+          "label": "Export PowerPoint (PPTX)",
+          "rect": {
+            "x": 1356,
+            "y": 383,
+            "width": 150,
+            "height": 31
+          }
+        },
+        {
+          "selector": "#gel-export-csv-btn",
+          "label": "Export Bands (CSV)",
+          "rect": {
+            "x": 1356,
+            "y": 414,
+            "width": 150,
+            "height": 31
+          }
+        }
+      ]
+    },
+    {
+      "name": "23-project-backup",
+      "title": "Save and reopen a portable project",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 1000
+      },
+      "targets": [
+        {
+          "selector": "#gel-save-btn",
+          "label": "Save project from the stack",
+          "rect": {
+            "x": 1521,
+            "y": 407,
+            "width": 58,
+            "height": 42
+          }
+        },
+        {
+          "selector": "[data-figure-action=open]",
+          "label": "Open a project file",
+          "rect": {
+            "x": 62,
+            "y": 116,
+            "width": 150,
+            "height": 31
+          }
+        }
+      ]
+    },
+    {
+      "name": "24-rename-gel",
+      "title": "Rename a gel in the navigator",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "width": 297,
+        "height": 189
+      },
+      "targets": [
+        {
+          "selector": "[data-gel-navigation-rename]",
+          "label": "Edit the selected name",
+          "rect": {
+            "x": 74,
+            "y": 147,
+            "width": 170,
+            "height": 24
+          }
+        }
+      ]
+    }
+  ],
+  "checks": [
+    "Cancel crop keeps the full simulated source image",
+    "Processed tools enable the processed preview",
+    "Finished lane dividers enable lane tables and image export",
+    "Submitting a positive ladder label closes the MW editor",
+    "Copy table includes measurement headers and numeric band intensities",
+    "A baseline creates a peak integration and Divider splits it into separate rows",
+    "Save retains the named gel, processing selections, and lane table",
+    "Dragging two gel entries places them in the selected stack",
+    "Apply trim leaves trim mode and retains the shared stack crop",
+    "Save project serializes both gel layers and their stack into a portable JSON file",
+    "Reopening the serialized practice project restores both layers and its stack without duplicating them",
+    "Inline rename updates the selected gel entry"
+  ]
+}
