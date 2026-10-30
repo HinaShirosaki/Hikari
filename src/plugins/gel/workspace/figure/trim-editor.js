@@ -1,3 +1,5 @@
+import { createPresentation } from "../../i18n.mjs";
+const i18nUi = createPresentation("gel");
 import { normalizeStackTrim } from './trim.js';
 
 // The editor uses the full aligned image while the shaded margins show what
@@ -50,8 +52,8 @@ export function createCanvasTrimEditor({ container, getPlan, onRender, onApply }
       const shade = documentObject.createElement('div'); shade.className = 'gel-trim-shade'; shade.dataset.trimShade = edge;
       const handle = documentObject.createElement('button'); handle.type = 'button'; handle.className = 'gel-trim-edge'; handle.dataset.trimEdge = edge;
       handle.setAttribute('role', 'slider'); handle.setAttribute('aria-orientation', 'horizontal'); handle.setAttribute('aria-valuemin', '0');
-      handle.setAttribute('aria-label', `${edge === 'left' ? 'Left' : 'Right'} trim edge`);
-      handle.title = 'Drag to set the trim edge. Arrow keys adjust; Shift moves farther.';
+      i18nUi.setAttribute(handle, "aria-label", i18nUi.message("{p0} trim edge", { p0: edge === 'left' ? 'Left' : 'Right' }));
+      i18nUi.setAttribute(handle, "title", i18nUi.message("Drag to set the trim edge. Arrow keys adjust; Shift moves farther."));
       overlay.append(shade, handle);
     }
     container.classList.add('is-trimming'); container.append(overlay);

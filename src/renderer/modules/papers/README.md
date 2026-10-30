@@ -13,5 +13,10 @@
 - `llm.js`, `paper-prompts.json`: direct LLM requests for paper workflows and their prompts
 - `model.js`, `normalizers.js`, `storage.js`, `pdf-metadata.js`: record and persistence support
 - `pdfjs-compat.js`, `pdfjs-worker.js`: PDF.js compatibility shims and worker setup
+- `locales/en.js`, `locales/es.js`, `localization.js`: the `papers` UI catalog, bound markup/notice helpers
+  (`paperUi()` descriptors) and `relativePaperTimeMessage()`. Paper records, metadata,
+  comments, search text, agent context and `movePaperToFolder()` errors stay canonical.
+  The bundled Spanish preview has interaction checks in
+  `tests/fixtures/i18n/papers-checks.mjs`. The hidden viewer status line keeps English progress text.
 
 Main-process search, download, parse, retrieval, and analysis code lives in `src/main/papers/`.

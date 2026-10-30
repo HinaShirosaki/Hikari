@@ -1,3 +1,7 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("papers");
+import { paperUi } from '../localization.js';
 const MIN_SELECTION_SIZE = 10;
 const MAX_IMAGE_EDGE = 1600;
 const MAX_DATA_URL_LENGTH = 380000;
@@ -225,7 +229,7 @@ export const installPdfViewerScreenshotSelectionController = (ctx) => {
     if (rect.width < MIN_SELECTION_SIZE || rect.height < MIN_SELECTION_SIZE) {
       removeSelectionBox(selection);
       state.screenshotSelection = null;
-      ctx.setStatus('Drag a larger area of the paper to capture a screenshot.');
+      ctx.setStatus(i18nUi.text("Drag a larger area of the paper to capture a screenshot."));
       return;
     }
     const attachment = buildAttachmentFromSelection(selection);
@@ -234,14 +238,14 @@ export const installPdfViewerScreenshotSelectionController = (ctx) => {
         ok: false,
         error: 'Unable to capture that paper region.'
       });
-      ctx.setStatus('Unable to capture that paper region.', true);
+      ctx.setStatus(paperUi('viewer.captureFailed'), true);
       return;
     }
     finishScreenshotSelection({
       ok: true,
       attachment
     });
-    ctx.setStatus(`Captured page ${attachment.pageNumber} screenshot.`);
+    ctx.setStatus(i18nUi.text("Captured page {p0} screenshot.", { p0: attachment.pageNumber }));
   }
 
   function startPaperScreenshotSelection() {
@@ -258,7 +262,7 @@ export const installPdfViewerScreenshotSelectionController = (ctx) => {
     ctx.hideSelectionSearchPopover?.();
     ctx.hideHighlightCommentPopover?.();
     setScreenshotSelectionMode(true);
-    ctx.setStatus('Drag over a visible page to attach a paper screenshot.');
+    ctx.setStatus(i18nUi.text("Drag over a visible page to attach a paper screenshot."));
     return new Promise((resolve) => {
       state.screenshotSelectionResolver = resolve;
     });
@@ -271,7 +275,7 @@ export const installPdfViewerScreenshotSelectionController = (ctx) => {
     preventCaptureEvent(event);
     const record = getPageRecordFromEvent(event);
     if (!record?.canvas || record.canvas.width <= 0 || record.canvas.height <= 0) {
-      ctx.setStatus('Wait for the page to finish rendering, then drag over the paper.');
+      ctx.setStatus(i18nUi.text("Wait for the page to finish rendering, then drag over the paper."));
       return;
     }
     removeSelectionBox();

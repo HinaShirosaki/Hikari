@@ -1,5 +1,6 @@
 import { DEFAULT_MAX_RECORDS } from '../constants.js';
 import { parseInputRecords } from '../parsing.js';
+import { bindDnaMessage, dnaDisplayText, dnaFailure, dnaUi } from '../localization.js';
 
 // Opening a sequence file from disk (or starting a blank record) straight into
 // the detail page, without going through the library.
@@ -51,9 +52,9 @@ function createHomeFileOpen({
       const text = await readSequenceFileText(file);
       const parsed = parseInputRecords(text, { maxRecords: DEFAULT_MAX_RECORDS });
       await openParsedRecordsInDetail(parsed, text, 'Loaded');
-      setStatus(`Opened ${file.name} in detail workspace.`);
+      setStatus(dnaUi('status.openedFile', { file: file.name }));
     } catch (error) {
-      setHomeStatus(error?.message || 'Failed to open selected file.', true);
+      setHomeStatus(dnaFailure(error, 'notice.openFileFailed'), true);
     }
   }
 
@@ -64,7 +65,7 @@ function createHomeFileOpen({
     navigateToDetail();
     setMode('paste');
     setInputComposerVisible(true);
-    setStatus('Paste sequence text, then click Load.');
+    setStatus(dnaUi('status.pasteThenLoad'));
     elements.inputTextarea?.focus?.();
   }
 
@@ -72,8 +73,8 @@ function createHomeFileOpen({
     if (!elements.newSequenceStatus) {
       return;
     }
-    const text = String(message || '').trim();
-    elements.newSequenceStatus.textContent = text;
+    const text = dnaDisplayText(message);
+    bindDnaMessage(elements.newSequenceStatus, message);
     elements.newSequenceStatus.hidden = !text;
     elements.newSequenceStatus.classList?.toggle?.('is-error', Boolean(text && isError));
   }
@@ -108,7 +109,7 @@ function createHomeFileOpen({
   async function submitNewSequenceDialog() {
     const rawText = String(elements.newSequenceTextarea?.value || '');
     if (!rawText.trim()) {
-      setNewSequenceDialogStatus('Paste a DNA sequence before loading.', true);
+      setNewSequenceDialogStatus(dnaUi('new.needsSequence'), true);
       elements.newSequenceTextarea?.focus?.();
       return false;
     }
@@ -116,7 +117,7 @@ function createHomeFileOpen({
     const topology = elements.newSequenceForm?.querySelector?.('input[name="sequence-viewer-new-topology"]:checked')?.value;
     const parsed = parseInputRecords(rawText, { maxRecords: DEFAULT_MAX_RECORDS, topology });
     if (!Array.isArray(parsed?.records) || !parsed.records.length) {
-      setNewSequenceDialogStatus(parsed?.errors?.[0] || 'No valid DNA sequence was found.', true);
+      setNewSequenceDialogStatus(parsed?.errors?.[0] || dnaUi('new.noSequence'), true);
       elements.newSequenceTextarea?.focus?.();
       return false;
     }

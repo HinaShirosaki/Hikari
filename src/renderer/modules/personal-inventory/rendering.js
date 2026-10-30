@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("samples");
 import { bindSingleSampleEvents } from './single-sample-events.js';
 import { bindStructureButtons } from './structure-bindings.js';
 import { bindWellSampleEvents } from './well-sample-events.js';
@@ -27,9 +30,9 @@ function renderSections() {
     ? `<div class="sr-only" aria-hidden="true">${activeContainers.map((container) => `<button type="button" data-container-open="${safeText(container.id)}" data-section="${safeText(activeSection)}">${safeText(container.name)}</button>`).join('')}</div>`
     : '';
 
-  inventorySections.innerHTML = activeContainer
+  i18nUi.setHtml(inventorySections, activeContainer
     ? `<section class="inventory-section inventory-section-active">${hiddenContainerOpeners}${ctx.renderContainerDetail(activeSection, activeContainer)}</section>`
-    : `<section class="inventory-section inventory-section-active">${hiddenContainerOpeners}</section>`;
+    : `<section class="inventory-section inventory-section-active">${hiddenContainerOpeners}</section>`);
 
   inventorySections.querySelectorAll('[data-container-open]').forEach((button) => {
     button.addEventListener('click', () => {

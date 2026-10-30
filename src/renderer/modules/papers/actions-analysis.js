@@ -14,7 +14,7 @@ import {
   resolveStoredPaperPath
 } from './storage.js';
 import { normalizeMethodsExtract, normalizePaperSummary } from './normalizers.js';
-import { showTransientNotice } from '../../lib/notify.js';
+import { paperFailure, paperNotice, paperUi } from './localization.js';
 
 // LLM-backed extraction (summary, methods, reagents) plus the PDF resolution
 // the viewer and those calls share.
@@ -163,7 +163,7 @@ function createPaperAnalysisActions({
       return;
     }
 
-    showTransientNotice('Unable to open this PDF. Re-upload the paper to restore the local file path.', { type: 'error' });
+    paperNotice(paperUi('notice.openFailed'), { type: 'error' });
   }
 
   async function resolvePaperPdfBytes(paper) {
@@ -201,20 +201,20 @@ function createPaperAnalysisActions({
     const storedPath = resolveStoredPaperPath(paper, state.settings?.storagePath);
     const storageRoot = String(state.settings?.storagePath || '').trim();
     if (!storedPath || !storageRoot || !windowRef?.hikariApi?.storeImportedFile) {
-      showTransientNotice('This PDF is not stored in the app folder, so filled values cannot be saved.', { type: 'error' });
+      paperNotice(paperUi('notice.formNotStored'), { type: 'error' });
       return false;
     }
 
     const separatorIndex = Math.max(storedPath.lastIndexOf('/'), storedPath.lastIndexOf('\\'));
     if (separatorIndex <= 0) {
-      showTransientNotice('Cannot resolve where this PDF is stored.', { type: 'error' });
+      paperNotice(paperUi('notice.formNoPath'), { type: 'error' });
       return false;
     }
 
     try {
       const bytes = await paperViewer.getFilledPdfBytes();
       if (!bytes?.byteLength) {
-        showTransientNotice('Nothing to save from this PDF.', { type: 'error' });
+        paperNotice(paperUi('notice.formNothing'), { type: 'error' });
         return false;
       }
       const result = await windowRef.hikariApi.storeImportedFile({
@@ -227,10 +227,10 @@ function createPaperAnalysisActions({
       if (!result?.ok) {
         throw new Error(result?.error || 'Failed to save the filled PDF.');
       }
-      showTransientNotice('Filled PDF saved.');
+      paperNotice(paperUi('notice.formSaved'));
       return true;
     } catch (error) {
-      showTransientNotice(String(error?.message || error || 'Failed to save the filled PDF.'), { type: 'error' });
+      paperNotice(paperFailure(error, 'notice.formSaveFailed'), { type: 'error' });
       return false;
     }
   }
@@ -293,7 +293,7 @@ function createPaperAnalysisActions({
       context.comments?.syncViewerComments();
       context.renderCommentSidebar?.();
     } catch (error) {
-      showTransientNotice(String(error?.message || error || 'Failed to load the PDF viewer.'), { type: 'error' });
+      paperNotice(paperFailure(error, 'notice.viewerFailed'), { type: 'error' });
     }
   }
 

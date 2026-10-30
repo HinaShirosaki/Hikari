@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../../lib/html.js';
 import { getUniProtRegions, selectUniProtSequence } from './uniprot-model.js';
 
@@ -18,7 +21,7 @@ export function installProteinBuilderUniProtPicker(ctx) {
 
   function setStatus(message = '') {
     if (e.proteinBuilderUniProtStatus) {
-      e.proteinBuilderUniProtStatus.textContent = message;
+      i18nUi.setOwnedText(e.proteinBuilderUniProtStatus, message);
       e.proteinBuilderUniProtStatus.hidden = !message;
     }
   }
@@ -31,7 +34,7 @@ export function installProteinBuilderUniProtPicker(ctx) {
     }
     if (e.proteinBuilderUniProtResultsToggleBtn) {
       e.proteinBuilderUniProtResultsToggleBtn.hidden = !entry || (items.length <= 1 && !nextCursor);
-      e.proteinBuilderUniProtResultsToggleBtn.textContent = resultsCollapsed ? 'Show all results' : 'Show selected only';
+      i18nUi.setText(e.proteinBuilderUniProtResultsToggleBtn, (resultsCollapsed ? i18nUi.message("Show all results") : i18nUi.message("Show selected only")));
       e.proteinBuilderUniProtResultsToggleBtn.setAttribute?.('aria-expanded', String(!resultsCollapsed));
       e.proteinBuilderUniProtResultsToggleBtn.disabled = busy;
     }
@@ -53,7 +56,7 @@ export function installProteinBuilderUniProtPicker(ctx) {
   function renderResults() {
     syncControls();
     if (!e.proteinBuilderUniProtResults) return;
-    e.proteinBuilderUniProtResults.innerHTML = items.map((item, index) => resultsCollapsed && item.accession !== entry?.accession ? '' : `
+    i18nUi.setHtml(e.proteinBuilderUniProtResults, items.map((item, index) => resultsCollapsed && item.accession !== entry?.accession ? '' : `
       <button type="button" class="sequence-viewer-protein-builder-uniprot-result" data-uniprot-result="${index}" aria-pressed="${item.accession === entry?.accession}">
         <strong>${escapeHtml(item.proteinName || item.entryId || item.accession)}</strong>
         <span class="small-note">${escapeHtml([
@@ -61,7 +64,7 @@ export function installProteinBuilderUniProtPicker(ctx) {
           `${item.sequence?.length || item.sequence?.value?.length || 0} aa`,
           item.reviewed ? 'Reviewed' : 'Unreviewed'
         ].filter(Boolean).join(' · '))}</span>
-      </button>`).join('');
+      </button>`).join(''));
   }
 
   ctx.toggleUniProtResults = function toggleUniProtResults() {
@@ -95,11 +98,11 @@ export function installProteinBuilderUniProtPicker(ctx) {
     regions = getUniProtRegions(entry);
     const length = entry.sequence.value.length;
     if (e.proteinBuilderUniProtSummary) {
-      e.proteinBuilderUniProtSummary.textContent = `${entry.accession} · ${entry.organism?.scientificName || 'Organism unspecified'} · ${length} aa`;
+      i18nUi.setText(e.proteinBuilderUniProtSummary, `${entry.accession} · ${entry.organism?.scientificName || 'Organism unspecified'} · ${length} aa`);
     }
     if (e.proteinBuilderUniProtRegion) {
       const options = regions.map((region, index) => `<option value="region-${index}"${region.selectable ? '' : ' disabled'}>${escapeHtml(`${region.type}${region.description ? `: ${region.description}` : ''} · ${region.start ?? '?'}–${region.end ?? '?'}${region.selectable ? '' : ' (uncertain boundary)'}`)}</option>`).join('');
-      e.proteinBuilderUniProtRegion.innerHTML = `<option value="full">Full sequence · 1–${length}</option>${options}`;
+      i18nUi.setHtml(e.proteinBuilderUniProtRegion, `<option value="full" data-i18n="dna.full.bf242c0c">${i18nUi.text("Full sequence · 1–")}${length}</option>${options}`);
       e.proteinBuilderUniProtRegion.value = 'full';
     }
     if (e.proteinBuilderUniProtDetail) e.proteinBuilderUniProtDetail.hidden = false;
@@ -168,12 +171,12 @@ export function installProteinBuilderUniProtPicker(ctx) {
     const requestedQuery = String(e.proteinBuilderUniProtQuery?.value || '').trim();
     if (!ctx.isUniProtSource() || busy) return;
     if (!requestedQuery) {
-      setStatus('Enter a UniProt query.');
+      setStatus(i18nUi.text("Enter a UniProt query."));
       return;
     }
     const bridge = ctx.getBridge?.();
     if (!bridge?.searchUniProt) {
-      setStatus('UniProt search is unavailable in this environment.');
+      setStatus(i18nUi.text("UniProt search is unavailable in this environment."));
       return;
     }
     const more = append && requestedQuery === query && Boolean(nextCursor);
@@ -188,7 +191,7 @@ export function installProteinBuilderUniProtPicker(ctx) {
     query = requestedQuery;
     busy = true;
     syncControls();
-    setStatus('Searching UniProt…');
+    setStatus(i18nUi.text("Searching UniProt…"));
     try {
       const response = await bridge.searchUniProt({ query, size: 10, ...(more ? { cursor: nextCursor } : {}) });
       if (token !== generation) return;
@@ -198,9 +201,9 @@ export function installProteinBuilderUniProtPicker(ctx) {
       items = [...items, ...found.filter((item) => item.accession && !seen.has(item.accession))];
       nextCursor = response.result?.nextCursor || '';
       renderResults();
-      setStatus(items.length ? '' : 'No proteins matched. Try a gene name, accession, or a different organism.');
+      setStatus((((((items.length ? '' : i18nUi.text("No proteins matched. Try a gene name, accession, or a different organism.")))))));
     } catch (error) {
-      if (token === generation) setStatus(error?.message || 'UniProt search failed. Try again.');
+      if (token === generation) setStatus((((((error?.message || i18nUi.text("UniProt search failed. Try again.")))))));
     } finally {
       if (token === generation) {
         busy = false;
@@ -222,7 +225,7 @@ export function installProteinBuilderUniProtPicker(ctx) {
       if (!protein.sequence?.value) {
         busy = true;
         syncControls();
-        setStatus('Loading UniProt sequence…');
+        setStatus(i18nUi.text("Loading UniProt sequence…"));
         const response = await ctx.getBridge?.()?.getUniProtEntry?.(selected.accession);
         if (token !== generation) return;
         if (!response?.ok) throw new Error(response?.error || 'Unable to load this UniProt protein.');
@@ -233,7 +236,7 @@ export function installProteinBuilderUniProtPicker(ctx) {
       showEntry(protein);
       setStatus(`${protein.proteinName || protein.entryId || protein.accession} · ${protein.reviewed ? 'Reviewed' : 'Unreviewed'}`);
     } catch (error) {
-      if (token === generation) setStatus(error?.message || 'Unable to load this UniProt protein.');
+      if (token === generation) setStatus((((((error?.message || i18nUi.text("Unable to load this UniProt protein.")))))));
     } finally {
       if (token === generation) {
         busy = false;

@@ -1,3 +1,5 @@
+import { createPresentation } from "../../i18n.mjs";
+const i18nUi = createPresentation("gel");
 import { buildLanesFromManualSegmentation, detectLadderBandRows } from '../analysis/analysis-core.js';
 import { buildQuantificationSignal } from '../analysis/image-processing.js';
 import { getLadderPresetBands } from '../constants.js';
@@ -45,20 +47,20 @@ function createManualLadderBands({
 
   function onDetectLadderBands() {
     if (!runtime.currentImage) {
-      deps.setStatus('Load a gel image before detecting ladder bands.');
+      deps.setStatus(i18nUi.text("Load a gel image before detecting ladder bands."));
       return;
     }
     const overrides = normalizeManualOverrides(runtime.manualOverrides);
     const lane = getLadderLaneShape(overrides);
     if (!lane) {
-      deps.setStatus('Set the ladder lane before detecting its bands.');
+      deps.setStatus(i18nUi.text("Set the ladder lane before detecting its bands."));
       return;
     }
     const standards = getLadderPresetBands(elements.gelLadderPresetSelect?.value)
       .filter((mw) => Number.isFinite(mw) && mw > 0)
       .sort((a, b) => b - a);
     if (!standards.length) {
-      deps.setStatus('Choose a ladder preset before detecting its bands.');
+      deps.setStatus(i18nUi.text("Choose a ladder preset before detecting its bands."));
       return;
     }
     const { signal } = buildQuantificationSignal(runtime.currentImage.gray);
@@ -70,7 +72,7 @@ function createManualLadderBands({
       count: standards.length
     });
     if (!rows.length) {
-      deps.setStatus('No ladder bands detected. Set them by hand with Set MW.');
+      deps.setStatus(i18nUi.text("No ladder bands detected. Set them by hand with Set MW."));
       return;
     }
     // ponytail: highest MW migrates least, so rows top-to-bottom pair with the preset
@@ -82,9 +84,7 @@ function createManualLadderBands({
     };
     renderOverrideStatus();
     deps.renderCanvas();
-    deps.setStatus(rows.length === standards.length
-      ? 'Click the top edge of the target band.'
-      : `Only ${rows.length} of ${standards.length} preset bands were detected. Check the labels and drag to adjust.`);
+    deps.setStatus(((rows.length === standards.length ? i18nUi.text("Click the top edge of the target band.") : i18nUi.text("Only {p0} of {p1} preset bands were detected. Check the labels and drag to adjust.", { p0: rows.length, p1: standards.length }))));
     deps.onRunAnalysis();
   }
 

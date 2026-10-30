@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 // Hover readout for sequence maps, shared by the Vector Builder and the library
 // preview.
 //
@@ -43,7 +46,7 @@ export function attachMapHoverLabel(config = {}) {
           return;
         }
         showTransientNotice(
-          result.copied ? `Copied primer ${result.kind === 'name' ? 'name' : 'sequence'}.` : 'Clipboard access is unavailable.',
+          (((((result.copied ? i18nUi.message("Copied primer {p0}.", { p0: result.kind === 'name' ? 'name' : 'sequence' }) : i18nUi.message("Clipboard access is unavailable.")))))),
           { type: result.copied ? 'success' : 'error' }
         );
       })();
@@ -79,9 +82,9 @@ export function attachMapHoverLabel(config = {}) {
     });
     const hasPrimerCard = detailHtml.includes('sequence-viewer-primer-hover-card');
     if (detailHtml) {
-      element.innerHTML = hasPrimerCard ? detailHtml : `<span class="vector-map__tooltip-title">${escapeHtml(text)}</span>${detailHtml}`;
+      i18nUi.setHtml(element, hasPrimerCard ? detailHtml : `<span class="vector-map__tooltip-title">${escapeHtml(text)}</span>${detailHtml}`);
     } else {
-      element.textContent = text;
+      i18nUi.setText(element, text);
     }
     element.classList?.toggle('has-protein-properties', detailHtml.includes('sequence-viewer-protein-hover'));
     interactivity?.setInteractive(detailHtml.includes('sequence-viewer-primer-copy-btn'));

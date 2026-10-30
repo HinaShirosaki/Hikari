@@ -7,7 +7,7 @@ const settingsModule = await readFile(new URL('../src/renderer/modules/settings/
 assert.match(markup, /<select id="setting-model">/);
 assert.doesNotMatch(markup, /<input id="setting-model"/);
 assert.doesNotMatch(markup, /id="setting-model-options"/);
-assert.match(settingsModule, /defaultOption\.textContent = 'Use the default model';/);
+assert.match(settingsModule, /i18nUi\.setText\(defaultOption, i18nUi\.message\("Use the default model"\)\)/);
 assert.match(settingsModule, /settingModel\.value = String\(selectedModel \|\| ''\)\.trim\(\);/);
 
 console.log('Settings model selector selfcheck passed.');

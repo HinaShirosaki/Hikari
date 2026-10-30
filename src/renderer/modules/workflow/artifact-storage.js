@@ -6,12 +6,13 @@ import {
   workflowNotebookPageFolderName,
   workflowTemplateFolderName
 } from '../../../shared/storage-layout.mjs';
+import { workflowError } from './localization.js';
 
 function blobToDataUrl(blob, FileReaderClass) {
   return new Promise((resolve, reject) => {
     const reader = new FileReaderClass();
     reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(new Error('Cannot convert imported file to data URL.'));
+    reader.onerror = () => reject(workflowError('file.convertFailed'));
     reader.readAsDataURL(blob);
   });
 }
@@ -79,13 +80,13 @@ export function createWorkflowArtifactStorage({
 
     const rootPath = String(state.settings?.storagePath || '').trim();
     if (!rootPath) {
-      throw new Error('Set Storage Folder Path in Settings before importing workflow files.');
+      throw workflowError('file.storageRequired');
     }
     if (!storageFolder) {
-      throw new Error('Workflow storage folder is missing.');
+      throw workflowError('file.folderMissing');
     }
     if (!windowObject?.hikariApi?.storeImportedFile || typeof FileReaderClass !== 'function') {
-      throw new Error('Imported file storage API is unavailable.');
+      throw workflowError('file.apiUnavailable');
     }
 
     const targetFolder = `${storageFolder}/ResultFiles`;
@@ -94,7 +95,7 @@ export function createWorkflowArtifactStorage({
     for (const file of selectedFiles) {
       const dataBase64 = extractBase64Payload(await blobToDataUrl(file, FileReaderClass));
       if (!dataBase64) {
-        throw new Error(`Cannot read ${file.name}.`);
+        throw workflowError('file.readFailed', { name: file.name });
       }
       const result = await windowObject.hikariApi.storeImportedFile({
         storagePath: rootPath,
@@ -103,7 +104,8 @@ export function createWorkflowArtifactStorage({
         dataBase64
       });
       if (!result?.ok) {
-        throw new Error(result?.error || `Failed to store ${file.name}.`);
+        if (result?.error) throw new Error(result.error);
+        throw workflowError('file.storeFailed', { name: file.name });
       }
       records.push({
         name: result.fileName || file.name,

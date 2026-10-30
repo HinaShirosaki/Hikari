@@ -329,27 +329,32 @@ test('workflow execution renderer lists runs as a ledger and opens the selected 
   });
 
   renderer.renderExecutionBoard();
+  // Keep the original English rendering assertions independent of opt-in
+  // translation metadata and the bound spans used for generated labels.
+  const englishMarkup = board.innerHTML
+    .replace(/<span data-i18n(?:-date)?="[^"]*"[^>]*>([^<]*)<\/span>/g, '$1')
+    .replace(/\sdata-i18n(?:-[\w-]+)?="[^"]*"/g, '');
 
   assert.equal(elements.workflowExecutionTitle.textContent, 'NiNTA');
-  assert.match(board.innerHTML, /<table class="workflow-ledger">/);
-  assert.match(board.innerHTML, /<th>Process<\/th>\s*<th>Progress<\/th>\s*<th>Next step<\/th>\s*<th>Updated<\/th>/);
-  assert.doesNotMatch(board.innerHTML, /Entity|workflow-progress-track|data-workflow-step-popover/);
+  assert.match(englishMarkup, /<table class="workflow-ledger">/);
+  assert.match(englishMarkup, /<th>Process<\/th>\s*<th>Progress<\/th>\s*<th>Next step<\/th>\s*<th>Updated<\/th>/);
+  assert.doesNotMatch(englishMarkup, /Entity|workflow-progress-track|data-workflow-step-popover/);
   // Every run is one row; the selected run is highlighted and its name is not an inline input.
-  assert.match(board.innerHTML, /workflow-ledger-row is-selected" data-workflow-run-open="workflow-1"[\s\S]*workflow-ledger-name">NiNTA 1<\/div>/);
-  assert.match(board.innerHTML, /workflow-ledger-row" data-workflow-run-open="workflow-2"/);
-  assert.match(board.innerHTML, /workflow-project-heading[\s\S]*GFP reporter panel[\s\S]*data-workflow-project-add="project-1"[\s\S]*data-workflow-run-open="workflow-1"/);
-  assert.match(board.innerHTML, /workflow-project-heading[\s\S]*No project[\s\S]*data-workflow-run-open="workflow-2"/);
-  const ledger = board.innerHTML.slice(0, board.innerHTML.indexOf('<aside class="workflow-drawer"'));
+  assert.match(englishMarkup, /workflow-ledger-row is-selected" data-workflow-run-open="workflow-1"[\s\S]*workflow-ledger-name">NiNTA 1<\/div>/);
+  assert.match(englishMarkup, /workflow-ledger-row" data-workflow-run-open="workflow-2"/);
+  assert.match(englishMarkup, /workflow-project-heading[\s\S]*GFP reporter panel[\s\S]*data-workflow-project-add="project-1"[\s\S]*data-workflow-run-open="workflow-1"/);
+  assert.match(englishMarkup, /workflow-project-heading[\s\S]*No project[\s\S]*data-workflow-run-open="workflow-2"/);
+  const ledger = englishMarkup.slice(0, englishMarkup.indexOf('<aside class="workflow-drawer"'));
   assert.doesNotMatch(ledger, /data-workflow-run-name=/);
   // Stepper: done, next (pending), locked.
-  assert.match(board.innerHTML, /workflow-stepper-node is-finished"[\s\S]*data-workflow-step-open="block-a"/);
-  assert.match(board.innerHTML, /workflow-stepper-node is-pending"[\s\S]*data-workflow-step-open="block-b"/);
-  assert.match(board.innerHTML, /workflow-stepper-node is-empty is-locked"[\s\S]*data-workflow-step-open="block-c"[\s\S]*disabled aria-disabled="true"/);
-  assert.match(board.innerHTML, /workflow-ledger-count">1\/3</);
-  assert.match(board.innerHTML, /workflow-ledger-next">Record purification yield<\/span> <span class="workflow-ledger-chip is-warn">In progress/);
-  assert.match(board.innerHTML, /data-workflow-run-open="workflow-2"[\s\S]*workflow-ledger-count">0\/3<[\s\S]*workflow-ledger-next">Ni-NTA Purification<\/span><\/td>/);
+  assert.match(englishMarkup, /workflow-stepper-node is-finished"[\s\S]*data-workflow-step-open="block-a"/);
+  assert.match(englishMarkup, /workflow-stepper-node is-pending"[\s\S]*data-workflow-step-open="block-b"/);
+  assert.match(englishMarkup, /workflow-stepper-node is-empty is-locked"[\s\S]*data-workflow-step-open="block-c"[\s\S]*disabled aria-disabled="true"/);
+  assert.match(englishMarkup, /workflow-ledger-count">1\/3</);
+  assert.match(englishMarkup, /workflow-ledger-next">Record purification yield<\/span> <span class="workflow-ledger-chip is-warn">In progress/);
+  assert.match(englishMarkup, /data-workflow-run-open="workflow-2"[\s\S]*workflow-ledger-count">0\/3<[\s\S]*workflow-ledger-next">Ni-NTA Purification<\/span><\/td>/);
   // Drawer for the selected run, with the step that is due unfolded and its controls restored.
-  const drawer = board.innerHTML.slice(board.innerHTML.indexOf('<aside class="workflow-drawer"'));
+  const drawer = englishMarkup.slice(englishMarkup.indexOf('<aside class="workflow-drawer"'));
   assert.match(drawer, /aria-label="Workflow name" value="NiNTA 1" data-workflow-run-name="workflow-1"/);
   assert.match(drawer, /data-workflow-drawer-close="true"/);
   assert.match(drawer, /workflow-drawer-progress-bar"><i style="width: 33%;">/);
@@ -473,9 +478,9 @@ test('workflow template navigation and graph actions use compact accessible icon
   const viewSource = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'workflow-management-view.html'), 'utf8');
   const viewCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'workflow-management-view.css'), 'utf8');
 
-  assert.match(viewSource, /id="workflow-entry-back-btn"[^>]*class="workflow-entry-back-icon-btn"[^>]*aria-label="Back to Home"[^>]*>[\s\S]*<svg[\s\S]*<span class="sr-only">Back to Home<\/span>/);
-  assert.match(viewSource, /id="workflow-save-template-btn"[^>]*class="primary-btn workflow-template-action-icon-btn"[^>]*aria-label="Save Current Graph"[^>]*>[\s\S]*<svg[\s\S]*<span class="sr-only">Save Current Graph<\/span>/);
-  assert.match(viewSource, /id="workflow-template-cancel-btn"[^>]*class="ghost-btn workflow-template-action-icon-btn"[^>]*aria-label="Cancel"[^>]*>[\s\S]*<svg[\s\S]*<span class="sr-only">Cancel<\/span>/);
+  assert.match(viewSource, /id="workflow-entry-back-btn"[^>]*class="workflow-entry-back-icon-btn"[^>]*aria-label="Back to Home"[^>]*>[\s\S]*<svg[\s\S]*<span class="sr-only"[^>]*>Back to Home<\/span>/);
+  assert.match(viewSource, /id="workflow-save-template-btn"[^>]*class="primary-btn workflow-template-action-icon-btn"[^>]*aria-label="Save Current Graph"[^>]*>[\s\S]*<svg[\s\S]*<span class="sr-only"[^>]*>Save Current Graph<\/span>/);
+  assert.match(viewSource, /id="workflow-template-cancel-btn"[^>]*class="ghost-btn workflow-template-action-icon-btn"[^>]*aria-label="Cancel"[^>]*>[\s\S]*<svg[\s\S]*<span class="sr-only"[^>]*>Cancel<\/span>/);
   assert.match(viewCss, /\.workflow-entry-panel > \.workflow-entry-back-icon-btn \{[\s\S]*?width: 30px;[\s\S]*?height: 30px;[\s\S]*?border: 0;[\s\S]*?background: transparent;/);
   assert.match(viewCss, /\.workflow-template-actions > \.workflow-template-action-icon-btn \{[\s\S]*?width: 30px;[\s\S]*?height: 30px;/);
   assert.match(viewCss, /\.workflow-editor-sidebar-pinned\.left-rail-template__pinned \{[\s\S]*?border-bottom: 0;/);
@@ -549,7 +554,7 @@ test('workflow protocol picker matches the Biology Notebook search-result patter
 
   search.value = 'missing';
   optionLists.renderProtocolResults();
-  assert.equal(results.innerHTML, '<p class="workflow-block-protocol-search-empty">No matching protocols.</p>');
+  assert.match(results.innerHTML, /^<p class="workflow-block-protocol-search-empty"[^>]*>No matching protocols\.<\/p>$/);
 });
 
 test('workflow protocol picker clears stale selection on search and selects result rows', () => {

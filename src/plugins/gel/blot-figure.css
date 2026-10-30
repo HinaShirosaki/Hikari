@@ -77,16 +77,20 @@
 .gel-nav-icon.gel-figure-item-icon { flex: 0 0 16px; width: 16px; height: 16px; pointer-events: none; }
 .gel-figure-preview-heading { justify-content: space-between; }
 .gel-figure-placement { display: grid; gap: 10px; border-top: 1px solid var(--theme-border-soft); padding-top: 14px; }
+/* The first section starts the panel, so it needs no divider above it. */
+.gel-figure-controls > section:first-of-type { border-top: 0; padding-top: 0; }
+/* The Stack table's inputs (see .gel-table-input) lie over the figure canvas;
+ * only the inputs take the pointer, so blots stay draggable around them. */
+.gel-figure-table-layer { position: absolute; container-type: inline-size; pointer-events: none; }
+.gel-figure-table-layer[hidden] { display: none; }
+#gel-view .gel-figure-table-layer .gel-table-input { pointer-events: auto; }
 .gel-figure-placement p { margin: 0; line-height: 1.5; }
 .gel-figure-placement h4 { margin: 0; }
-#gel-view .gel-figure-controls .ghost-btn, #gel-view .gel-figure-navigation .ghost-btn { min-height: 30px; padding: 5px 8px; font-size: 0.75rem; }
+#gel-view .gel-figure-controls :is(.ghost-btn, .primary-btn), #gel-view .gel-figure-navigation .ghost-btn { min-height: 30px; padding: 5px 8px; font-size: 0.75rem; }
 #gel-view .gel-figure-header .gel-nav-icon-btn { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 32px; width: 32px; height: 32px; padding: 6px; border: 0; border-radius: 7px; background: transparent; }
 #gel-view .gel-nav-icon-btn:hover:not(:disabled) { background: var(--theme-fill); }
 #gel-view .gel-nav-icon-btn:disabled { opacity: 0.4; }
 .gel-nav-icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-.gel-figure-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.gel-figure-exact summary { cursor: pointer; color: var(--theme-text-muted); font-size: 0.75rem; }
-.gel-figure-exact[open] summary { margin-bottom: 8px; }
 .gel-figure-preview-area { display: flex; flex-direction: column; min-height: 0; min-width: 0; gap: 10px; }
 .gel-figure-preview { position: relative; flex: 1; min-height: 0; overflow: auto; padding: 12px; background: var(--theme-surface-elevated); border: 1px solid var(--theme-border-soft); }
 /* The canvas takes pointer drags (move, stretch, crop); the outline marks the blot under the pointer. */
@@ -114,6 +118,10 @@
 .gel-figure-layer-focus { border: 0; background: transparent; }
 .gel-figure-root-layers { min-height: 34px; display: grid; align-content: start; gap: var(--space-2); }
 .gel-figure-stack-group { min-width: 0; }
+.gel-figure-stack-head { position: relative; min-width: 0; }
+#gel-view .gel-figure-stack-head .gel-figure-stack-layer { padding-right: 32px; }
+#gel-view .gel-figure-stack-fold { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); }
+.gel-figure-stack-children[hidden] { display: none; }
 .gel-figure-layer-focus { cursor: grab; touch-action: none; user-select: none; }
 .gel-figure-drag-label { position: fixed; z-index: 10000; max-width: 240px; padding: 7px 12px; pointer-events: none; border: 1px solid var(--theme-accent); border-radius: 7px; color: var(--theme-text); background: var(--theme-surface); box-shadow: var(--theme-shadow-medium); font-size: 0.8rem; }
 .gel-figure-layer-focus.is-dragging-gel-row { opacity: 0.45; }
@@ -129,10 +137,7 @@
 .gel-figure-stack-children > .folder-tree-template__leaf:first-child::after { top: -2px; }
 .gel-figure-stack-children > .folder-tree-template__leaf:last-child::after { bottom: 50%; }
 #gel-view .gel-figure-stack-children button { width: 100%; }
-.gel-figure-tools-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.gel-figure-tools-head h3 { margin: 0; font-size: 0.88rem; }
 .gel-figure-save { width: 100%; }
-#gel-figure-preview-detail { overflow-wrap: anywhere; }
 
 #gel-view .gel-processing-notice { position: absolute; inset-inline-start: 50%; bottom: 14px; transform: translateX(-50%); z-index: 5; padding: 6px 12px; border: 1px solid var(--theme-border-soft); border-radius: 8px; background: var(--theme-surface-elevated); color: var(--theme-text-muted); font-size: .8rem; pointer-events: none; }
 #gel-view .gel-processing-notice[hidden] { display: none; }

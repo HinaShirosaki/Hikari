@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "../../lib/i18n/shell.js";
+const i18nUi = createPresentation("shell");
 import { ACTION_WHAT_IS_IT, ACTION_WHERE_TO_BUY } from './constants.js';
 import { getCurrentContext, getHostRegistration } from './controller-context.js';
 import { buildPanelHtml } from './panel-rendering.js';
@@ -12,20 +15,20 @@ export function ensureUi(ctx) {
     ctx.menuNode = ctx.rootDocument.createElement('div');
     ctx.menuNode.className = 'selection-insight-menu';
     ctx.menuNode.hidden = true;
-    ctx.menuNode.innerHTML = `
+    i18nUi.setHtml(ctx.menuNode, `
       <button type="button" class="selection-insight-menu-item hikari-agent-action" data-selection-insight-action="${ACTION_WHAT_IS_IT}">
         <span class="selection-insight-menu-copy">
           <span class="selection-insight-menu-label">${normalizeActionLabel(ACTION_WHAT_IS_IT)}</span>
-          <span class="selection-insight-menu-description">Understand its meaning and role</span>
+          <span class="selection-insight-menu-description">${i18nUi.html("Understand its meaning and role")}</span>
         </span>
       </button>
       <button type="button" class="selection-insight-menu-item hikari-agent-action" data-selection-insight-action="${ACTION_WHERE_TO_BUY}">
         <span class="selection-insight-menu-copy">
           <span class="selection-insight-menu-label">${normalizeActionLabel(ACTION_WHERE_TO_BUY)}</span>
-          <span class="selection-insight-menu-description">Explore products and where to buy</span>
+          <span class="selection-insight-menu-description">${i18nUi.html("Explore products and where to buy")}</span>
         </span>
       </button>
-    `;
+    `);
     ctx.rootDocument.body.appendChild(ctx.menuNode);
     ctx.menuNode.addEventListener('click', (event) => {
       const actionButton = event.target?.closest?.('[data-selection-insight-action]');
@@ -77,7 +80,7 @@ export function hidePanel(ctx) {
   ctx.activePanelState = null;
   if (ctx.panelNode) {
     ctx.panelNode.hidden = true;
-    ctx.panelNode.innerHTML = '';
+    i18nUi.setHtml(ctx.panelNode, '');
   }
 }
 
@@ -116,7 +119,7 @@ export function openPanelByInsightId(ctx, hostKey, insightId, options = {}) {
     return;
   }
   const anchor = registration.host.querySelector(`[data-selection-insight-anchor-id="${insightId.replace(/"/g, '\\"')}"]`);
-  ctx.panelNode.innerHTML = buildPanelHtml(insight);
+  i18nUi.setHtml(ctx.panelNode, buildPanelHtml(insight));
   ctx.panelNode.hidden = false;
   const anchorRect = anchor?.getBoundingClientRect?.() || options.fallbackRect || null;
   if (anchorRect) {

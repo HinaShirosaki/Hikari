@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
 import { showTransientNotice } from '../../../lib/notify.js';
 import { asArray, ensureObject } from '../../../lib/normalize.js';
 import { escapeHtml } from '../../../lib/html.js';
@@ -87,9 +90,9 @@ function renderPaperCard(paper = {}) {
       ? `<p class="small-note project-paper-finder-result-meta">${metaBits.join(' · ')}</p>`
       : '',
     summary ? `<p class="project-paper-finder-result-summary">${summary}</p>` : '',
-    reason ? `<p class="small-note project-paper-finder-result-reason">Why: ${reason}</p>` : '',
+    reason ? `<p class="small-note project-paper-finder-result-reason">${i18nUi.html("Why:")} ${reason}</p>` : '',
     savedPath
-      ? `<p class="project-paper-finder-result-saved">Saved<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg><button type="button" class="project-paper-finder-open" data-paper-finder-open="${escapeHtml(savedPath)}" data-paper-finder-open-relative="${escapeHtml(localFile.relative_path)}" title="Open in Papers">Open</button></p>`
+      ? `<p class="project-paper-finder-result-saved">${i18nUi.html("Saved")}<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg><button type="button" class="project-paper-finder-open" data-paper-finder-open="${escapeHtml(savedPath)}" data-paper-finder-open-relative="${escapeHtml(localFile.relative_path)}" title="Open in Papers" data-i18n-title="notebook.full.b3b7756b">${i18nUi.html("Open")}</button></p>`
       : '',
     '</article>'
   ].join('');
@@ -153,9 +156,7 @@ export function createProjectPaperFinderController({
     }
     if (controls.timezone) {
       const localZone = localTimeZone();
-      controls.timezone.textContent = scheduleTimezone === localZone
-        ? `Local time · ${localZone}`
-        : `Time zone · ${scheduleTimezone}`;
+      i18nUi.setText(controls.timezone, (scheduleTimezone === localZone ? i18nUi.message("Local time · {p0}", { p0: localZone }) : i18nUi.message("Time zone · {p0}", { p0: scheduleTimezone })));
     }
   }
 
@@ -167,16 +168,16 @@ export function createProjectPaperFinderController({
     const result = taskRunResult(task);
     const papers = asArray(result.papers);
     if (!papers.length) {
-      container.innerHTML = '';
+      i18nUi.setHtml(container, '');
       container.hidden = true;
       return;
     }
     const runSummary = escapeHtml(result.summary)
       || `Found ${papers.length} paper${papers.length === 1 ? '' : 's'}.`;
-    container.innerHTML = [
+    i18nUi.setHtml(container, [
       `<p class="small-note project-paper-finder-results-head">${runSummary}</p>`,
       ...papers.map(renderPaperCard)
-    ].join('');
+    ].join(''));
     container.hidden = false;
   }
 
@@ -188,7 +189,7 @@ export function createProjectPaperFinderController({
     if (!status) {
       return;
     }
-    status.textContent = cleanText(message);
+    i18nUi.setOwnedText(status, cleanText(message));
     status.classList?.toggle?.('is-error', Boolean(error));
   }
 
@@ -210,17 +211,17 @@ export function createProjectPaperFinderController({
       controls.form.dataset.taskId = hasTask ? activeTask.id : '';
     }
     if (controls.stateLabel) {
-      controls.stateLabel.textContent = hasTask ? formatNextRun(activeTask) : 'Not scheduled';
+      i18nUi.setText(controls.stateLabel, (hasTask ? formatNextRun(activeTask) : i18nUi.message("Not scheduled")));
       controls.stateLabel.dataset.state = !hasTask ? 'none' : activeTask.enabled === false ? 'paused' : 'active';
     }
     if (controls.saveBtn) {
-      controls.saveBtn.textContent = hasTask ? 'Save schedule' : 'Schedule';
+      i18nUi.setText(controls.saveBtn, (hasTask ? i18nUi.message("Save schedule") : i18nUi.message("Schedule")));
     }
     [controls.runBtn, controls.toggleBtn, controls.removeBtn].filter(Boolean).forEach((button) => {
       button.hidden = !hasTask;
     });
     if (controls.toggleBtn && hasTask) {
-      controls.toggleBtn.textContent = activeTask.enabled === false ? 'Resume' : 'Pause';
+      i18nUi.setText(controls.toggleBtn, (activeTask.enabled === false ? i18nUi.message("Resume") : i18nUi.message("Pause")));
     }
   }
 
@@ -282,7 +283,7 @@ export function createProjectPaperFinderController({
       return null;
     }
     if (typeof api?.listPaperFindingTasks !== 'function') {
-      setStatus('Scheduled paper finding is unavailable in this build.', { error: true });
+      setStatus(i18nUi.text("Scheduled paper finding is unavailable in this build."), { error: true });
       const controls = elements();
       if (controls.saveBtn) {
         controls.saveBtn.disabled = true;
@@ -290,14 +291,14 @@ export function createProjectPaperFinderController({
       return null;
     }
 
-    setStatus('Loading schedule...');
+    setStatus(i18nUi.text("Loading schedule..."));
     try {
       const response = await api.listPaperFindingTasks();
       if (revision !== loadRevision || cleanText(activeProject?.id) !== cleanText(project?.id)) {
         return null;
       }
       if (response?.ok !== true) {
-        setStatus(response?.error || 'Could not load the paper-finding schedule.', { error: true });
+        setStatus((((((response?.error || i18nUi.text("Could not load the paper-finding schedule.")))))), { error: true });
         return null;
       }
       const task = asArray(response.tasks).find((entry) => taskMatchesProject(entry, project)) || null;
@@ -308,7 +309,7 @@ export function createProjectPaperFinderController({
       return task;
     } catch (error) {
       if (revision === loadRevision) {
-        setStatus(error?.message || 'Could not load the paper-finding schedule.', { error: true });
+        setStatus((((((error?.message || i18nUi.text("Could not load the paper-finding schedule.")))))), { error: true });
       }
       return null;
     }
@@ -355,24 +356,24 @@ export function createProjectPaperFinderController({
     }
     const saveSchedule = api?.schedulePaperFinding;
     if (typeof saveSchedule !== 'function') {
-      setStatus('Scheduled paper finding is unavailable in this build.', { error: true });
+      setStatus(i18nUi.text("Scheduled paper finding is unavailable in this build."), { error: true });
       return null;
     }
     setBusy(true);
-    setStatus(activeTask ? 'Saving schedule...' : 'Creating schedule...');
+    setStatus((((((activeTask ? i18nUi.text("Saving schedule...") : i18nUi.text("Creating schedule...")))))));
     try {
       const response = await saveSchedule(buildInput());
       if (response?.ok !== true || !response.task) {
-        setStatus(response?.error || 'Could not save the paper-finding schedule.', { error: true });
+        setStatus((((((response?.error || i18nUi.text("Could not save the paper-finding schedule.")))))), { error: true });
         return null;
       }
       syncTask(response.task);
       hydrateFields(response.task);
-      setStatus('Schedule saved. Results will remain metadata-only.');
+      setStatus(i18nUi.text("Schedule saved. Results will remain metadata-only."));
       onTaskChanged(response.task);
       return response.task;
     } catch (error) {
-      setStatus(error?.message || 'Could not save the paper-finding schedule.', { error: true });
+      setStatus((((((error?.message || i18nUi.text("Could not save the paper-finding schedule.")))))), { error: true });
       return null;
     } finally {
       setBusy(false);
@@ -384,11 +385,11 @@ export function createProjectPaperFinderController({
       return null;
     }
     setBusy(true);
-    setStatus('Finding papers...');
+    setStatus(i18nUi.text("Finding papers..."));
     try {
       const response = await api.runPaperFindingTask(activeTask.id);
       if (response?.ok !== true) {
-        setStatus(response?.error || 'Paper finding failed.', { error: true });
+        setStatus((((((response?.error || i18nUi.text("Paper finding failed.")))))), { error: true });
         return null;
       }
       if (response.task) {
@@ -397,14 +398,12 @@ export function createProjectPaperFinderController({
       renderResults(response.task || activeTask);
       const paperCount = paperCountFromRun(response);
       setStatus(
-        paperCount
-          ? `Found ${paperCount} paper card${paperCount === 1 ? '' : 's'} as metadata.`
-          : 'Paper finding completed with no matching cards.'
+        (((((paperCount ? i18nUi.text((paperCount === 1 ? "Found {p0} paper card as metadata." : "Found {p0} paper cards as metadata."), { p0: paperCount }) : i18nUi.text("Paper finding completed with no matching cards."))))))
       );
       onTaskChanged(response.task || activeTask);
       return response;
     } catch (error) {
-      setStatus(error?.message || 'Paper finding failed.', { error: true });
+      setStatus((((((error?.message || i18nUi.text("Paper finding failed.")))))), { error: true });
       return null;
     } finally {
       setBusy(false);
@@ -417,19 +416,19 @@ export function createProjectPaperFinderController({
     }
     const nextEnabled = activeTask.enabled === false;
     setBusy(true);
-    setStatus(nextEnabled ? 'Resuming schedule...' : 'Pausing schedule...');
+    setStatus((((((nextEnabled ? i18nUi.text("Resuming schedule...") : i18nUi.text("Pausing schedule...")))))));
     try {
       const response = await api.updateScheduledTask(activeTask.id, { enabled: nextEnabled });
       if (response?.ok !== true || !response.task) {
-        setStatus(response?.error || 'Could not update the schedule.', { error: true });
+        setStatus((((((response?.error || i18nUi.text("Could not update the schedule.")))))), { error: true });
         return null;
       }
       syncTask(response.task);
-      setStatus(nextEnabled ? 'Paper finding resumed.' : 'Paper finding paused.');
+      setStatus((((((nextEnabled ? i18nUi.text("Paper finding resumed.") : i18nUi.text("Paper finding paused.")))))));
       onTaskChanged(response.task);
       return response.task;
     } catch (error) {
-      setStatus(error?.message || 'Could not update the schedule.', { error: true });
+      setStatus((((((error?.message || i18nUi.text("Could not update the schedule.")))))), { error: true });
       return null;
     } finally {
       setBusy(false);
@@ -441,21 +440,21 @@ export function createProjectPaperFinderController({
       return null;
     }
     setBusy(true);
-    setStatus('Removing schedule...');
+    setStatus(i18nUi.text("Removing schedule..."));
     try {
       const response = await api.deletePaperFindingTask(activeTask.id);
       if (response?.ok !== true) {
-        setStatus(response?.error || 'Could not remove the schedule.', { error: true });
+        setStatus((((((response?.error || i18nUi.text("Could not remove the schedule.")))))), { error: true });
         return null;
       }
       syncTask(null);
       hydrateFields(null);
       renderResults(null);
-      setStatus('Paper-finding schedule removed.');
+      setStatus(i18nUi.text("Paper-finding schedule removed."));
       onTaskChanged(null);
       return response;
     } catch (error) {
-      setStatus(error?.message || 'Could not remove the schedule.', { error: true });
+      setStatus((((((error?.message || i18nUi.text("Could not remove the schedule.")))))), { error: true });
       return null;
     } finally {
       setBusy(false);
@@ -469,7 +468,7 @@ export function createProjectPaperFinderController({
     try {
       await onOpenPaper({ filePath, relativePath: cleanText(relativePath) });
     } catch (error) {
-      showTransientNotice(error?.message || 'Could not open the saved PDF.', { type: 'error' });
+      showTransientNotice((((((error?.message || i18nUi.message("Could not open the saved PDF.")))))), { type: 'error' });
     }
   }
 

@@ -1,3 +1,5 @@
+import { createPresentation } from "./i18n.mjs";
+const i18nUi = createPresentation("figura");
 // Copied from the public-API Gel rail adapter; no host source imports.
 const DEFAULT_WIDTH = 280;
 const DEFAULT_MIN = 240;
@@ -98,8 +100,8 @@ export function initPluginLeftRailResizer({
       toggle.hidden = !foldable;
       toggle.setAttribute('aria-busy', String(folding));
       toggle.setAttribute('aria-expanded', String(!hidden));
-      toggle.setAttribute('aria-label', hidden ? 'Show illustrations' : 'Hide illustrations');
-      toggle.title = hidden ? 'Show illustrations' : 'Hide illustrations';
+      i18nUi.setAttribute(toggle, "aria-label", (hidden ? i18nUi.message("Show library") : i18nUi.message("Hide library")));
+      i18nUi.setAttribute(toggle, "title", (hidden ? i18nUi.message("Show library") : i18nUi.message("Hide library")));
     }
   }
 

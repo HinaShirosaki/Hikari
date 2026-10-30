@@ -1,5 +1,6 @@
 import { oppositeAxis } from '../shared.js';
 import { parseWellId, wellIdFor } from '../plate-model.js';
+import { plateUi } from '../localization.js';
 
 // Plate-preview DOM event handlers plus the focus/keyboard-navigation helpers
 // they drive. Pure event entry points wired by index.js; no layout state of its own.
@@ -57,7 +58,7 @@ export function createPlatePreviewEvents({
       renderPlatePreview();
       renderResultTable();
       setLayoutStatus('');
-      setCsvStatus(`Mapped wells: ${runtime.currentLayout.length}.`);
+      setCsvStatus(plateUi('status.mappedWells', { count: runtime.currentLayout.length }));
       return;
     }
 
@@ -76,8 +77,8 @@ export function createPlatePreviewEvents({
     );
     renderPlatePreview();
     renderResultTable();
-    setLayoutStatus(`Updated ${String(inlineInput.dataset.well || '').trim().toUpperCase()}.`);
-    setCsvStatus(`Mapped wells: ${runtime.currentLayout.length}.`);
+    setLayoutStatus(plateUi('status.updatedWell', { well: String(inlineInput.dataset.well || '').trim().toUpperCase() }));
+    setCsvStatus(plateUi('status.mappedWells', { count: runtime.currentLayout.length }));
   }
 
   function onPlatePreviewFocusIn(event) {

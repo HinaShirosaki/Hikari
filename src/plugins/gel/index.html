@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Gel Analysis</title>
+    <title><span data-i18n="gel.full.9f9c9abb">Gel Analysis</span></title>
 
     <!-- The app's own stylesheets, in the order css-order.json builds them, so
          the ported view looks like it did inside Hikari. -->
@@ -33,11 +33,14 @@
   <body class="plugin-gel">
     <section id="boot" class="plugin-gel__boot plugin-gel__boot--loading" role="status" aria-live="polite" aria-atomic="true">
       <span class="plugin-gel__boot-indicator" aria-hidden="true"></span>
-      <p id="boot-message" class="plugin-gel__boot-message">Loading gel workspace&hellip;</p>
-      <button id="boot-retry" class="ghost-btn plugin-gel__boot-retry" type="button" hidden>Try again</button>
+      <p id="boot-message" class="plugin-gel__boot-message"><span data-i18n="gel.full.41bde6d8">Loading gel workspace&hellip;</span></p>
+      <button id="boot-retry" class="ghost-btn plugin-gel__boot-retry" type="button" hidden><span data-i18n="gel.full.213e90fa">Try again</span></button>
     </section>
     <div id="gel-host" aria-busy="true" hidden></div>
     <script src="./hikari.js"></script>
+    <script src="./locales/en.js"></script>
+<script src="./locales/es.js"></script>
+    <script src="./i18n.js"></script>
     <script type="module" src="./main.js"></script>
   </body>
 </html>

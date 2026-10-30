@@ -1,3 +1,4 @@
+import { toolError } from '../localization.js';
 // Canvas primitives shared by the colony counter: pointer mapping, source
 // copying, and image loading.
 import { clampNumber } from '../common.js';
@@ -94,7 +95,7 @@ function clearCanvas(canvas) {
 function loadImageElementFromFile(file) {
   return new Promise((resolve, reject) => {
     if (!file) {
-      reject(new Error('No image file selected.'));
+      reject(toolError('colony.error.noImage'));
       return;
     }
     const url = URL.createObjectURL(file);
@@ -105,7 +106,7 @@ function loadImageElementFromFile(file) {
     };
     image.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error('Failed to load selected image.'));
+      reject(toolError('colony.error.loadImage'));
     };
     image.src = url;
   });
@@ -115,11 +116,11 @@ function loadImageElementFromFile(file) {
 function loadImageElementFromSrc(imgElement, src) {
   return new Promise((resolve, reject) => {
     if (!imgElement) {
-      reject(new Error('Cropper image host is unavailable.'));
+      reject(toolError('colony.error.cropHost'));
       return;
     }
     imgElement.onload = () => resolve();
-    imgElement.onerror = () => reject(new Error('Failed to prepare image for cropper.'));
+    imgElement.onerror = () => reject(toolError('colony.error.cropImage'));
     imgElement.src = src;
   });
 }

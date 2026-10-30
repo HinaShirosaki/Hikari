@@ -1,3 +1,6 @@
+import { createPresentation } from "../../i18n.mjs";
+import "../../i18n.mjs";
+const i18nUi = createPresentation("gel");
 import { clamp, round } from '../shared.js';
 import {
   buildLinearPath,
@@ -199,9 +202,9 @@ function renderPeakEditorPlaceholder(svg) {
   } = getPeakEditorLayout(svg, true);
   svg.setAttribute('preserveAspectRatio', 'none');
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-  svg.innerHTML = `
+  i18nUi.setHtml(svg, `
     <line class="peak-editor-grid" x1="${plotLeft}" y1="${plotBottom}" x2="${plotRight}" y2="${plotBottom}" />
-  `;
+  `);
 }
 
 function buildPeakAreaPath(profile, integration, startRow, endRow, scales) {
@@ -330,7 +333,7 @@ function renderPeakEditorSvg(svg, profile, integrations = [], hoverRow = null, m
 
   svg.setAttribute('preserveAspectRatio', 'none');
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-  svg.innerHTML = `
+  i18nUi.setHtml(svg, `
     <line class="peak-editor-grid" x1="${plotLeft}" y1="${plotBottom}" x2="${plotRight}" y2="${plotBottom}" />
     <line class="peak-editor-grid" x1="${plotLeft}" y1="${plotTop + ((plotBottom - plotTop) / 4)}" x2="${plotRight}" y2="${plotTop + ((plotBottom - plotTop) / 4)}" />
     <line class="peak-editor-grid" x1="${plotLeft}" y1="${plotTop + ((plotBottom - plotTop) / 2)}" x2="${plotRight}" y2="${plotTop + ((plotBottom - plotTop) / 2)}" />
@@ -341,9 +344,9 @@ function renderPeakEditorSvg(svg, profile, integrations = [], hoverRow = null, m
     <circle class="peak-editor-apex" cx="${peakX}" cy="${peakY}" r="5" />
     ${overlayMarkup.join('')}
     ${hoverMarkup}
-    <text class="peak-editor-axis-label" x="${plotLeft}" y="${height - Math.min(10, height / 8)}">Top</text>
-    <text class="peak-editor-axis-label" x="${plotRight}" y="${height - Math.min(10, height / 8)}" text-anchor="end">Bottom</text>
-  `;
+    <text class="peak-editor-axis-label" x="${plotLeft}" y="${height - Math.min(10, height / 8)}">${i18nUi.svg("Top")}</text>
+    <text class="peak-editor-axis-label" x="${plotRight}" y="${height - Math.min(10, height / 8)}" text-anchor="end">${i18nUi.svg("Bottom")}</text>
+  `);
 }
 
 export {

@@ -1,8 +1,8 @@
       </section>
-      <aside id="universal-agent-chat-rail" class="universal-agent-chat-rail" aria-label="Agent Chat Rail" aria-hidden="true" data-state="collapsed" hidden>
-        <div class="universal-agent-chat-rail__tools" role="group" aria-label="Workspace tools">
-          <div id="plugin-workspace-tools" class="plugin-workspace-tools" role="toolbar" aria-label="Plugin tools" aria-orientation="vertical" hidden></div>
-          <div id="paper-viewer-toolbar" class="papers-viewer-toolbar" role="toolbar" aria-label="PDF controls" aria-orientation="vertical" hidden>
+      <aside id="universal-agent-chat-rail" class="universal-agent-chat-rail" aria-label="Agent Chat Rail" data-i18n-aria-label="agent.rail.label" aria-hidden="true" data-state="collapsed" hidden>
+        <div class="universal-agent-chat-rail__tools" role="group" aria-label="Workspace tools" data-i18n-aria-label="agent.rail.tools">
+          <div id="plugin-workspace-tools" class="plugin-workspace-tools" role="toolbar" aria-label="Plugin tools" data-i18n-aria-label="agent.rail.pluginTools" aria-orientation="vertical" hidden></div>
+          <div id="paper-viewer-toolbar" class="papers-viewer-toolbar" role="toolbar" aria-label="PDF controls" data-i18n-aria-label="papers.toolbar.label" aria-orientation="vertical" hidden>
             <div class="papers-viewer-page-cluster">
               <button
                 type="button"
@@ -10,11 +10,13 @@
                 class="ghost-btn papers-viewer-page-nav-btn"
                 aria-label="Previous page"
                 title="Previous page"
+                data-i18n-aria-label="papers.toolbar.prev"
+                data-i18n-title="papers.toolbar.prev"
               >
                 <svg class="papers-viewer-toolbar-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 14 6-6 6 6"></path></svg>
               </button>
               <label class="papers-viewer-page-field">
-                <input id="paper-viewer-page-input" type="number" min="1" value="1" aria-label="Page number" />
+                <input id="paper-viewer-page-input" type="number" min="1" value="1" aria-label="Page number" data-i18n-aria-label="papers.toolbar.page" />
               </label>
               <span id="paper-viewer-page-count" class="small-note">/ 0</span>
               <button
@@ -23,85 +25,87 @@
                 class="ghost-btn papers-viewer-page-nav-btn"
                 aria-label="Next page"
                 title="Next page"
+                data-i18n-aria-label="papers.toolbar.next"
+                data-i18n-title="papers.toolbar.next"
               >
                 <svg class="papers-viewer-toolbar-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 10 6 6 6-6"></path></svg>
               </button>
             </div>
-            <div class="papers-viewer-zoom-cluster" role="group" aria-label="PDF zoom">
-              <button type="button" id="paper-viewer-zoom-out-btn" class="ghost-btn papers-viewer-zoom-step-btn" aria-label="Zoom out" title="Zoom out"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14"/></svg></button>
+            <div class="papers-viewer-zoom-cluster" role="group" aria-label="PDF zoom" data-i18n-aria-label="papers.toolbar.zoom">
+              <button type="button" id="paper-viewer-zoom-out-btn" class="ghost-btn papers-viewer-zoom-step-btn" aria-label="Zoom out" title="Zoom out" data-i18n-aria-label="papers.toolbar.zoomOut" data-i18n-title="papers.toolbar.zoomOut"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14"/></svg></button>
               <span id="paper-viewer-zoom-label" class="small-note">100%</span>
-              <button type="button" id="paper-viewer-zoom-in-btn" class="ghost-btn papers-viewer-zoom-step-btn" aria-label="Zoom in" title="Zoom in"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
-              <button type="button" id="paper-viewer-zoom-reset-btn" class="ghost-btn" aria-label="Reset zoom to 100%" title="Reset zoom to 100%">100%</button>
-              <button type="button" id="paper-viewer-fit-width-btn" class="ghost-btn papers-viewer-toolbar-icon-btn" aria-label="Fit width" title="Fit width">
+              <button type="button" id="paper-viewer-zoom-in-btn" class="ghost-btn papers-viewer-zoom-step-btn" aria-label="Zoom in" title="Zoom in" data-i18n-aria-label="papers.toolbar.zoomIn" data-i18n-title="papers.toolbar.zoomIn"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
+              <button type="button" id="paper-viewer-zoom-reset-btn" class="ghost-btn" aria-label="Reset zoom to 100%" title="Reset zoom to 100%" data-i18n-aria-label="papers.toolbar.zoomReset" data-i18n-title="papers.toolbar.zoomReset">100%</button>
+              <button type="button" id="paper-viewer-fit-width-btn" class="ghost-btn papers-viewer-toolbar-icon-btn" aria-label="Fit width" title="Fit width" data-i18n-aria-label="papers.toolbar.fitWidth" data-i18n-title="papers.toolbar.fitWidth">
                 <svg class="papers-viewer-toolbar-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                   <rect x="4.5" y="6" width="15" height="12" rx="1.5"></rect>
                   <path d="M8 12h8"></path>
                   <path d="m10 9-3 3 3 3"></path>
                   <path d="m14 9 3 3-3 3"></path>
                 </svg>
-                <span class="sr-only">Fit width</span>
+                <span class="sr-only" data-i18n="papers.toolbar.fitWidth">Fit width</span>
               </button>
             </div>
-            <div class="papers-viewer-action-cluster" role="group" aria-label="Document actions">
-              <button type="button" id="paper-viewer-print-btn" class="ghost-btn papers-viewer-toolbar-icon-btn" aria-label="Print" title="Print">
+            <div class="papers-viewer-action-cluster" role="group" aria-label="Document actions" data-i18n-aria-label="papers.toolbar.actions">
+              <button type="button" id="paper-viewer-print-btn" class="ghost-btn papers-viewer-toolbar-icon-btn" aria-label="Print" title="Print" data-i18n-aria-label="papers.toolbar.print" data-i18n-title="papers.toolbar.print">
                 <svg class="papers-viewer-toolbar-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                   <path d="M7 8V4.75h10V8"></path>
                   <rect x="6" y="14" width="12" height="5.25" rx="1"></rect>
                   <path d="M6.5 17H5.25A2.25 2.25 0 0 1 3 14.75v-4A2.25 2.25 0 0 1 5.25 8.5h13.5A2.25 2.25 0 0 1 21 10.75v4A2.25 2.25 0 0 1 18.75 17H17.5"></path>
                   <path d="M8.25 16.5h7.5"></path>
                 </svg>
-                <span class="sr-only">Print</span>
+                <span class="sr-only" data-i18n="papers.toolbar.print">Print</span>
               </button>
-              <button type="button" id="paper-viewer-save-form-btn" class="ghost-btn papers-viewer-toolbar-icon-btn" aria-label="Save filled form" title="Save filled form" hidden>
+              <button type="button" id="paper-viewer-save-form-btn" class="ghost-btn papers-viewer-toolbar-icon-btn" aria-label="Save filled form" title="Save filled form" data-i18n-aria-label="papers.toolbar.saveForm" data-i18n-title="papers.toolbar.saveForm" hidden>
                 <svg class="papers-viewer-toolbar-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                   <path d="M5.25 5.25h9.25L18.75 9.5v9.25H5.25z"></path>
                   <path d="M8.5 5.25v4h6"></path>
                   <rect x="8.5" y="12.75" width="7" height="6"></rect>
                 </svg>
-                <span class="sr-only">Save filled form</span>
+                <span class="sr-only" data-i18n="papers.toolbar.saveForm">Save filled form</span>
               </button>
             </div>
           </div>
-          <button type="button" id="paper-comment-toggle-btn" class="papers-context-toggle" aria-controls="paper-comment-sidebar" aria-expanded="false" aria-label="Open outline &amp; bookmarks" title="Outline &amp; bookmarks" hidden>
+          <button type="button" id="paper-comment-toggle-btn" class="papers-context-toggle" aria-controls="paper-comment-sidebar" aria-expanded="false" aria-label="Open outline &amp; bookmarks" title="Outline &amp; bookmarks" data-i18n-aria-label="papers.panel.openOutline" data-i18n-title="papers.panel.outline" hidden>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v12a2 2 0 0 0 2 2h2M4 8h4"></path><path d="M12 4h8v6l-4-2-4 2zM12 15h8M12 19h6"></path></svg>
           </button>
-          <button type="button" id="paper-details-toggle-btn" class="papers-context-toggle" aria-controls="paper-details-sidebar" aria-expanded="false" aria-label="Open paper details" title="Paper details" hidden>
+          <button type="button" id="paper-details-toggle-btn" class="papers-context-toggle" aria-controls="paper-details-sidebar" aria-expanded="false" aria-label="Open paper details" title="Paper details" data-i18n-aria-label="papers.panel.openDetails" data-i18n-title="papers.panel.details" hidden>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></svg>
           </button>
-          <button type="button" id="paper-brief-toggle-btn" class="papers-context-toggle" aria-controls="paper-research-brief" aria-expanded="false" aria-label="Open research brief" title="Research brief" hidden>
+          <button type="button" id="paper-brief-toggle-btn" class="papers-context-toggle" aria-controls="paper-research-brief" aria-expanded="false" aria-label="Open research brief" title="Research brief" data-i18n-aria-label="papers.panel.openBrief" data-i18n-title="papers.panel.brief" hidden>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 12h8M8 16h5"/></svg>
           </button>
-          <button type="button" id="agent-chat-rail-toggle-btn" class="universal-agent-chat-rail__toggle" aria-label="Open agent chat rail" aria-expanded="false" title="Open chat" data-requires-agent><span class="agent-chat-icon universal-agent-chat-rail__toggle-icon" data-agent-chat-icon="chat" aria-hidden="true"></span></button>
+          <button type="button" id="agent-chat-rail-toggle-btn" class="universal-agent-chat-rail__toggle" aria-label="Open agent chat rail" aria-expanded="false" title="Open chat" data-i18n-aria-label="agent.rail.open" data-i18n-title="agent.rail.openTitle" data-requires-agent><span class="agent-chat-icon universal-agent-chat-rail__toggle-icon" data-agent-chat-icon="chat" aria-hidden="true"></span></button>
         </div>
         <div class="universal-agent-chat-rail__content">
           <header class="universal-agent-chat-rail__header">
             <div>
-              <h2>Chat</h2>
+              <h2 data-i18n="agent.rail.chat">Chat</h2>
             </div>
           </header>
           <div class="agent-conversation-shell universal-agent-chat-rail__conversation is-empty-chat">
             <div class="agent-history-viewport">
               <div id="agent-rail-chat-history" class="agent-chat-history universal-agent-chat-rail__history" aria-live="polite"></div>
-              <button type="button" id="agent-rail-scroll-to-bottom-btn" class="ghost-btn agent-scroll-to-bottom-btn" hidden><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>Latest</button>
+              <button type="button" id="agent-rail-scroll-to-bottom-btn" class="ghost-btn agent-scroll-to-bottom-btn" hidden><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M19 12l-7 7-7-7"/></svg><span data-i18n="agent.rail.latest">Latest</span></button>
             </div>
             <div class="agent-composer-shell universal-agent-chat-rail__composer">
               <div id="agent-rail-question-dock" class="agent-question-dock" aria-live="polite" hidden></div>
-              <div id="agent-rail-quick-prompts" class="agent-rail-quick-prompts" aria-label="Common chat prompts">
-                <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Summarize the current workspace context and call out useful next actions.">Summarize context</button>
-                <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Suggest practical next steps from the current workspace context.">Plan next step</button>
-                <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Flag missing details or follow-up questions from the current workspace context.">Find gaps</button>
+              <div id="agent-rail-quick-prompts" class="agent-rail-quick-prompts" aria-label="Common chat prompts" data-i18n-aria-label="agent.prompts.workspace">
+                <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Summarize the current workspace context and call out useful next actions."><span data-i18n="shell.full.e219f1b9">Summarize context</span></button>
+                <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Suggest practical next steps from the current workspace context."><span data-i18n="shell.full.e5eaae3b">Plan next step</span></button>
+                <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Flag missing details or follow-up questions from the current workspace context."><span data-i18n="shell.full.6a21b0bb">Find gaps</span></button>
               </div>
               <div class="stack-form agent-composer-card">
                 <input id="agent-rail-attachment-input" type="file" multiple hidden />
-                <label for="agent-rail-message-input" class="sr-only">Message</label>
+                <label for="agent-rail-message-input" class="sr-only" data-i18n="agent.composer.message">Message</label>
                 <div class="agent-composer-input-wrap">
-                  <textarea id="agent-rail-message-input" rows="2" placeholder="Ask Hikari about this workspace."></textarea>
+                  <textarea id="agent-rail-message-input" rows="2" placeholder="Ask Hikari about this workspace." data-i18n-placeholder="agent.placeholder.workspace"></textarea>
                 </div>
-                <div id="agent-rail-hidden-context-list" class="agent-attachment-list agent-hidden-context-list" aria-label="Injected context" aria-live="polite" hidden></div>
+                <div id="agent-rail-hidden-context-list" class="agent-attachment-list agent-hidden-context-list" aria-label="Injected context" data-i18n-aria-label="agent.rail.injected" aria-live="polite" hidden></div>
                 <div id="agent-rail-attachment-list" class="agent-attachment-list" hidden></div>
                 <div class="agent-composer-toolbar">
                   <div class="agent-composer-toolbar-start">
-                    <button type="button" id="agent-rail-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files"><span class="agent-chat-icon agent-attach-icon" data-agent-chat-icon="attach" aria-hidden="true"></span></button>
+                    <button type="button" id="agent-rail-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files" data-i18n-aria-label="agent.composer.attach" data-i18n-title="agent.composer.attach"><span class="agent-chat-icon agent-attach-icon" data-agent-chat-icon="attach" aria-hidden="true"></span></button>
                     <button
                       type="button"
                       id="agent-rail-paper-screenshot-btn"
@@ -109,16 +113,18 @@
                       aria-label="Select an area of the paper to attach"
                       aria-pressed="false"
                       title="Select area from paper"
+                      data-i18n-aria-label="agent.rail.screenshot"
+                      data-i18n-title="agent.rail.screenshotTitle"
                     >
                       <span class="agent-chat-icon agent-paper-screenshot-icon" data-agent-chat-icon="screenshot" aria-hidden="true"></span>
                     </button>
                   </div>
                   <div class="form-actions agent-composer-actions">
-                    <button type="button" id="agent-rail-send-btn" class="primary-btn agent-send-icon-btn" aria-label="Send message" title="Send message">
+                    <button type="button" id="agent-rail-send-btn" class="primary-btn agent-send-icon-btn" aria-label="Send message" title="Send message" data-i18n-aria-label="agent.composer.send" data-i18n-title="agent.composer.send">
                       <span class="agent-chat-icon agent-send-icon" data-agent-chat-icon="send" aria-hidden="true"></span>
-                      <span class="sr-only">Send message</span>
+                      <span class="sr-only" data-i18n="agent.composer.send">Send message</span>
                     </button>
-                    <button type="button" id="agent-rail-stop-btn" class="danger-btn" hidden>Stop</button>
+                    <button type="button" id="agent-rail-stop-btn" class="danger-btn" hidden data-i18n="agent.composer.stop">Stop</button>
                   </div>
                 </div>
               </div>
@@ -130,15 +136,15 @@
         <section class="agent-review-dialog app-dialog-surface draft-review-dialog" role="dialog" aria-modal="true" aria-labelledby="agent-rail-review-title">
           <header class="agent-review-dialog-header app-dialog-head">
             <div>
-              <h3 id="agent-rail-review-title">Review generated drafts</h3>
+              <h3 id="agent-rail-review-title" data-i18n="agent.review.railTitle">Review generated drafts</h3>
             </div>
-            <button type="button" id="agent-rail-review-close-btn" class="app-dialog-close-btn" aria-label="Close generated draft review dialog" title="Close"><span class="agent-chat-icon agent-close-icon" data-agent-chat-icon="close" aria-hidden="true"></span></button>
+            <button type="button" id="agent-rail-review-close-btn" class="app-dialog-close-btn" aria-label="Close generated draft review dialog" title="Close" data-i18n-aria-label="agent.review.close" data-i18n-title="agent.review.closeTitle"><span class="agent-chat-icon agent-close-icon" data-agent-chat-icon="close" aria-hidden="true"></span></button>
           </header>
           <div id="agent-rail-review-track" class="agent-review-track" tabindex="0" aria-live="polite"></div>
           <footer class="agent-review-footer">
-            <button type="button" id="agent-rail-review-prev-btn" class="row-action-icon-btn" aria-label="Previous generated draft"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m15 18-6-6 6-6"/></svg></button>
+            <button type="button" id="agent-rail-review-prev-btn" class="row-action-icon-btn" aria-label="Previous generated draft" data-i18n-aria-label="agent.review.prev"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m15 18-6-6 6-6"/></svg></button>
             <span id="agent-rail-review-page-label" class="small-note">1 / 1</span>
-            <button type="button" id="agent-rail-review-next-btn" class="row-action-icon-btn" aria-label="Next generated draft"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 18 6-6-6-6"/></svg></button>
+            <button type="button" id="agent-rail-review-next-btn" class="row-action-icon-btn" aria-label="Next generated draft" data-i18n-aria-label="agent.review.next"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 18 6-6-6-6"/></svg></button>
           </footer>
         </section>
       </div>
@@ -149,17 +155,17 @@
     <section class="unsaved-changes-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="unsaved-changes-title" aria-describedby="unsaved-changes-description">
       <div class="app-dialog-head">
         <div>
-          <h3 id="unsaved-changes-title">Save changes before quitting?</h3>
-          <p id="unsaved-changes-description" class="small-note">The following work has not been saved.</p>
+          <h3 id="unsaved-changes-title" data-i18n="shell.unsaved.titleQuit">Save changes before quitting?</h3>
+          <p id="unsaved-changes-description" data-i18n="shell.unsaved.description" class="small-note">The following work has not been saved.</p>
         </div>
-        <button type="button" id="unsaved-changes-close-btn" class="app-dialog-close-btn" aria-label="Close save changes dialog" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+        <button type="button" id="unsaved-changes-close-btn" class="app-dialog-close-btn" data-i18n-aria-label="shell.unsaved.close" aria-label="Close save changes dialog" data-i18n-title="shell.unsaved.closeTitle" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       </div>
       <ul id="unsaved-changes-list" class="unsaved-changes-list"></ul>
       <p id="unsaved-changes-status" class="small-note" role="status" aria-live="polite"></p>
       <div class="form-actions unsaved-changes-actions">
-        <button type="button" id="unsaved-changes-discard-btn" class="danger-btn">Discard &amp; Quit</button>
-        <button type="button" id="unsaved-changes-cancel-btn" class="ghost-btn">Cancel</button>
-        <button type="button" id="unsaved-changes-save-btn" class="primary-btn">Save &amp; Quit</button>
+        <button type="button" id="unsaved-changes-discard-btn" data-i18n="shell.unsaved.discardQuit" class="danger-btn">Discard &amp; Quit</button>
+        <button type="button" id="unsaved-changes-cancel-btn" data-i18n="shell.unsaved.cancel" class="ghost-btn">Cancel</button>
+        <button type="button" id="unsaved-changes-save-btn" data-i18n="shell.unsaved.saveQuit" class="primary-btn">Save &amp; Quit</button>
       </div>
     </section>
   </div>

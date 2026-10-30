@@ -1,3 +1,5 @@
+import { createPresentation } from "../../i18n.mjs";
+const i18nUi = createPresentation("gel");
 import {
   clamp,
   getLaneBandWindow,
@@ -204,7 +206,7 @@ function createManualCanvasInteraction({
       return;
     }
     if (runtime.cropperActive) {
-      deps.setStatus('Finish cropping first: Done or Cancel.');
+      deps.setStatus(i18nUi.text("Finish cropping first: Done or Cancel."));
       return;
     }
 
@@ -233,7 +235,7 @@ function createManualCanvasInteraction({
       if (runtime.suppressNextLaneDividerClick) { runtime.suppressNextLaneDividerClick = false; return; }
       const added = addLaneDivider(point.x);
       if (!added) {
-        deps.setStatus('A lane divider already exists at that position.');
+        deps.setStatus(i18nUi.text("A lane divider already exists at that position."));
         return;
       }
       resetDownstreamManualSelections();
@@ -241,7 +243,7 @@ function createManualCanvasInteraction({
       deps.renderCanvas();
       const segmentation = normalizeManualOverrides(runtime.manualOverrides).laneSegmentation || {};
       if (!Number.isFinite(segmentation.gelRight)) {
-        deps.setStatus('Add at least one more divider to mark the gel edges.');
+        deps.setStatus(i18nUi.text("Add at least one more divider to mark the gel edges."));
         return;
       }
       deps.setStatus('');
@@ -250,7 +252,7 @@ function createManualCanvasInteraction({
     if (step === 'ladder') {
       const laneIndex = inferLaneIndexFromSegmentationPoint(point);
       if (!laneIndex) {
-        deps.setStatus('No lane found at click position.');
+        deps.setStatus(i18nUi.text("No lane found at click position."));
         return;
       }
       runtime.manualOverrides = {
@@ -262,7 +264,7 @@ function createManualCanvasInteraction({
       clearCanvasTool('ladder');
       renderOverrideStatus();
       deps.renderCanvas();
-      deps.setStatus('Detect the ladder, or use Set MW to label its bands.');
+      deps.setStatus(i18nUi.text("Detect the ladder, or use Set MW to label its bands."));
       deps.onRunAnalysis();
       return;
     }
@@ -273,7 +275,7 @@ function createManualCanvasInteraction({
       }
       const normalized = normalizeManualOverrides(runtime.manualOverrides);
       if (!isPointInLadderLane(point, normalized)) {
-        deps.setStatus(`Click inside the ladder lane (${normalized.ladderLane || '-'}) to set ladder MW.`);
+        deps.setStatus(i18nUi.text("Click inside the ladder lane ({p0}) to set ladder MW.", { p0: normalized.ladderLane || '-' }));
         return;
       }
       const existing = findLadderBandNearPoint(point, normalized);
@@ -285,7 +287,7 @@ function createManualCanvasInteraction({
       if (isPerLaneBandMode(normalizeManualOverrides(runtime.manualOverrides).laneSegmentation)) {
         const laneIndex = inferLaneIndexFromSegmentationPoint(point);
         if (!laneIndex) {
-          deps.setStatus('Click inside a lane to set a lane-specific top line.');
+          deps.setStatus(i18nUi.text("Click inside a lane to set a lane-specific top line."));
           return;
         }
         const rowY = getRectifiedLaneRowFromPoint(point, laneIndex);
@@ -297,7 +299,7 @@ function createManualCanvasInteraction({
         runtime.selectedViewerTool = 'band-bottom';
         renderOverrideStatus();
         deps.renderCanvas();
-        deps.setStatus(`Click the bottom edge in lane ${laneIndex}.`);
+        deps.setStatus(i18nUi.text("Click the bottom edge in lane {p0}.", { p0: laneIndex }));
         return;
       }
       const rowY = getRectifiedLaneRowFromPoint(point);
@@ -310,7 +312,7 @@ function createManualCanvasInteraction({
       runtime.selectedViewerTool = 'band-bottom';
       renderOverrideStatus();
       deps.renderCanvas();
-      deps.setStatus('Click the bottom edge of the band.');
+      deps.setStatus(i18nUi.text("Click the bottom edge of the band."));
       return;
     }
     if (step === 'band-bottom') {
@@ -319,19 +321,19 @@ function createManualCanvasInteraction({
         const progress = getLaneBandProgress(normalized);
         const pendingLaneIndex = progress.pendingBottomLaneIndex;
         if (!pendingLaneIndex) {
-          deps.setStatus('Click a lane top line before setting a lane bottom line.');
+          deps.setStatus(i18nUi.text("Click a lane top line before setting a lane bottom line."));
           return;
         }
         const laneIndex = inferLaneIndexFromSegmentationPoint(point);
         if (laneIndex !== pendingLaneIndex) {
-          deps.setStatus(`Click the bottom line in lane ${pendingLaneIndex} before starting another lane.`);
+          deps.setStatus(i18nUi.text("Click the bottom line in lane {p0} before starting another lane.", { p0: pendingLaneIndex }));
           return;
         }
         const rowY = getRectifiedLaneRowFromPoint(point, laneIndex);
         const window = getLaneBandWindow(normalized.laneSegmentation, pendingLaneIndex);
         const top = window?.bandTop;
         if (!Number.isFinite(top) || rowY <= top + 1) {
-          deps.setStatus('Bottom line must be below top line.');
+          deps.setStatus(i18nUi.text("Bottom line must be below top line."));
           return;
         }
         upsertLaneBandWindow(pendingLaneIndex, { bandBottom: rowY });
@@ -349,14 +351,14 @@ function createManualCanvasInteraction({
         }
         renderOverrideStatus();
         deps.renderCanvas();
-        deps.setStatus(allLanesSet ? '' : `Click the top edge in lane ${nextProgress.missingCompleteLaneIndex || 1}.`);
+        deps.setStatus(((allLanesSet ? '' : i18nUi.text("Click the top edge in lane {p0}.", { p0: nextProgress.missingCompleteLaneIndex || 1 }))));
         deps.onRunAnalysis();
         return;
       }
       const top = normalizeManualOverrides(runtime.manualOverrides).laneSegmentation?.bandTop;
       const rowY = getRectifiedLaneRowFromPoint(point);
       if (!Number.isFinite(top) || rowY <= top + 1) {
-        deps.setStatus('Bottom line must be below top line.');
+        deps.setStatus(i18nUi.text("Bottom line must be below top line."));
         return;
       }
       updateLaneSegmentation({ bandBottom: rowY });

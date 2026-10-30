@@ -46,7 +46,6 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const hasOpenSequenceEditDialog = config?.hasOpenSequenceEditDialog || (() => false);
   const onRequestSave = config?.onRequestSave || (() => {});
   const onRequestAnnotate = config?.onRequestAnnotate || (() => {});
-  const onRequestRecognizeBackbone = config?.onRequestRecognizeBackbone || (() => {});
   const onRequestAlignment = config?.onRequestAlignment || (() => {});
   const onRequestCloningDesign = config?.onRequestCloningDesign || (() => {});
   const onSelectAlignmentSession = config?.onSelectAlignmentSession || (() => {});
@@ -98,7 +97,6 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     hasOpenSequenceEditDialog,
     onRequestSave,
     onRequestAnnotate,
-    onRequestRecognizeBackbone,
     onRequestAlignment,
     onRequestCloningDesign,
     onSelectAlignmentSession,

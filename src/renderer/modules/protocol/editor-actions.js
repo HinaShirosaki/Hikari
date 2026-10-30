@@ -100,7 +100,7 @@ function createProtocolEditorActions({
       materials,
       steps: convertedSteps,
       troubleshooting
-    }, 'Create Protocol', { isCreateMode: true, requiresSave: true });
+    }, 'editor.create', { isCreateMode: true, requiresSave: true });
     return true;
   }
 

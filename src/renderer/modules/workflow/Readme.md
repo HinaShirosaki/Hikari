@@ -10,5 +10,6 @@
 - `public-api.js`: the narrow surface other features import.
 - `artifact-storage.js`: storage-folder paths and imported result-file persistence.
 - `dom.js` and `constants.js`: DOM lookup and shared constants.
+- `localization.js`, `locales/en.js`: template/process and execution UI messages, bound graph/menu/status labels, file errors, and notebook option metadata. User content and open editor elements are preserved across locale changes. `renderer.titleForBlock()` remains locale independent for saved metadata and artifact paths; UI uses `displayTitleForBlock()`. See [incremental i18n](../../../../docs/renderer/architecture/i18n.md) for coverage.
 
 Keep filesystem path and bridge mechanics out of `actions.js`; add them to `artifact-storage.js` instead.

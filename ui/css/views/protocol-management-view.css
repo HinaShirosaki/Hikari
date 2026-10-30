@@ -391,7 +391,7 @@
 
 .protocol-placeholder-group {
   display: grid;
-  grid-template-columns: 76px minmax(0, 1fr);
+  grid-template-columns: minmax(76px, max-content) minmax(0, 1fr);
   align-items: start;
   gap: var(--space-8);
 }

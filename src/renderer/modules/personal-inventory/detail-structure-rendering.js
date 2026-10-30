@@ -1,3 +1,5 @@
+import { sampleAttributes, sampleMessage } from './localization.js';
+
 export function createStructureRenderer({ safeText, getPendingStructureDraft }) {
   function hasStructure(sample) {
     const structure = sample?.compoundStructure;
@@ -16,7 +18,7 @@ export function createStructureRenderer({ safeText, getPendingStructureDraft }) 
     const structure = sample?.compoundStructure || getPendingStructureDraft(mode);
     const imageDataUrl = getStructureImageDataUrl(structure);
     const hasCapturedStructure = sample ? hasStructure(sample) : Boolean(structure);
-    const buttonText = hasCapturedStructure ? 'Replace Structure' : 'Paste Structure';
+    const buttonKey = hasCapturedStructure ? 'structure.replace' : 'structure.paste';
     const sampleId = sample?.id ? ` data-sample-id="${safeText(sample.id)}"` : '';
     return `
       <div class="inventory-sample-structure-control">
@@ -25,7 +27,7 @@ export function createStructureRenderer({ safeText, getPendingStructureDraft }) 
           class="ghost-btn inventory-sample-structure-paste-btn"
           data-inventory-sample-structure-paste="${safeText(mode)}"${sampleId}
           hidden
-        >${safeText(buttonText)}</button>
+        >${sampleMessage(buttonKey)}</button>
         <div
           class="inventory-sample-structure-preview"
           data-inventory-sample-structure-preview="${safeText(mode)}"${sampleId}
@@ -34,7 +36,7 @@ export function createStructureRenderer({ safeText, getPendingStructureDraft }) 
           <img
             data-inventory-sample-structure-preview-image
             src="${safeText(imageDataUrl)}"
-            alt="Chemical structure preview"
+            ${sampleAttributes({ alt: 'structure.preview' })}
           />
         </div>
         <span class="small-note inventory-sample-structure-status" data-inventory-sample-structure-status></span>

@@ -1,6 +1,9 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("plate");
 import { sanitizeFilePart } from '../shared.js';
 import { applyFigureDefaults } from '../plotly/figure-theme.js';
-import { showTransientNotice } from '../../../lib/notify.js';
+import { plateFailure, plateMessage, plateNotice, plateUi } from '../localization.js';
 import { ensureObject } from '../../../lib/normalize.js';
 import { normalizeAgentPlotlyGraphArtifact } from './plotly-artifact.js';
 import { normalizePlotElements } from '../../../../shared/assay-plot.mjs';
@@ -129,7 +132,7 @@ function createChartSurface({
         ? await getPlotlyRuntime().toImage(agentPlotlyTarget, { format: extension, scale: extension === 'svg' ? 1 : 2 })
         : await plotlyRenderer.toImage(extension);
       if (!dataUrl) {
-        showTransientNotice('Render a chart before exporting.', { type: 'error' });
+        plateNotice(plateUi('chart.renderFirst'), { type: 'error' });
         return;
       }
       const link = document.createElement('a');
@@ -138,9 +141,9 @@ function createChartSurface({
       document.body.appendChild(link);
       link.click();
       link.remove();
-      showTransientNotice(`Exported chart as ${extension.toUpperCase()}.`);
+      plateNotice(plateUi('chart.exported', { format: extension.toUpperCase() }));
     } catch (error) {
-      showTransientNotice(String(error?.message || error || 'Chart export failed.'), { type: 'error' });
+      plateNotice(plateFailure(error, 'chart.exportFailed'), { type: 'error' });
     }
   }
 
@@ -191,8 +194,8 @@ function createChartSurface({
     const plotly = getPlotlyRuntime();
     if (typeof plotly?.newPlot !== 'function') {
       purgeAgentPlotly();
-      showTransientNotice('Plotly is unavailable, so the agent graph could not be rendered.', { type: 'error' });
-      assayAnalysisTable.innerHTML = '<p class="small-note">Plotly is unavailable in this workspace.</p>';
+      plateNotice(plateUi('chart.plotlyMissing'), { type: 'error' });
+      i18nUi.setHtml(assayAnalysisTable, `<p class="small-note">${plateMessage('chart.plotlyUnavailable')}</p>`);
       return false;
     }
 
@@ -201,11 +204,11 @@ function createChartSurface({
     const traceNames = normalized.figure.data
       .map((trace, index) => String(trace?.name || `Trace ${index + 1}`).trim())
       .filter(Boolean);
-    assayAnalysisTable.innerHTML = `
+    i18nUi.setHtml(assayAnalysisTable, `
       <div class="assay-analysis-results assay-analysis-agent-results" data-assay-agent-plotly-output>
         <div class="assay-analysis-chart assay-analysis-agent-chart" data-assay-agent-plotly-chart></div>
       </div>
-    `;
+    `);
     agentPlotlyTarget = assayAnalysisTable.querySelector('[data-assay-agent-plotly-chart]');
     if (!agentPlotlyTarget) {
       return false;
@@ -256,7 +259,7 @@ function createChartSurface({
           purgeAgentPlotly();
           lastAnalysisContext = { ...lastAnalysisContext, method: '' };
           setChartContext(lastAnalysisContext);
-          showTransientNotice(String(error?.message || error || 'Unable to render Plotly graph.'), { type: 'error' });
+          plateNotice(plateFailure(error, 'chart.renderFailed'), { type: 'error' });
         });
       lastAnalysisContext = {
         headers: [],
@@ -273,7 +276,7 @@ function createChartSurface({
       purgeAgentPlotly();
       lastAnalysisContext = { ...lastAnalysisContext, method: '' };
       setChartContext(lastAnalysisContext);
-      showTransientNotice(String(error?.message || error || 'Unable to render Plotly graph.'), { type: 'error' });
+      plateNotice(plateFailure(error, 'chart.renderFailed'), { type: 'error' });
       return false;
     }
   }

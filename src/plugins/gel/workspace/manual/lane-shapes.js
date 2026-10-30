@@ -1,3 +1,5 @@
+import { createPresentation } from "../../i18n.mjs";
+const i18nUi = createPresentation("gel");
 import {
   clamp,
   getLaneVertexArray,
@@ -142,7 +144,7 @@ function createManualLaneShapes({
   function updateLaneVertexFromPoint(point, target = null) {
     const nextTarget = target || findLaneVertexTarget(point);
     if (!nextTarget) {
-      deps.setStatus('Set lane dividers first, then click near a lane corner to adjust tilt.');
+      deps.setStatus(i18nUi.text("Set lane dividers first, then click near a lane corner to adjust tilt."));
       return null;
     }
     const changed = updateLaneVertex(nextTarget.laneIndex, nextTarget.vertexKey, point);
@@ -192,9 +194,7 @@ function createManualLaneShapes({
     renderOverrideStatus();
     deps.renderCanvas();
     if (nextMode) {
-      deps.setStatus(progress.totalLanes
-        ? `Click the top edge of the band in lane ${progress.missingCompleteLaneIndex || 1}.`
-        : 'Finish the lane dividers first.');
+      deps.setStatus(((progress.totalLanes ? i18nUi.text("Click the top edge of the band in lane {p0}.", { p0: progress.missingCompleteLaneIndex || 1 }) : i18nUi.text("Finish the lane dividers first."))));
       return;
     }
     deps.setStatus('');

@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
 import {
   buildNotebookAssayPlatePreviewHtml,
   formatLinkedPreviewTimestamp
@@ -14,19 +17,19 @@ export function buildLinkedGelPreviewHtml(analysis, previewImage, safeText) {
   const imageHtml = previewImage
     ? `
         <figure class="biology-notebook-linked-preview-figure">
-          <img src="${safeText(previewImage)}" alt="${safeText(analysis?.name || 'Linked gel preview')}" />
+          <img src="${safeText(previewImage)}" ${i18nUi.attributeMessage("alt", (analysis?.name || i18nUi.message("Linked gel preview")))} />
           <figcaption class="biology-notebook-linked-preview-caption small-note">
-            ${safeText(`${formatGelAnalysisTypeLabel(analysis?.analysisType)} · Updated ${updatedAt}`)}
+            ${i18nUi.render(i18nUi.message("{p0} · Updated {p1}", { p0: formatGelAnalysisTypeLabel(analysis?.analysisType), p1: updatedAt }))}
           </figcaption>
         </figure>
       `
-    : '<p class="small-note">Save a gel image to show its linked preview here.</p>';
+    : `<p class="small-note">${i18nUi.html("Save a gel image to show its linked preview here.")}</p>`;
 
   return `
       <article class="biology-notebook-linked-preview">
         <div class="biology-notebook-linked-preview-head">
           <div class="biology-notebook-linked-preview-copy">
-            <h4>${safeText(analysis?.name || 'Linked Gel')}</h4>
+            <h4>${i18nUi.render((analysis?.name || i18nUi.message("Linked Gel")))}</h4>
             <p class="biology-notebook-linked-preview-meta">${safeText(`${formatGelAnalysisTypeLabel(analysis?.analysisType)} · ${analysis?.projectName || 'No project'}`)}</p>
           </div>
           <span class="small-note">${safeText(updatedAt)}</span>
@@ -77,7 +80,7 @@ function buildSerialDilutionSectionHtml(serialDilutionSummary, safeText) {
   }
 
   const volumeNote = Number.isFinite(serialDilutionSummary?.volumePerWellUl) && serialDilutionSummary.volumePerWellUl > 0
-    ? `<span class="small-note">${safeText(`Volume per well: ${serialDilutionSummary.volumePerWellUl} uL`)}</span>`
+    ? `<span class="small-note">${i18nUi.render(i18nUi.message("Volume per well: {p0} uL", { p0: serialDilutionSummary.volumePerWellUl }))}</span>`
     : '';
 
   const feedbackHtml = (Array.isArray(serialDilutionSummary.feedbackMessages) ? serialDilutionSummary.feedbackMessages : [])
@@ -88,7 +91,7 @@ function buildSerialDilutionSectionHtml(serialDilutionSummary, safeText) {
   const initialHtml = Array.isArray(serialDilutionSummary.initialDilutionRows) && serialDilutionSummary.initialDilutionRows.length
     ? `
               <div class="biology-notebook-linked-assay-serial-dilution-block">
-                <p class="small-note">Initial dilution</p>
+                <p class="small-note">${i18nUi.html("Initial dilution")}</p>
                 ${buildSerialDilutionTableHtml({
                   headers: ['Sample', 'Stock Vol.', 'Buffer Vol.'],
                   rows: serialDilutionSummary.initialDilutionRows.map((row) => [
@@ -106,7 +109,7 @@ function buildSerialDilutionSectionHtml(serialDilutionSummary, safeText) {
   const followingHtml = Array.isArray(serialDilutionSummary.followingDilutionRows) && serialDilutionSummary.followingDilutionRows.length
     ? `
               <div class="biology-notebook-linked-assay-serial-dilution-block">
-                <p class="small-note">Following dilution</p>
+                <p class="small-note">${i18nUi.html("Following dilution")}</p>
                 ${buildSerialDilutionTableHtml({
                   headers: ['Step', 'Target Conc.', 'From Previous Well', 'Buffer Vol.', 'Transfer / Discard', 'Final Vol.'],
                   rows: serialDilutionSummary.followingDilutionRows.map((row) => [
@@ -123,13 +126,13 @@ function buildSerialDilutionSectionHtml(serialDilutionSummary, safeText) {
               </div>
             `
     : (serialDilutionSummary?.hasValidPlans
-      ? '<p class="small-note">No downstream dilution steps are needed for this assay.</p>'
+      ? `<p class="small-note">${i18nUi.html("No downstream dilution steps are needed for this assay.")}</p>`
       : '');
 
   return `
         <section class="biology-notebook-linked-assay-serial-dilution">
           <div class="biology-notebook-linked-assay-serial-dilution-head">
-            <h5>Serial Dilution</h5>
+            <h5>${i18nUi.html("Serial Dilution")}</h5>
             ${volumeNote}
           </div>
           ${feedbackHtml}
@@ -151,7 +154,7 @@ export function buildLinkedAssayPreviewHtml(assay, safeText) {
   const plotHtml = plotImage
     ? `
         <figure class="biology-notebook-linked-preview-figure">
-          <img src="${safeText(plotImage)}" alt="${safeText(`${assay?.name || 'Assay'} analysis plot`)}" />
+          <img src="${safeText(plotImage)}" ${i18nUi.attributeMessage("alt", i18nUi.message("{p0} analysis plot", { p0: assay?.name || 'Assay' }))} />
           <figcaption class="biology-notebook-linked-preview-caption small-note">
             ${safeText(`${formatAssayAnalysisMethodLabel(latestAnalysis?.method)} · ${latestAnalysis?.summary || 'Saved analysis plot'}`)}
           </figcaption>
@@ -164,7 +167,7 @@ export function buildLinkedAssayPreviewHtml(assay, safeText) {
       <article class="biology-notebook-linked-preview">
         <div class="biology-notebook-linked-preview-head">
           <div class="biology-notebook-linked-preview-copy">
-            <h4>${safeText(assay?.name || 'Linked Assay')}</h4>
+            <h4>${i18nUi.render((assay?.name || i18nUi.message("Linked Assay")))}</h4>
             <p class="biology-notebook-linked-preview-meta">${safeText(`${assay?.assayNumber || assay?.id || '-'} · ${assay?.plateLabel || `${assay?.wellCount || '-'} well plate`}`)}</p>
           </div>
           <span class="small-note">${safeText(formatLinkedPreviewTimestamp(assay?.updatedAt))}</span>

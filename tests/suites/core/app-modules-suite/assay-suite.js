@@ -339,7 +339,11 @@ test('assay dilution fill commits generated concentrations before the layout re-
 
   assert.deepEqual(concentrationInputs.map((input) => input.value), ['1 uM', '0.5 uM', '0.25 uM']);
   assert.deepEqual(axisValues.concentrationValues, ['1 uM', '0.5 uM', '0.25 uM']);
-  assert.equal(statusMessage, 'Auto-filled 2 concentration steps at a 1:2 dilution.');
+  // Statuses are plate catalog descriptors; English rendering stays unchanged.
+  const { plateDisplayText } = loadEsmStyleModule(path.join(
+    __dirname, 'src', 'renderer', 'modules', 'assay', 'localization.js'
+  ));
+  assert.equal(plateDisplayText(statusMessage), 'Auto-filled 2 concentration steps at a 1:2 dilution.');
 });
 
 test('assay browser renders the Setup list and selectable Analyze list from the same assays', () => {

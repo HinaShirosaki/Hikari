@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("tools");
 import {
   CODON_USAGE_PROFILES,
   REVERSE_TRANSLATE_DEFAULT_ORGANISM,
@@ -8,6 +11,8 @@ import {
   translateDnaSequence
 } from '../sequence-viewer/calculations/sequence.js';
 import { COMMERCIAL_RESTRICTION_ENZYMES } from '../sequence-viewer/data/commercial-restriction-enzymes.js';
+import { toolMessage, toolText } from './localization.js';
+import { escapeHtml } from './common.js';
 
 // Only unambiguous motifs the reverse translator can actually avoid.
 const AVOIDABLE_ENZYMES = COMMERCIAL_RESTRICTION_ENZYMES
@@ -40,9 +45,9 @@ export function initTranslationTool(options = {}) {
       ? reverseTranslateOrganismSelect.value
       : REVERSE_TRANSLATE_DEFAULT_ORGANISM;
 
-    reverseTranslateOrganismSelect.innerHTML = Object.entries(CODON_USAGE_PROFILES)
+    i18nUi.setHtml(reverseTranslateOrganismSelect, Object.entries(CODON_USAGE_PROFILES)
       .map(([key, profile]) => `<option value="${key}"${key === selected ? ' selected' : ''}>${profile.label}</option>`)
-      .join('');
+      .join(''));
     reverseTranslateOrganismSelect.value = selected;
   }
 
@@ -58,7 +63,7 @@ export function initTranslationTool(options = {}) {
 
     const nucleotideSequence = cleanNucleotideSequence(raw, type);
     if (!nucleotideSequence.length) {
-      dnaProteinResult.innerHTML = '<p class="small-note">Enter DNA or RNA sequence for translation.</p>';
+      i18nUi.setHtml(dnaProteinResult, `<p class="small-note">${toolMessage('dna.empty')}</p>`);
       return;
     }
 
@@ -67,7 +72,7 @@ export function initTranslationTool(options = {}) {
       : nucleotideSequence;
     const translated = translateDnaSequence(dnaSequence, frame, stopMode);
 
-    dnaProteinResult.innerHTML = `<div class="sequence-block">${translated.protein || '-'}</div>`;
+    i18nUi.setHtml(dnaProteinResult, `<div class="sequence-block">${translated.protein || '-'}</div>`);
   }
 
   const availableList = rootDocument.getElementById('reverse-translate-site-available');
@@ -76,7 +81,8 @@ export function initTranslationTool(options = {}) {
   const selectedEnzymes = new Set();
 
   function renderEnzymeItem(entry, action) {
-    const aliasNote = entry.aliases.length ? ` title="Isoschizomers: ${entry.aliases.join(', ')}"` : '';
+    const params = { names: entry.aliases.join(', ') };
+    const aliasNote = entry.aliases.length ? ` data-i18n-title="tools.reverse.aliases" data-i18n-params="${escapeHtml(JSON.stringify(params))}" title="${escapeHtml(toolText('reverse.aliases', params))}"` : '';
     return `<button type="button" role="listitem" class="reverse-translate-site-item" data-site-action="${action}" data-site-name="${entry.name}"${aliasNote}>`
       + `<span class="reverse-translate-site-name">${entry.name}</span>`
       + `<span class="reverse-translate-site-motif">${entry.site}</span>`
@@ -95,12 +101,12 @@ export function initTranslationTool(options = {}) {
         || entry.aliases.some((alias) => alias.toUpperCase().includes(query))));
     const selected = AVOIDABLE_ENZYMES.filter((entry) => selectedEnzymes.has(entry.name));
 
-    availableList.innerHTML = available.length
+    i18nUi.setHtml(availableList, available.length
       ? available.map((entry) => renderEnzymeItem(entry, 'add')).join('')
-      : '<p class="small-note">No enzyme matches this filter.</p>';
-    selectedList.innerHTML = selected.length
+      : `<p class="small-note">${toolMessage('reverse.noEnzymes')}</p>`);
+    i18nUi.setHtml(selectedList, selected.length
       ? selected.map((entry) => renderEnzymeItem(entry, 'remove')).join('')
-      : '<p class="small-note">Click an enzyme to avoid its site.</p>';
+      : `<p class="small-note">${toolMessage('reverse.selectEnzyme')}</p>`);
   }
 
   function handleEnzymePickerClick(event) {
@@ -131,7 +137,7 @@ export function initTranslationTool(options = {}) {
     const appendStopCodon = Boolean(rootDocument.getElementById('reverse-translate-append-stop')?.checked);
     const cleanedProtein = cleanProteinSequence(rawProtein, true);
     if (!cleanedProtein.length) {
-      reverseTranslateResult.innerHTML = '<p class="small-note">Enter a protein sequence to reverse translate.</p>';
+      i18nUi.setHtml(reverseTranslateResult, `<p class="small-note">${toolMessage('reverse.empty')}</p>`);
       return;
     }
 
@@ -142,13 +148,13 @@ export function initTranslationTool(options = {}) {
     });
 
     if (!translated.ok) {
-      reverseTranslateResult.innerHTML = translated.dna
+      i18nUi.setHtml(reverseTranslateResult, translated.dna
         ? `<div class="sequence-block">${translated.dna}</div>`
-        : '<p class="small-note">Unable to generate a DNA sequence with the current settings.</p>';
+        : `<p class="small-note">${toolMessage('reverse.failed')}</p>`);
       return;
     }
 
-    reverseTranslateResult.innerHTML = `<div class="sequence-block">${translated.dna || '-'}</div>`;
+    i18nUi.setHtml(reverseTranslateResult, `<div class="sequence-block">${translated.dna || '-'}</div>`);
   }
 
   populateReverseTranslateProfileOptions();

@@ -4,6 +4,7 @@ const { SYSTEM } = require('../../../shared/ipc/channels');
 
 function createSystemApi(ipcRenderer) {
   return {
+    setUiLocale: (locale) => ipcRenderer.invoke(SYSTEM.SET_UI_LOCALE, { locale }),
     openExternalUrl: (url) => ipcRenderer.invoke(SYSTEM.OPEN_EXTERNAL_URL, { url }),
     onAppCloseRequested: (handler) => {
       if (typeof handler !== 'function') {

@@ -1,5 +1,6 @@
 import { preprocessWithJs } from '../analysis/image-processing.js';
 import { buildBlotFigurePlan, FIGURE_FONT_SIZE, FIGURE_MARGIN, LABEL_WIDTH } from './model.js';
+import { CAPTION_ANGLE } from '../shared.js';
 import { drawLadderLabels } from '../rendering/ladder-labels.js';
 
 export function blotImageData(row, preprocess = preprocessWithJs) {
@@ -15,11 +16,12 @@ export function blotImageData(row, preprocess = preprocessWithJs) {
   return row.displayData;
 }
 
-export function createBlotFigureCanvas(rows, documentObject, { rasterScale = 3, trim, preprocess, showLadderLabels = false } = {}) {
+// stackTableText: false leaves the Stack table's text to the preview's own inputs.
+export function createBlotFigureCanvas(rows, documentObject, { rasterScale = 3, trim, table, stackTableText = true, preprocess, showLadderLabels = false } = {}) {
   const canvas = documentObject.createElement('canvas');
   const ctx = canvas.getContext('2d');
   ctx.font = `${FIGURE_FONT_SIZE}px Arial, Helvetica, sans-serif`;
-  const plan = buildBlotFigurePlan(rows, { measureText: text => ctx.measureText(text).width, trim, showLadderLabels });
+  const plan = buildBlotFigurePlan(rows, { measureText: text => ctx.measureText(text).width, trim, table, showLadderLabels });
   const scale = Math.max(1, Math.min(rasterScale, 12000 / Math.max(plan.width, plan.height),
     Math.sqrt(36000000 / (plan.width * plan.height))));
   canvas.width = Math.ceil(plan.width * scale);
@@ -34,9 +36,15 @@ export function createBlotFigureCanvas(rows, documentObject, { rasterScale = 3, 
     ctx.fillStyle = '#000'; ctx.textAlign = align;
     lines.forEach((line, index) => ctx.fillText(line, x, y + height / 2 + (index - (lines.length - 1) / 2) * 28));
   }
-  plan.tables.forEach(table => table.rows.forEach(row => {
-    drawLines(row.labelLines, FIGURE_MARGIN + LABEL_WIDTH - 20, row.y, row.height, 'right');
-    table.columns.forEach((column, index) => drawLines(row.values[index], plan.imageLeft + column.center, row.y, row.height, 'center'));
+  plan.tables.filter(table => stackTableText || !table.stack).forEach(table => table.rows.forEach(row => {
+    drawLines(row.labelLines, FIGURE_MARGIN + LABEL_WIDTH - 20, row.labelY, row.labelHeight, 'right');
+    table.columns.forEach((column, index) => {
+      if (!table.rotated) { drawLines(row.values[index], plan.imageLeft + column.center, row.y, row.height, 'center'); return; }
+      ctx.save();
+      ctx.translate(plan.imageLeft + column.center, row.captionY); ctx.rotate(-CAPTION_ANGLE * Math.PI / 180);
+      ctx.fillStyle = '#000'; ctx.textAlign = 'left'; ctx.fillText(row.values[index][0], 0, 0);
+      ctx.restore();
+    });
   }));
   const blotCanvases = [];
   plan.rows.forEach((part, index) => {

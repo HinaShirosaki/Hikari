@@ -1,5 +1,6 @@
 'use strict';
 
+const { nativeText } = require('../lib/i18n.js');
 const { app, BrowserWindow, crashReporter, dialog, ipcMain, Menu, protocol, safeStorage, session, shell } = require('electron');
 const path = require('path');
 const fs = require('node:fs/promises');
@@ -75,10 +76,10 @@ function startMainApp() {
           try {
             result = await dialog.showMessageBox(mainWindow, {
               type: 'warning',
-              title: 'Hikari',
-              message: 'Hikari could not check for unsaved changes.',
-              detail: 'The window is not responding. You can cancel and try again, or quit without saving.',
-              buttons: ['Cancel', 'Quit Without Saving'],
+              title: nativeText("Hikari"),
+              message: nativeText("Hikari could not check for unsaved changes."),
+              detail: nativeText("The window is not responding. You can cancel and try again, or quit without saving."),
+              buttons: [nativeText("Cancel"), nativeText("Quit Without Saving")],
               defaultId: 0,
               cancelId: 0,
               noLink: true

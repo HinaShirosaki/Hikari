@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("plate");
 import {
   GROUPED_ANALYSES,
   analyzeAssayData,
@@ -6,6 +9,7 @@ import {
 } from './analysis/index.js';
 import { isValidWellForDefinition } from './plate-model.js';
 import { parseNumericResult } from './shared.js';
+import { plateMessage } from './localization.js';
 import {
   createDefaultChartStyle,
   normalizeChartStyle
@@ -269,9 +273,9 @@ export function createAssayAnalysisView({
     unmountAnalysisChart();
     purgeAgentPlotly();
     if (assayAnalysisTable) {
-      assayAnalysisTable.innerHTML = '';
+      i18nUi.setHtml(assayAnalysisTable, '');
     }
-    if (assayAnalysisSummaryTable) assayAnalysisSummaryTable.innerHTML = '';
+    if (assayAnalysisSummaryTable) i18nUi.setHtml(assayAnalysisSummaryTable, '');
     if (previewSaveTimer) {
       clearTimeout(previewSaveTimer);
       previewSaveTimer = null;
@@ -346,14 +350,14 @@ export function createAssayAnalysisView({
     if (!observations.length) {
       // Nothing to plot: say so where the table and chart would have been, not in
       // the rail beside the controls.
-      assayAnalysisTable.innerHTML = `<p class="small-note">${safeText(nonNumericCount
-        ? `No numeric values found. Non-numeric result cells: ${nonNumericCount}.`
-        : 'No result values to analyze.')}</p>`;
+      i18nUi.setHtml(assayAnalysisTable, `<p class="small-note">${nonNumericCount
+        ? plateMessage('analysis.noNumeric', { count: nonNumericCount })
+        : plateMessage('analysis.noValues')}</p>`);
       lastResult = null;
       lastSpec = null;
       lastModel = null;
       lastRecordedSummary = '';
-      if (assayAnalysisSummaryTable) assayAnalysisSummaryTable.innerHTML = assayAnalysisTable.innerHTML;
+      if (assayAnalysisSummaryTable) i18nUi.setHtml(assayAnalysisSummaryTable, assayAnalysisTable.innerHTML);
       onWorkspaceChanged?.();
       return;
     }
@@ -382,23 +386,23 @@ export function createAssayAnalysisView({
     }
     lastRecordedSummary = [result.summary, ...notices.filter((notice) => notice !== result.summary)].join(' ');
     if (!result.rows.length) {
-      assayAnalysisTable.innerHTML = '<p class="small-note">No analyzable rows for this analysis.</p>';
-      if (assayAnalysisSummaryTable) assayAnalysisSummaryTable.innerHTML = assayAnalysisTable.innerHTML;
+      i18nUi.setHtml(assayAnalysisTable, `<p class="small-note">${plateMessage('analysis.noRows')}</p>`);
+      if (assayAnalysisSummaryTable) i18nUi.setHtml(assayAnalysisSummaryTable, assayAnalysisTable.innerHTML);
       setChartContext(getAnalysisContext());
       emitAnalysisRendered();
       return;
     }
 
     const tableHtml = buildAnalysisTable(result.headers, result.rows);
-    if (assayAnalysisSummaryTable) assayAnalysisSummaryTable.innerHTML = tableHtml;
-    assayAnalysisTable.innerHTML = hasPlotly
+    if (assayAnalysisSummaryTable) i18nUi.setHtml(assayAnalysisSummaryTable, tableHtml);
+    i18nUi.setHtml(assayAnalysisTable, hasPlotly
       ? `
         <div class="assay-analysis-results">
           <div class="assay-analysis-chart" data-assay-analysis-chart></div>
           ${assayAnalysisSummaryTable ? '' : tableHtml}
         </div>
       `
-      : (assayAnalysisSummaryTable ? '<p class="small-note">Chart rendering is unavailable. Results are in Summary.</p>' : tableHtml);
+      : (assayAnalysisSummaryTable ? `<p class="small-note">${plateMessage('analysis.chartUnavailable')}</p>` : tableHtml));
     lastModel = modelForStyle(result, spec.analysis, getChartStyle());
     applyChartContext(renderAnalysisChart(lastModel));
     emitAnalysisRendered();
@@ -542,7 +546,7 @@ export function createAssayAnalysisView({
     renderAgentPlotlyGraph: (artifact) => {
       const rendered = renderAgentPlotlyGraph(artifact);
       if (rendered && assayAnalysisSummaryTable) {
-        assayAnalysisSummaryTable.innerHTML = '<p class="small-note">This agent chart has no summary table.</p>';
+        i18nUi.setHtml(assayAnalysisSummaryTable, `<p class="small-note">${plateMessage('analysis.agentNoSummary')}</p>`);
       }
       onWorkspaceChanged?.();
       return rendered;

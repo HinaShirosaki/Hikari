@@ -429,7 +429,11 @@ test('agent-chat releases the composer immediately when cancellation is acknowle
   assert.equal(runtime.activeClientRequestId, '');
   assert.equal(state.agentChat.messages.length, 2);
   assert.equal(state.agentChat.messages[1].text, 'Agent stopped.');
-  assert.equal(statuses.at(-1), 'Stopped.');
+  // Statuses are agent catalog descriptors; their English rendering is unchanged.
+  const { agentDisplayText } = loadEsmStyleModule(path.join(
+    __dirname, 'src', 'renderer', 'modules', 'agent-chat', 'localization.js'
+  ));
+  assert.equal(agentDisplayText(statuses.at(-1)), 'Stopped.');
 
   resolveAgentChat({ ok: false, canceled: true, error: 'Agent request stopped by user.' });
   await pendingSend;

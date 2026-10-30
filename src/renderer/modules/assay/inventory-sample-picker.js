@@ -1,3 +1,8 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("plate");
+import { plateAttributes, plateMessage } from './localization.js';
+
 export function createInventorySamplePicker({
   safeText,
   getInventorySamples,
@@ -70,7 +75,7 @@ export function createInventorySamplePicker({
     state.wellId = '';
     state.query = '';
     root.hidden = true;
-    root.innerHTML = '';
+    i18nUi.setHtml(root, '');
   }
 
   function position(clientX, clientY) {
@@ -95,9 +100,9 @@ export function createInventorySamplePicker({
       : options;
     const currentValue = getEffectiveWellMapping(state.wellId).sampleId;
 
-    root.innerHTML = `
+    i18nUi.setHtml(root, `
       <div class="assay-sample-picker-head">
-        <strong>Select Sample</strong>
+        <strong>${plateMessage('picker.title')}</strong>
         <span>${safeText(state.wellId)}</span>
       </div>
       <div class="assay-sample-picker-search">
@@ -105,15 +110,14 @@ export function createInventorySamplePicker({
           type="search"
           class="assay-sample-picker-search-input"
           value="${safeText(state.query)}"
-          placeholder="Search inventory samples"
-          aria-label="Search inventory samples"
+          ${plateAttributes({ placeholder: 'picker.search', 'aria-label': 'picker.search' })}
         />
       </div>
       <div class="assay-sample-picker-list">
         ${currentValue ? `
           <button type="button" class="assay-sample-picker-item assay-sample-picker-clear" data-assay-sample-picker-clear="true">
-            <span class="assay-sample-picker-item-title">Clear Sample</span>
-            <span class="assay-sample-picker-item-meta">Remove the Sample ID for ${safeText(state.wellId)}</span>
+            <span class="assay-sample-picker-item-title">${plateMessage('picker.clear')}</span>
+            <span class="assay-sample-picker-item-meta">${plateMessage('picker.clearMeta', { well: state.wellId })}</span>
           </button>
         ` : ''}
         ${filtered.length ? filtered.map((item) => `
@@ -124,15 +128,15 @@ export function createInventorySamplePicker({
             title="${safeText(item.name || item.value)}"
           >
             <span class="assay-sample-picker-item-title">${safeText(item.value)}</span>
-            <span class="assay-sample-picker-item-meta">${safeText([
+            <span class="assay-sample-picker-item-meta">${[
               item.name && item.name !== item.value ? item.name : '',
               item.type || '',
               item.concentration || ''
-            ].filter(Boolean).join(' • ') || 'Inventory sample')}</span>
+            ].filter(Boolean).map((part) => safeText(part)).join(' • ') || plateMessage('picker.fallbackMeta')}</span>
           </button>
-        `).join('') : '<p class="small-note assay-sample-picker-empty">No inventory samples match this search.</p>'}
+        `).join('') : `<p class="small-note assay-sample-picker-empty">${plateMessage('picker.empty')}</p>`}
       </div>
-    `;
+    `);
     root.hidden = false;
 
     const searchInput = root.querySelector('.assay-sample-picker-search-input');

@@ -1,7 +1,7 @@
 import { buildFolderKey, updatePaperAvailability } from './model.js';
 import { buildPaperStorageFolder, fileToBytes } from './storage.js';
-import { showTransientNotice } from '../../lib/notify.js';
 import { isAgentAvailable } from '../../lib/agent-availability.js';
+import { paperFailure, paperNotice, paperText, paperUi } from './localization.js';
 
 // Adding a PDF to the library: resolve the destination folder, copy the bytes
 // into storage, and kick off the automatic intake pipeline.
@@ -70,7 +70,7 @@ function createPaperUploadActions({
 
     const rootPath = String(state.settings?.storagePath || '').trim();
     if (!rootPath) {
-      showTransientNotice('Set Storage Folder Path in Settings before uploading papers.', { type: 'error' });
+      paperNotice(paperUi('notice.storageForUpload'), { type: 'error' });
       return null;
     }
 
@@ -96,12 +96,12 @@ function createPaperUploadActions({
 
     const pdfBytes = await fileToBytes(file);
     if (!pdfBytes?.byteLength) {
-      showTransientNotice('Cannot read the selected PDF.', { type: 'error' });
+      paperNotice(paperUi('notice.cannotRead'), { type: 'error' });
       return null;
     }
 
     if (!windowRef?.hikariApi?.storeImportedFile) {
-      showTransientNotice('Imported file storage API is unavailable.', { type: 'error' });
+      paperNotice(paperUi('notice.storeUnavailable'), { type: 'error' });
       return null;
     }
 
@@ -122,7 +122,7 @@ function createPaperUploadActions({
       }
       storedFile = result;
     } catch (error) {
-      showTransientNotice(String(error?.message || error || 'Failed to store uploaded PDF.'), { type: 'error' });
+      paperNotice(paperFailure(error, 'notice.storeFailed'), { type: 'error' });
       return null;
     }
 
@@ -261,15 +261,15 @@ function createPaperUploadActions({
     if (!failed.length) {
       return;
     }
+    // File names and backend errors stay verbatim inside the translated list.
     const listed = failed.slice(0, MAX_LISTED_INTAKE_FAILURES).map((paper) => (
-      `- ${paper.fileName}: ${paper.ingestionErrors?.[0] || 'Unknown intake error.'}`
+      `- ${paper.fileName}: ${paper.ingestionErrors?.[0] || paperText('notice.intakeUnknown')}`
     ));
     const remaining = failed.length - listed.length;
-    showTransientNotice([
-      `${failed.length} PDF${failed.length === 1 ? ' was' : 's were'} stored, but automatic paper intake failed:`,
-      ...listed,
-      ...(remaining > 0 ? [`- and ${remaining} more.`] : [])
-    ].join('\n'), { type: 'error', durationMs: 12000 });
+    paperNotice(paperUi('notice.intakeFailed', {
+      count: failed.length,
+      list: [...listed, ...(remaining > 0 ? [paperText('notice.intakeMore', { count: remaining })] : [])].join('\n')
+    }), { type: 'error', durationMs: 12000 });
   }
 
   async function uploadPaperFiles(files = []) {

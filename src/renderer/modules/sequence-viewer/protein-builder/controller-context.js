@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { showTransientNotice } from '../../../lib/notify.js';
 import { cleanText, normalizeSequenceText } from '../shared.js';
 import {
@@ -79,9 +82,9 @@ export function createProteinBuilderContext(config = {}) {
       return;
     }
     const selected = ctx.getCodonUsageProfile();
-    elements.proteinBuilderCodonUsageSelect.innerHTML = Object.entries(CODON_USAGE_PROFILES)
+    i18nUi.setHtml(elements.proteinBuilderCodonUsageSelect, Object.entries(CODON_USAGE_PROFILES)
       .map(([key, profile]) => `<option value="${key}"${key === selected ? ' selected' : ''}>${profile.label}</option>`)
-      .join('');
+      .join(''));
     elements.proteinBuilderCodonUsageSelect.value = selected;
   };
 
@@ -96,7 +99,7 @@ export function createProteinBuilderContext(config = {}) {
     if (!elements.proteinBuilderFeatureSearchStatus) {
       return;
     }
-    elements.proteinBuilderFeatureSearchStatus.textContent = String(message || '');
+    i18nUi.setOwnedText(elements.proteinBuilderFeatureSearchStatus, String(message || ''));
     elements.proteinBuilderFeatureSearchStatus.classList.toggle('is-error', Boolean(isError));
   };
 
@@ -129,7 +132,7 @@ export function createProteinBuilderContext(config = {}) {
     if (!state.dnaConstruct?.ok || !state.dnaConstruct?.sequence) {
       ctx.buildCurrentDnaSequence();
       if (!state.dnaConstruct?.ok || !state.dnaConstruct?.sequence) {
-        ctx.setBuilderStatus('Resolve the construct errors before inserting it into the vector.', true);
+        ctx.setBuilderStatus(i18nUi.text("Resolve the construct errors before inserting it into the vector."), true);
         return;
       }
     }
@@ -142,10 +145,10 @@ export function createProteinBuilderContext(config = {}) {
         dnaConstruct: state.dnaConstruct
       });
       if (applied) {
-        ctx.setBuilderStatus('Inserted the construct into the open vector.');
+        ctx.setBuilderStatus(i18nUi.text("Inserted the construct into the open vector."));
       }
     } catch (error) {
-      ctx.setBuilderStatus(error?.message || 'Failed to insert the construct into the vector.', true);
+      ctx.setBuilderStatus((((((error?.message || i18nUi.text("Failed to insert the construct into the vector.")))))), true);
     } finally {
       state.isPreparingAssembly = false;
       ctx.syncVectorInsertControls();

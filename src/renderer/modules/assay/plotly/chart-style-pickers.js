@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("plate");
 // DOM pickers used by the Assay Plotly style panel.
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -170,7 +173,7 @@ function strokeWidthSvg(width, opts) {
       'text-anchor': 'middle',
       'font-size': '10', fill: 'currentColor', opacity: '0.55'
     });
-    tx.textContent = 'none';
+    i18nUi.setText(tx, i18nUi.message("none"));
     svg.appendChild(tx);
   } else {
     svg.appendChild(svgEl('line', {
@@ -259,7 +262,7 @@ export function createChartStylePicker(mount, config) {
   let shapeContext = config.shapeContext || 'circle';
   let menuColumns = config.menuColumns || 1;
 
-  mount.innerHTML = '';
+  i18nUi.setHtml(mount, '');
   mount.classList.add('assay-chart-picker');
   mount.dataset.pickerKind = kind;
 
@@ -350,8 +353,8 @@ export function createChartStylePicker(mount, config) {
   }
 
   function renderTrigger() {
-    previewWrap.innerHTML = '';
-    labelEl.textContent = '';
+    i18nUi.setHtml(previewWrap, '');
+    i18nUi.setText(labelEl, '');
     const opt = findOption(currentValue) || { value: currentValue, label: String(currentValue ?? '') };
     const stylePreset = pickPreviewBuilders(kind);
     const preview = buildTriggerPreview(opt);
@@ -360,17 +363,17 @@ export function createChartStylePicker(mount, config) {
     }
     const showLabel = stylePreset ? stylePreset.showLabelInTrigger : true;
     if (showLabel || !preview) {
-      labelEl.textContent = labelForOption(opt);
+      i18nUi.setOwnedText(labelEl, labelForOption(opt));
       labelEl.style.display = '';
     } else {
       labelEl.style.display = 'none';
     }
     const tooltip = stylePreset?.optionTooltip ? stylePreset.optionTooltip(opt || {}) : labelForOption(opt);
-    trigger.title = tooltip;
+    i18nUi.setAttribute(trigger, "title", i18nUi.owned(tooltip));
   }
 
   function renderMenu() {
-    popup.innerHTML = '';
+    i18nUi.setHtml(popup, '');
     const stylePreset = pickPreviewBuilders(kind);
     options.forEach((opt) => {
       const item = document.createElement('button');
@@ -396,11 +399,11 @@ export function createChartStylePicker(mount, config) {
       if (showLabel) {
         const lbl = document.createElement('span');
         lbl.className = 'assay-chart-picker__option-label';
-        lbl.textContent = labelForOption(opt);
+        i18nUi.setOwnedText(lbl, labelForOption(opt));
         item.appendChild(lbl);
       }
       const tooltip = stylePreset?.optionTooltip ? stylePreset.optionTooltip(opt) : labelForOption(opt);
-      item.title = tooltip;
+      i18nUi.setAttribute(item, "title", i18nUi.owned(tooltip));
 
       item.addEventListener('click', () => {
         setValue(opt.value);
@@ -488,7 +491,7 @@ export function createChartStylePicker(mount, config) {
     destroy() {
       close();
       popup.remove();
-      mount.innerHTML = '';
+      i18nUi.setHtml(mount, '');
       mount.classList.remove('assay-chart-picker', 'is-open');
       delete mount.dataset.pickerKind;
     }

@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "../../lib/i18n/shell.js";
+const i18nUi = createPresentation("shell");
 import { showTransientNotice } from '../../lib/notify.js';
 import {
   PAGE_MARGIN,
@@ -46,7 +49,7 @@ function createContext({
 }) {
   const JsPdf = getJsPdfCtor();
   if (!JsPdf) {
-    showTransientNotice('PDF generator is not loaded. Please restart the app and try again.', { type: 'error' });
+    showTransientNotice(i18nUi.message("PDF generator is not loaded. Please restart the app and try again."), { type: 'error' });
     return null;
   }
 

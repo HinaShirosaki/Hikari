@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("dna");
 import { normalizeTopology } from './shared.js';
 import { positionFloatingUi } from './detail-feature-editing/feature-ranges.js';
 
@@ -23,10 +26,10 @@ export function createSequenceCursorMenuController(config = {}) {
     activeContext = { record, boundary };
     const circular = normalizeTopology(record.topology) === 'circular';
     const atStart = boundary === 0 || boundary === record.sequence.length;
-    menu.innerHTML = `
-      <button type="button" class="sequence-viewer-context-item" data-sequence-cursor-action="insert">Insert Sequence…</button>
-      ${circular ? `<button type="button" class="sequence-viewer-context-item" data-sequence-cursor-action="set-origin"${atStart ? ' disabled' : ''}>Set Sequence Start Here</button>` : ''}
-    `;
+    i18nUi.setHtml(menu, `
+      <button type="button" class="sequence-viewer-context-item" data-sequence-cursor-action="insert">${i18nUi.html("Insert Sequence…")}</button>
+      ${circular ? `<button type="button" class="sequence-viewer-context-item" data-sequence-cursor-action="set-origin"${atStart ? ' disabled' : ''}>${i18nUi.html("Set Sequence Start Here")}</button>` : ''}
+    `);
     menu.hidden = false;
     positionFloatingUi(menu, Number(event?.clientX) + 4, Number(event?.clientY) + 4);
   }
@@ -46,7 +49,7 @@ export function createSequenceCursorMenuController(config = {}) {
       try {
         await onSetSequenceOrigin(boundary);
       } catch (error) {
-        setStatus(error?.message || 'Failed to change the sequence start.', true);
+        setStatus((((((error?.message || i18nUi.text("Failed to change the sequence start.")))))), true);
       }
     }
   }

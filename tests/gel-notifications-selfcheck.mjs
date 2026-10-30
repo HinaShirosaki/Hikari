@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import vm from 'node:vm';
+import { createPresentation } from '../src/plugins/gel/i18n.mjs';
 import { createGelNotifications } from '../src/plugins/gel/notifications.js';
 
 const calls = [], errors = [];
@@ -36,7 +37,7 @@ const source = await fs.readFile(new URL('../src/plugins/gel/main.js', import.me
 const menuRetry = { hidden: true }, indicator = {}, bootMessage = {}, bootRetryButton = {};
 const bootPanel = { hidden: true, dataset: {}, classList: { toggle() {}, remove() {} }, querySelector: () => indicator };
 let attempts = 0;
-const context = vm.createContext({ notifications, bootPanel, bootMessage, bootRetryButton, retryAction: null,
+const context = vm.createContext({ i18nUi: createPresentation('gel'), notifications, bootPanel, bootMessage, bootRetryButton, retryAction: null,
   workspaceReady: true, readyWarningKey: '', loadWarnings: { artifactWarnings: 0, migrationError: '' },
   state: { settings: { storagePath: '.' } }, persistFailure: '',
   document: { getElementById: () => menuRetry }, host: { setAttribute() {} },

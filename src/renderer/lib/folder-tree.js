@@ -1,3 +1,6 @@
+import { createPresentation } from "./i18n/presentation.js";
+import "./i18n/shell.js";
+const i18nUi = createPresentation("shell");
 import { escapeHtml } from './html.js';
 
 function normalizeFolderTreeKey(value) {
@@ -278,7 +281,7 @@ export function attachRailHoverCard(listEl, {
       card.addEventListener('mouseenter', () => clearTimeout(hideTimer));
       doc.body.append(card);
     }
-    card.textContent = text;
+    i18nUi.setText(card, text);
     card.hidden = false;
     const bounds = row.getBoundingClientRect();
     const view = doc.defaultView;

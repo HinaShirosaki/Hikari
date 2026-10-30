@@ -3,14 +3,14 @@
         <aside id="agent-session-rail" class="agent-session-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div class="agent-session-toolbar left-rail-template__pinned">
             <div class="agent-session-toolbar-copy">
-              <p id="agent-session-status" class="small-note">Set Storage Folder Path in Settings to save and browse agent chats.</p>
+              <p id="agent-session-status" class="small-note"><span data-i18n="agent.full.a8e39af0">Set Storage Folder Path in Settings to save and browse agent chats.</span></p>
             </div>
           </div>
           <div id="agent-session-list" class="agent-session-list left-rail-template__scroll folder-tree-template" aria-live="polite"></div>
           <div id="agent-session-context-menu" class="agent-session-context-menu" hidden>
-            <button type="button" id="agent-context-new-folder" class="agent-session-context-item">New Folder</button>
-            <button type="button" id="agent-context-rename-folder" class="agent-session-context-item" hidden>Rename Folder</button>
-            <button type="button" id="agent-context-delete-folder" class="agent-session-context-item agent-session-context-item-danger" hidden>Delete Folder</button>
+            <button type="button" id="agent-context-new-folder" class="agent-session-context-item" data-i18n="agent.menu.newFolder">New Folder</button>
+            <button type="button" id="agent-context-rename-folder" class="agent-session-context-item" hidden data-i18n="agent.menu.renameFolder">Rename Folder</button>
+            <button type="button" id="agent-context-delete-folder" class="agent-session-context-item agent-session-context-item-danger" hidden data-i18n="agent.menu.deleteFolder">Delete Folder</button>
           </div>
         </aside>
 
@@ -19,34 +19,34 @@
             <div class="agent-conversation-shell is-empty-chat">
               <div class="agent-history-viewport">
                 <div id="agent-chat-history" class="agent-chat-history" aria-live="polite"></div>
-                <button type="button" id="agent-scroll-to-bottom-btn" class="ghost-btn agent-scroll-to-bottom-btn" hidden><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>Jump to Latest</button>
+                <button type="button" id="agent-scroll-to-bottom-btn" class="ghost-btn agent-scroll-to-bottom-btn" hidden><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M19 12l-7 7-7-7"/></svg><span data-i18n="agent.history.jumpLatest">Jump to Latest</span></button>
               </div>
               <div class="agent-composer-shell">
                 <div id="agent-question-dock" class="agent-question-dock" aria-live="polite" hidden></div>
                 <div class="stack-form agent-composer-card">
                   <input id="agent-attachment-input" type="file" multiple hidden />
                   <label class="agent-composer-label">
-                    <span class="sr-only">Message</span>
-                    <textarea id="agent-message-input" rows="3" placeholder="Ask Hikari…"></textarea>
+                    <span class="sr-only" data-i18n="agent.composer.message">Message</span>
+                    <textarea id="agent-message-input" rows="3" placeholder="Ask Hikari…" data-i18n-placeholder="agent.composer.placeholder"></textarea>
                   </label>
                   <div id="agent-attachment-list" class="agent-attachment-list" hidden></div>
                   <div class="agent-composer-toolbar">
                     <div class="agent-composer-toolbar-start">
-                      <button type="button" id="agent-file-changes-btn" class="ghost-btn">File changes</button>
-                      <button type="button" id="agent-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files"><span class="agent-chat-icon agent-attach-icon" data-agent-chat-icon="attach" aria-hidden="true"></span></button>
+                      <button type="button" id="agent-file-changes-btn" class="ghost-btn" data-i18n="agent.composer.fileChanges">File changes</button>
+                      <button type="button" id="agent-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files" data-i18n-aria-label="agent.composer.attach" data-i18n-title="agent.composer.attach"><span class="agent-chat-icon agent-attach-icon" data-agent-chat-icon="attach" aria-hidden="true"></span></button>
                       <label class="agent-composer-project agent-composer-project-inline">
-                        <span class="sr-only">Project Scope</span>
-                        <select id="agent-project-select" aria-label="Project Scope">
-                          <option value="">All projects</option>
+                        <span class="sr-only" data-i18n="agent.composer.projectScope">Project Scope</span>
+                        <select id="agent-project-select" aria-label="Project Scope" data-i18n-aria-label="agent.composer.projectScope">
+                          <option value="" data-i18n="agent.composer.allProjects">All projects</option>
                         </select>
                       </label>
                     </div>
                     <div class="form-actions agent-composer-actions">
-                      <button type="button" id="agent-send-btn" class="primary-btn agent-send-icon-btn" aria-label="Send message" title="Send message">
+                      <button type="button" id="agent-send-btn" class="primary-btn agent-send-icon-btn" aria-label="Send message" title="Send message" data-i18n-aria-label="agent.composer.send" data-i18n-title="agent.composer.send">
                         <span class="agent-chat-icon agent-send-icon" data-agent-chat-icon="send" aria-hidden="true"></span>
-                        <span class="sr-only">Send message</span>
+                        <span class="sr-only" data-i18n="agent.composer.send">Send message</span>
                       </button>
-                      <button type="button" id="agent-stop-btn" class="danger-btn" hidden>Stop</button>
+                      <button type="button" id="agent-stop-btn" class="danger-btn" hidden data-i18n="agent.composer.stop">Stop</button>
                     </div>
                   </div>
                 </div>
@@ -56,15 +56,15 @@
               <section class="agent-review-dialog app-dialog-surface draft-review-dialog" role="dialog" aria-modal="true" aria-labelledby="agent-review-title">
                 <header class="agent-review-dialog-header app-dialog-head">
                   <div>
-                    <h3 id="agent-review-title">Review changes</h3>
+                    <h3 id="agent-review-title" data-i18n="agent.review.title">Review changes</h3>
                   </div>
-                  <button type="button" id="agent-review-close-btn" class="app-dialog-close-btn" aria-label="Close generated draft review dialog" title="Close"><span class="agent-chat-icon agent-close-icon" data-agent-chat-icon="close" aria-hidden="true"></span></button>
+                  <button type="button" id="agent-review-close-btn" class="app-dialog-close-btn" aria-label="Close generated draft review dialog" title="Close" data-i18n-aria-label="agent.review.close" data-i18n-title="agent.review.closeTitle"><span class="agent-chat-icon agent-close-icon" data-agent-chat-icon="close" aria-hidden="true"></span></button>
                 </header>
                 <div id="agent-review-track" class="agent-review-track" tabindex="0" aria-live="polite"></div>
                 <footer class="agent-review-footer">
-                  <button type="button" id="agent-review-prev-btn" class="row-action-icon-btn" aria-label="Previous generated draft"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m15 18-6-6 6-6"/></svg></button>
+                  <button type="button" id="agent-review-prev-btn" class="row-action-icon-btn" aria-label="Previous generated draft" data-i18n-aria-label="agent.review.prev"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m15 18-6-6 6-6"/></svg></button>
                   <span id="agent-review-page-label" class="small-note">1 / 1</span>
-                  <button type="button" id="agent-review-next-btn" class="row-action-icon-btn" aria-label="Next generated draft"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 18 6-6-6-6"/></svg></button>
+                  <button type="button" id="agent-review-next-btn" class="row-action-icon-btn" aria-label="Next generated draft" data-i18n-aria-label="agent.review.next"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 18 6-6-6-6"/></svg></button>
                 </footer>
               </section>
             </div>

@@ -6,10 +6,10 @@
               <div class="protocol-library-toolbar">
                 <button type="button" id="create-protocol-btn" class="primary-btn protocol-create-btn">
                   <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"></path></svg>
-                  <span>Add protocol</span>
+                  <span data-i18n="protocol.action.add">Add protocol</span>
                 </button>
                 <label class="protocol-search-field">
-                  <input type="search" id="protocol-search" placeholder="Search protocols" aria-label="Search protocols by name or purpose" aria-controls="protocol-list" autocomplete="off" />
+                  <input type="search" id="protocol-search" placeholder="Search protocols" aria-label="Search protocols by name or purpose" aria-controls="protocol-list" autocomplete="off"  data-i18n-aria-label="protocol.search.label" data-i18n-placeholder="protocol.search.placeholder"/>
                 </label>
               </div>
             </div>
@@ -21,71 +21,71 @@
 
         <div id="protocol-detail-panel" class="panel protocol-detail-panel left-rail-template__main">
           <div id="protocol-empty-panel" class="protocol-empty-panel">
-            <span class="protocol-empty-eyebrow">Protocol Workspace</span>
-            <h3>Select a protocol</h3>
-            <p class="small-note">Choose a protocol from the list to view it here, or start a new one to begin editing right away.</p>
+            <span class="protocol-empty-eyebrow" data-i18n="protocol.empty.eyebrow">Protocol Workspace</span>
+            <h3 data-i18n="protocol.empty.title">Select a protocol</h3>
+            <p class="small-note" data-i18n="protocol.empty.description">Choose a protocol from the list to view it here, or start a new one to begin editing right away.</p>
             <div class="form-actions">
-              <button type="button" class="primary-btn" data-protocol-empty-create>Create Protocol</button>
+              <button type="button" class="primary-btn" data-protocol-empty-create data-i18n="protocol.editor.create">Create Protocol</button>
             </div>
           </div>
 
           <div id="protocol-editor-panel" hidden>
             <div class="protocol-panel-head">
               <div>
-                <span class="protocol-detail-mode">Editor</span>
-                <h3 id="protocol-editor-heading">Protocol Editor</h3>
+                <span class="protocol-detail-mode" data-i18n="protocol.editor.mode">Editor</span>
+                <h3 id="protocol-editor-heading" data-i18n="protocol.editor.title">Protocol Editor</h3>
               </div>
               <div class="form-actions">
                 <div id="protocol-json-import-panel" class="form-actions protocol-json-import-launcher">
-                  <button type="button" id="open-protocol-json-import-btn" class="ghost-btn protocol-viewer-icon-btn" aria-label="Import Protocol JSON" aria-haspopup="dialog" aria-controls="protocol-json-import-overlay" title="Import Protocol JSON">
+                  <button type="button" id="open-protocol-json-import-btn" class="ghost-btn protocol-viewer-icon-btn" aria-label="Import Protocol JSON" aria-haspopup="dialog" aria-controls="protocol-json-import-overlay" title="Import Protocol JSON" data-i18n-title="protocol.import.title" data-i18n-aria-label="protocol.import.title">
                     <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                       <path d="M12 3v11"></path>
                       <path d="m8 10 4 4 4-4"></path>
                       <path d="M5 15v4h14v-4"></path>
                     </svg>
-                    <span class="sr-only">Import Protocol JSON</span>
+                    <span class="sr-only" data-i18n="protocol.import.title">Import Protocol JSON</span>
                   </button>
                 </div>
-                <button type="button" id="protocol-editor-back-btn" class="ghost-btn" hidden>Back to List</button>
+                <button type="button" id="protocol-editor-back-btn" class="ghost-btn" hidden data-i18n="protocol.action.back">Back to List</button>
               </div>
             </div>
             <form id="protocol-form" class="stack-form">
               <label>
-                Protocol Name
-                <input id="protocol-name" required placeholder="Protocol name" />
+                <span data-i18n="protocol.field.name">Protocol Name</span>
+                <input id="protocol-name" required placeholder="Protocol name"  data-i18n-placeholder="protocol.field.namePlaceholder"/>
               </label>
               <label>
-                Purpose
-                <textarea id="protocol-purpose" rows="3" placeholder="Describe the purpose"></textarea>
+                <span data-i18n="protocol.field.purpose">Purpose</span>
+                <textarea id="protocol-purpose" rows="3" placeholder="Describe the purpose" data-i18n-placeholder="protocol.field.purposePlaceholder"></textarea>
               </label>
               <label>
-                Materials
-                <textarea id="protocol-materials" rows="5" placeholder="• Material 1&#10;• Material 2"></textarea>
+                <span data-i18n="protocol.field.materials">Materials</span>
+                <textarea id="protocol-materials" rows="5" placeholder="• Material 1&#10;• Material 2" data-i18n-placeholder="protocol.field.materialsPlaceholder"></textarea>
               </label>
               <div class="protocol-steps-field">
-                <label for="protocol-steps">Steps</label>
+                <label for="protocol-steps" data-i18n="protocol.field.steps">Steps</label>
                 <div class="protocol-steps-editor">
-                  <div class="protocol-steps-toolbar" role="group" aria-label="Interactive bars">
-                    <div id="protocol-placeholder-presets" class="protocol-placeholder-presets" role="group" aria-label="Protocol step placeholder presets"></div>
+                  <div class="protocol-steps-toolbar" role="group" aria-label="Interactive bars" data-i18n-aria-label="protocol.presets.toolbar">
+                    <div id="protocol-placeholder-presets" class="protocol-placeholder-presets" role="group" aria-label="Protocol step placeholder presets" data-i18n-aria-label="protocol.presets.label"></div>
                     <div class="protocol-placeholder-group">
-                      <label class="protocol-steps-toolbar-label" for="placeholder-name">Custom</label>
+                      <label class="protocol-steps-toolbar-label" for="placeholder-name" data-i18n="protocol.presets.custom">Custom</label>
                       <div class="protocol-placeholder-custom">
-                        <input id="placeholder-name" placeholder="Bar name (e.g. volume)" />
-                        <button type="button" id="add-placeholder-btn" class="ghost-btn">Insert</button>
+                        <input id="placeholder-name" placeholder="Bar name (e.g. volume)"  data-i18n-placeholder="protocol.presets.name"/>
+                        <button type="button" id="add-placeholder-btn" class="ghost-btn" data-i18n="protocol.presets.insert">Insert</button>
                       </div>
                     </div>
                   </div>
-                  <textarea id="protocol-steps" rows="7" placeholder="• Step 1&#10;• Step 2"></textarea>
+                  <textarea id="protocol-steps" rows="7" placeholder="• Step 1&#10;• Step 2" data-i18n-placeholder="protocol.field.stepsPlaceholder"></textarea>
                 </div>
               </div>
               <label>
-                Troubleshooting
-                <textarea id="protocol-troubleshooting" rows="4" placeholder="Common issues and solutions"></textarea>
+                <span data-i18n="protocol.field.troubleshooting">Troubleshooting</span>
+                <textarea id="protocol-troubleshooting" rows="4" placeholder="Common issues and solutions" data-i18n-placeholder="protocol.field.troubleshootingPlaceholder"></textarea>
               </label>
               <div class="form-actions protocol-save-actions">
-                <button type="button" id="protocol-generate-btn" class="ghost-btn hikari-agent-action" hidden>Generate Protocol</button>
-                <button type="button" id="protocol-polish-btn" class="ghost-btn hikari-agent-action">Polish Protocol</button>
-                <button type="submit" class="primary-btn">Save Protocol</button>
+                <button type="button" id="protocol-generate-btn" class="ghost-btn hikari-agent-action" hidden data-i18n="protocol.action.generate">Generate Protocol</button>
+                <button type="button" id="protocol-polish-btn" class="ghost-btn hikari-agent-action" data-i18n="protocol.action.polish">Polish Protocol</button>
+                <button type="submit" class="primary-btn" data-i18n="protocol.action.save">Save Protocol</button>
               </div>
             </form>
           </div>
@@ -93,36 +93,36 @@
           <div id="protocol-view-panel" hidden>
             <div class="protocol-panel-head">
               <div>
-                <span class="protocol-detail-mode">Viewer</span>
-                <h3 id="protocol-view-title">Protocol</h3>
+                <span class="protocol-detail-mode" data-i18n="protocol.viewer.mode">Viewer</span>
+                <h3 id="protocol-view-title"><span data-i18n="protocol.full.4a57ebd5">Protocol</span></h3>
               </div>
-              <div class="form-actions protocol-viewer-actions" aria-label="Protocol actions">
-                <button type="button" id="protocol-view-edit-btn" class="ghost-btn protocol-viewer-icon-btn" aria-label="Edit protocol" title="Edit protocol">
+              <div class="form-actions protocol-viewer-actions" aria-label="Protocol actions" data-i18n-aria-label="protocol.action.menu">
+                <button type="button" id="protocol-view-edit-btn" class="ghost-btn protocol-viewer-icon-btn" aria-label="Edit protocol" title="Edit protocol" data-i18n-title="protocol.action.edit" data-i18n-aria-label="protocol.action.edit">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M4.5 19.5 8 18.75 18.5 8.25a2.12 2.12 0 0 0-3-3L5 15.75l-.5 3.75Z"></path>
                     <path d="m13.75 7 3.25 3.25"></path>
                   </svg>
-                  <span class="sr-only">Edit protocol</span>
+                  <span class="sr-only" data-i18n="protocol.action.edit">Edit protocol</span>
                 </button>
-                <button type="button" id="protocol-export-pdf-btn" class="ghost-btn protocol-viewer-icon-btn" aria-label="Export PDF" title="Export PDF">
+                <button type="button" id="protocol-export-pdf-btn" class="ghost-btn protocol-viewer-icon-btn" aria-label="Export PDF" title="Export PDF" data-i18n-title="protocol.action.export" data-i18n-aria-label="protocol.action.export">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M6 3.75h8l4 4v12.5H6V3.75Z"></path>
                     <path d="M14 3.75v4h4"></path>
                     <path d="M12 10v6"></path>
                     <path d="m9.5 13.5 2.5 2.5 2.5-2.5"></path>
                   </svg>
-                  <span class="sr-only">Export PDF</span>
+                  <span class="sr-only" data-i18n="protocol.action.export">Export PDF</span>
                 </button>
-                <button type="button" id="protocol-print-btn" class="ghost-btn protocol-viewer-icon-btn" aria-label="Print" title="Print">
+                <button type="button" id="protocol-print-btn" class="ghost-btn protocol-viewer-icon-btn" aria-label="Print" title="Print" data-i18n-title="protocol.action.print" data-i18n-aria-label="protocol.action.print">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M7 8V4.75h10V8"></path>
                     <rect x="6" y="14" width="12" height="5.25" rx="1"></rect>
                     <path d="M6.5 17H5.25A2.25 2.25 0 0 1 3 14.75v-4A2.25 2.25 0 0 1 5.25 8.5h13.5A2.25 2.25 0 0 1 21 10.75v4A2.25 2.25 0 0 1 18.75 17H17.5"></path>
                     <path d="M8.25 16.5h7.5"></path>
                   </svg>
-                  <span class="sr-only">Print</span>
+                  <span class="sr-only" data-i18n="protocol.action.print">Print</span>
                 </button>
-                <button type="button" id="protocol-view-back-btn" class="ghost-btn" hidden>Back to List</button>
+                <button type="button" id="protocol-view-back-btn" class="ghost-btn" hidden data-i18n="protocol.action.back">Back to List</button>
               </div>
             </div>
             <div id="protocol-view-content" class="stack-form"></div>
@@ -132,23 +132,23 @@
             <section class="protocol-json-import-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="protocol-json-import-title">
               <div class="app-dialog-head">
                 <div>
-                  <span class="protocol-detail-mode">Import</span>
-                  <h3 id="protocol-json-import-title">Import Protocol JSON</h3>
+                  <span class="protocol-detail-mode" data-i18n="protocol.import.mode">Import</span>
+                  <h3 id="protocol-json-import-title" data-i18n="protocol.import.title">Import Protocol JSON</h3>
                 </div>
-                <button type="button" id="protocol-json-import-close-btn" class="app-dialog-close-btn" aria-label="Close protocol import dialog" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                <button type="button" id="protocol-json-import-close-btn" class="app-dialog-close-btn" aria-label="Close protocol import dialog" title="Close" data-i18n-title="protocol.action.close" data-i18n-aria-label="protocol.import.close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
               </div>
               <div class="stack-form">
                 <label>
-                  Choose JSON File
+                  <span data-i18n="protocol.import.file">Choose JSON File</span>
                   <input id="protocol-json-import-file" type="file" accept=".json,application/json" />
                 </label>
                 <label>
-                  Or Paste JSON
-                  <textarea id="protocol-json-import-input" rows="8" placeholder='Paste protocol JSON, e.g. {"protocols":[...]} or [...]'></textarea>
+                  <span data-i18n="protocol.import.paste">Or Paste JSON</span>
+                  <textarea id="protocol-json-import-input" rows="8" placeholder='Paste protocol JSON, e.g. {"protocols":[...]} or [...]' data-i18n-placeholder="protocol.import.placeholder"></textarea>
                 </label>
                 <p id="protocol-json-import-status" class="small-note" hidden></p>
                 <div class="form-actions">
-                  <button type="button" id="import-protocol-json-btn" class="primary-btn">Import Protocol JSON</button>
+                  <button type="button" id="import-protocol-json-btn" class="primary-btn" data-i18n="protocol.import.title">Import Protocol JSON</button>
                 </div>
               </div>
             </section>
@@ -159,24 +159,24 @@
               <section class="protocol-polish-dialog protocol-generate-input-dialog app-dialog-surface" aria-labelledby="protocol-generate-input-title">
                 <div class="protocol-polish-dialog-head app-dialog-head">
                   <div>
-                    <span class="protocol-detail-mode">Generate</span>
-                    <h3 id="protocol-generate-input-title">Generate Protocol</h3>
+                    <span class="protocol-detail-mode" data-i18n="protocol.generate.mode">Generate</span>
+                    <h3 id="protocol-generate-input-title" data-i18n="protocol.action.generate">Generate Protocol</h3>
                   </div>
-                  <button type="button" id="protocol-generate-close-btn" class="app-dialog-close-btn" aria-label="Close protocol generation dialog" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                  <button type="button" id="protocol-generate-close-btn" class="app-dialog-close-btn" aria-label="Close protocol generation dialog" title="Close" data-i18n-title="protocol.action.close" data-i18n-aria-label="protocol.generate.close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
                 </div>
 
                 <div class="agent-composer-shell protocol-generate-composer-shell">
                   <div class="stack-form agent-composer-card">
                     <input id="protocol-generate-attachment-input" type="file" multiple hidden />
                     <label class="agent-composer-label">
-                      <span>Message</span>
-                      <textarea id="protocol-generate-prompt-input" rows="3" placeholder="Describe the protocol you want, or attach methods, notes, images, or a PDF."></textarea>
+                      <span data-i18n="protocol.generate.message">Message</span>
+                      <textarea id="protocol-generate-prompt-input" rows="3" placeholder="Describe the protocol you want, or attach methods, notes, images, or a PDF." data-i18n-placeholder="protocol.generate.placeholder"></textarea>
                     </label>
                     <div id="protocol-generate-attachment-list" class="agent-attachment-list" hidden></div>
                     <div class="agent-composer-toolbar">
-                      <button type="button" id="protocol-generate-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files"><span class="agent-chat-icon agent-attach-icon" data-agent-chat-icon="attach" aria-hidden="true"></span></button>
+                      <button type="button" id="protocol-generate-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files" data-i18n-title="protocol.generate.attach" data-i18n-aria-label="protocol.generate.attach"><span class="agent-chat-icon agent-attach-icon" data-agent-chat-icon="attach" aria-hidden="true"></span></button>
                       <div class="form-actions agent-composer-actions">
-                        <button type="button" id="protocol-generate-send-btn" class="primary-btn hikari-agent-action">Generate Protocol</button>
+                        <button type="button" id="protocol-generate-send-btn" class="primary-btn hikari-agent-action" data-i18n="protocol.action.generate">Generate Protocol</button>
                       </div>
                     </div>
                   </div>
@@ -192,15 +192,15 @@
               <section class="protocol-polish-dialog protocol-generate-result-dialog app-dialog-surface draft-review-dialog" aria-labelledby="protocol-generate-title">
                 <div class="protocol-polish-dialog-head app-dialog-head">
                   <div>
-                    <h3 id="protocol-generate-title">Review generated protocol</h3>
+                    <h3 id="protocol-generate-title" data-i18n="protocol.generate.review">Review generated protocol</h3>
                   </div>
-                  <button type="button" id="protocol-generate-result-close-btn" class="app-dialog-close-btn" aria-label="Close generated protocol dialog" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                  <button type="button" id="protocol-generate-result-close-btn" class="app-dialog-close-btn" aria-label="Close generated protocol dialog" title="Close" data-i18n-title="protocol.action.close" data-i18n-aria-label="protocol.generate.closeReview"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
                 </div>
                 <div id="protocol-generate-result-preview" class="protocol-polish-preview stack-form draft-review-document"></div>
                 <p id="protocol-generate-status" class="small-note" hidden></p>
               <div class="form-actions draft-review-actions">
-                <button type="button" id="protocol-generate-back-btn" class="ghost-btn">Keep Editing</button>
-                <button type="button" id="protocol-generate-apply-btn" class="primary-btn" disabled>Use Generated Protocol</button>
+                <button type="button" id="protocol-generate-back-btn" class="ghost-btn" data-i18n="protocol.action.keepEditing">Keep Editing</button>
+                <button type="button" id="protocol-generate-apply-btn" class="primary-btn" disabled data-i18n="protocol.generate.apply">Use Generated Protocol</button>
               </div>
               </section>
             </div>
@@ -212,8 +212,8 @@
                 <section class="protocol-polish-dialog protocol-polish-dialog-source app-dialog-surface" aria-labelledby="protocol-polish-source-title">
                   <div class="protocol-polish-dialog-head app-dialog-head">
                     <div>
-                      <span class="protocol-detail-mode">Before</span>
-                      <h3 id="protocol-polish-source-title">Your Input</h3>
+                      <span class="protocol-detail-mode" data-i18n="protocol.polish.before">Before</span>
+                      <h3 id="protocol-polish-source-title" data-i18n="protocol.polish.input">Your Input</h3>
                     </div>
                   </div>
                   <div id="protocol-polish-original-preview" class="protocol-polish-preview stack-form"></div>
@@ -222,10 +222,10 @@
                 <section class="protocol-polish-dialog protocol-polish-dialog-result app-dialog-surface" aria-labelledby="protocol-polish-title">
                   <div class="protocol-polish-dialog-head app-dialog-head">
                     <div>
-                      <span class="protocol-detail-mode">After</span>
-                      <h3 id="protocol-polish-title">Polished Protocol</h3>
+                      <span class="protocol-detail-mode" data-i18n="protocol.polish.after">After</span>
+                      <h3 id="protocol-polish-title" data-i18n="protocol.polish.title">Polished Protocol</h3>
                     </div>
-                    <button type="button" id="protocol-polish-close-btn" class="app-dialog-close-btn" aria-label="Close protocol polish dialog" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                    <button type="button" id="protocol-polish-close-btn" class="app-dialog-close-btn" aria-label="Close protocol polish dialog" title="Close" data-i18n-title="protocol.action.close" data-i18n-aria-label="protocol.polish.close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
                   </div>
                   <div id="protocol-polish-result-preview" class="protocol-polish-preview stack-form"></div>
                   <p id="protocol-polish-status" class="small-note" hidden></p>
@@ -233,8 +233,8 @@
               </div>
 
               <div class="form-actions protocol-polish-actions">
-                <button type="button" id="protocol-polish-apply-btn" class="primary-btn" disabled>Use Polished Version</button>
-                <button type="button" id="protocol-polish-keep-editing-btn" class="ghost-btn">Keep Editing</button>
+                <button type="button" id="protocol-polish-apply-btn" class="primary-btn" disabled data-i18n="protocol.polish.apply">Use Polished Version</button>
+                <button type="button" id="protocol-polish-keep-editing-btn" class="ghost-btn" data-i18n="protocol.action.keepEditing">Keep Editing</button>
               </div>
             </div>
           </div>

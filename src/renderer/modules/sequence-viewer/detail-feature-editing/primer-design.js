@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../../lib/html.js';
 import { designPcrPrimerPair } from '../cloning-assembly.js';
 import { clamp, cleanText, normalizeRecordName, normalizeSequenceText } from '../shared.js';
@@ -26,7 +29,7 @@ function createPrimerDesignOverlay({
 
   function renderPrimerDesignTable(primers = []) {
     if (!primers.length) {
-      return '<p class="small-note">No primer pair was generated for this sequence.</p>';
+      return `<p class="small-note">${i18nUi.html("No primer pair was generated for this sequence.")}</p>`;
     }
 
     return `
@@ -34,10 +37,10 @@ function createPrimerDesignOverlay({
         <table class="sequence-viewer-cloning-design-primer-table">
           <thead>
             <tr>
-              <th>Primer</th>
-              <th>Role</th>
-              <th>Sequence</th>
-              <th>Length</th>
+              <th>${i18nUi.html("Primer")}</th>
+              <th>${i18nUi.html("Role")}</th>
+              <th>${i18nUi.html("Sequence")}</th>
+              <th>${i18nUi.html("Length")}</th>
               <th>Tm</th>
               <th>GC</th>
             </tr>
@@ -128,13 +131,13 @@ function createPrimerDesignOverlay({
   function openPrimerDesignOverlay(context = {}) {
     const record = getSelectedRecord();
     if (!record?.sequence?.length) {
-      setStatus('Load a record before designing primers.', true);
+      setStatus(i18nUi.text("Load a record before designing primers."), true);
       return;
     }
 
     const target = resolvePrimerDesignTarget(record, context);
     if (!target) {
-      setStatus('Select a sequence range or feature before designing primers.', true);
+      setStatus(i18nUi.text("Select a sequence range or feature before designing primers."), true);
       return;
     }
 
@@ -151,21 +154,21 @@ function createPrimerDesignOverlay({
     const thresholdLabel = cleanText(primerPlan?.selectedThresholdLevel, 80) || 'none';
 
     if (elements.primerDesignTitle) {
-      elements.primerDesignTitle.textContent = 'Designed Primers';
+      i18nUi.setText(elements.primerDesignTitle, i18nUi.message("Designed Primers"));
     }
     if (elements.primerDesignNote) {
-      elements.primerDesignNote.textContent = `PCR primer pair for ${target.label}.`;
+      i18nUi.setText(elements.primerDesignNote, i18nUi.message("PCR primer pair for {p0}.", { p0: target.label }));
     }
     if (elements.primerDesignResult) {
-      elements.primerDesignResult.innerHTML = `
+      i18nUi.setHtml(elements.primerDesignResult, `
         <div class="sequence-viewer-primer-design-summary">
-          <p><strong>Template:</strong> ${escapeHtml(target.label)}</p>
-          <p><strong>Selected sequence:</strong> ${target.sequence.length.toLocaleString()} bp</p>
-          <p><strong>Threshold profile:</strong> ${escapeHtml(thresholdLabel)}</p>
+          <p><strong>${i18nUi.html("Template:")}</strong> ${escapeHtml(target.label)}</p>
+          <p><strong>${i18nUi.html("Selected sequence:")}</strong> ${target.sequence.length.toLocaleString()} bp</p>
+          <p><strong>${i18nUi.html("Threshold profile:")}</strong> ${escapeHtml(thresholdLabel)}</p>
         </div>
         ${renderPrimerDesignTable(primers)}
         ${renderPrimerDesignWarnings(primerPlan?.warnings)}
-      `;
+      `);
     }
 
     hideFeatureContextMenu();

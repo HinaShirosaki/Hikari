@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("workflow");
 import {
   GRAPH_MIN_HEIGHT,
   GRAPH_MIN_WIDTH,
@@ -6,6 +9,8 @@ import {
   NODE_PORT_Y,
   NODE_WIDTH
 } from '../constants.js';
+import { workflowMessage } from '../localization.js';
+import { translateTree } from '../../../lib/i18n/dom.js';
 
 // Board geometry and drawing: block/port coordinates, the link curves, node
 // markup, the marquee overlay, and the context-menu surface.
@@ -141,16 +146,17 @@ function createGraphRendering({
       }
     }
 
-    elements.workflowGraphSvg.innerHTML = paths.join('');
+    i18nUi.setHtml(elements.workflowGraphSvg, paths.join(''));
   }
 
   function renderGraphNodes() {
-    elements.workflowGraphNodes.innerHTML = (runtime.draft?.blocks || []).map((block) => {
+    i18nUi.setHtml(elements.workflowGraphNodes, (runtime.draft?.blocks || []).map((block) => {
       const isTextBlock = getBlockType(block) === 'text';
       const connectingClass = runtime.activeLinkFromBlockId === block.id ? ' workflow-node-connecting' : '';
       const selectedClass = runtime.selectedBlockIds.has(block.id) ? ' workflow-node-selected' : '';
       const typeClass = isTextBlock ? ' workflow-node-text' : '';
       const title = isTextBlock ? 'Text Block' : titleForBlock(block);
+      const titleParams = safeText(JSON.stringify({ title }));
       return `
         <article class="workflow-node${typeClass}${connectingClass}${selectedClass}" data-workflow-node="${safeText(block.id)}" style="left:${safeText(block.x)}px; top:${safeText(block.y)}px;">
           <button
@@ -158,22 +164,25 @@ function createGraphRendering({
             class="workflow-node-remove"
             data-workflow-block-remove="${safeText(block.id)}"
             aria-label="Delete ${safeText(title)}"
+            data-i18n-aria-label="workflow.graph.${isTextBlock ? 'deleteText' : 'deleteLabel'}" data-i18n-params="${titleParams}"
             title="Delete block"
+            data-i18n-title="workflow.graph.delete"
           ><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-          <button type="button" class="workflow-port workflow-port-in" data-workflow-port-in="${safeText(block.id)}" title="Connect into this block" aria-label="Input port for ${safeText(title)}"></button>
-          <button type="button" class="workflow-port workflow-port-out" data-workflow-port-out="${safeText(block.id)}" title="Connect out from this block" aria-label="Output port for ${safeText(title)}"></button>
+          <button type="button" class="workflow-port workflow-port-in" data-workflow-port-in="${safeText(block.id)}" title="Connect into this block" aria-label="Input port for ${safeText(title)}" data-i18n-title="workflow.graph.connectIn" data-i18n-aria-label="workflow.graph.${isTextBlock ? 'inputText' : 'input'}" data-i18n-params="${titleParams}"></button>
+          <button type="button" class="workflow-port workflow-port-out" data-workflow-port-out="${safeText(block.id)}" title="Connect out from this block" aria-label="Output port for ${safeText(title)}" data-i18n-title="workflow.graph.connectOut" data-i18n-aria-label="workflow.graph.${isTextBlock ? 'outputText' : 'output'}" data-i18n-params="${titleParams}"></button>
           <header class="workflow-node-header" data-workflow-node-drag="${safeText(block.id)}">
-            <strong>${safeText(title)}</strong>
+            <strong>${isTextBlock ? workflowMessage('fallback.textBlock') : safeText(title)}</strong>
           </header>
         </article>
       `;
-    }).join('');
+    }).join(''));
+    translateTree(elements.workflowGraphNodes);
   }
 
   function hideContextMenu() {
     runtime.contextMenuState = null;
     elements.workflowGraphContextMenu.hidden = true;
-    elements.workflowGraphContextMenu.innerHTML = '';
+    i18nUi.setHtml(elements.workflowGraphContextMenu, '');
   }
 
   function showContextMenu(event, items, payload) {
@@ -183,9 +192,9 @@ function createGraphRendering({
     }
 
     runtime.contextMenuState = payload || null;
-    elements.workflowGraphContextMenu.innerHTML = items.map((item) => (
-      `<button type="button" class="workflow-context-item" data-workflow-menu-action="${safeText(item.action)}">${safeText(item.label)}</button>`
-    )).join('');
+    i18nUi.setHtml(elements.workflowGraphContextMenu, items.map((item) => (
+      `<button type="button" class="workflow-context-item" data-workflow-menu-action="${safeText(item.action)}">${item.messageKey ? workflowMessage(item.messageKey, item.params) : safeText(item.label)}</button>`
+    )).join(''));
 
     elements.workflowGraphContextMenu.hidden = false;
     elements.workflowGraphContextMenu.style.left = `${event.clientX}px`;

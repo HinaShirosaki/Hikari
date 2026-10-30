@@ -1,7 +1,10 @@
+import { createPresentation } from "../../i18n.mjs";
+const i18nUi = createPresentation("gel");
 import { buildLanesFromManualSegmentation } from '../analysis/analysis-core.js';
 import { downloadBinaryFile, downloadDataUrlFile } from '../export.js';
-import { normalizeManualOverrides, safeFilePart } from '../shared.js';
-import { buildGelFigurePlan, createGelFigureCanvas, createGelImageCanvas } from './figure-export.js';
+import { CAPTION_ANGLE, normalizeManualOverrides, safeFilePart } from '../shared.js';
+import { buildGelFigurePlan, canvasTextEm, createGelFigureCanvas, createGelImageCanvas } from './figure-export.js';
+import { syncTableInputs, tableInputsMarkup, tableInputsShape, writeTableInput } from './table-inputs.js';
 import { createGelPowerPoint } from './powerpoint-export.js';
 
 export { buildGelFigurePlan, createGelFigureCanvas, createGelImageCanvas, createGelPowerPoint };
@@ -15,66 +18,8 @@ function cloneLaneTableRows(rows = []) {
   }));
 }
 
-function formatPercentWidth(value) {
-  const numeric = Number(value);
-  if (!Number.isFinite(numeric) || numeric <= 0) {
-    return '0%';
-  }
-  return `${Math.round(numeric * 10000) / 10000}%`;
-}
-
-function normalizeColumnWidths(columns) {
-  const totalWidth = columns.reduce((sum, column) => sum + column.widthPercent, 0);
-  if (!columns.length || totalWidth <= 0) {
-    return [];
-  }
-  return columns.map((column) => ({
-    ...column,
-    widthPercent: (column.widthPercent / totalWidth) * 100
-  }));
-}
-
-function resolveVisibleLayout(layout, includeLadder, ladderLane) {
-  const columns = Array.isArray(layout?.columns) ? layout.columns : [];
-  const baseLayout = {
-    columns: normalizeColumnWidths(columns),
-    leftOffsetPercent: layout?.leftOffsetPercent || 0,
-    rightOffsetPercent: layout?.rightOffsetPercent || 0
-  };
-  if (includeLadder || !ladderLane) {
-    return baseLayout;
-  }
-
-  const ladderColumnIndex = columns.findIndex((column) => column.laneIndex === ladderLane);
-  if (ladderColumnIndex < 0) {
-    return baseLayout;
-  }
-
-  const ladderColumn = columns[ladderColumnIndex];
-  if (ladderColumnIndex === 0 || ladderColumnIndex === columns.length - 1) {
-    const gelWidthPercent = Math.max(
-      0,
-      100 - baseLayout.leftOffsetPercent - baseLayout.rightOffsetPercent
-    );
-    const ladderWidthPercent = (ladderColumn.widthPercent / 100) * gelWidthPercent;
-    return {
-      columns: normalizeColumnWidths(columns.filter((column) => column !== ladderColumn)),
-      leftOffsetPercent: baseLayout.leftOffsetPercent + (ladderColumnIndex === 0 ? ladderWidthPercent : 0),
-      rightOffsetPercent: baseLayout.rightOffsetPercent
-        + (ladderColumnIndex === columns.length - 1 ? ladderWidthPercent : 0)
-    };
-  }
-
-  // An interior ladder leaves two non-contiguous sample groups in the source gel.
-  // Keep its track as an invisible gap so every remaining header stays over its lane.
-  return {
-    ...baseLayout,
-    columns: baseLayout.columns.map((column) => ({
-      ...column,
-      excluded: column.laneIndex === ladderLane
-    }))
-  };
-}
+let measureCanvasContext = null;
+const measureContext = () => (measureCanvasContext ||= globalThis.document?.createElement?.('canvas')?.getContext?.('2d') || null);
 
 function resolveLaneLayout(runtime) {
   if (!runtime.currentImage) {
@@ -117,9 +62,11 @@ function hasDividerLayout(overrides) {
     && (Boolean(segmentation.dividerDone) || Boolean(overrides?.laneSegmentation?.dividerDone));
 }
 
-export function createLaneTableController({ runtime, elements, safeText, deps = {} }) {
+export function createLaneTableController({ runtime, elements, deps = {} }) {
   let figureExportPromise = null;
   let panelOpen = null;
+  // The export's label column as a share of the image width (0 without a table).
+  let labelShare = 0;
 
   function resolveLadderLane(layout = resolveLaneLayout(runtime)) {
     const normalized = normalizeManualOverrides(runtime.manualOverrides);
@@ -153,7 +100,7 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
   }
 
   function focusLastRowLabel() {
-    const inputs = elements.gelLaneTableShell?.querySelectorAll?.('[data-gel-table-role="label"]');
+    const inputs = elements.gelLaneTableShell?.querySelectorAll?.('.gel-table-input.is-label');
     if (!inputs?.length) {
       return;
     }
@@ -174,17 +121,33 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
     if (!stage || !row) {
       return;
     }
-    const labelWidth = stage.classList.contains('has-lane-table') ? LABEL_COLUMN_WIDTH_PX : 0;
+    // The label column keeps the export's share of the gel width, at least LABEL_COLUMN_WIDTH_PX.
+    const tableShown = stage.classList.contains('has-lane-table');
+    const minLabelWidth = tableShown ? LABEL_COLUMN_WIDTH_PX : 0;
+    const share = tableShown ? labelShare : 0;
     const panel = elements.gelLaneTablePanel;
     const tableWidth = panel && !panel.hidden ? elements.gelLaneTableShell?.clientWidth : 0;
-    const usableWidth = Math.min(stage.clientWidth || 0, tableWidth || stage.clientWidth || 0) - labelWidth;
-    const panelHeight = panel && !panel.hidden ? panel.getBoundingClientRect().height + 12 : 0;
-    const usableHeight = stageHeight - panelHeight;
-    if (!image?.width || !image?.height || usableWidth <= 0 || usableHeight <= 0) {
+    const totalWidth = Math.min(stage.clientWidth || 0, tableWidth || stage.clientWidth || 0);
+    const usableWidth = Math.min(totalWidth - minLabelWidth, totalWidth / (1 + share));
+    // The table strip's height is a fixed share of the image width (container
+    // units), so solve for the width that fits both. The dock stops at 42% of
+    // the stage (its CSS max-height); past that a long table scrolls in it.
+    const docked = Boolean(panel && !panel.hidden);
+    const strip = docked ? elements.gelLaneTableShell?.querySelector?.('.gel-table-strip-lanes') : null;
+    const stripPerWidth = strip?.clientWidth ? strip.getBoundingClientRect().height / strip.clientWidth : 0;
+    const bodyHeight = strip?.closest?.('.gel-lane-table-body')?.clientHeight || 0;
+    const fixedHeight = docked ? panel.getBoundingClientRect().height - bodyHeight + 12 : 0;
+    if (!image?.width || !image?.height || usableWidth <= 0 || stageHeight - fixedHeight <= 0) {
       stage.classList.remove('is-fitted');
       return;
     }
-    const canvasWidth = Math.min(usableWidth, (usableHeight * image.width) / image.height);
+    const aspect = image.width / image.height;
+    let canvasWidth = Math.min(usableWidth, (stageHeight - fixedHeight) * aspect / (1 + stripPerWidth * aspect));
+    if (fixedHeight - 12 + stripPerWidth * canvasWidth > stageHeight * 0.42) {
+      canvasWidth = Math.min(usableWidth, (stageHeight * 0.58 - 12) * aspect);
+    }
+    const labelWidth = Math.max(minLabelWidth, Math.round(canvasWidth * share));
+    stage.style.setProperty('--gel-lane-label-width', `${labelWidth || LABEL_COLUMN_WIDTH_PX}px`);
     stage.style.setProperty('--gel-fit-width', `${Math.floor(canvasWidth + labelWidth)}px`);
     const fittedHeight = canvasWidth * image.height / image.width;
     stage.style.setProperty('--gel-fit-height', `${Math.floor(fittedHeight)}px`);
@@ -225,118 +188,72 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
 
     const ladderLane = resolveLadderLane(layout);
     const includeLadder = runtime.figureExportIncludeLadder !== false;
-    const visibleLayout = resolveVisibleLayout(layout, includeLadder, ladderLane);
-    const visibleColumns = visibleLayout.columns;
 
-    const panelVisible = !runtime.cropperActive && (panelOpen ?? hasTable);
+    // The table strip shows with any gel image until closed, so Add table stays
+    // in reach; without finished dividers, clicking it says what is missing.
+    const panelVisible = !runtime.cropperActive && (panelOpen ?? (hasTable || Boolean(runtime.currentImage)));
     if (elements.gelLaneTablePanel) elements.gelLaneTablePanel.hidden = !panelVisible;
     elements.gelOpenLaneTableBtn?.setAttribute('aria-expanded', String(panelVisible));
     elements.gelOpenLaneTableBtn?.classList.toggle('is-active', panelVisible);
     elements.gelAddTableBtn.hidden = hasTable;
-    elements.gelAddTableBtn.disabled = !canAddTable || hasTable;
-    elements.gelViewerStage.style.setProperty('--gel-lane-label-width', `${LABEL_COLUMN_WIDTH_PX}px`);
+    elements.gelAddTableBtn.disabled = hasTable || !runtime.currentImage || runtime.cropperActive;
+    elements.gelLaneTablePanel?.querySelectorAll?.('[data-gel-table-add-row],[data-gel-table-remove-row]')
+      .forEach((node) => { node.hidden = !hasTable; });
+    const ladderChoice = elements.gelLaneTablePanel?.querySelector?.('[data-gel-table-ladder]');
+    if (ladderChoice) ladderChoice.hidden = !hasTable || !ladderLane;
+    const ladderToggle = elements.gelLaneTablePanel?.querySelector?.('[data-gel-table-include-ladder]');
+    if (ladderToggle) {
+      ladderToggle.checked = includeLadder;
+      ladderToggle.disabled = !ladderLane;
+    }
     const inlineTable = hasTable && (!elements.gelLaneTablePanel || panelVisible);
     elements.gelViewerStage.classList.toggle('has-lane-table', inlineTable);
     elements.gelLaneTableSpacer.hidden = !inlineTable;
-    elements.gelLaneTableShell.hidden = !hasTable;
+    const shell = elements.gelLaneTableShell;
+    shell.hidden = !hasTable;
 
+    labelShare = 0;
     if (!hasTable || !layout) {
-      elements.gelLaneTableShell.innerHTML = '';
+      shell.dataset.shape = '';
+      i18nUi.setHtml(shell, '');
       return;
     }
 
-    const colMarkup = visibleColumns
-      .map((column) => `<col style="width:${formatPercentWidth(column.widthPercent)};" />`)
-      .join('');
-    const headerMarkup = visibleColumns
-      .map((column) => column.excluded
-        ? '<th class="gel-lane-table-excluded-cell" aria-hidden="true"></th>'
-        : `<th scope="col">Lane ${column.laneIndex}</th>`)
-      .join('');
-    const labelMarkup = rows.map((row, rowIndex) => `
-      <div class="gel-lane-table-label-cell">
-        <input
-          type="text"
-          class="gel-lane-table-input gel-lane-table-input-label"
-          data-gel-table-role="label"
-          data-gel-table-row="${rowIndex}"
-          aria-label="Row ${rowIndex + 1} label"
-          value="${safeText(row.label || '')}"
-          placeholder="Label"
-          autocomplete="off"
-          spellcheck="false"
-        />
-      </div>
-    `).join('');
-    const bodyMarkup = rows.map((row, rowIndex) => {
-      const cells = visibleColumns.map((column) => {
-        if (column.excluded) {
-          return '<td class="gel-lane-table-excluded-cell" aria-hidden="true"></td>';
-        }
-        const columnIndex = column.laneIndex - 1;
-        return `
-        <td>
-          <input
-            type="text"
-            class="gel-lane-table-input"
-            data-gel-table-role="value"
-            data-gel-table-row="${rowIndex}"
-            data-gel-table-col="${columnIndex}"
-            value="${safeText(row.values[columnIndex] || '')}"
-            placeholder=" "
-            autocomplete="off"
-            spellcheck="false"
-          />
-        </td>
-      `;
-      }).join('');
-
-      return `
-        <tr>
-          ${cells}
-        </tr>
-      `;
-    }).join('');
-
-    elements.gelLaneTableShell.innerHTML = `
-      <div class="gel-lane-table-toolbar">
-        <div class="gel-lane-table-actions">
-          <label class="small-note gel-lane-table-ladder-choice">
-            <input
-              type="checkbox"
-              data-gel-table-include-ladder
-              ${includeLadder ? 'checked' : ''}
-              ${ladderLane ? '' : 'disabled'}
-            />
-            Include ladder lane
-          </label>
-          <button type="button" class="ghost-btn" data-gel-table-add-row>Add row</button>
-        </div>
-      </div>
-      <div class="gel-lane-table-labels">
-        ${labelMarkup}
-      </div>
-      <div class="gel-lane-table-grid-shell">
-        <div
-          class="gel-lane-table-grid-offsets"
-          style="padding-left:${formatPercentWidth(visibleLayout.leftOffsetPercent)}; padding-right:${formatPercentWidth(visibleLayout.rightOffsetPercent)};"
-        >
-          <div class="gel-lane-table-wrap">
-            <table class="gel-lane-table">
-              <colgroup>${colMarkup}</colgroup>
-              <thead class="sr-only">
-                <tr>
-                  ${headerMarkup}
-                </tr>
-              </thead>
-              <tbody>
-                ${bodyMarkup}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    `;
+    // The strip shows the table as the export draws it (figure-export.js), over
+    // the image's own lanes: positions in percent of the image width, type and
+    // heights in container units, so it follows the fitted gel at any size.
+    const image = runtime.currentImage;
+    const lanes = buildLanesFromManualSegmentation(overrides, image.width) || [];
+    const plan = buildGelFigurePlan({ imageWidth: image.width, imageHeight: image.height, manualOverrides: overrides,
+      includeLadder, ladderLane, measureTextEm: canvasTextEm(measureContext()) });
+    const percent = (value) => `${value / image.width * 100}%`;
+    const fluid = (value) => `calc(${value / image.width * 100} * 1cqw)`;
+    const line = plan.fontSize * 1.6;
+    labelShare = plan.labelWidth / image.width;
+    const cells = rows.flatMap((_, row) => {
+      const center = plan.captions ? plan.captions.y : (row + 0.5) * plan.rowHeight;
+      const height = plan.captions ? line : plan.rowHeight;
+      return [
+        { row, lane: 0, style: `left:calc(-1 * var(--gel-lane-label-width));width:var(--gel-lane-label-width);top:${fluid(center - height / 2)};height:${fluid(height)}` },
+        ...plan.slices.map((slice, index) => {
+          const lane = lanes[slice.laneIndex - 1];
+          return plan.captions
+            ? { row, lane: slice.laneIndex, rotated: true, style: `left:${percent(lane.center)};top:${fluid(plan.captions.y - line / 2)};width:${fluid(Math.max(plan.captions.widths[index], plan.fontSize * 2) + plan.fontSize)};height:${fluid(line)}` }
+            : { row, lane: slice.laneIndex, style: `left:${percent(lane.xStart)};width:${percent(lane.xEnd - lane.xStart + 1)};top:${fluid(row * plan.rowHeight)};height:${fluid(plan.rowHeight)}` };
+        })
+      ];
+    });
+    shell.style.setProperty('--table-font', String(plan.fontSize / image.width * 100));
+    // Slack below the rows keeps a label centered on the caption line inside the strip.
+    shell.style.setProperty('--table-height', fluid(plan.tableHeight - plan.tableGap + plan.fontSize / 2));
+    shell.style.setProperty('--caption-angle', `-${CAPTION_ANGLE}deg`);
+    const shape = tableInputsShape(cells);
+    if (shell.dataset.shape === shape) {
+      syncTableInputs(shell, cells, rows);
+      return;
+    }
+    shell.dataset.shape = shape;
+    i18nUi.setHtml(shell, `<div class="gel-table-strip-label"></div><div class="gel-table-strip-lanes"><div class="gel-table-strip-box">${tableInputsMarkup(cells, rows)}</div></div>`);
   }
 
   function onAddTableClick() {
@@ -373,7 +290,7 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
     if (button) {
       button.disabled = true;
       button.setAttribute?.('aria-busy', 'true');
-      button.textContent = 'Generating…';
+      i18nUi.setText(button, i18nUi.message("Generating…"));
     }
 
     figureExportPromise = Promise.resolve()
@@ -415,7 +332,7 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
         if (button) {
           button.disabled = false;
           button.removeAttribute?.('aria-busy');
-          button.textContent = originalLabel;
+          i18nUi.setText(button, originalLabel);
         }
         figureExportPromise = null;
       });
@@ -435,7 +352,7 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
     if (button) {
       button.disabled = true;
       button.setAttribute?.('aria-busy', 'true');
-      button.textContent = 'Generating…';
+      i18nUi.setText(button, i18nUi.message("Generating…"));
     }
 
     figureExportPromise = Promise.resolve()
@@ -492,7 +409,7 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
         if (button) {
           button.disabled = false;
           button.removeAttribute?.('aria-busy');
-          button.textContent = originalLabel;
+          i18nUi.setText(button, originalLabel);
         }
         figureExportPromise = null;
       });
@@ -500,6 +417,11 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
   }
 
   function onShellClick(event) {
+    if (event?.target?.closest?.('[data-gel-table-remove-row]')) {
+      updateRows((rows) => rows.slice(0, -1));
+      render();
+      return;
+    }
     const addRowButton = event?.target?.closest?.('[data-gel-table-add-row]');
     if (!addRowButton) {
       return;
@@ -526,36 +448,15 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
       render();
       return;
     }
-    const input = event?.target?.closest?.('[data-gel-table-row]');
+    const input = event?.target?.closest?.('.gel-table-input');
     if (!input) {
       return;
     }
-
-    const rowIndex = Number(input.dataset.gelTableRow);
-    if (!Number.isInteger(rowIndex) || rowIndex < 0) {
-      return;
-    }
-
-    const role = String(input.dataset.gelTableRole || '');
-    const columnIndex = Number(input.dataset.gelTableCol);
-    const nextValue = String(input.value || '').slice(0, 160);
     updateRows((rows) => {
-      if (!rows[rowIndex]) {
-        return rows;
-      }
-      const nextRows = cloneLaneTableRows(rows);
-      if (role === 'label') {
-        nextRows[rowIndex].label = nextValue;
-        return nextRows;
-      }
-      if (role === 'value' && Number.isInteger(columnIndex) && columnIndex >= 0) {
-        while (nextRows[rowIndex].values.length <= columnIndex) {
-          nextRows[rowIndex].values.push('');
-        }
-        nextRows[rowIndex].values[columnIndex] = nextValue;
-      }
-      return nextRows;
+      writeTableInput(rows, input);
+      return rows;
     });
+    render();
   }
 
   function onTogglePanel() {

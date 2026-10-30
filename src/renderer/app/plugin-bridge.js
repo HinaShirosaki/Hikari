@@ -1,3 +1,4 @@
+import { i18n } from '../lib/i18n/index.js';
 import { asArray } from '../lib/normalize.js';
 import { PLUGIN_SAVE_TIMEOUT_MS, PROTOCOL_MARKER, buildPluginAppContext, text } from './plugin-bridge/helpers.js';
 import { VERBS } from './plugin-bridge/verbs.js';
@@ -278,6 +279,7 @@ export function createPluginBridge({
     }
   }
 
+  const disconnectLocale = i18n.subscribe(() => broadcastAppContext('locale'));
   windowObject?.addEventListener?.('message', handleMessage);
   windowObject?.document?.addEventListener?.(PLUGIN_SETTINGS_CHANGED, event => {
     frames.forEach(({ plugin, origin }, frameWindow) => {
@@ -289,6 +291,7 @@ export function createPluginBridge({
   windowObject?.document?.addEventListener?.('hikari:agent-chat-rail-state', () => broadcastAppContext('layout'));
   return {
     register,
+    disconnectLocale,
     contextActions,
     requestCanvas,
     queueNotebookGel,

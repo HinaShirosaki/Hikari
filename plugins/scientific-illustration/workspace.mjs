@@ -10,7 +10,7 @@ import { instantiateClipboard } from './clipboard.mjs';
 import { LIBRARY_PATH, LIBRARY_ACTIONS, normalizeLibrary, readLibrary, nextScenePath, validateLibraryRequest } from './library.mjs';
 import { migrateStoredDocument } from './stored-document.mjs';
 import { ASSETS_PATH, ASSET_ACTIONS, assetPath, createAssetLibrary, normalizeAssetLibrary, readAssetLibrary, validateAssetRequest,
-  snapshotAsset, normalizeAsset, readAsset, instantiateAsset, assetPreviewDocument, assetContent, compoundGroups } from './reusable-assets.mjs';
+  snapshotAsset, componentAsset, normalizeAsset, readAsset, instantiateAsset, assetPreviewDocument, assetContent, compoundGroups } from './reusable-assets.mjs';
 
 export function encodeText(text) {
   const bytes = new TextEncoder().encode(text);
@@ -128,14 +128,14 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
     if (args.expected_assets_revision !== assetLibrary.revision) return { ...failure('revision_conflict', 'The reusable assets changed. List them again.'), ...readAssetLibrary(assetLibrary) };
     let asset, entry, raster;
     if (args.action === 'asset_save') {
-      if (args.illustration_id !== library.activeId) return { ...failure('illustration_changed', 'Another illustration is open. Reopen the intended illustration before saving components.'), ...readLibrary(library) };
-      if (args.expected_revision !== documentState.revision) return { ...failure('revision_conflict', 'The figure changed. Read it again before saving components.'), revision: documentState.revision };
+      if (!args.objects && args.illustration_id !== library.activeId) return { ...failure('illustration_changed', 'Another illustration is open. Reopen the intended illustration before saving components.'), ...readLibrary(library) };
+      if (!args.objects && args.expected_revision !== documentState.revision) return { ...failure('revision_conflict', 'The figure changed. Read it again before saving components.'), revision: documentState.revision };
       raster = imported ? await prepareRaster(imported.data_url, { trim: true }) : null;
-      asset = raster ? rasterComponent(raster, args.name.trim()) : snapshotAsset(documentState, args, validateSvg);
+      asset = raster ? rasterComponent(raster, args.name.trim()) : args.objects ? componentAsset(args.name.trim(), args.objects, validateSvg) : snapshotAsset(documentState, args, validateSvg);
       const fingerprint = await signature(assetContent(asset));
       entry = raster && assetLibrary.assets.find(item => item.fingerprint === fingerprint);
       if (entry) asset = null;
-      else entry = assetEntry(asset, fingerprint, imported?.source === 'codex' ? 'codex' : imported ? 'storage' : 'manual');
+      else entry = assetEntry(asset, fingerprint, imported?.source === 'codex' ? 'codex' : imported ? 'storage' : args.objects ? 'agent' : 'manual');
     } else {
       entry = assetLibrary.assets.find(item => item.id === args.asset_id);
       if (!entry) return failure('not_found', 'This reusable asset does not exist.');
@@ -227,6 +227,7 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
       raster_imports: rasterImports, auto_saved_assets: autoSavedAssets }].slice(-64);
     if (JSON.stringify(next).length > MAX_DOCUMENT_CHARS) throw new Error('The illustration is too large. Use smaller assets.');
     await save(next);
+    if (agentRequest && inspectionRunId) inspections.edited(inspectionRunId);
     undoStack.push(previous); if (undoStack.length > 25) undoStack.shift(); redoStack.length = 0; reportHistory();
     return { ok: true, status: 'applied', persisted: true, illustration_id: library.activeId, inserted_assets: insertedAssets,
       raster_imports: rasterImports, auto_saved_assets: autoSavedAssets, ...readDocument(documentState), ...readLibrary(library), ...readAssetLibrary(assetLibrary) };

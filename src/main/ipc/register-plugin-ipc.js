@@ -1,5 +1,6 @@
 'use strict';
 
+const { nativeText } = require('../lib/i18n.js');
 const path = require('node:path');
 const { PLUGINS } = require('../../shared/ipc/channels');
 const { inspectPluginFolder } = require('../lib/inspect-plugin-folder');
@@ -138,7 +139,7 @@ function registerPluginIpc(deps = {}) {
     }
     const suggestedName = sanitizePluginExportFileName(input.fileName);
     try {
-      const result = await dialog.showSaveDialog({ title: 'Export Plugin File', defaultPath: suggestedName });
+      const result = await dialog.showSaveDialog({ title: nativeText("Export Plugin File"), defaultPath: suggestedName });
       if (result.canceled || !result.filePath) return { ok: false, canceled: true };
       await fs.writeFile(result.filePath, Buffer.from(dataBase64, 'base64'));
       return { ok: true, saved: true, fileName: path.basename(result.filePath) };

@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 export function createNavigationActions(ctx) {
   const { actions, controllers, onNavigateHome, onNavigateDetail, homeViewId, detailViewId, state } = ctx;
 
@@ -27,20 +30,20 @@ export function createNavigationActions(ctx) {
     controllers.home?.setLocalWorkspaceVisibility('detail');
     onNavigateDetail?.();
     controllers.detail?.renderActiveRecord?.();
-    actions.setStatus('Returned to DNA.');
+    actions.setStatus(i18nUi.text("Returned to DNA."));
   }
 
   function returnToSequenceDetailFromCloningDesign() {
     controllers.home?.setLocalWorkspaceVisibility('detail');
     onNavigateDetail?.();
     controllers.detail?.renderActiveRecord?.();
-    actions.setStatus('Returned to DNA.');
+    actions.setStatus(i18nUi.text("Returned to DNA."));
   }
 
   function returnToProteinBuilder() {
     actions.setProteinBuilderConfirmation(null, { render: false });
     showProteinBuilderWorkspace();
-    actions.setStatus('Returned to Protein Builder to adjust the construct.');
+    actions.setStatus(i18nUi.text("Returned to Protein Builder to adjust the construct."));
   }
 
   function syncShellWorkspace(activeViewId = '') {

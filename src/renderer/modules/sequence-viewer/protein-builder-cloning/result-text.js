@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { cleanText, normalizeSequenceText } from '../shared.js';
 import { asArray } from '../../../lib/normalize.js';
 import { resolvePcrTargets } from './cloning-plan.js';
@@ -47,13 +50,13 @@ function buildProteinBuilderPrimerResultTable(plan = {}) {
   }
 
   const columns = [
-    { field: 'name', title: 'Primer' },
-    { field: 'role', title: 'Role' },
-    { field: 'sequence', title: 'Sequence' },
-    { field: 'length', title: 'Length' },
-    { field: 'tm', title: 'Binding Tm' },
+    { field: 'name', title: 'Primer', titleFormatter: () => i18nUi.render(i18nUi.message("Primer")), headerTooltip: () => i18nUi.render(i18nUi.message("Primer")) },
+    { field: 'role', title: 'Role', titleFormatter: () => i18nUi.render(i18nUi.message("Role")), headerTooltip: () => i18nUi.render(i18nUi.message("Role")) },
+    { field: 'sequence', title: 'Sequence', titleFormatter: () => i18nUi.render(i18nUi.message("Sequence")), headerTooltip: () => i18nUi.render(i18nUi.message("Sequence")) },
+    { field: 'length', title: 'Length', titleFormatter: () => i18nUi.render(i18nUi.message("Length")), headerTooltip: () => i18nUi.render(i18nUi.message("Length")) },
+    { field: 'tm', title: 'Binding Tm', titleFormatter: () => i18nUi.render(i18nUi.message("Binding Tm")), headerTooltip: () => i18nUi.render(i18nUi.message("Binding Tm")) },
     { field: 'gc', title: 'GC%' },
-    { field: 'notes', title: 'Notes' }
+    { field: 'notes', title: 'Notes', titleFormatter: () => i18nUi.render(i18nUi.message("Notes")), headerTooltip: () => i18nUi.render(i18nUi.message("Notes")) }
   ];
   const rows = primers.map((primer, index) => ({
     id: cleanText(primer?.name, 120) || `primer_${index + 1}`,

@@ -18,6 +18,13 @@ export {
   lanePointToRectifiedRow
 } from './shared/lane-geometry.js';
 
+// A one-row lane table reads as lane captions, drawn at this angle (degrees)
+// rising to the right from each lane center instead of as table cells.
+export const CAPTION_ANGLE = 45;
+// Arial text width in ems, for layouts measured without a canvas.
+export const estimateTextEm = text => Array.from(String(text)).reduce((sum, char) =>
+  sum + (/[MW@\u2e80-\uffff]/u.test(char) ? 1 : 0.6), 0);
+
 export function createEmptyManualOverrides() {
   return {
     laneSegmentation: {
@@ -354,11 +361,16 @@ export function normalizeManualOverrides(raw) {
     })
     .sort((a, b) => a.pixelY - b.pixelY);
   normalized.peakIntegrations = normalizePeakIntegrations(input.peakIntegrations);
-  const rawLaneTable = input.laneTable && typeof input.laneTable === 'object'
-    ? input.laneTable
-    : {};
-  normalized.laneTable = {
-    rows: (Array.isArray(rawLaneTable.rows) ? rawLaneTable.rows : [])
+  normalized.laneTable = normalizeLaneTable(input.laneTable);
+
+  return normalized;
+}
+
+// A gel's lane table, or a Stack's own table: rows of a label and per-lane values.
+export function normalizeLaneTable(raw) {
+  const table = raw && typeof raw === 'object' ? raw : {};
+  return {
+    rows: (Array.isArray(table.rows) ? table.rows : [])
       .filter((row) => row && typeof row === 'object')
       .map((row) => ({
         label: String(row.label ?? '').slice(0, 160),
@@ -366,8 +378,6 @@ export function normalizeManualOverrides(raw) {
           .map((value) => String(value ?? '').slice(0, 160))
       }))
   };
-
-  return normalized;
 }
 
 export function safeFilePart(raw, fallback) {

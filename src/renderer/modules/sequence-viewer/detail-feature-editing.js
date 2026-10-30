@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../lib/html.js';
 import { COMMON_SEQUENCE_FEATURE_TYPES } from './feature-types.js';
 import { clamp, cleanText, normalizeRecordName } from './shared.js';
@@ -32,9 +35,9 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
     if (!elements.featureEditorTypeOptions) {
       return;
     }
-    elements.featureEditorTypeOptions.innerHTML = COMMON_SEQUENCE_FEATURE_TYPES
+    i18nUi.setHtml(elements.featureEditorTypeOptions, COMMON_SEQUENCE_FEATURE_TYPES
       .map((entry) => `<option value="${escapeHtml(entry.value)}" label="${escapeHtml(entry.label)}"></option>`)
-      .join('');
+      .join(''));
   }
 
   populateFeatureTypeOptions();
@@ -44,7 +47,7 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
       return;
     }
     elements.featureContextMenu.hidden = true;
-    elements.featureContextMenu.innerHTML = '';
+    i18nUi.setHtml(elements.featureContextMenu, '');
   }
 
   function hideFeatureEditor() {
@@ -113,14 +116,14 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
   function buildSelectionDetailHtml(record) {
     const selectionRange = getSequenceSelectionRange(record);
     if (!selectionRange) {
-      return '<p class="small-note">Select a feature in the bottom track to view details.</p>';
+      return `<p class="small-note">${i18nUi.html("Select a feature in the bottom track to view details.")}</p>`;
     }
     const editableContext = resolveSelectionFeatureContext(record, selectionRange);
     const guidance = editableContext
       ? `Right-click the highlighted sequence to add a feature or edit/delete ${editableContext.feature?.name || 'the overlapping feature'}.`
       : 'Right-click the highlighted sequence to add a feature.';
     return `
-      <p><strong>Selection:</strong> ${escapeHtml(formatBaseRangeLabel(selectionRange))}</p>
+      <p><strong>${i18nUi.html("Selection:")}</strong> ${escapeHtml(formatBaseRangeLabel(selectionRange))}</p>
       <p class="small-note">${escapeHtml(guidance)}</p>
     `;
   }
@@ -142,13 +145,13 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
     }
     const selectionLabel = context?.selectionRange ? formatBaseRangeLabel(context.selectionRange) : '';
     const featureName = cleanText(context?.featureContext?.feature?.name, 120) || 'feature';
-    elements.featureContextMenu.innerHTML = `
+    i18nUi.setHtml(elements.featureContextMenu, `
       ${selectionLabel ? `<p class="small-note">${escapeHtml(selectionLabel)}</p>` : ''}
-      <button type="button" class="sequence-viewer-context-item" data-sequence-feature-action="add"${context?.selectionRange ? '' : ' disabled'}>Add Feature</button>
-      <button type="button" class="sequence-viewer-context-item" data-sequence-feature-action="design-primer">Design Primer</button>
-      <button type="button" class="sequence-viewer-context-item" data-sequence-feature-action="edit"${context?.featureContext ? '' : ' disabled'}>Edit ${escapeHtml(featureName)}</button>
-      <button type="button" class="sequence-viewer-context-item" data-sequence-feature-action="delete"${context?.featureContext ? '' : ' disabled'}>Delete ${escapeHtml(featureName)}</button>
-    `;
+      <button type="button" class="sequence-viewer-context-item" data-sequence-feature-action="add"${context?.selectionRange ? '' : ' disabled'}>${i18nUi.html("Add Feature")}</button>
+      <button type="button" class="sequence-viewer-context-item" data-sequence-feature-action="design-primer">${i18nUi.html("Design Primer")}</button>
+      <button type="button" class="sequence-viewer-context-item" data-sequence-feature-action="edit"${context?.featureContext ? '' : ' disabled'}>${i18nUi.html("Edit")} ${escapeHtml(featureName)}</button>
+      <button type="button" class="sequence-viewer-context-item" data-sequence-feature-action="delete"${context?.featureContext ? '' : ' disabled'}>${i18nUi.html("Delete")} ${escapeHtml(featureName)}</button>
+    `);
     elements.featureContextMenu.hidden = false;
     positionFloatingUi(elements.featureContextMenu, Number(event?.clientX) + 4, Number(event?.clientY) + 4);
   }
@@ -180,7 +183,7 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
   function openFeatureEditor(mode, context = {}) {
     const record = getSelectedRecord();
     if (!record?.sequence?.length) {
-      setStatus('Load a record before editing features.', true);
+      setStatus(i18nUi.text("Load a record before editing features."), true);
       return;
     }
     if (mode !== 'add' && mode !== 'edit') {
@@ -195,11 +198,11 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
     const range = selectionRange || originalRange;
 
     if (!range) {
-      setStatus('Select a sequence range before adding or editing a feature.', true);
+      setStatus(i18nUi.text("Select a sequence range before adding or editing a feature."), true);
       return;
     }
     if (mode === 'edit' && !featureContext) {
-      setStatus('Select an editable feature before editing.', true);
+      setStatus(i18nUi.text("Select an editable feature before editing."), true);
       return;
     }
 
@@ -220,10 +223,10 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
     };
 
     if (elements.featureEditorTitle) {
-      elements.featureEditorTitle.textContent = mode === 'edit' ? 'Edit Feature' : 'Add Feature';
+      i18nUi.setText(elements.featureEditorTitle, (mode === 'edit' ? i18nUi.message("Edit Feature") : i18nUi.message("Add Feature")));
     }
     if (elements.featureEditorNote) {
-      elements.featureEditorNote.textContent = note;
+      i18nUi.setText(elements.featureEditorNote, note);
     }
     if (elements.featureEditorNameInput) {
       elements.featureEditorNameInput.value = suggestedName;
@@ -293,7 +296,7 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
     try {
       payload = readFeatureEditorPayload(record);
     } catch (error) {
-      setStatus(error?.message || 'Feature details are invalid.', true);
+      setStatus((((((error?.message || i18nUi.text("Feature details are invalid.")))))), true);
       return;
     }
 
@@ -301,7 +304,7 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
     const nextRecords = [...state.records];
     const current = nextRecords[selectedIndex];
     if (!current) {
-      setStatus('Selected record no longer exists.', true);
+      setStatus(i18nUi.text("Selected record no longer exists."), true);
       return;
     }
 
@@ -312,7 +315,7 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
     if (featureEditorState.mode === 'edit') {
       const targetIndex = Number(featureEditorState.recordFeatureIndex);
       if (!Number.isFinite(targetIndex) || targetIndex < 0 || targetIndex >= nextFeatures.length) {
-        setStatus('Feature is no longer available for editing.', true);
+        setStatus(i18nUi.text("Feature is no longer available for editing."), true);
         return;
       }
 
@@ -386,7 +389,7 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
 
     const nextFeatures = Array.isArray(current.features) ? [...current.features] : [];
     if (!Number.isFinite(recordFeatureIndex) || recordFeatureIndex < 0 || recordFeatureIndex >= nextFeatures.length) {
-      setStatus('Select an editable feature before deleting.', true);
+      setStatus(i18nUi.text("Select an editable feature before deleting."), true);
       return;
     }
 

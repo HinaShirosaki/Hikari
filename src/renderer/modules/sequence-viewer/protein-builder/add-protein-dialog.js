@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { translateDnaSequence } from '../calculations/sequence.js';
 import { cleanText } from '../shared.js';
 import { sanitizeProteinAssemblySequence } from './assembly-model.js';
@@ -42,7 +45,7 @@ export function installProteinBuilderAddProteinDialog(ctx) {
       : parseAddProteinInput(elements.proteinBuilderAddProteinSequence?.value, isDna ? 'dna' : 'protein');
     const aaLength = countAminoAcids(input.sequence);
     if (elements.proteinBuilderAddProteinSequence) {
-      elements.proteinBuilderAddProteinSequence.placeholder = isDna ? 'Enter a DNA coding sequence (5′ to 3′)' : 'Enter an amino-acid sequence';
+      i18nUi.setAttribute(elements.proteinBuilderAddProteinSequence, "placeholder", (isDna ? i18nUi.message("Enter a DNA coding sequence (5′ to 3′)") : i18nUi.message("Enter an amino-acid sequence")));
     }
 
     if (elements.proteinBuilderAddProteinOverlay && Object.hasOwn(options, 'open')) {
@@ -52,7 +55,7 @@ export function installProteinBuilderAddProteinDialog(ctx) {
       elements.proteinBuilderAddProteinConfirmBtn.disabled = !aaLength || Boolean(input.error);
     }
     if (elements.proteinBuilderAddProteinValidation) {
-      elements.proteinBuilderAddProteinValidation.textContent = input.error || (aaLength ? `${aaLength.toLocaleString()} aa selected.` : '');
+      i18nUi.setText(elements.proteinBuilderAddProteinValidation, (input.error || (aaLength ? i18nUi.message("{p0} aa selected.", { p0: aaLength.toLocaleString() }) : '')));
       elements.proteinBuilderAddProteinValidation.hidden = !elements.proteinBuilderAddProteinValidation.textContent;
     }
     return { ...input, aaLength };
@@ -64,8 +67,8 @@ export function installProteinBuilderAddProteinDialog(ctx) {
     const row = rowId ? state.rows.find((item) => item.id === rowId && item.kind === 'custom') : null;
     ctx.resetUniProtPicker();
     ctx.editingProteinRowId = row?.id || '';
-    if (elements.proteinBuilderAddProteinTitle) elements.proteinBuilderAddProteinTitle.textContent = row ? 'Edit Protein' : 'Add Protein';
-    if (elements.proteinBuilderAddProteinConfirmBtn) elements.proteinBuilderAddProteinConfirmBtn.textContent = row ? 'Save' : 'Add to Chain';
+    if (elements.proteinBuilderAddProteinTitle) i18nUi.setText(elements.proteinBuilderAddProteinTitle, (row ? i18nUi.message("Edit Protein") : i18nUi.message("Add Protein")));
+    if (elements.proteinBuilderAddProteinConfirmBtn) i18nUi.setText(elements.proteinBuilderAddProteinConfirmBtn, (row ? i18nUi.message("Save") : i18nUi.message("Add to Chain")));
     if (elements.proteinBuilderAddProteinType) elements.proteinBuilderAddProteinType.value = row?.sourceDnaSequence ? 'dna' : 'protein';
     if (elements.proteinBuilderAddProteinName) {
       elements.proteinBuilderAddProteinName.value = row?.label || '';
@@ -101,7 +104,7 @@ export function installProteinBuilderAddProteinDialog(ctx) {
       ctx.invalidateDnaConstruct();
       ctx.closeAddProteinDialog();
       ctx.render();
-      ctx.setBuilderStatus(`Updated ${label} (${input.aaLength} aa).`);
+      ctx.setBuilderStatus(i18nUi.text("Updated {p0} ({p1} aa).", { p0: label, p1: input.aaLength }));
       return true;
     }
     const row = createCustomRow(state.nextRowId++, label, input.sequence);
@@ -111,7 +114,7 @@ export function installProteinBuilderAddProteinDialog(ctx) {
     ctx.invalidateDnaConstruct();
     ctx.closeAddProteinDialog();
     ctx.render();
-    ctx.setBuilderStatus(`Added ${label} (${input.aaLength} aa) to the chain.`);
+    ctx.setBuilderStatus(i18nUi.text("Added {p0} ({p1} aa) to the chain.", { p0: label, p1: input.aaLength }));
     return true;
   };
 }

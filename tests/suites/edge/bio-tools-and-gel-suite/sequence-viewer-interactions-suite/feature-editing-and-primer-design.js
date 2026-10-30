@@ -1,3 +1,4 @@
+const { stripI18nMarkup } = require('../../../../support/i18n-markup.cjs');
 module.exports = function registerEdgeSequenceViewerInteractionsSuiteFeatureEditingAndPrimerDesign(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
@@ -108,7 +109,7 @@ test('[EDGE] sequence-viewer drag selection context menu can edit and delete an 
   trigger(sequenceHost, 'mouseup', { target: lineTarget });
   trigger(sequenceHost, 'contextmenu', { clientX: 60, clientY: 84, target: lineTarget });
 
-  assert.match(contextMenu.innerHTML, /Edit Feature_A/);
+  assert.match(stripI18nMarkup(contextMenu.innerHTML), /Edit Feature_A/);
 
   trigger(contextMenu, 'click', {
     target: {
@@ -126,8 +127,8 @@ test('[EDGE] sequence-viewer drag selection context menu can edit and delete an 
   await flushAsync();
 
   assert.equal(Number(statFeatures.textContent || 0), initialFeatureCount);
-  assert.match(featureRailHost.innerHTML, /Feature_B/);
-  assert.match(featureDetail.innerHTML, /Feature_B/);
+  assert.match(stripI18nMarkup(featureRailHost.innerHTML), /Feature_B/);
+  assert.match(stripI18nMarkup(featureDetail.innerHTML), /Feature_B/);
 
   trigger(sequenceHost, 'mousedown', { button: 0, clientX: 28, target: lineTarget });
   trigger(sequenceHost, 'mousemove', { clientX: 60, target: lineTarget });
@@ -257,12 +258,12 @@ test('[EDGE] sequence-viewer context menu designs primers for selected sequence 
   trigger(sequenceHost, 'mouseup', { target: lineTarget });
   trigger(sequenceHost, 'contextmenu', { clientX: 452, clientY: 84, target: lineTarget });
 
-  assert.match(contextMenu.innerHTML, /Design Primer/);
+  assert.match(stripI18nMarkup(contextMenu.innerHTML), /Design Primer/);
   trigger(contextMenu, 'click', { target: actionTarget });
   assert.equal(Boolean(overlay.hidden), false);
   assert.match(note.textContent, /PCR primer pair/);
-  assert.match(result.innerHTML, /Pcr Forward/);
-  assert.match(result.innerHTML, /Pcr Reverse/);
+  assert.match(stripI18nMarkup(result.innerHTML), /Pcr Forward/);
+  assert.match(stripI18nMarkup(result.innerHTML), /Pcr Reverse/);
   const overlayCopyButtons = result.querySelectorAll('[data-sequence-primer-copy]');
   assert.equal(overlayCopyButtons.length >= 4, true);
   trigger(result, 'click', {
@@ -295,8 +296,8 @@ test('[EDGE] sequence-viewer context menu designs primers for selected sequence 
 
   assert.equal(Boolean(overlay.hidden), false);
   assert.match(note.textContent, /Feature_A/);
-  assert.match(result.innerHTML, /Feature_A F/);
-  assert.match(result.innerHTML, /Feature_A R/);
+  assert.match(stripI18nMarkup(result.innerHTML), /Feature_A F/);
+  assert.match(stripI18nMarkup(result.innerHTML), /Feature_A R/);
 });
 test('[EDGE] sequence-viewer keyboard edits selected bases through the sequence edit dialog', async () => {
   const ids = [

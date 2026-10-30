@@ -2,20 +2,20 @@
       <div id="sequence-viewer-detail-workspace" class="sequence-viewer-detail-workspace">
         <div id="sequence-viewer-protein-builder-confirmation" class="sequence-viewer-protein-builder-confirmation" hidden>
           <div class="sequence-viewer-protein-builder-confirmation-copy">
-            <h4>Confirm Construct</h4>
-            <p class="small-note">Review the assembled plasmid in DNA before confirming the construct.</p>
+            <h4 data-i18n="dna.ui.confirmConstruct">Confirm Construct</h4>
+            <p class="small-note" data-i18n="dna.ui.reviewTheAssembledPlasmidInDna">Review the assembled plasmid in DNA before confirming the construct.</p>
           </div>
           <div id="sequence-viewer-protein-builder-confirmation-summary" class="sequence-viewer-protein-builder-confirmation-summary">
-            <p class="small-note">Protein Builder review details will appear here.</p>
+            <p class="small-note" data-i18n="dna.ui.proteinBuilderReviewDetailsWillAppear">Protein Builder review details will appear here.</p>
           </div>
           <div class="form-actions sequence-viewer-protein-builder-confirmation-actions">
-            <button id="sequence-viewer-protein-builder-confirmation-back-btn" type="button" class="ghost-btn sequence-viewer-back-action-btn" aria-label="Back to Protein Builder" title="Back to Protein Builder">
+            <button id="sequence-viewer-protein-builder-confirmation-back-btn" type="button" class="ghost-btn sequence-viewer-back-action-btn" aria-label="Back to Protein Builder" title="Back to Protein Builder" data-i18n-aria-label="dna.ui.backToProteinBuilder" data-i18n-title="dna.ui.backToProteinBuilder">
               <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                 <path d="M19 12H5M11 6l-6 6 6 6"></path>
               </svg>
-              <span class="sr-only">Back to Protein Builder</span>
+              <span class="sr-only" data-i18n="dna.ui.backToProteinBuilder">Back to Protein Builder</span>
             </button>
-            <button id="sequence-viewer-protein-builder-confirmation-confirm-btn" type="button" class="primary-btn">Confirm Construct</button>
+            <button id="sequence-viewer-protein-builder-confirmation-confirm-btn" type="button" class="primary-btn" data-i18n="dna.ui.confirmConstruct">Confirm Construct</button>
           </div>
         </div>
 
@@ -24,39 +24,39 @@
             <div class="sequence-viewer-detail-sidebar-pinned left-rail-template__pinned">
               <section class="sequence-viewer-rail-actions-section left-rail-template__section">
                 <div class="form-actions sequence-viewer-rail-nav-actions">
-                  <button id="sequence-viewer-detail-new-btn" type="button" class="primary-btn sequence-viewer-icon-btn" aria-label="New sequence" title="New sequence">
+                  <button id="sequence-viewer-detail-new-btn" type="button" class="primary-btn sequence-viewer-icon-btn" aria-label="New sequence" title="New sequence" data-i18n-aria-label="dna.ui.newSequence" data-i18n-title="dna.ui.newSequence">
                     <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                       <path d="M12 5v14"></path>
                       <path d="M5 12h14"></path>
                     </svg>
-                    <span class="sequence-viewer-button-caption">New</span>
+                    <span class="sequence-viewer-button-caption" data-i18n="dna.ui.new">New</span>
                   </button>
-                  <button id="sequence-viewer-detail-open-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Open sequence" title="Open sequence">
+                  <button id="sequence-viewer-detail-open-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Open sequence" title="Open sequence" data-i18n-aria-label="dna.ui.openSequence" data-i18n-title="dna.ui.openSequence">
                     <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                       <path d="M3.5 7.5h6l2 2h9v9.5h-17Z"></path>
                       <path d="M3.5 7.5V5h7l2 2.5"></path>
                     </svg>
-                    <span class="sequence-viewer-button-caption">Open</span>
+                    <span class="sequence-viewer-button-caption" data-i18n="dna.ui.open">Open</span>
                   </button>
                   <input id="sequence-viewer-detail-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
-                  <button id="sequence-viewer-vector-builder-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Vector Builder" title="Vector Builder">
+                  <button id="sequence-viewer-vector-builder-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Vector Builder" title="Vector Builder" data-i18n-aria-label="dna.ui.vectorBuilder" data-i18n-title="dna.ui.vectorBuilder">
                     <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                       <circle cx="12" cy="12" r="7.5"></circle>
                       <path d="M12 4.5a7.5 7.5 0 0 1 6.5 3.75"></path>
                       <path d="m17.5 5.75 1 2.5-2.65.45"></path>
                       <circle cx="7.25" cy="15.5" r="1"></circle>
                     </svg>
-                    <span class="sequence-viewer-button-caption">Vector Builder</span>
+                    <span class="sequence-viewer-button-caption" data-i18n="dna.ui.vectorBuilder">Vector Builder</span>
                   </button>
                 </div>
               </section>
               <section class="sequence-viewer-library-controls left-rail-template__section">
                 <div class="sequence-viewer-library-filter-row">
-                  <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
-                    <button id="sequence-viewer-detail-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
-                    <button id="sequence-viewer-detail-library-filter-temporary" class="sequence-viewer-library-switch-btn" type="button">Unsaved</button>
+                  <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter" data-i18n-aria-label="dna.ui.sequenceLibraryFilter">
+                    <button id="sequence-viewer-detail-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button" data-i18n="dna.ui.saved">Saved</button>
+                    <button id="sequence-viewer-detail-library-filter-temporary" class="sequence-viewer-library-switch-btn" type="button" data-i18n="dna.ui.unsaved">Unsaved</button>
                   </div>
-                  <button id="sequence-viewer-detail-primer-library-open" class="ghost-btn sequence-viewer-primer-library-open-btn" type="button" aria-label="Open Primer Library" title="Primer Library" aria-haspopup="dialog">Primers</button>
+                  <button id="sequence-viewer-detail-primer-library-open" class="ghost-btn sequence-viewer-primer-library-open-btn" type="button" aria-label="Open Primer Library" title="Primer Library" aria-haspopup="dialog" data-i18n-aria-label="dna.ui.openPrimerLibrary" data-i18n-title="dna.ui.primerLibrary" data-i18n="dna.ui.primers">Primers</button>
                 </div>
                 <input
                   id="sequence-viewer-detail-library-search-input"
@@ -64,21 +64,22 @@
                   type="search"
                   placeholder="Search sequences"
                   autocomplete="off"
-                  aria-label="Search sequence library"
+                  aria-label="Search sequence library" data-i18n-aria-label="dna.ui.searchSequenceLibrary" data-i18n-placeholder="dna.ui.searchSequences"
                 />
               </section>
             </div>
             <div class="sequence-viewer-detail-sidebar-scroll left-rail-template__scroll">
               <section class="sequence-viewer-library-card left-rail-template__section">
                 <div id="sequence-viewer-detail-library-list" class="sequence-viewer-library-list folder-tree-template">
-                  <p class="small-note">No sequence entries found.</p>
+                  <p class="small-note" data-i18n="dna.ui.noSequenceEntriesFound">No sequence entries found.</p>
                 </div>
                 <div id="sequence-viewer-detail-library-context-menu" class="sequence-viewer-context-menu" hidden>
-                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="new-folder">New Folder</button>
-                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="rename" hidden>Rename Sequence</button>
-                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="move-entry" hidden>Move to Folder...</button>
-                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="rename-folder" hidden>Rename Folder</button>
-                  <button type="button" class="sequence-viewer-context-item sequence-viewer-context-item-danger" data-sequence-library-action="delete-folder" hidden>Delete Folder</button>
+                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="new-folder" data-i18n="dna.ui.newFolder">New Folder</button>
+                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="rename" hidden data-i18n="dna.ui.renameSequence">Rename Sequence</button>
+                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="move-entry" hidden data-i18n="dna.ui.moveToFolder">Move to Folder...</button>
+                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="recognize-backbone" hidden data-i18n="dna.ui.recognizeBackboneAndInsert">Recognize Backbone/Insert...</button>
+                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="rename-folder" hidden data-i18n="dna.ui.renameFolder">Rename Folder</button>
+                  <button type="button" class="sequence-viewer-context-item sequence-viewer-context-item-danger" data-sequence-library-action="delete-folder" hidden data-i18n="dna.ui.deleteFolder">Delete Folder</button>
                 </div>
               </section>
             </div>
@@ -86,80 +87,72 @@
 
           <div class="sequence-viewer-detail-main left-rail-template__main">
         <form id="sequence-viewer-form" class="stack-form sequence-viewer-controls" autocomplete="off">
-          <div class="sequence-viewer-mode-switch sequence-viewer-detail-input-switch" role="tablist" aria-label="DNA input mode" hidden aria-hidden="true">
-            <button id="sequence-viewer-mode-paste" class="sequence-viewer-mode-btn sequence-viewer-mode-btn-active" type="button">Paste Text</button>
-            <button id="sequence-viewer-mode-file" class="sequence-viewer-mode-btn" type="button">Load File</button>
+          <div class="sequence-viewer-mode-switch sequence-viewer-detail-input-switch" role="tablist" aria-label="DNA input mode" hidden aria-hidden="true" data-i18n-aria-label="dna.ui.dnaInputMode">
+            <button id="sequence-viewer-mode-paste" class="sequence-viewer-mode-btn sequence-viewer-mode-btn-active" type="button" data-i18n="dna.ui.pasteText">Paste Text</button>
+            <button id="sequence-viewer-mode-file" class="sequence-viewer-mode-btn" type="button" data-i18n="dna.ui.loadFile">Load File</button>
           </div>
 
           <div id="sequence-viewer-paste-panel" class="sequence-viewer-input-panel">
             <label>
-              Sequence or Records
-              <textarea id="sequence-viewer-textarea" rows="8" placeholder="Paste FASTA, FASTQ, GenBank, or raw sequence text."></textarea>
+              <span data-i18n="dna.ui.sequenceOrRecords">Sequence or Records</span>
+              <textarea id="sequence-viewer-textarea" rows="8" placeholder="Paste FASTA, FASTQ, GenBank, or raw sequence text." data-i18n-placeholder="dna.ui.pasteFastaFastqGenbankOrRaw"></textarea>
             </label>
           </div>
 
           <div id="sequence-viewer-file-panel" class="sequence-viewer-input-panel" hidden>
             <input id="sequence-viewer-file-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
             <div class="inline-row">
-              <button id="sequence-viewer-file-choose" type="button" class="ghost-btn">Choose File</button>
-              <span id="sequence-viewer-file-name" class="small-note">No file selected</span>
+              <button id="sequence-viewer-file-choose" type="button" class="ghost-btn" data-i18n="dna.ui.chooseFile">Choose File</button>
+              <span id="sequence-viewer-file-name" class="small-note"><span data-i18n="dna.full.d1f08ab1">No file selected</span></span>
             </div>
           </div>
 
           <div class="form-actions sequence-viewer-detail-toolbar">
-            <button id="sequence-viewer-cloning-design-btn" type="button" class="primary-btn" hidden>Cloning Design</button>
-            <button id="sequence-viewer-load-btn" type="submit" class="primary-btn">Load</button>
-            <button id="sequence-viewer-save-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Save sequence to library" title="Save to library" hidden>
+            <button id="sequence-viewer-cloning-design-btn" type="button" class="primary-btn" hidden data-i18n="dna.ui.cloningDesign">Cloning Design</button>
+            <button id="sequence-viewer-load-btn" type="submit" class="primary-btn" data-i18n="dna.ui.load">Load</button>
+            <button id="sequence-viewer-save-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Save sequence to library" title="Save to library" hidden data-i18n-aria-label="dna.ui.saveSequenceToLibrary" data-i18n-title="dna.ui.saveToLibrary">
               <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                 <path d="M5 5.5h11L19 8.5v10h-14Z"></path>
                 <path d="M8.5 5.5h7v4h-7Z"></path>
                 <path d="M8 12.5h8v6h-8Z"></path>
               </svg>
-              <span class="sequence-viewer-button-caption">Save</span>
+              <span class="sequence-viewer-button-caption" data-i18n="dna.ui.save">Save</span>
             </button>
-            <button id="sequence-viewer-annotate-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Annotate sequence" title="Annotate sequence">
+            <button id="sequence-viewer-annotate-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Annotate sequence" title="Annotate sequence" data-i18n-aria-label="dna.ui.annotateSequence" data-i18n-title="dna.ui.annotateSequence">
               <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                 <path d="M4 5.5h7.5L20 14l-6 6-8.5-8.5V7A1.5 1.5 0 0 1 7 5.5Z"></path>
                 <circle cx="8.5" cy="9" r="1"></circle>
               </svg>
-              <span class="sequence-viewer-button-caption">Annotate</span>
-            </button>
-            <button id="sequence-viewer-recognize-backbone-btn" type="button" class="ghost-btn sequence-viewer-icon-btn" aria-label="Recognize backbone and insert" title="Recognize backbone and insert">
-              <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                <circle cx="10.5" cy="10.5" r="5.5"></circle>
-                <path d="m14.5 14.5 5 5"></path>
-                <path d="M8.5 8.5h4v4h-4Z"></path>
-              </svg>
-              <span class="sequence-viewer-button-caption">Recognize</span>
+              <span class="sequence-viewer-button-caption" data-i18n="dna.ui.annotate">Annotate</span>
             </button>
             <div class="sequence-viewer-menu-anchor">
-              <button id="sequence-viewer-alignment-menu-btn" type="button" class="ghost-btn sequence-viewer-icon-btn sequence-viewer-toolbar-menu-icon-btn" aria-label="Alignment options" title="Alignment" aria-haspopup="true" aria-expanded="false">
+              <button id="sequence-viewer-alignment-menu-btn" type="button" class="ghost-btn sequence-viewer-icon-btn sequence-viewer-toolbar-menu-icon-btn" aria-label="Alignment options" title="Alignment" aria-haspopup="true" aria-expanded="false" data-i18n-aria-label="dna.ui.alignmentOptions" data-i18n-title="dna.ui.alignment">
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                   <path d="M5 7h14"></path>
                   <path d="M7 12h12"></path>
                   <path d="M5 17h14"></path>
                   <path d="M9 5v4M15 10v4M11 15v4"></path>
                 </svg>
-                <span class="sequence-viewer-button-caption">Alignment</span>
+                <span class="sequence-viewer-button-caption" data-i18n="dna.ui.alignment">Alignment</span>
               </button>
               <div id="sequence-viewer-alignment-menu" class="sequence-viewer-context-menu sequence-viewer-toolbar-menu" hidden>
-                <button id="sequence-viewer-alignment-open-btn" type="button" class="sequence-viewer-context-item">Open Sequence</button>
-                <label class="sequence-viewer-inline-toggle" title="Show or hide the currently selected sequencing alignment on the reference sequence.">
+                <button id="sequence-viewer-alignment-open-btn" type="button" class="sequence-viewer-context-item" data-i18n="dna.ui.openSequence2">Open Sequence</button>
+                <label class="sequence-viewer-inline-toggle" title="Show or hide the currently selected sequencing alignment on the reference sequence." data-i18n-title="dna.ui.showOrHideTheCurrentlySelected">
                   <input id="sequence-viewer-alignment-toggle" type="checkbox" />
-                  <span>Show Alignment</span>
+                  <span data-i18n="dna.ui.showAlignment">Show Alignment</span>
                 </label>
-                <label class="sequence-viewer-inline-select" title="Choose a saved sequencing alignment for the current reference.">
-                  <span>Saved</span>
+                <label class="sequence-viewer-inline-select" title="Choose a saved sequencing alignment for the current reference." data-i18n-title="dna.ui.chooseASavedSequencingAlignmentFor">
+                  <span data-i18n="dna.ui.saved">Saved</span>
                   <select id="sequence-viewer-alignment-session-select">
-                    <option value="">No saved alignments</option>
+                    <option value="" data-i18n="dna.full.8e56f479">No saved alignments</option>
                   </select>
                 </label>
-                <span id="sequence-viewer-alignment-active-note" class="small-note">No alignment selected.</span>
+                <span id="sequence-viewer-alignment-active-note" class="small-note"><span data-i18n="dna.full.d1bee6f2">No alignment selected.</span></span>
               </div>
             </div>
 
             <div class="sequence-viewer-menu-anchor">
-              <button id="sequence-viewer-orf-menu-btn" type="button" class="ghost-btn sequence-viewer-icon-btn sequence-viewer-toolbar-menu-icon-btn" aria-label="ORF View options" title="ORF View" aria-haspopup="true" aria-expanded="false">
+              <button id="sequence-viewer-orf-menu-btn" type="button" class="ghost-btn sequence-viewer-icon-btn sequence-viewer-toolbar-menu-icon-btn" aria-label="ORF View options" title="ORF View" aria-haspopup="true" aria-expanded="false" data-i18n-aria-label="dna.ui.orfViewOptions" data-i18n-title="dna.ui.orfView">
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                   <path d="M5 6h14v12H5Z"></path>
                   <path d="m10 9 5 3-5 3Z"></path>
@@ -167,48 +160,48 @@
                 <span class="sequence-viewer-button-caption">ORF</span>
               </button>
               <div id="sequence-viewer-orf-menu" class="sequence-viewer-context-menu sequence-viewer-toolbar-menu" hidden>
-                <label class="sequence-viewer-inline-toggle" title="Show/hide predicted ORFs and selected ORF amino-acid translation.">
+                <label class="sequence-viewer-inline-toggle" title="Show/hide predicted ORFs and selected ORF amino-acid translation." data-i18n-title="dna.ui.showHidePredictedOrfsAndSelected">
                   <input id="sequence-viewer-orf-toggle" type="checkbox" />
-                  <span>ORF View</span>
+                  <span data-i18n="dna.ui.orfView">ORF View</span>
                 </label>
-                <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="ORF stop codons">
-                  <span class="sequence-viewer-inline-toggle-group-label">ORF Stops</span>
-                  <label class="sequence-viewer-inline-toggle" title="Use TAG as an ORF terminator.">
+                <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="ORF stop codons" data-i18n-aria-label="dna.ui.orfStopCodons">
+                  <span class="sequence-viewer-inline-toggle-group-label" data-i18n="dna.ui.orfStops">ORF Stops</span>
+                  <label class="sequence-viewer-inline-toggle" title="Use TAG as an ORF terminator." data-i18n-title="dna.ui.useTagAsAnOrfTerminator">
                     <input id="sequence-viewer-orf-stop-tag-toggle" type="checkbox" checked />
                     <span>TAG</span>
                   </label>
-                  <label class="sequence-viewer-inline-toggle" title="Use TAA as an ORF terminator.">
+                  <label class="sequence-viewer-inline-toggle" title="Use TAA as an ORF terminator." data-i18n-title="dna.ui.useTaaAsAnOrfTerminator">
                     <input id="sequence-viewer-orf-stop-taa-toggle" type="checkbox" checked />
                     <span>TAA</span>
                   </label>
-                  <label class="sequence-viewer-inline-toggle" title="Use TGA as an ORF terminator.">
+                  <label class="sequence-viewer-inline-toggle" title="Use TGA as an ORF terminator." data-i18n-title="dna.ui.useTgaAsAnOrfTerminator">
                     <input id="sequence-viewer-orf-stop-tga-toggle" type="checkbox" checked />
                     <span>TGA</span>
                   </label>
                 </div>
-                <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="ORF reading frames">
-                  <span class="sequence-viewer-inline-toggle-group-label">Frames</span>
-                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in forward frame +1.">
+                <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="ORF reading frames" data-i18n-aria-label="dna.ui.orfReadingFrames">
+                  <span class="sequence-viewer-inline-toggle-group-label" data-i18n="dna.ui.frames">Frames</span>
+                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in forward frame +1." data-i18n-title="dna.ui.showOrfsInForwardFrame1">
                     <input id="sequence-viewer-orf-frame-p1-toggle" type="checkbox" checked />
                     <span>+1</span>
                   </label>
-                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in forward frame +2.">
+                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in forward frame +2." data-i18n-title="dna.ui.showOrfsInForwardFrame2">
                     <input id="sequence-viewer-orf-frame-p2-toggle" type="checkbox" checked />
                     <span>+2</span>
                   </label>
-                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in forward frame +3.">
+                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in forward frame +3." data-i18n-title="dna.ui.showOrfsInForwardFrame3">
                     <input id="sequence-viewer-orf-frame-p3-toggle" type="checkbox" checked />
                     <span>+3</span>
                   </label>
-                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in reverse frame -1.">
+                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in reverse frame -1." data-i18n-title="dna.ui.showOrfsInReverseFrame1">
                     <input id="sequence-viewer-orf-frame-m1-toggle" type="checkbox" checked />
                     <span>-1</span>
                   </label>
-                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in reverse frame -2.">
+                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in reverse frame -2." data-i18n-title="dna.ui.showOrfsInReverseFrame2">
                     <input id="sequence-viewer-orf-frame-m2-toggle" type="checkbox" checked />
                     <span>-2</span>
                   </label>
-                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in reverse frame -3.">
+                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in reverse frame -3." data-i18n-title="dna.ui.showOrfsInReverseFrame3">
                     <input id="sequence-viewer-orf-frame-m3-toggle" type="checkbox" checked />
                     <span>-3</span>
                   </label>
@@ -217,40 +210,40 @@
             </div>
 
             <div class="sequence-viewer-menu-anchor">
-              <button id="sequence-viewer-cutter-menu-btn" type="button" class="ghost-btn sequence-viewer-icon-btn sequence-viewer-toolbar-menu-icon-btn" aria-label="Restriction cutter options" title="Restriction cutters" aria-haspopup="true" aria-expanded="false">
+              <button id="sequence-viewer-cutter-menu-btn" type="button" class="ghost-btn sequence-viewer-icon-btn sequence-viewer-toolbar-menu-icon-btn" aria-label="Restriction cutter options" title="Restriction cutters" aria-haspopup="true" aria-expanded="false" data-i18n-aria-label="dna.ui.restrictionCutterOptions" data-i18n-title="dna.ui.restrictionCutters">
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                   <circle cx="6.5" cy="7" r="2.5"></circle>
                   <circle cx="6.5" cy="17" r="2.5"></circle>
                   <path d="m8.5 8.5 11 8.5"></path>
                   <path d="m8.5 15.5 11-8.5"></path>
                 </svg>
-                <span class="sequence-viewer-button-caption">Cutters</span>
+                <span class="sequence-viewer-button-caption" data-i18n="dna.ui.cutters">Cutters</span>
               </button>
               <div id="sequence-viewer-cutter-menu" class="sequence-viewer-context-menu sequence-viewer-toolbar-menu" hidden>
-                <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="Restriction enzyme vendors">
-                  <label class="sequence-viewer-inline-toggle" title="Show unique cutters sold by New England Biolabs.">
+                <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="Restriction enzyme vendors" data-i18n-aria-label="dna.ui.restrictionEnzymeVendors">
+                  <label class="sequence-viewer-inline-toggle" title="Show unique cutters sold by New England Biolabs." data-i18n-title="dna.ui.showUniqueCuttersSoldByNew">
                     <input id="sequence-viewer-restriction-neb-toggle" type="checkbox" checked />
                     <span>NEB</span>
                   </label>
-                  <label class="sequence-viewer-inline-toggle" title="Show unique cutters sold by Thermo Fisher Scientific.">
+                  <label class="sequence-viewer-inline-toggle" title="Show unique cutters sold by Thermo Fisher Scientific." data-i18n-title="dna.ui.showUniqueCuttersSoldByThermo">
                     <input id="sequence-viewer-restriction-thermo-toggle" type="checkbox" checked />
-                    <span>Thermo</span>
+                    <span><span data-i18n="dna.full.73405dbe">Thermo</span></span>
                   </label>
                 </div>
               </div>
             </div>
 
-            <label class="sequence-viewer-inline-toggle" title="Show primer binding sites on the strands they anneal to.">
+            <label class="sequence-viewer-inline-toggle" title="Show primer binding sites on the strands they anneal to." data-i18n-title="dna.ui.showPrimerBindingSitesOnThe">
               <input id="sequence-viewer-primers-toggle" type="checkbox" checked />
-              <span>Primers</span>
+              <span data-i18n="dna.ui.primers">Primers</span>
             </label>
 
           </div>
 
           <label class="sequence-viewer-hidden-control" hidden aria-hidden="true">
-            Record
+            <span data-i18n="dna.ui.record">Record</span>
             <select id="sequence-viewer-record-select">
-              <option value="">No records loaded</option>
+              <option value="" data-i18n="dna.full.d97fcd35">No records loaded</option>
             </select>
           </label>
         </form>
@@ -258,34 +251,34 @@
         <div class="sequence-viewer-results">
           <section class="sequence-viewer-sequence-region">
             <div id="sequence-viewer-sequence-host" class="sequence-viewer-sequence-host">
-              <p class="small-note">Load sequence data to begin.</p>
+              <p class="small-note" data-i18n="dna.ui.loadSequenceDataToBegin">Load sequence data to begin.</p>
             </div>
             <div class="sequence-viewer-feature-bottom">
               <div class="result-card-head">
-                <h4>Features (Bottom Track)</h4>
+                <h4 data-i18n="dna.ui.featuresBottomTrack">Features (Bottom Track)</h4>
               </div>
               <div id="sequence-viewer-feature-rail-host" class="sequence-viewer-feature-rail-host">
-                <p class="small-note">No features to display.</p>
+                <p class="small-note" data-i18n="dna.ui.noFeaturesToDisplay">No features to display.</p>
               </div>
               <div id="sequence-viewer-feature-detail" class="calc-output sequence-viewer-feature-detail">
-                <p class="small-note">Select a feature in the bottom track to view details.</p>
+                <p class="small-note" data-i18n="dna.ui.selectAFeatureInTheBottom">Select a feature in the bottom track to view details.</p>
               </div>
             </div>
           </section>
 
           <div class="sequence-viewer-hidden-summary" hidden aria-hidden="true">
             <div class="sequence-viewer-stats">
-              <div><strong>Format:</strong> <span id="sequence-viewer-stat-format">-</span></div>
-              <div><strong>Length:</strong> <span id="sequence-viewer-stat-length">0</span> bp</div>
-              <div><strong>Topology:</strong> <span id="sequence-viewer-stat-topology">-</span></div>
+              <div><strong data-i18n="dna.ui.format">Format:</strong> <span id="sequence-viewer-stat-format">-</span></div>
+              <div><strong data-i18n="dna.ui.length">Length:</strong> <span id="sequence-viewer-stat-length">0</span> <span data-i18n="dna.ui.bp">bp</span></div>
+              <div><strong data-i18n="dna.ui.topology2">Topology:</strong> <span id="sequence-viewer-stat-topology">-</span></div>
               <div><strong>GC:</strong> <span id="sequence-viewer-stat-gc">-</span></div>
-              <div><strong>Ambiguous:</strong> <span id="sequence-viewer-stat-ambiguous">-</span></div>
-              <div><strong>Quality (min/mean/max):</strong> <span id="sequence-viewer-stat-quality">-</span></div>
-              <div><strong>Features:</strong> <span id="sequence-viewer-stat-features">0</span></div>
-              <div><strong>Unique NEB/Thermo Sites:</strong> <span id="sequence-viewer-stat-restriction-sites">0</span></div>
+              <div><strong data-i18n="dna.ui.ambiguous">Ambiguous:</strong> <span id="sequence-viewer-stat-ambiguous">-</span></div>
+              <div><strong data-i18n="dna.ui.qualityMinMeanMax">Quality (min/mean/max):</strong> <span id="sequence-viewer-stat-quality">-</span></div>
+              <div><strong data-i18n="dna.ui.features">Features:</strong> <span id="sequence-viewer-stat-features">0</span></div>
+              <div><strong data-i18n="dna.ui.uniqueNebThermoSites">Unique NEB/Thermo Sites:</strong> <span id="sequence-viewer-stat-restriction-sites">0</span></div>
             </div>
             <div id="sequence-viewer-messages" class="calc-output sequence-viewer-message-box">
-              <p class="small-note">No parser warnings.</p>
+              <p class="small-note" data-i18n="dna.ui.noParserWarnings">No parser warnings.</p>
             </div>
           </div>
         </div>
@@ -295,45 +288,45 @@
         <div id="sequence-viewer-feature-editor-overlay" class="sequence-viewer-feature-editor-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
           <form id="sequence-viewer-feature-editor-form" class="sequence-viewer-feature-editor app-dialog-surface" autocomplete="off">
             <div class="result-card-head sequence-viewer-feature-editor-head app-dialog-head">
-              <h4 id="sequence-viewer-feature-editor-title">Add Feature</h4>
-              <button id="sequence-viewer-feature-editor-close" type="button" class="app-dialog-close-btn" aria-label="Close feature editor dialog" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+              <h4 id="sequence-viewer-feature-editor-title"><span data-i18n="dna.full.582622a">Add Feature</span></h4>
+              <button id="sequence-viewer-feature-editor-close" type="button" class="app-dialog-close-btn" aria-label="Close feature editor dialog" title="Close" data-i18n-aria-label="dna.ui.closeFeatureEditorDialog" data-i18n-title="dna.ui.close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
             </div>
-            <p id="sequence-viewer-feature-editor-note" class="small-note">Choose the feature metadata for the selected range.</p>
+            <p id="sequence-viewer-feature-editor-note" class="small-note"><span data-i18n="dna.full.8a5e68d0">Choose the feature metadata for the selected range.</span></p>
 
             <div class="sequence-viewer-feature-editor-grid">
               <label>
-                Name
-                <input id="sequence-viewer-feature-editor-name" placeholder="e.g. promoter_1" />
+                <span data-i18n="dna.ui.name">Name</span>
+                <input id="sequence-viewer-feature-editor-name" placeholder="e.g. promoter_1" data-i18n-placeholder="dna.ui.eGPromoter1" />
               </label>
               <label>
-                Type
-                <input id="sequence-viewer-feature-editor-type" list="sequence-viewer-feature-editor-type-options" placeholder="e.g. promoter" />
+                <span data-i18n="dna.ui.type">Type</span>
+                <input id="sequence-viewer-feature-editor-type" list="sequence-viewer-feature-editor-type-options" placeholder="e.g. promoter" data-i18n-placeholder="dna.ui.eGPromoter" />
                 <datalist id="sequence-viewer-feature-editor-type-options"></datalist>
               </label>
               <label>
-                Strand
+                <span data-i18n="dna.ui.strand">Strand</span>
                 <select id="sequence-viewer-feature-editor-strand">
-                  <option value="1">Forward (+)</option>
-                  <option value="-1">Reverse (-)</option>
+                  <option value="1" data-i18n="dna.ui.forward">Forward (+)</option>
+                  <option value="-1" data-i18n="dna.ui.reverse">Reverse (-)</option>
                 </select>
               </label>
               <label>
-                Start
+                <span data-i18n="dna.ui.start">Start</span>
                 <input id="sequence-viewer-feature-editor-start" type="number" min="1" step="1" />
               </label>
               <label>
-                End
+                <span data-i18n="dna.ui.end">End</span>
                 <input id="sequence-viewer-feature-editor-end" type="number" min="1" step="1" />
               </label>
               <label class="sequence-viewer-feature-editor-field-wide">
-                Description
-                <textarea id="sequence-viewer-feature-editor-description" rows="3" placeholder="Optional feature note"></textarea>
+                <span data-i18n="dna.ui.description">Description</span>
+                <textarea id="sequence-viewer-feature-editor-description" rows="3" placeholder="Optional feature note" data-i18n-placeholder="dna.ui.optionalFeatureNote"></textarea>
               </label>
             </div>
 
             <div class="form-actions">
-              <button id="sequence-viewer-feature-editor-save" type="submit" class="primary-btn">Save Feature</button>
-              <button id="sequence-viewer-feature-editor-cancel" type="button" class="ghost-btn">Cancel</button>
+              <button id="sequence-viewer-feature-editor-save" type="submit" class="primary-btn" data-i18n="dna.ui.saveFeature">Save Feature</button>
+              <button id="sequence-viewer-feature-editor-cancel" type="button" class="ghost-btn" data-i18n="dna.ui.cancel">Cancel</button>
             </div>
           </form>
         </div>
@@ -341,26 +334,26 @@
         <div id="sequence-viewer-sequence-edit-overlay" class="sequence-viewer-sequence-edit-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
           <form id="sequence-viewer-sequence-edit-form" class="sequence-viewer-sequence-edit-dialog app-dialog-surface" autocomplete="off">
             <div class="result-card-head sequence-viewer-sequence-edit-head app-dialog-head">
-              <h4 id="sequence-viewer-sequence-edit-title">Edit Bases</h4>
-              <button id="sequence-viewer-sequence-edit-close" type="button" class="app-dialog-close-btn" aria-label="Close sequence edit dialog" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+              <h4 id="sequence-viewer-sequence-edit-title"><span data-i18n="dna.full.dbf77707">Edit Bases</span></h4>
+              <button id="sequence-viewer-sequence-edit-close" type="button" class="app-dialog-close-btn" aria-label="Close sequence edit dialog" title="Close" data-i18n-aria-label="dna.ui.closeSequenceEditDialog" data-i18n-title="dna.ui.close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
             </div>
             <p id="sequence-viewer-sequence-edit-note" class="small-note sequence-viewer-sequence-edit-note"></p>
 
             <label id="sequence-viewer-sequence-edit-tag-wrap" class="sequence-viewer-sequence-edit-input-wrap" hidden>
-              Common peptides
-              <select id="sequence-viewer-sequence-edit-tag-select"><option value="">Custom DNA</option></select>
+              <span data-i18n="dna.ui.commonPeptides">Common peptides</span>
+              <select id="sequence-viewer-sequence-edit-tag-select"><option value="" data-i18n="dna.full.3fddec97">Custom DNA</option></select>
             </label>
             <div id="sequence-viewer-sequence-edit-tag-options" class="sequence-viewer-sequence-edit-tag-options" hidden>
               <div class="sequence-viewer-sequence-edit-tag-fields">
                 <label class="sequence-viewer-sequence-edit-input-wrap">
-                  ORF reference
-                  <select id="sequence-viewer-sequence-edit-tag-orf"><option value="">No ORF reference</option></select>
+                  <span data-i18n="dna.ui.orfReference">ORF reference</span>
+                  <select id="sequence-viewer-sequence-edit-tag-orf"><option value="" data-i18n="dna.full.1b8c7b92">No ORF reference</option></select>
                 </label>
                 <label class="sequence-viewer-sequence-edit-input-wrap">
-                  Peptide orientation
+                  <span data-i18n="dna.ui.peptideOrientation">Peptide orientation</span>
                   <select id="sequence-viewer-sequence-edit-tag-orientation">
-                    <option value="along">Along ORF</option>
-                    <option value="reverse">Reverse of ORF</option>
+                    <option value="along" data-i18n="dna.full.b680b1ff">Along ORF</option>
+                    <option value="reverse" data-i18n="dna.full.4bd33107">Reverse of ORF</option>
                   </select>
                 </label>
               </div>
@@ -368,14 +361,14 @@
             </div>
 
             <label id="sequence-viewer-sequence-edit-input-wrap" class="sequence-viewer-sequence-edit-input-wrap">
-              Sequence
+              <span data-i18n="dna.ui.sequence">Sequence</span>
               <textarea id="sequence-viewer-sequence-edit-textarea" rows="3" spellcheck="false" placeholder="ACGT"></textarea>
             </label>
             <div id="sequence-viewer-sequence-edit-delete-message" class="sequence-viewer-sequence-edit-delete-message" hidden></div>
 
             <div class="form-actions">
-              <button id="sequence-viewer-sequence-edit-confirm" type="submit" class="primary-btn">Apply</button>
-              <button id="sequence-viewer-sequence-edit-cancel" type="button" class="ghost-btn">Cancel</button>
+              <button id="sequence-viewer-sequence-edit-confirm" type="submit" class="primary-btn"><span data-i18n="dna.full.ca77bbdb">Apply</span></button>
+              <button id="sequence-viewer-sequence-edit-cancel" type="button" class="ghost-btn" data-i18n="dna.ui.cancel">Cancel</button>
             </div>
           </form>
         </div>
@@ -384,43 +377,42 @@
           <div class="sequence-viewer-backbone-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-backbone-dialog-title">
             <div class="sequence-viewer-backbone-dialog-head app-dialog-head">
               <div>
-                <h4 id="sequence-viewer-backbone-dialog-title">Backbone / Insert Candidates</h4>
-                <p id="sequence-viewer-backbone-dialog-subtitle" class="small-note">Review promoter and ORF candidates before applying a backbone/insert interpretation.</p>
+                <h4 id="sequence-viewer-backbone-dialog-title" data-i18n="dna.ui.backboneInsertCandidates">Backbone / Insert Candidates</h4>
               </div>
-              <button id="sequence-viewer-backbone-dialog-close-btn" type="button" class="app-dialog-close-btn" aria-label="Close backbone recognition dialog" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+              <button id="sequence-viewer-backbone-dialog-close-btn" type="button" class="app-dialog-close-btn" aria-label="Close backbone recognition dialog" title="Close" data-i18n-aria-label="dna.ui.closeBackboneRecognitionDialog" data-i18n-title="dna.ui.close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
             </div>
 
-            <div class="sequence-viewer-backbone-dialog-mode-switch" role="tablist" aria-label="Recognition mode">
-              <button id="sequence-viewer-backbone-dialog-mode-gibson-btn" class="sequence-viewer-mode-btn sequence-viewer-mode-btn-active" type="button">Gibson / HR</button>
-              <button id="sequence-viewer-backbone-dialog-mode-restriction-btn" class="sequence-viewer-mode-btn" type="button">Restriction</button>
+            <div class="sequence-viewer-backbone-dialog-mode-switch" role="tablist" aria-label="Recognition mode" data-i18n-aria-label="dna.ui.recognitionMode">
+              <button id="sequence-viewer-backbone-dialog-mode-gibson-btn" class="sequence-viewer-mode-btn sequence-viewer-mode-btn-active" type="button" data-i18n="dna.ui.gibsonHr">Gibson / HR</button>
+              <button id="sequence-viewer-backbone-dialog-mode-restriction-btn" class="sequence-viewer-mode-btn" type="button" data-i18n="dna.ui.restriction">Restriction</button>
             </div>
 
             <div class="sequence-viewer-backbone-dialog-grid">
               <section class="sequence-viewer-backbone-dialog-panel">
                 <div class="result-card-head">
-                  <h4>Candidate List</h4>
+                  <h4 data-i18n="dna.ui.candidateList">Candidate List</h4>
                 </div>
                 <div id="sequence-viewer-backbone-dialog-candidates" class="sequence-viewer-backbone-dialog-candidates">
-                  <p class="small-note">No candidates available.</p>
+                  <p class="small-note" data-i18n="dna.ui.noCandidatesAvailable">No candidates available.</p>
                 </div>
               </section>
 
               <section class="sequence-viewer-backbone-dialog-panel sequence-viewer-backbone-dialog-preview-panel">
                 <div class="result-card-head">
-                  <h4>Preview</h4>
+                  <h4 data-i18n="dna.ui.preview">Preview</h4>
                 </div>
                 <div id="sequence-viewer-backbone-dialog-summary" class="calc-output sequence-viewer-backbone-dialog-summary">
-                  <p class="small-note">Select a candidate to preview the plasmid map.</p>
+                  <p class="small-note" data-i18n="dna.ui.selectACandidateToPreviewThe">Select a candidate to preview the plasmid map.</p>
                 </div>
                 <div id="sequence-viewer-backbone-dialog-preview" class="sequence-viewer-backbone-dialog-preview">
-                  <p class="small-note">Circular plasmid preview unavailable.</p>
+                  <p class="small-note" data-i18n="dna.ui.circularPlasmidPreviewUnavailable">Circular plasmid preview unavailable.</p>
                 </div>
               </section>
             </div>
 
             <div class="form-actions">
-              <button id="sequence-viewer-backbone-dialog-apply-btn" type="button" class="primary-btn">Apply Selection</button>
-              <button id="sequence-viewer-backbone-dialog-cancel-btn" type="button" class="ghost-btn">Cancel</button>
+              <button id="sequence-viewer-backbone-dialog-apply-btn" type="button" class="primary-btn" data-i18n="dna.ui.applySelection">Apply Selection</button>
+              <button id="sequence-viewer-backbone-dialog-cancel-btn" type="button" class="ghost-btn" data-i18n="dna.ui.cancel">Cancel</button>
             </div>
           </div>
         </div>
@@ -433,14 +425,14 @@
       <div id="sequence-viewer-primer-design-overlay" class="sequence-viewer-primer-design-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
         <section class="sequence-viewer-primer-design-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-primer-design-title">
           <div class="result-card-head sequence-viewer-primer-design-head app-dialog-head">
-            <h4 id="sequence-viewer-primer-design-title">Designed Primers</h4>
-            <button id="sequence-viewer-primer-design-close" type="button" class="app-dialog-close-btn" aria-label="Close designed primers dialog" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            <h4 id="sequence-viewer-primer-design-title"><span data-i18n="dna.full.b6d040ee">Designed Primers</span></h4>
+            <button id="sequence-viewer-primer-design-close" type="button" class="app-dialog-close-btn" aria-label="Close designed primers dialog" title="Close" data-i18n-aria-label="dna.ui.closeDesignedPrimersDialog" data-i18n-title="dna.ui.close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           </div>
-          <p id="sequence-viewer-primer-design-note" class="small-note">Primer details will appear here.</p>
+          <p id="sequence-viewer-primer-design-note" class="small-note"><span data-i18n="dna.full.5c91a195">Primer details will appear here.</span></p>
           <div id="sequence-viewer-primer-design-result" class="sequence-viewer-primer-design-result calc-output"></div>
           <div class="form-actions">
-            <button id="sequence-viewer-primer-design-order" type="button" class="ghost-btn">Order Primers</button>
-            <button id="sequence-viewer-primer-design-dismiss" type="button" class="primary-btn">Done</button>
+            <button id="sequence-viewer-primer-design-order" type="button" class="ghost-btn" data-i18n="dna.ui.orderPrimers">Order Primers</button>
+            <button id="sequence-viewer-primer-design-dismiss" type="button" class="primary-btn" data-i18n="dna.ui.done">Done</button>
           </div>
         </section>
       </div>
@@ -448,25 +440,25 @@
       <dialog id="sequence-viewer-primer-library-overlay" class="sequence-viewer-primer-library-overlay app-dialog-overlay app-dialog-overlay--center" aria-labelledby="sequence-viewer-primer-library-title">
         <section class="sequence-viewer-primer-library-dialog app-dialog-surface">
           <div class="result-card-head app-dialog-head">
-            <h4 id="sequence-viewer-primer-library-title">Primer Library</h4>
-            <button id="sequence-viewer-primer-library-close" type="button" class="app-dialog-close-btn" aria-label="Close Primer Library" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            <h4 id="sequence-viewer-primer-library-title" data-i18n="dna.ui.primerLibrary">Primer Library</h4>
+            <button id="sequence-viewer-primer-library-close" type="button" class="app-dialog-close-btn" aria-label="Close Primer Library" title="Close" data-i18n-aria-label="dna.ui.closePrimerLibrary" data-i18n-title="dna.ui.close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           </div>
           <div class="sequence-viewer-primer-library-toolbar">
-            <input id="sequence-viewer-primer-library-search" type="search" placeholder="Search primers" aria-label="Search Primer Library" autocomplete="off">
-            <span id="sequence-viewer-primer-library-count" class="small-note" aria-live="polite">0 primers · 0 selected</span>
+            <input id="sequence-viewer-primer-library-search" type="search" placeholder="Search primers" aria-label="Search Primer Library" autocomplete="off" data-i18n-aria-label="dna.ui.searchPrimerLibrary" data-i18n-placeholder="dna.ui.searchPrimers">
+            <span id="sequence-viewer-primer-library-count" class="small-note" aria-live="polite"><span data-i18n="dna.full.db01288b">0 primers · 0 selected</span></span>
           </div>
           <div class="sequence-viewer-primer-library-table-wrap">
             <table class="sequence-viewer-primer-library-table">
               <thead><tr>
-                <th scope="col"><input id="sequence-viewer-primer-library-select-all" type="checkbox" aria-label="Select all visible primers"></th>
-                <th scope="col">Name</th><th scope="col">Sequence (5′ → 3′)</th><th scope="col">nt</th><th scope="col">Source</th>
+                <th scope="col"><input id="sequence-viewer-primer-library-select-all" type="checkbox" aria-label="Select all visible primers" data-i18n-aria-label="dna.ui.selectAllVisiblePrimers"></th>
+                <th scope="col" data-i18n="dna.ui.name">Name</th><th scope="col" data-i18n="dna.ui.sequence53">Sequence (5′ → 3′)</th><th scope="col">nt</th><th scope="col" data-i18n="dna.ui.source">Source</th>
               </tr></thead>
               <tbody id="sequence-viewer-primer-library-body"></tbody>
             </table>
           </div>
           <div class="form-actions sequence-viewer-primer-library-actions">
-            <button id="sequence-viewer-primer-library-remove" type="button" class="ghost-btn" disabled>Remove Selected</button>
-            <button id="sequence-viewer-primer-library-export" type="button" class="primary-btn" disabled>Export Selected to IDT</button>
+            <button id="sequence-viewer-primer-library-remove" type="button" class="ghost-btn" disabled data-i18n="dna.ui.removeSelected">Remove Selected</button>
+            <button id="sequence-viewer-primer-library-export" type="button" class="primary-btn" disabled data-i18n="dna.ui.exportSelectedToIdt">Export Selected to IDT</button>
           </div>
         </section>
       </dialog>
@@ -474,27 +466,27 @@
       <dialog id="sequence-viewer-primer-order-overlay" class="sequence-viewer-primer-order-overlay app-dialog-overlay app-dialog-overlay--center" aria-labelledby="sequence-viewer-primer-order-title">
         <section class="sequence-viewer-primer-order-dialog app-dialog-surface">
           <div class="result-card-head app-dialog-head">
-            <h4 id="sequence-viewer-primer-order-title">Order Primers</h4>
-            <button id="sequence-viewer-primer-order-close" type="button" class="app-dialog-close-btn" aria-label="Close order primers dialog" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            <h4 id="sequence-viewer-primer-order-title" data-i18n="dna.ui.orderPrimers">Order Primers</h4>
+            <button id="sequence-viewer-primer-order-close" type="button" class="app-dialog-close-btn" aria-label="Close order primers dialog" title="Close" data-i18n-aria-label="dna.ui.closeOrderPrimersDialog" data-i18n-title="dna.ui.close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           </div>
           <div class="sequence-viewer-primer-order-controls">
             <label>
-              Scale
+              <span data-i18n="dna.ui.scale">Scale</span>
               <select id="sequence-viewer-primer-order-scale"></select>
             </label>
             <label>
-              Purification
+              <span data-i18n="dna.ui.purification">Purification</span>
               <select id="sequence-viewer-primer-order-purification"></select>
             </label>
           </div>
           <div id="sequence-viewer-primer-order-warnings" class="sequence-viewer-primer-order-warnings"></div>
           <label class="sequence-viewer-primer-order-preview-label">
-            Order block
+            <span data-i18n="dna.ui.orderBlock">Order block</span>
             <textarea id="sequence-viewer-primer-order-preview" class="sequence-viewer-primer-order-preview" rows="8" readonly spellcheck="false"></textarea>
           </label>
           <div class="form-actions sequence-viewer-primer-order-actions">
-            <button id="sequence-viewer-primer-order-copy-idt" type="button" class="primary-btn">Copy IDT Block</button>
-            <button id="sequence-viewer-primer-order-copy-csv" type="button" class="ghost-btn">Copy CSV</button>
+            <button id="sequence-viewer-primer-order-copy-idt" type="button" class="primary-btn" data-i18n="dna.ui.copyIdtBlock">Copy IDT Block</button>
+            <button id="sequence-viewer-primer-order-copy-csv" type="button" class="ghost-btn" data-i18n="dna.ui.copyCsv">Copy CSV</button>
           </div>
         </section>
       </dialog>
@@ -502,41 +494,41 @@
       <div id="sequence-viewer-vector-builder-workspace" class="sequence-viewer-vector-builder-workspace" hidden>
         <div class="sequence-viewer-vector-builder-toolbar">
           <div class="sequence-viewer-vector-builder-toolbar-nav">
-            <button id="sequence-viewer-vector-builder-back-btn" type="button" class="ghost-btn sequence-viewer-back-action-btn" aria-label="Back to DNA" title="Back to DNA">
+            <button id="sequence-viewer-vector-builder-back-btn" type="button" class="ghost-btn sequence-viewer-back-action-btn" aria-label="Back to DNA" title="Back to DNA" data-i18n-aria-label="dna.ui.backToDna" data-i18n-title="dna.ui.backToDna">
               <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                 <path d="M19 12H5M11 6l-6 6 6 6"></path>
               </svg>
-              <span class="sr-only">Back to DNA</span>
+              <span class="sr-only" data-i18n="dna.ui.backToDna">Back to DNA</span>
             </button>
-            <h3 id="sequence-viewer-vector-builder-title">No sequence open</h3>
+            <h3 id="sequence-viewer-vector-builder-title"><span data-i18n="dna.full.ad578191">No sequence open</span></h3>
           </div>
           <div class="form-actions sequence-viewer-vector-builder-toolbar-actions">
-            <label class="sequence-viewer-inline-toggle" title="Overlay unique NEB/Thermo cutter sites on the map.">
+            <label class="sequence-viewer-inline-toggle" title="Overlay unique NEB/Thermo cutter sites on the map." data-i18n-title="dna.ui.overlayUniqueNebThermoCutterSites">
               <input id="sequence-viewer-vector-builder-cutters-toggle" type="checkbox" />
-              <span>Cutters</span>
+              <span data-i18n="dna.ui.cutters">Cutters</span>
             </label>
-            <label class="sequence-viewer-inline-toggle" title="Show primer binding sites on their own map track.">
+            <label class="sequence-viewer-inline-toggle" title="Show primer binding sites on their own map track." data-i18n-title="dna.ui.showPrimerBindingSitesOnTheir">
               <input id="sequence-viewer-vector-builder-primers-toggle" type="checkbox" checked />
-              <span>Primers</span>
+              <span data-i18n="dna.ui.primers">Primers</span>
             </label>
-            <button id="sequence-viewer-vector-builder-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
-            <button id="sequence-viewer-vector-builder-cloning-design-btn" type="button" class="primary-btn">Cloning Design</button>
+            <button id="sequence-viewer-vector-builder-protein-builder-btn" type="button" class="ghost-btn" data-i18n="dna.ui.proteinBuilder">Protein Builder</button>
+            <button id="sequence-viewer-vector-builder-cloning-design-btn" type="button" class="primary-btn" data-i18n="dna.ui.cloningDesign">Cloning Design</button>
           </div>
         </div>
 
         <div class="sequence-viewer-vector-builder-layout">
           <section class="result-card sequence-viewer-vector-builder-map-card">
             <div id="sequence-viewer-vector-builder-map" class="sequence-viewer-vector-builder-map">
-              <p class="small-note">Open a sequence record to build a vector.</p>
+              <p class="small-note" data-i18n="dna.ui.openASequenceRecordToBuild">Open a sequence record to build a vector.</p>
             </div>
           </section>
 
           <section class="result-card sequence-viewer-vector-builder-sequence-card">
             <div class="result-card-head">
-              <h4>Bases</h4>
+              <h4 data-i18n="dna.ui.bases">Bases</h4>
             </div>
             <div id="sequence-viewer-vector-builder-sequence" class="sequence-viewer-vector-builder-sequence sequence-viewer-sequence-host">
-              <p class="small-note">No sequence loaded.</p>
+              <p class="small-note" data-i18n="dna.ui.noSequenceLoaded">No sequence loaded.</p>
             </div>
           </section>
         </div>
@@ -546,21 +538,21 @@
         <div id="sequence-viewer-vector-builder-feature-replace-overlay" class="sequence-viewer-feature-editor-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
           <form id="sequence-viewer-vector-builder-feature-replace-form" class="sequence-viewer-feature-editor app-dialog-surface" autocomplete="off">
             <div class="result-card-head sequence-viewer-feature-editor-head app-dialog-head">
-              <h4>Replace Feature</h4>
-              <button id="sequence-viewer-vector-builder-feature-replace-close" type="button" class="app-dialog-close-btn" aria-label="Close replace feature dialog" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+              <h4 data-i18n="dna.ui.replaceFeature">Replace Feature</h4>
+              <button id="sequence-viewer-vector-builder-feature-replace-close" type="button" class="app-dialog-close-btn" aria-label="Close replace feature dialog" title="Close" data-i18n-aria-label="dna.ui.closeReplaceFeatureDialog" data-i18n-title="dna.ui.close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
             </div>
-            <p id="sequence-viewer-vector-builder-feature-replace-note" class="small-note">Choose a recorded feature to replace.</p>
+            <p id="sequence-viewer-vector-builder-feature-replace-note" class="small-note"><span data-i18n="dna.full.90d76756">Choose a recorded feature to replace.</span></p>
 
             <div class="sequence-viewer-vector-builder-feature-picker">
               <section class="sequence-viewer-vector-builder-feature-picker-col">
-                <h5>Stored feature</h5>
+                <h5 data-i18n="dna.ui.storedFeature">Stored feature</h5>
                 <div class="sequence-viewer-protein-builder-feature-controls">
                   <input
                     id="sequence-viewer-vector-builder-feature-replace-search"
                     type="search"
                     placeholder="Search stored features"
                     autocomplete="off"
-                    aria-label="Search stored features"
+                    aria-label="Search stored features" data-i18n-aria-label="dna.ui.searchStoredFeatures" data-i18n-placeholder="dna.ui.searchStoredFeatures"
                   />
                 </div>
                 <span id="sequence-viewer-vector-builder-feature-replace-status" class="small-note"></span>
@@ -568,19 +560,19 @@
               </section>
 
               <section class="sequence-viewer-vector-builder-feature-picker-col">
-                <h5>Source vector</h5>
+                <h5 data-i18n="dna.ui.sourceVector">Source vector</h5>
                 <div id="sequence-viewer-vector-builder-feature-replace-hosts" class="sequence-viewer-feature-source-list"></div>
               </section>
 
               <section class="sequence-viewer-vector-builder-feature-picker-col">
-                <h5>Plasmid preview</h5>
+                <h5 data-i18n="dna.ui.plasmidPreview">Plasmid preview</h5>
                 <div id="sequence-viewer-vector-builder-feature-replace-preview" class="sequence-viewer-feature-source-preview"></div>
               </section>
             </div>
 
             <div class="form-actions">
-              <button id="sequence-viewer-vector-builder-feature-replace-confirm" type="button" class="primary-btn" disabled>Confirm</button>
-              <button id="sequence-viewer-vector-builder-feature-replace-cancel" type="button" class="ghost-btn">Cancel</button>
+              <button id="sequence-viewer-vector-builder-feature-replace-confirm" type="button" class="primary-btn" disabled data-i18n="dna.ui.confirm">Confirm</button>
+              <button id="sequence-viewer-vector-builder-feature-replace-cancel" type="button" class="ghost-btn" data-i18n="dna.ui.cancel">Cancel</button>
             </div>
           </form>
         </div>
@@ -588,26 +580,26 @@
         <div id="sequence-viewer-vector-builder-sequence-edit-overlay" class="sequence-viewer-sequence-edit-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
           <form id="sequence-viewer-vector-builder-sequence-edit-form" class="sequence-viewer-sequence-edit-dialog app-dialog-surface" autocomplete="off">
             <div class="result-card-head sequence-viewer-sequence-edit-head app-dialog-head">
-              <h4 id="sequence-viewer-vector-builder-sequence-edit-title">Edit Bases</h4>
-              <button id="sequence-viewer-vector-builder-sequence-edit-close" type="button" class="app-dialog-close-btn" aria-label="Close sequence edit dialog" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+              <h4 id="sequence-viewer-vector-builder-sequence-edit-title"><span data-i18n="dna.full.dbf77707">Edit Bases</span></h4>
+              <button id="sequence-viewer-vector-builder-sequence-edit-close" type="button" class="app-dialog-close-btn" aria-label="Close sequence edit dialog" title="Close" data-i18n-aria-label="dna.ui.closeSequenceEditDialog" data-i18n-title="dna.ui.close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
             </div>
             <p id="sequence-viewer-vector-builder-sequence-edit-note" class="small-note sequence-viewer-sequence-edit-note"></p>
 
             <label id="sequence-viewer-vector-builder-sequence-edit-tag-wrap" class="sequence-viewer-sequence-edit-input-wrap" hidden>
-              Common peptides
-              <select id="sequence-viewer-vector-builder-sequence-edit-tag-select"><option value="">Custom DNA</option></select>
+              <span data-i18n="dna.ui.commonPeptides">Common peptides</span>
+              <select id="sequence-viewer-vector-builder-sequence-edit-tag-select"><option value="" data-i18n="dna.full.3fddec97">Custom DNA</option></select>
             </label>
             <div id="sequence-viewer-vector-builder-sequence-edit-tag-options" class="sequence-viewer-sequence-edit-tag-options" hidden>
               <div class="sequence-viewer-sequence-edit-tag-fields">
                 <label class="sequence-viewer-sequence-edit-input-wrap">
-                  ORF reference
-                  <select id="sequence-viewer-vector-builder-sequence-edit-tag-orf"><option value="">No ORF reference</option></select>
+                  <span data-i18n="dna.ui.orfReference">ORF reference</span>
+                  <select id="sequence-viewer-vector-builder-sequence-edit-tag-orf"><option value="" data-i18n="dna.full.1b8c7b92">No ORF reference</option></select>
                 </label>
                 <label class="sequence-viewer-sequence-edit-input-wrap">
-                  Peptide orientation
+                  <span data-i18n="dna.ui.peptideOrientation">Peptide orientation</span>
                   <select id="sequence-viewer-vector-builder-sequence-edit-tag-orientation">
-                    <option value="along">Along ORF</option>
-                    <option value="reverse">Reverse of ORF</option>
+                    <option value="along" data-i18n="dna.full.b680b1ff">Along ORF</option>
+                    <option value="reverse" data-i18n="dna.full.4bd33107">Reverse of ORF</option>
                   </select>
                 </label>
               </div>
@@ -615,14 +607,14 @@
             </div>
 
             <label id="sequence-viewer-vector-builder-sequence-edit-input-wrap" class="sequence-viewer-sequence-edit-input-wrap">
-              Sequence
+              <span data-i18n="dna.ui.sequence">Sequence</span>
               <textarea id="sequence-viewer-vector-builder-sequence-edit-textarea" rows="3" spellcheck="false" placeholder="ACGT"></textarea>
             </label>
             <div id="sequence-viewer-vector-builder-sequence-edit-delete-message" class="sequence-viewer-sequence-edit-delete-message" hidden></div>
 
             <div class="form-actions">
-              <button id="sequence-viewer-vector-builder-sequence-edit-confirm" type="submit" class="primary-btn">Apply</button>
-              <button id="sequence-viewer-vector-builder-sequence-edit-cancel" type="button" class="ghost-btn">Cancel</button>
+              <button id="sequence-viewer-vector-builder-sequence-edit-confirm" type="submit" class="primary-btn"><span data-i18n="dna.full.ca77bbdb">Apply</span></button>
+              <button id="sequence-viewer-vector-builder-sequence-edit-cancel" type="button" class="ghost-btn" data-i18n="dna.ui.cancel">Cancel</button>
             </div>
           </form>
         </div>
@@ -631,21 +623,21 @@
       <div id="sequence-viewer-cloning-design-workspace" class="sequence-viewer-cloning-design-workspace" hidden>
         <div class="sequence-viewer-cloning-design-toolbar">
           <div class="sequence-viewer-cloning-design-toolbar-nav">
-            <button id="sequence-viewer-cloning-design-back-btn" type="button" class="ghost-btn sequence-viewer-back-action-btn" aria-label="Back to Sequence" title="Back to Sequence">
+            <button id="sequence-viewer-cloning-design-back-btn" type="button" class="ghost-btn sequence-viewer-back-action-btn" aria-label="Back to Sequence" title="Back to Sequence" data-i18n-aria-label="dna.ui.backToSequence" data-i18n-title="dna.ui.backToSequence">
               <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                 <path d="M19 12H5M11 6l-6 6 6 6"></path>
               </svg>
-              <span class="sr-only">Back to Sequence</span>
+              <span class="sr-only" data-i18n="dna.ui.backToSequence">Back to Sequence</span>
             </button>
           </div>
           <div class="sequence-viewer-cloning-design-toolbar-main">
             <div class="sequence-viewer-cloning-design-toolbar-copy">
-              <h2>Cloning Design</h2>
-              <span id="sequence-viewer-cloning-design-status" class="small-note">Edit the active sequence to enable cloning design.</span>
+              <h2 data-i18n="dna.ui.cloningDesign">Cloning Design</h2>
+              <span id="sequence-viewer-cloning-design-status" class="small-note"><span data-i18n="dna.full.28b9cf4f">Edit the active sequence to enable cloning design.</span></span>
             </div>
             <div class="form-actions sequence-viewer-cloning-design-toolbar-actions">
-              <button id="sequence-viewer-cloning-design-run-btn" type="button" class="ghost-btn">Design Primers</button>
-              <button id="sequence-viewer-cloning-design-confirm-btn" type="button" class="primary-btn" disabled>Confirm Design</button>
+              <button id="sequence-viewer-cloning-design-run-btn" type="button" class="ghost-btn" data-i18n="dna.ui.designPrimers">Design Primers</button>
+              <button id="sequence-viewer-cloning-design-confirm-btn" type="button" class="primary-btn" disabled><span data-i18n="dna.full.1645c767">Confirm Design</span></button>
             </div>
           </div>
         </div>
@@ -654,32 +646,32 @@
           <aside class="sequence-viewer-cloning-design-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
             <section class="sequence-viewer-cloning-design-panel">
               <div class="result-card-head">
-                <h4>Route</h4>
+                <h4 data-i18n="dna.ui.route">Route</h4>
               </div>
-              <div id="sequence-viewer-cloning-design-strategy-list" class="sequence-viewer-cloning-design-strategy-list" role="group" aria-label="Cloning design route"></div>
+              <div id="sequence-viewer-cloning-design-strategy-list" class="sequence-viewer-cloning-design-strategy-list" role="group" aria-label="Cloning design route" data-i18n-aria-label="dna.full.5fbdd27c"></div>
             </section>
           </aside>
 
           <div class="sequence-viewer-cloning-design-main left-rail-template__main">
             <div id="sequence-viewer-cloning-design-result" class="sequence-viewer-cloning-design-result">
-              <p class="small-note">Choose a route, then design primers.</p>
+              <p class="small-note" data-i18n="dna.ui.chooseARouteThenDesignPrimers">Choose a route, then design primers.</p>
             </div>
           </div>
         </div>
       </div>
 
       <div id="sequence-viewer-alignment-workspace" class="sequence-viewer-alignment-workspace app-dialog-overlay app-dialog-overlay--top" hidden>
-        <div class="sequence-viewer-alignment-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-label="Alignment">
-          <button id="sequence-viewer-alignment-close-btn" type="button" class="app-dialog-close-btn app-dialog-close-btn--floating" aria-label="Close alignment dialog" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+        <div class="sequence-viewer-alignment-dialog app-dialog-surface" data-i18n-caption="dna.alignment.dropCaption" data-caption="Drop sequence file to align" role="dialog" aria-modal="true" aria-label="Alignment" data-i18n-aria-label="dna.ui.alignment">
+          <button id="sequence-viewer-alignment-close-btn" type="button" class="app-dialog-close-btn app-dialog-close-btn--floating" aria-label="Close alignment dialog" title="Close" data-i18n-aria-label="dna.ui.closeAlignmentDialog" data-i18n-title="dna.ui.close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
 
           <section class="sequence-viewer-alignment-panel">
-            <div class="sequence-viewer-mode-switch" role="tablist" aria-label="Alignment query input mode">
-              <button id="sequence-viewer-alignment-query-mode-paste" class="sequence-viewer-mode-btn sequence-viewer-mode-btn-active" type="button">Align Copied Sequence</button>
-              <button id="sequence-viewer-alignment-query-mode-file" class="sequence-viewer-mode-btn" type="button">Align With File</button>
+            <div class="sequence-viewer-mode-switch" role="tablist" aria-label="Alignment query input mode" data-i18n-aria-label="dna.ui.alignmentQueryInputMode">
+              <button id="sequence-viewer-alignment-query-mode-paste" class="sequence-viewer-mode-btn sequence-viewer-mode-btn-active" type="button" data-i18n="dna.ui.alignCopiedSequence">Align Copied Sequence</button>
+              <button id="sequence-viewer-alignment-query-mode-file" class="sequence-viewer-mode-btn" type="button" data-i18n="dna.ui.alignWithFile">Align With File</button>
             </div>
 
             <div id="sequence-viewer-alignment-query-paste-panel" class="sequence-viewer-input-panel">
-              <textarea id="sequence-viewer-alignment-query-textarea" rows="7" placeholder="Paste FASTA, GenBank, or plain sequence text for alignment."></textarea>
+              <textarea id="sequence-viewer-alignment-query-textarea" rows="7" placeholder="Paste FASTA, GenBank, or plain sequence text for alignment." data-i18n-placeholder="dna.ui.pasteFastaGenbankOrPlainSequence"></textarea>
             </div>
 
             <div id="sequence-viewer-alignment-query-file-panel" class="sequence-viewer-input-panel" hidden>
@@ -690,13 +682,13 @@
                 hidden
               />
               <div class="inline-row">
-                <button id="sequence-viewer-alignment-query-choose" type="button" class="ghost-btn">Choose Query File</button>
+                <button id="sequence-viewer-alignment-query-choose" type="button" class="ghost-btn" data-i18n="dna.ui.chooseQueryFile">Choose Query File</button>
                 <span id="sequence-viewer-alignment-query-file-name" class="small-note" hidden></span>
               </div>
             </div>
 
             <label id="sequence-viewer-alignment-query-record-wrap" class="sequence-viewer-alignment-record-wrap" hidden>
-              Query Record
+              <span data-i18n="dna.ui.queryRecord">Query Record</span>
               <select id="sequence-viewer-alignment-query-record-select"></select>
             </label>
 
@@ -705,8 +697,8 @@
           </section>
 
           <div class="form-actions sequence-viewer-alignment-actions">
-            <button id="sequence-viewer-alignment-run-btn" type="button" class="primary-btn">Run Alignment</button>
-            <button id="sequence-viewer-alignment-reset-btn" type="button" class="ghost-btn">Reset</button>
+            <button id="sequence-viewer-alignment-run-btn" type="button" class="primary-btn" data-i18n="dna.ui.runAlignment">Run Alignment</button>
+            <button id="sequence-viewer-alignment-reset-btn" type="button" class="ghost-btn" data-i18n="dna.ui.reset">Reset</button>
             <span id="sequence-viewer-alignment-status" class="small-note sequence-viewer-status-note" hidden></span>
           </div>
 

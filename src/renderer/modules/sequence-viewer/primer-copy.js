@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../lib/html.js';
 import { cleanText } from './shared.js';
 
@@ -26,8 +29,8 @@ export function renderPrimerCopyButton(value, kind = 'value', label = 'primer va
       class="sequence-viewer-primer-copy-btn"
       data-sequence-primer-copy="${escapeHtml(copyValue)}"
       data-sequence-primer-copy-kind="${escapeHtml(safeKind)}"
-      title="Copy ${escapeHtml(safeLabel)}"
-      aria-label="Copy ${escapeHtml(safeLabel)}"
+      ${i18nUi.attributeMessage("title", i18nUi.message("Copy {p0}", { p0: safeLabel }))}
+      ${i18nUi.attributeMessage("aria-label", i18nUi.message("Copy {p0}", { p0: safeLabel }))}
     >
       ${COPY_ICON_MARKUP}
     </button>

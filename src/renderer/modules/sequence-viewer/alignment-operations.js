@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("dna");
 import { alignSequenceToReference } from './alignment.js';
 import {
   buildReferenceRecordKey,
@@ -34,7 +37,7 @@ function createAlignmentOperations({
 } = {}) {
   async function loadSource(role, input) {
     const label = role === 'query' ? 'query' : 'reference';
-    setAlignmentStatus(`Loading ${label} input...`);
+    setAlignmentStatus(i18nUi.text("Loading {p0} input...", { p0: label }));
 
     try {
       const parsed = await parseAlignmentInput(role, input, {
@@ -71,10 +74,10 @@ function createAlignmentOperations({
       if (next.errors.length) {
         setAlignmentStatus(next.errors[0], true);
       } else if (!next.records.length) {
-        setAlignmentStatus(`No ${label} records were loaded.`, true);
+        setAlignmentStatus(i18nUi.text("No {p0} records were loaded.", { p0: label }), true);
       } else {
-        setAlignmentStatus(`Loaded ${label} input: ${describeSelectedRecord(next.records[0])}`);
-        setStatus(`Loaded sequencing ${label} input.`);
+        setAlignmentStatus(i18nUi.text("Loaded {p0} input: {p1}", { p0: label, p1: describeSelectedRecord(next.records[0]) }));
+        setStatus(i18nUi.text("Loaded sequencing {p0} input.", { p0: label }));
       }
     } catch (error) {
       state[role] = {
@@ -82,7 +85,7 @@ function createAlignmentOperations({
         fileName: String(input?.name || input?.fileName || input?.file?.name || '').trim()
       };
       state.result = null;
-      setAlignmentStatus(error?.message || `Failed to load ${label} input.`, true);
+      setAlignmentStatus((((((error?.message || i18nUi.text("Failed to load {p0} input.", { p0: label })))))), true);
     }
 
     render();
@@ -152,13 +155,13 @@ function createAlignmentOperations({
     const referenceRecord = getSelectedRecord('reference');
     const queryRecord = getSelectedRecord('query');
     if (!referenceRecord?.sequence?.length || !queryRecord?.sequence?.length) {
-      setAlignmentStatus('Load both a reference and a query before running the alignment.', true);
+      setAlignmentStatus(i18nUi.text("Load both a reference and a query before running the alignment."), true);
       render();
       return null;
     }
 
     state.isRunning = true;
-    setAlignmentStatus('Running sequencing alignment...');
+    setAlignmentStatus(i18nUi.text("Running sequencing alignment..."));
     render();
 
     try {
@@ -184,13 +187,13 @@ function createAlignmentOperations({
       applyAlignmentToViewer(appliedSession, { enableView: true });
 
       setAlignmentStatus(
-        `Best ${state.result.orientation} alignment: ${state.result.identityPercent.toFixed(2)}% identity across ${state.result.queryCoveragePercent.toFixed(2)}% query coverage.`
+        i18nUi.text("Best {p0} alignment: {p1}% identity across {p2}% query coverage.", { p0: state.result.orientation, p1: state.result.identityPercent.toFixed(2), p2: state.result.queryCoveragePercent.toFixed(2) })
       );
-      setStatus(`Sequencing alignment complete for ${state.result.queryName}.`);
+      setStatus(i18nUi.text("Sequencing alignment complete for {p0}.", { p0: state.result.queryName }));
       closeSequencingAlignmentWorkspace({ silent: true });
     } catch (error) {
       state.result = null;
-      setAlignmentStatus(error?.message || 'Sequencing alignment failed.', true);
+      setAlignmentStatus((((((error?.message || i18nUi.text("Sequencing alignment failed.")))))), true);
     } finally {
       state.isRunning = false;
       render();
@@ -213,7 +216,7 @@ function createAlignmentOperations({
       elements.alignmentQueryTextarea.value = '';
     }
     render();
-    setStatus('Cleared sequencing alignment query.');
+    setStatus(i18nUi.text("Cleared sequencing alignment query."));
   }
 
   function selectSavedAlignmentSession(sessionId, options = {}) {

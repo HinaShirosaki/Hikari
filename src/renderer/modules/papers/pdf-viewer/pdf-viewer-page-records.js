@@ -1,3 +1,7 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("papers");
+import { setPaperAttribute } from '../localization.js';
 // The selection binding belongs to the text layer's DOM, not to a render task.
 // Only call this where the spans themselves go away: dropping the binding while
 // they survive makes renderPageRecord believe the layer still needs building, and
@@ -56,17 +60,17 @@ export function clearPageRecordRender(record, {
   record.renderedScale = 0;
   if (clearText && record.textLayer) {
     releaseTextSelectionBinding(record);
-    record.textLayer.innerHTML = '';
+    i18nUi.setHtml(record.textLayer, '');
     record.renderedTextScale = 0;
   }
   if (clearLinks && record.linkLayer) {
-    record.linkLayer.innerHTML = '';
+    i18nUi.setHtml(record.linkLayer, '');
     record.renderedLinkScale = 0;
   }
   // Typed values live in the document's annotationStorage, so dropping the
   // inputs here is safe: re-rendering the layer restores what the user filled.
   if (clearForms && record.formLayer) {
-    record.formLayer.innerHTML = '';
+    i18nUi.setHtml(record.formLayer, '');
     record.renderedForms = false;
   }
 }
@@ -90,7 +94,7 @@ export function releasePageRecords({ pageLayer, pageRecords = [] } = {}) {
   cancelAllRenderTasks(pageRecords);
   pageRecords.forEach(releaseTextSelectionBinding);
   if (pageLayer) {
-    pageLayer.innerHTML = '';
+    i18nUi.setHtml(pageLayer, '');
   }
 }
 
@@ -131,21 +135,21 @@ export function buildPageRecords({ doc, pageMetrics = [], onCanvasContextLost = 
     linkLayer.dataset.pageNumber = String(pageNumber);
     linkLayer.dataset.pageWidth = String(pageWidth);
     linkLayer.dataset.pageHeight = String(pageHeight);
-    linkLayer.setAttribute('aria-label', `Paper page ${pageNumber} links`);
+    setPaperAttribute(linkLayer, 'aria-label', 'viewer.pageLinks', { page: pageNumber });
 
     const formLayer = doc.createElement('div');
     formLayer.className = 'papers-viewer-form-layer';
     formLayer.dataset.pageNumber = String(pageNumber);
     formLayer.dataset.pageWidth = String(pageWidth);
     formLayer.dataset.pageHeight = String(pageHeight);
-    formLayer.setAttribute('aria-label', `Paper page ${pageNumber} form fields`);
+    setPaperAttribute(formLayer, 'aria-label', 'viewer.pageForm', { page: pageNumber });
 
     const overlay = doc.createElement('div');
     overlay.className = 'papers-viewer-overlay';
     overlay.dataset.pageNumber = String(pageNumber);
     overlay.dataset.pageWidth = String(pageWidth);
     overlay.dataset.pageHeight = String(pageHeight);
-    overlay.setAttribute('aria-label', `Paper page ${pageNumber} comment pins`);
+    setPaperAttribute(overlay, 'aria-label', 'viewer.pagePins', { page: pageNumber });
 
     pageElement.append(canvas, highlightLayer, textLayer, linkLayer, formLayer, overlay);
 
@@ -184,13 +188,13 @@ export function buildPageRecords({ doc, pageMetrics = [], onCanvasContextLost = 
 export function attachPageRecords({ pageLayer, pageRecords = [] } = {}) {
   if (!pageLayer || !pageRecords.length) {
     if (pageLayer) {
-      pageLayer.innerHTML = '';
+      i18nUi.setHtml(pageLayer, '');
     }
     return;
   }
   const doc = pageLayer.ownerDocument || (typeof document !== 'undefined' ? document : null);
   if (!doc?.createDocumentFragment) {
-    pageLayer.innerHTML = '';
+    i18nUi.setHtml(pageLayer, '');
     pageRecords.forEach((record) => {
       if (record?.element) {
         pageLayer.appendChild(record.element);

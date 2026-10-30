@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
 import { getGelAnalyses } from '../../../lib/gel-records.js';
 import { findLatestLinkedRecord } from '../linked-previews.js';
 import {
@@ -48,7 +51,7 @@ function createNotebookEntryActions({
 
     const activeEntry = entry || getActiveEntry();
     if (!activeEntry?.id) {
-      notebookLinkedResults.innerHTML = '';
+      i18nUi.setHtml(notebookLinkedResults, '');
       return;
     }
 
@@ -67,9 +70,9 @@ function createNotebookEntryActions({
       return;
     }
 
-    notebookLinkedResults.innerHTML = parts.length
+    i18nUi.setHtml(notebookLinkedResults, parts.length
       ? parts.join('')
-      : '';
+      : '');
   }
 
   async function ensureNotebookEntryForLinkedWork() {

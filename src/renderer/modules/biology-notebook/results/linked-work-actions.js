@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
 import { exportNotebookEntryPdf, exportProjectNotebookEntriesPdf } from '../../pdf-export/index.js';
 import { findLatestLinkedRecord } from '../linked-previews.js';
 import {
@@ -41,7 +44,7 @@ export function createLinkedWorkActions({
     try {
       await onCreateLinkedGel({ notebookEntryId: entry.id });
     } catch (error) {
-      showTransientNotice(error?.message || 'Could not open Gel.', { type: 'error' });
+      showTransientNotice((((((error?.message || i18nUi.message("Could not open Gel.")))))), { type: 'error' });
     }
   }
 
@@ -85,7 +88,7 @@ export function createLinkedWorkActions({
         return (Number.isFinite(left) ? left : 0) - (Number.isFinite(right) ? right : 0);
       });
     if (!projectEntries.length) {
-      showTransientNotice('No notebook pages to export for this project.', { type: 'error' });
+      showTransientNotice(i18nUi.message("No notebook pages to export for this project."), { type: 'error' });
       return;
     }
 

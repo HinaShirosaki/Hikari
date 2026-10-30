@@ -1,3 +1,5 @@
+import { dateSpan } from '../../../lib/i18n/markup.js';
+import { notebookMessage } from '../localization.js';
 import { resolveEntryExecutedAt } from './entry-helpers.js';
 import {
   formatSampleLinkValue,
@@ -36,6 +38,25 @@ export function buildViewerMeta({ entry }) {
   return parts.join(' · ');
 }
 
+// Live display bindings preserve the original OS date format in English.
+export function buildViewerMetaHtml({ entry }) {
+  if (!entry) return '';
+  const executedAt = resolveEntryExecutedAt(entry);
+  const part = (key, value, sameDayAs = '') => {
+    const date = new Date(String(value || '').trim());
+    if (Number.isNaN(date.getTime())) return `${notebookMessage(key)} ${notebookMessage('meta.unknown')}`;
+    const reference = new Date(sameDayAs);
+    const sameDay = !Number.isNaN(reference.getTime()) && date.toDateString() === reference.toDateString();
+    return `${notebookMessage(key)} ${dateSpan(date.toISOString(), viewerTimestamp(value, sameDayAs), {
+      ...(sameDay ? {} : { dateStyle: 'medium' }), timeStyle: 'short'
+    })}`;
+  };
+  const parts = [];
+  if (executedAt) parts.push(part('meta.executed', executedAt));
+  if (!executedAt || new Date(entry.updatedAt).getTime() !== new Date(executedAt).getTime()) parts.push(part('meta.updated', entry.updatedAt, executedAt));
+  return parts.join(' · ');
+}
+
 export function buildProtocolStepsHtml({
   protocol,
   values,
@@ -57,7 +78,7 @@ export function buildProtocolStepsHtml({
     const sentenceHtml = renderStepSentence(step, values || {}, helpers);
     return `
         <article class="card">
-          <p class="notebook-step-line"><strong>Step ${index + 1}:</strong> <span class="notebook-step-content" data-selection-segment-id="notebook:step:${index + 1}" data-selection-segment-label="Step ${index + 1}">${sentenceHtml}</span></p>
+          <p class="notebook-step-line"><strong>${notebookMessage('step.number', { index: index + 1 })}</strong> <span class="notebook-step-content" data-selection-segment-id="notebook:step:${index + 1}" data-selection-segment-label="Step ${index + 1}">${sentenceHtml}</span></p>
         </article>
       `;
   }).join('');

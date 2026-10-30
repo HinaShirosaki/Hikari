@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../lib/html.js';
 import { clamp, cleanText, normalizeSequenceText } from './shared.js';
 import {
@@ -83,16 +86,16 @@ export function createSequenceViewerSequenceEditingController(config = {}) {
     const isInsert = editState?.mode === 'insert';
     if (elements.sequenceEditTagWrap) elements.sequenceEditTagWrap.hidden = !isInsert;
     if (elements.sequenceEditTagSelect) {
-      elements.sequenceEditTagSelect.innerHTML = '<option value="">Custom DNA</option>' + PEPTIDE_INSERT_GROUPS
+      i18nUi.setHtml(elements.sequenceEditTagSelect, `<option value="" data-i18n="dna.full.3fddec97">${i18nUi.text("Custom DNA")}</option>` + PEPTIDE_INSERT_GROUPS
         .map((group) => `<optgroup label="${escapeHtml(group.label)}">${group.items.map((part) =>
           `<option value="${group.id}:${escapeHtml(part.id)}">${escapeHtml(part.label)}</option>`
-        ).join('')}</optgroup>`).join('');
+        ).join('')}</optgroup>`).join(''));
       elements.sequenceEditTagSelect.value = '';
     }
     const features = editState?.codingFeatures || [];
     if (elements.sequenceEditTagOrfSelect) {
-      elements.sequenceEditTagOrfSelect.innerHTML = '<option value="">No ORF reference</option>' + features
-        .map((feature, index) => `<option value="${index}">${escapeHtml(cleanText(feature.name, 120) || 'ORF')} (${Number(feature.strand) === -1 ? '−' : '+'})</option>`).join('');
+      i18nUi.setHtml(elements.sequenceEditTagOrfSelect, `<option value="" data-i18n="dna.full.1b8c7b92">${i18nUi.text("No ORF reference")}</option>` + features
+        .map((feature, index) => `<option value="${index}">${escapeHtml(cleanText(feature.name, 120) || 'ORF')} (${Number(feature.strand) === -1 ? '−' : '+'})</option>`).join(''));
       // A selected coding feature wins. Without one, avoid silently choosing
       // between overlapping reading frames.
       elements.sequenceEditTagOrfSelect.value = editState?.preferredCodingIndex >= 0
@@ -101,7 +104,7 @@ export function createSequenceViewerSequenceEditingController(config = {}) {
     }
     if (elements.sequenceEditTagOrientation) elements.sequenceEditTagOrientation.value = 'along';
     if (elements.sequenceEditTagOptions) elements.sequenceEditTagOptions.hidden = true;
-    if (elements.sequenceEditTagPreview) elements.sequenceEditTagPreview.textContent = '';
+    if (elements.sequenceEditTagPreview) i18nUi.setText(elements.sequenceEditTagPreview, '');
   }
 
   function updatePeptideSequence() {
@@ -118,7 +121,7 @@ export function createSequenceViewerSequenceEditingController(config = {}) {
       const labels = feature
         ? ['Along ORF', 'Reverse of ORF']
         : ['Forward strand (+)', 'Reverse strand (−)'];
-      elements.sequenceEditTagOrientation.innerHTML = `<option value="along">${labels[0]}</option><option value="reverse">${labels[1]}</option>`;
+      i18nUi.setHtml(elements.sequenceEditTagOrientation, `<option value="along">${labels[0]}</option><option value="reverse">${labels[1]}</option>`);
       elements.sequenceEditTagOrientation.value = orientation;
     }
     if (elements.sequenceEditTextarea) elements.sequenceEditTextarea.value = generated.sequence;
@@ -132,7 +135,7 @@ export function createSequenceViewerSequenceEditingController(config = {}) {
           : 'Insertion is inside a codon. Choose a codon boundary to express the peptide in frame.';
         if (orientation === 'reverse') frameNote += ' Peptide DNA faces opposite to this ORF.';
       }
-      elements.sequenceEditTagPreview.textContent = `${generated.part.sequence} · ${generated.sequence.length} bp · ${generated.strand === -1 ? '−' : '+'} strand. ${frameNote}`;
+      i18nUi.setText(elements.sequenceEditTagPreview, i18nUi.message("{p0} · {p1} bp · {p2} strand. {p3}", { p0: generated.part.sequence, p1: generated.sequence.length, p2: generated.strand === -1 ? '−' : '+', p3: frameNote }));
     }
   }
 
@@ -188,15 +191,13 @@ export function createSequenceViewerSequenceEditingController(config = {}) {
     renderPeptideControls();
 
     if (elements.sequenceEditTitle) {
-      elements.sequenceEditTitle.textContent = mode === 'delete'
-        ? 'Delete Bases'
-        : (mode === 'replace' ? 'Replace Bases' : 'Insert Bases');
+      i18nUi.setText(elements.sequenceEditTitle, (mode === 'delete' ? i18nUi.message("Delete Bases") : (mode === 'replace' ? i18nUi.message("Replace Bases") : i18nUi.message("Insert Bases"))));
     }
     if (elements.sequenceEditNote) {
-      elements.sequenceEditNote.innerHTML = '';
+      i18nUi.setHtml(elements.sequenceEditNote, '');
     }
     if (elements.sequenceEditDeleteMessage) {
-      elements.sequenceEditDeleteMessage.innerHTML = `<p>Delete ${selectedLength.toLocaleString()} bp?</p>`;
+      i18nUi.setHtml(elements.sequenceEditDeleteMessage, `<p>${i18nUi.html("Delete")} ${selectedLength.toLocaleString()} bp?</p>`);
     }
     if (elements.sequenceEditTextarea) {
       elements.sequenceEditTextarea.value = mode === 'delete'
@@ -204,9 +205,7 @@ export function createSequenceViewerSequenceEditingController(config = {}) {
         : normalizeEditableSequence(editState.initialSequence || '');
     }
     if (elements.sequenceEditConfirmBtn) {
-      elements.sequenceEditConfirmBtn.textContent = mode === 'delete'
-        ? 'Delete Bases'
-        : (mode === 'replace' ? 'Replace Bases' : 'Insert Bases');
+      i18nUi.setText(elements.sequenceEditConfirmBtn, (mode === 'delete' ? i18nUi.message("Delete Bases") : (mode === 'replace' ? i18nUi.message("Replace Bases") : i18nUi.message("Insert Bases"))));
     }
 
     if (mode !== 'delete') {
@@ -236,7 +235,7 @@ export function createSequenceViewerSequenceEditingController(config = {}) {
     }
     if (elements.sequenceEditDeleteMessage) {
       elements.sequenceEditDeleteMessage.hidden = true;
-      elements.sequenceEditDeleteMessage.innerHTML = '';
+      i18nUi.setHtml(elements.sequenceEditDeleteMessage, '');
     }
     renderPeptideControls();
   }
@@ -354,9 +353,9 @@ export function createSequenceViewerSequenceEditingController(config = {}) {
 
     if (mode !== 'delete' && !replacement.length) {
       if (elements.sequenceEditNote) {
-        elements.sequenceEditNote.innerHTML = '<span style="color:var(--theme-danger);">Enter at least one base before confirming.</span>';
+        i18nUi.setHtml(elements.sequenceEditNote, `<span style="color:var(--theme-danger);">${i18nUi.html("Enter at least one base before confirming.")}</span>`);
       }
-      setStatus('Enter at least one base before confirming.', true);
+      setStatus(i18nUi.text("Enter at least one base before confirming."), true);
       return;
     }
 
@@ -371,7 +370,7 @@ export function createSequenceViewerSequenceEditingController(config = {}) {
       renderSequence(getSelectedRecord(), { preserveScroll: true });
       renderSelectedFeatureDetail(getSelectedRecord());
     } catch (error) {
-      setStatus(error?.message || 'Failed to edit sequence.', true);
+      setStatus((((((error?.message || i18nUi.text("Failed to edit sequence.")))))), true);
     }
   }
 

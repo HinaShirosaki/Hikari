@@ -1,3 +1,5 @@
+import { createPresentation } from "../../i18n.mjs";
+const i18nUi = createPresentation("gel");
 import { buildQuantificationSignal } from '../analysis/image-processing.js';
 import { clamp, normalizeManualOverrides } from '../shared.js';
 import { formatTableNumber, makeProfilePoint } from './profile-shape.js';
@@ -34,7 +36,7 @@ export function createPeakEditorController({
 
   function setPeakEditorStatus(message) {
     if (elements.gelPeakEditorSummary) {
-      elements.gelPeakEditorSummary.textContent = message || '';
+      i18nUi.setText(elements.gelPeakEditorSummary, (message || ''));
       elements.gelPeakEditorSummary.hidden = !message;
     }
   }
@@ -154,12 +156,12 @@ export function createPeakEditorController({
       if (!runtime.peakIntegrationTable) {
         runtime.peakIntegrationTable = new window.Tabulator(host, {
           data: tableRows,
-          columns: PEAK_EDITOR_COLUMNS,
+          columns: PEAK_EDITOR_COLUMNS.map(column => ({ ...column, titleFormatter: () => i18nUi.renderOwned(column.title), headerTooltip: () => i18nUi.renderOwned(column.title) })),
           layout: 'fitColumns',
           columnDefaults: { headerWordWrap: true, headerTooltip: true, tooltip: true },
           columnHeaderVertAlign: 'middle',
           height: '100%',
-          placeholder: 'No bands integrated'
+          placeholder: i18nUi.html('No bands integrated')
         });
       } else if (typeof runtime.peakIntegrationTable.setData === 'function') {
         runtime.peakIntegrationTable.setData(tableRows);
@@ -172,16 +174,16 @@ export function createPeakEditorController({
         ${PEAK_EDITOR_COLUMNS.map(column => `<td class="num">${safeText(row[column.field])}</td>`).join('') }
       </tr>
     `).join('');
-    host.innerHTML = `
+    i18nUi.setHtml(host, `
       <table class="gel-peak-table">
         <thead>
           <tr>
-            ${PEAK_EDITOR_COLUMNS.map((column) => `<th>${safeText(column.title)}</th>`).join('')}
+            ${PEAK_EDITOR_COLUMNS.map((column) => `<th>${i18nUi.renderOwned(column.title)}</th>`).join('')}
           </tr>
         </thead>
-        <tbody>${rowsHtml || `<tr><td colspan="${PEAK_EDITOR_COLUMNS.length}">No bands integrated</td></tr>`}</tbody>
+        <tbody>${rowsHtml || `<tr><td colspan="${PEAK_EDITOR_COLUMNS.length}">${i18nUi.html("No bands integrated")}</td></tr>`}</tbody>
       </table>
-    `;
+    `);
   }
 
   function renderPeakEditor() {
@@ -200,9 +202,9 @@ export function createPeakEditorController({
     const selectedLane = getSelectedPeakEditorLane(lanes);
     if (elements.gelPeakEditorLaneSelect) {
       elements.gelPeakEditorLaneSelect.disabled = !lanes.length;
-      elements.gelPeakEditorLaneSelect.innerHTML = lanes.length
+      i18nUi.setHtml(elements.gelPeakEditorLaneSelect, lanes.length
         ? lanes.map((lane) => `<option value="${lane.laneIndex}">Lane ${lane.laneIndex}</option>`).join('')
-        : '<option value="">No lanes</option>';
+        : `<option value="" data-i18n="gel.full.b47302bd">${i18nUi.text("No lanes")}</option>`);
       elements.gelPeakEditorLaneSelect.value = selectedLane ? String(selectedLane.laneIndex) : '';
     }
     if (elements.gelPeakEditorBaselineModeBtn) {
@@ -228,7 +230,7 @@ export function createPeakEditorController({
     }
 
     renderPeakIntegrationTable(getAllPeakIntegrationRows());
-    setPeakEditorStatus(selectedLane ? '' : 'Divide the gel into lanes before editing peak areas.');
+    setPeakEditorStatus(((selectedLane ? '' : i18nUi.text("Divide the gel into lanes before editing peak areas."))));
   }
 
   function onPeakEditorOpen() {
@@ -275,7 +277,7 @@ export function createPeakEditorController({
     const selectedLane = getSelectedPeakEditorLane(lanes);
     const profile = selectedLane ? computeProfileForLane(selectedLane) : null;
     if (!selectedLane || !profile) {
-      setPeakEditorStatus('Divide the gel into lanes before editing peak areas.');
+      setPeakEditorStatus(i18nUi.text("Divide the gel into lanes before editing peak areas."));
       return;
     }
 
@@ -310,7 +312,7 @@ export function createPeakEditorController({
         });
       const target = candidates[0];
       if (!target) {
-        setPeakEditorStatus('Add a complete baseline before adding vertical peak dividers.');
+        setPeakEditorStatus(i18nUi.text("Add a complete baseline before adding vertical peak dividers."));
         return;
       }
       const dividers = new Set(target.integration.dividers || []);
@@ -331,7 +333,7 @@ export function createPeakEditorController({
     ));
     if (draftIndex >= 0) {
       if (nextIntegrations[draftIndex].left.row === point.row) {
-        setPeakEditorStatus('Choose a second baseline point at a different row.');
+        setPeakEditorStatus(i18nUi.text("Choose a second baseline point at a different row."));
         return;
       }
       nextIntegrations[draftIndex] = {

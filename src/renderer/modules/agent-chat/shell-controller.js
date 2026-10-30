@@ -1,80 +1,49 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("agent");
 import * as renderingModule from './rendering.js';
 import { asArray, trimText } from './shared.js';
 import { ensureAgentChatFolderState } from './session-folders.js';
+import { agentEnglishText, agentOption, bindAgentMessage, setAgentAttribute, setAgentText } from './localization.js';
 
+// Labels/placeholders are catalog keys; prompts are sent to the agent and stay English.
 const QUICK_PROMPT_PRESETS = {
   workspace: {
-    ariaLabel: 'Common chat prompts',
-    placeholder: 'Ask Hikari about this workspace.',
+    ariaLabel: 'prompts.workspace',
+    placeholder: 'placeholder.workspace',
     prompts: [
-      {
-        label: 'Summarize context',
-        prompt: 'Summarize the current workspace context and call out useful next actions.'
-      },
-      {
-        label: 'Plan next step',
-        prompt: 'Suggest practical next steps from the current workspace context.'
-      },
-      {
-        label: 'Find gaps',
-        prompt: 'Flag missing details or follow-up questions from the current workspace context.'
-      }
+      { label: 'prompt.summarizeContext', prompt: 'Summarize the current workspace context and call out useful next actions.' },
+      { label: 'prompt.planNext', prompt: 'Suggest practical next steps from the current workspace context.' },
+      { label: 'prompt.findGaps', prompt: 'Flag missing details or follow-up questions from the current workspace context.' }
     ]
   },
-  home: { ariaLabel: 'Notebook experiment', placeholder: 'Add experiment details…', prompts: [] },
-  plugin: { ariaLabel: 'Plugin chat', placeholder: 'Describe what you want to create or change…', prompts: [] },
+  home: { ariaLabel: 'prompts.home', placeholder: 'placeholder.home', prompts: [] },
+  plugin: { ariaLabel: 'prompts.plugin', placeholder: 'placeholder.plugin', prompts: [] },
   paper: {
-    ariaLabel: 'Common paper prompts',
-    placeholder: 'Ask Hikari about this paper.',
+    ariaLabel: 'prompts.paper',
+    placeholder: 'placeholder.paper',
     prompts: [
-      {
-        label: 'Generate protocol',
-        prompt: 'Generate a step-by-step experimental protocol from this paper. Include materials, timing, controls, and key caveats.'
-      },
-      {
-        label: 'Summarize',
-        prompt: 'Summarize the main finding, evidence, and limitations of this paper.'
-      }
+      { label: 'prompt.generateProtocol', prompt: 'Generate a step-by-step experimental protocol from this paper. Include materials, timing, controls, and key caveats.' },
+      { label: 'prompt.summarize', prompt: 'Summarize the main finding, evidence, and limitations of this paper.' }
     ]
   },
   notebook: {
-    ariaLabel: 'Common notebook prompts',
-    placeholder: 'Ask Hikari about this notebook page.',
+    ariaLabel: 'prompts.notebook',
+    placeholder: 'placeholder.notebook',
     prompts: [
-      {
-        label: 'Research & append',
-        prompt: 'Research this notebook page and propose an append with only new, useful information.'
-      },
-      {
-        label: 'Summarize page',
-        prompt: 'Summarize this notebook page and flag any missing experimental details.'
-      },
-      {
-        label: 'Next steps',
-        prompt: 'Suggest the next experimental steps based on this notebook page.'
-      },
-      {
-        label: 'Draft note',
-        prompt: 'Draft a concise follow-up note for this notebook page.'
-      }
+      { label: 'prompt.researchAppend', prompt: 'Research this notebook page and propose an append with only new, useful information.' },
+      { label: 'prompt.summarizePage', prompt: 'Summarize this notebook page and flag any missing experimental details.' },
+      { label: 'prompt.nextSteps', prompt: 'Suggest the next experimental steps based on this notebook page.' },
+      { label: 'prompt.draftNote', prompt: 'Draft a concise follow-up note for this notebook page.' }
     ]
   },
   assay: {
-    ariaLabel: 'Common assay prompts',
-    placeholder: 'Ask Hikari about this assay.',
+    ariaLabel: 'prompts.assay',
+    placeholder: 'placeholder.assay',
     prompts: [
-      {
-        label: 'Analyze results',
-        prompt: 'Analyze these assay results and identify patterns, outliers, and useful follow-up calculations.'
-      },
-      {
-        label: 'Make graph',
-        prompt: 'Create a clear Plotly graph for this assay result set and explain what should be adjusted.'
-      },
-      {
-        label: 'Build table',
-        prompt: 'Create a derived analysis table from this assay data with averages, standard deviations, and relevant ratios.'
-      }
+      { label: 'prompt.analyzeResults', prompt: 'Analyze these assay results and identify patterns, outliers, and useful follow-up calculations.' },
+      { label: 'prompt.makeGraph', prompt: 'Create a clear Plotly graph for this assay result set and explain what should be adjusted.' },
+      { label: 'prompt.buildTable', prompt: 'Create a derived analysis table from this assay data with averages, standard deviations, and relevant ratios.' }
     ]
   }
 };
@@ -108,12 +77,13 @@ export function createAgentChatShellController({
     ensureAgentChatFolderState(state.agentChat);
   }
 
-  function setStatus(text) {
+  // Messages are agentUi() descriptors or verbatim agent/backend text.
+  function setStatus(message) {
     if (!dom.status) {
       return;
     }
-    dom.status.textContent = text;
-    const normalized = trimText(text, 160).toLowerCase();
+    bindAgentMessage(dom.status, message);
+    const normalized = trimText(agentEnglishText(message), 160).toLowerCase();
     // The pill ships hidden so a cleared status leaves no empty bubble, which
     // means every write has to re-assert visibility or the pill stays dead.
     dom.status.hidden = !normalized;
@@ -137,10 +107,8 @@ export function createAgentChatShellController({
     dom.status.dataset.state = tone;
   }
 
-  function setSessionStatus(text) {
-    if (dom.sessionStatus) {
-      dom.sessionStatus.textContent = text;
-    }
+  function setSessionStatus(message) {
+    bindAgentMessage(dom.sessionStatus, message);
   }
 
   function getStoragePath() {
@@ -243,12 +211,14 @@ export function createAgentChatShellController({
       return;
     }
     const selected = state.agentChat.projectId;
-    const options = ['<option value="">All projects</option>'];
+    const options = [agentOption('', 'composer.allProjects')];
     asArray(state.projects).forEach((project) => {
       const isSelected = selected === project.id ? ' selected' : '';
-      options.push(`<option value="${project.id}"${isSelected}>${safeText(project.name || 'Untitled')}</option>`);
+      options.push(project.name
+        ? `<option value="${project.id}"${isSelected}>${safeText(project.name)}</option>`
+        : agentOption(project.id, 'composer.untitledProject').replace('<option ', `<option${isSelected} `));
     });
-    dom.projectSelect.innerHTML = options.join('');
+    i18nUi.setHtml(dom.projectSelect, options.join(''));
     if (selected && asArray(state.projects).some((project) => project.id === selected)) {
       dom.projectSelect.value = selected;
     } else if (selected) {
@@ -276,7 +246,7 @@ export function createAgentChatShellController({
     const scopeType = getActiveScopeType();
     const preset = QUICK_PROMPT_PRESETS[scopeType] || QUICK_PROMPT_PRESETS.workspace;
     if (dom.input) {
-      dom.input.placeholder = preset.placeholder;
+      setAgentAttribute(dom.input, 'placeholder', preset.placeholder);
     }
     if (dom.paperScreenshotBtn) {
       dom.paperScreenshotBtn.hidden = !hasImageCapture || scopeType !== 'paper';
@@ -284,7 +254,7 @@ export function createAgentChatShellController({
     if (!dom.quickPrompts) {
       return;
     }
-    dom.quickPrompts.setAttribute?.('aria-label', preset.ariaLabel);
+    setAgentAttribute(dom.quickPrompts, 'aria-label', preset.ariaLabel);
     dom.quickPrompts.hidden = preset.prompts.length === 0;
     const doc = dom.quickPrompts.ownerDocument;
     const buttons = Array.from(dom.quickPrompts.querySelectorAll?.('[data-agent-suggest-prompt]') || []);
@@ -302,7 +272,7 @@ export function createAgentChatShellController({
         return;
       }
       button.dataset.agentSuggestPrompt = prompt.prompt;
-      button.textContent = prompt.label;
+      setAgentText(button, prompt.label);
     });
   }
 
@@ -335,7 +305,7 @@ export function createAgentChatShellController({
     if (dom.stopBtn) {
       dom.stopBtn.hidden = !runtime.inFlight;
       dom.stopBtn.disabled = !runtime.inFlight || runtime.stopInProgress;
-      dom.stopBtn.textContent = runtime.stopInProgress ? 'Stopping...' : 'Stop';
+      setAgentText(dom.stopBtn, runtime.stopInProgress ? 'composer.stopping' : 'composer.stop');
     }
     if (dom.projectSelect) {
       dom.projectSelect.disabled = composerBusy;

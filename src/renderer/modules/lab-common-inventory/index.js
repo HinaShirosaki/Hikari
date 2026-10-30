@@ -1,3 +1,4 @@
+import './localization.js';
 import { installBlockchainAndMessages } from './blockchain-and-messages.js';
 import { installChemicalDetailRendering } from './chemical-detail-rendering.js';
 import { installChemicalDialog } from './dialog-controller.js';

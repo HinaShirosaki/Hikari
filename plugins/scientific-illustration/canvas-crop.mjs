@@ -1,3 +1,5 @@
+import { createPresentation } from "./i18n.mjs";
+const i18nUi = createPresentation("figura");
 import { prepareRaster, cropRasterPatch } from './raster.mjs';
 
 // Crop the selected source in the active canvas. Persist only after Apply;
@@ -20,11 +22,11 @@ export function initCanvasCrop({ workspace, getSelected, getCanvas, getIllustrat
     if (session !== current || !current.cropper?.ready) return;
     const crop = current.cropper.getData(true);
     for (const key of ['x', 'y', 'width', 'height']) current.overlay.querySelector(`[data-crop-field="${key}"]`).value = crop[key];
-    current.overlay.querySelector('[data-crop-size]').textContent = `${crop.width} × ${crop.height} px`;
+    i18nUi.setText(current.overlay.querySelector('[data-crop-size]'), `${crop.width} × ${crop.height} px`);
   }
   async function apply() {
     const current = session; if (!current || current.saving || !current.cropper?.ready) return;
-    const error = current.overlay.querySelector('[data-crop-error]'); error.textContent = '';
+    const error = current.overlay.querySelector('[data-crop-error]'); i18nUi.setText(error, '');
     try {
       // Enter in a numeric field commits its value before applying the crop.
       const values = {};
@@ -42,8 +44,8 @@ export function initCanvasCrop({ workspace, getSelected, getCanvas, getIllustrat
       const result = await workspace.request({ action: 'apply', illustration_id: current.illustrationId, expected_revision: current.revision, request_id: crypto.randomUUID(),
         operations: [{ op: 'update', id: current.object.id, patch: { ...patch, dataUrl: canvas.toDataURL('image/png'), textFree: true } }] });
       if (!result.ok) throw new Error(result.error);
-      if (session === current) { close(); select(current.object.id); status('Artwork cropped'); }
-    } catch (failure) { if (session === current) error.textContent = failure.message; }
+      if (session === current) { close(); select(current.object.id); status(i18nUi.text("Artwork cropped")); }
+    } catch (failure) { if (session === current) i18nUi.setText(error, failure.message); }
     finally {
       if (session === current) {
         current.saving = false; current.cropper.enable();
@@ -61,14 +63,14 @@ export function initCanvasCrop({ workspace, getSelected, getCanvas, getIllustrat
       if (typeof window.Cropper !== 'function') throw new Error('The bundled cropper could not load.');
       onStart();
       const stage = $(`${canvas}-canvas`), overlay = document.createElement('section'); overlay.className = 'canvas-crop-overlay'; overlay.id = 'canvas-crop-overlay';
-      overlay.setAttribute('aria-label', `Crop ${object.name}`);
-      overlay.innerHTML = `<div class="canvas-crop-heading"><strong data-crop-name></strong><button id="canvas-crop-reset" type="button">Reset</button><button id="canvas-crop-cancel" type="button">Cancel</button><button id="canvas-crop-apply" class="primary-button" type="button">Apply crop</button></div>
-        <div class="canvas-crop-image"><img id="canvas-crop-preview" alt="Selected artwork crop preview"></div>
-        <div class="canvas-crop-fields" role="group" aria-label="Crop in pixels">
+      i18nUi.setAttribute(overlay, "aria-label", i18nUi.message("Crop {p0}", { p0: object.name }));
+      overlay.innerHTML = `<div class="canvas-crop-heading"><strong data-crop-name></strong><button id="canvas-crop-reset" type="button">${i18nUi.html("Reset")}</button><button id="canvas-crop-cancel" type="button">${i18nUi.html("Cancel")}</button><button id="canvas-crop-apply" class="primary-button" type="button">${i18nUi.html("Apply crop")}</button></div>
+        <div class="canvas-crop-image"><img id="canvas-crop-preview" data-i18n-alt="figura.full.6ae492" alt="Selected artwork crop preview"></div>
+        <div class="canvas-crop-fields" role="group" data-i18n-aria-label="figura.full.d64f4317" aria-label="Crop in pixels">
           <label>X<input data-crop-field="x" type="number" min="0" step="1"></label><label>Y<input data-crop-field="y" type="number" min="0" step="1"></label>
-          <label>Width<input data-crop-field="width" type="number" min="1" step="1"></label><label>Height<input data-crop-field="height" type="number" min="1" step="1"></label>
-        </div><div class="canvas-crop-note"><span>Drag the handles to crop.</span><span data-crop-size role="status"></span></div><p data-crop-error role="alert"></p>`;
-      overlay.querySelector('[data-crop-name]').textContent = `Crop ${object.name}`;
+          <label>${i18nUi.html("Width")}<input data-crop-field="width" type="number" min="1" step="1"></label><label>${i18nUi.html("Height")}<input data-crop-field="height" type="number" min="1" step="1"></label>
+        </div><div class="canvas-crop-note"><span>${i18nUi.html("Drag the handles to crop.")}</span><span data-crop-size role="status"></span></div><p data-crop-error role="alert"></p>`;
+      i18nUi.setText(overlay.querySelector('[data-crop-name]'), i18nUi.message("Crop {p0}", { p0: object.name }));
       const current = { object, raster, illustrationId, revision, canvas, stage, overlay, inert: stage.inert, saving: false };
       session = current; stage.inert = true; stage.classList.add('is-cropping'); stage.parentElement.append(overlay); layout(current); onActiveChange(true, false);
       current.observer = new ResizeObserver(() => { if (session === current) layout(current); }); current.observer.observe(stage);
@@ -93,7 +95,7 @@ export function initCanvasCrop({ workspace, getSelected, getCanvas, getIllustrat
       if (!session) return;
       if (id !== session.illustrationId || getCanvas() !== session.canvas || getSelected()?.id !== session.object.id
         || document.revision !== session.revision && !session.saving) {
-        close({ focus: false }); status('Crop canceled because the illustration changed.');
+        close({ focus: false }); status(i18nUi.text("Crop canceled because the illustration changed."));
       }
     },
     handleKey(event) {

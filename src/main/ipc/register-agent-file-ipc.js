@@ -1,5 +1,6 @@
 'use strict';
 
+const { nativeText } = require('../lib/i18n.js');
 const { FILE_ACCESS } = require('../../shared/ipc/channels');
 
 function registerAgentFileIpc({ ipcMain, fileAccess, getMainWindow, dialog }) {
@@ -22,7 +23,7 @@ function registerAgentFileIpc({ ipcMain, fileAccess, getMainWindow, dialog }) {
   handle(FILE_ACCESS.REVIEW, input => fileAccess.review(input));
   handle(FILE_ACCESS.UNDO, input => fileAccess.undo(input));
   handle(FILE_ACCESS.ADD_LOCATION, async input => {
-    const selected = await dialog.showOpenDialog(getMainWindow(), { title: 'Grant agent access to another folder', properties: ['openDirectory'] });
+    const selected = await dialog.showOpenDialog(getMainWindow(), { title: nativeText("Grant agent access to another folder"), properties: ['openDirectory'] });
     if (selected.canceled || !selected.filePaths?.[0]) return { ok: true, cancelled: true };
     return fileAccess.settings({ action: 'add-location', root_id: input.root_id, path: selected.filePaths[0] });
   });

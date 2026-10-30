@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
 import { showTransientNotice } from '../../../lib/notify.js';
 import { collectProtocolPlaceholderKeys } from '../entry/entry-helpers.js';
 import {
@@ -74,7 +77,7 @@ function createNotebookResultFiles({
     setPendingDroppedResultFiles(mergedIntoInput ? [] : mergedFiles);
     renderResultFileAttachments();
     showTransientNotice(
-      `${incomingFiles.length} file${incomingFiles.length === 1 ? '' : 's'} ready to attach on save.`
+      i18nUi.message((incomingFiles.length === 1 ? "{p0} file ready to attach on save." : "{p0} files ready to attach on save."), { p0: incomingFiles.length })
     );
   }
 

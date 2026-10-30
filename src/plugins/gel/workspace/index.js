@@ -1,3 +1,5 @@
+import { createPresentation } from "../i18n.mjs";
+const i18nUi = createPresentation("gel");
 import { analyzeGelImage } from './analysis/analysis-core.js';
 import { BAND_MEASUREMENT_VERSION } from './analysis/lane-signal.js';
 import { createCropController } from './images/crop-controller.js';
@@ -134,7 +136,7 @@ export function initGelAnalysis({
 
   function setStatus(message) {
     if (elements.gelStatus) {
-      elements.gelStatus.textContent = message || '';
+      i18nUi.setOwnedText(elements.gelStatus, (message || ''));
       elements.gelStatus.hidden = true;
     }
     onNotify?.(message);
@@ -213,6 +215,10 @@ export function initGelAnalysis({
     runtime,
     elements,
     deps: {
+      bindCropModeLabel: (element, label) => {
+        i18nUi.setAttribute(element, 'title', i18nUi.owned(label));
+        i18nUi.setAttribute(element, 'aria-label', i18nUi.owned(label));
+      },
       copyNormalizedImage: imageController.copyNormalizedImage,
       imageDataToDataUrl: imageController.imageDataToDataUrl,
       normalizeCurrentCanvasCrop: imageController.normalizeCurrentCanvasCrop,
@@ -242,7 +248,7 @@ export function initGelAnalysis({
       confirmDelete: (record) => (
         typeof rootWindow?.confirm !== 'function'
         || rootWindow.confirm(
-          `Remove the saved Gel record "${record?.name || record?.id || 'Untitled gel'}"? Its artifact files will remain in plugin storage.`
+          i18nUi.text("Remove the saved Gel record \"{p0}\"? Its artifact files will remain in plugin storage.", { p0: record?.name || record?.id || 'Untitled gel' })
         )
       ),
       decodeImageSource: imageController.decodeImageSource,
@@ -357,7 +363,7 @@ export function initGelAnalysis({
     },
     onRejected: () => {
       if (blotFigure?.handleFileDrop([])) return;
-      setStatus('Drop an image file to load it into Gel.');
+      setStatus(i18nUi.text("Drop an image file to load it into Gel."));
     },
     onError: (error) => {
       setStatus(String(error?.message || error || 'Failed to load the dropped gel image.'));
@@ -407,13 +413,13 @@ export function initGelAnalysis({
   elements.gelDetectLadderBtn?.addEventListener('click', manualWorkflow.onDetectLadderBands);
   if (elements.gelLadderPresetSelect && !elements.gelLadderPresetSelect.options.length) {
     const groups = [...new Set(LADDER_PRESETS.map((preset) => preset.group))];
-    elements.gelLadderPresetSelect.innerHTML = groups.map((group) => {
+    i18nUi.setHtml(elements.gelLadderPresetSelect, groups.map((group) => {
       const options = LADDER_PRESETS
         .filter((preset) => preset.group === group)
         .map((preset) => `<option value="${preset.id}">${safeText(preset.label)}</option>`)
         .join('');
       return `<optgroup label="${safeText(group)}">${options}</optgroup>`;
-    }).join('');
+    }).join(''));
     elements.gelLadderPresetSelect.value = DEFAULT_LADDER_PRESET_ID;
   }
   elements.gelToolLadderLaneBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('ladder'));
@@ -426,8 +432,9 @@ export function initGelAnalysis({
   elements.gelCloseLaneTableBtn?.addEventListener('click', laneTable.onClosePanel);
   elements.gelExportImageBtn?.addEventListener('click', (event) => laneTable.onGenerateFigureClick(event.currentTarget));
   elements.gelExportPptxBtn?.addEventListener('click', (event) => laneTable.onGeneratePowerPointClick(event.currentTarget));
-  elements.gelLaneTableShell?.addEventListener('click', laneTable.onShellClick);
-  elements.gelLaneTableShell?.addEventListener('input', (event) => {
+  // The table bar (rows, ladder lane) and the strip's inputs both live in the panel.
+  elements.gelLaneTablePanel?.addEventListener('click', laneTable.onShellClick);
+  elements.gelLaneTablePanel?.addEventListener('input', (event) => {
     laneTable.onShellInput(event);
     rendering.renderCellTable();
   });
@@ -456,7 +463,7 @@ export function initGelAnalysis({
   function setViewerMode(mode) {
     if (mode === 'processed' && !runtime.currentImage) {
       updateViewerModeButtons();
-      setStatus('Load a gel image before processing.');
+      setStatus(i18nUi.text("Load a gel image before processing."));
       return;
     }
     runtime.viewerMode = mode;
@@ -516,7 +523,7 @@ export function initGelAnalysis({
   let analysisRequest = 0;
   let disposed = false;
   function onRunAnalysis() {
-    if (!runtime.currentImage) { setStatus('Load a gel image before running analysis.'); return Promise.resolve(null); }
+    if (!runtime.currentImage) { setStatus(i18nUi.text("Load a gel image before running analysis.")); return Promise.resolve(null); }
     const request = ++analysisRequest, image = runtime.currentImage, revision = runtime.imageRevision;
     const params = recordsManager.readParams(), signature = JSON.stringify(params);
     const task = (async () => {
@@ -528,7 +535,7 @@ export function initGelAnalysis({
         runtime.currentReport = result.report;
         renderCanvasAndCommit(); manualWorkflow.renderOverrideStatus();
         return result;
-      } catch (error) { if (!disposed && request === analysisRequest) setStatus(error instanceof Error ? error.message : 'Analysis failed.'); return null; }
+      } catch (error) { if (!disposed && request === analysisRequest) setStatus(((error instanceof Error ? error.message : i18nUi.text("Analysis failed.")))); return null; }
     })();
     runtime.analysisPromise = task;
     runtime.analysisRevision = revision;

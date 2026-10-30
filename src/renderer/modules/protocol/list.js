@@ -1,3 +1,8 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("protocol");
+import { dateSpan } from '../../lib/i18n/markup.js';
+import { protocolText, protocolMessage, protocolAttributes } from './localization.js';
 export function createProtocolListController({
   state,
   persist,
@@ -92,7 +97,7 @@ export function createProtocolListController({
     ensureProtocolTimestamps();
 
     if (!state.protocols.length) {
-      ui.protocolList.innerHTML = '';
+      i18nUi.setHtml(ui.protocolList, '');
       syncSelectionAfterMutation?.();
       return;
     }
@@ -102,10 +107,10 @@ export function createProtocolListController({
       !query || `${protocol.name || ''} ${protocol.purpose || ''}`.toLocaleLowerCase().includes(query)
     ).sort(compareProtocols);
     if (!sortedProtocols.length) {
-      ui.protocolList.innerHTML = '<p class="small-note" role="status">No matching protocols. Try another search.</p>';
+      i18nUi.setHtml(ui.protocolList, `<p class="small-note" role="status">${protocolMessage('list.noMatches')}</p>`);
       return;
     }
-    ui.protocolList.innerHTML = sortedProtocols.map((protocol) => `
+    i18nUi.setHtml(ui.protocolList, sortedProtocols.map((protocol) => `
       <article
         class="list-row protocol-list-row${localState.activeMenuProtocolId === protocol.id ? ' protocol-list-row-menu-open' : ''}${localState.activeProtocolId === protocol.id ? ' protocol-list-row-selected list-row-selected' : ''}"
         data-protocol-select="${protocol.id}"
@@ -113,14 +118,14 @@ export function createProtocolListController({
       >
         <div class="protocol-name-text-wrap">
           <span class="protocol-name-text">${safeText(protocol.name)}</span>
-          <span class="protocol-row-meta">Updated ${safeText(formatProtocolTimestamp(protocol))}</span>
+          <span class="protocol-row-meta">${protocolMessage('list.updated')} ${getProtocolSortTimestamp(protocol) ? dateSpan(new Date(getProtocolSortTimestamp(protocol)).toISOString(), formatProtocolTimestamp(protocol), { year: 'numeric', month: 'short', day: 'numeric' }) : protocolMessage('list.noTimestamp')}</span>
         </div>
         <div class="card-actions list-actions protocol-list-actions">
           <div class="protocol-legacy-actions" hidden>
-            <button type="button" class="ghost-btn protocol-view-btn" data-protocol-view="${protocol.id}">View</button>
-            <button type="button" class="ghost-btn protocol-view-btn" data-protocol-export="${protocol.id}">Export PDF</button>
-            <button type="button" class="ghost-btn protocol-edit-btn" data-protocol-edit="${protocol.id}">Edit</button>
-            <button type="button" class="danger-btn protocol-delete-btn" data-protocol-delete="${protocol.id}">Delete</button>
+            <button type="button" class="ghost-btn protocol-view-btn" data-protocol-view="${protocol.id}">${protocolMessage('list.view')}</button>
+            <button type="button" class="ghost-btn protocol-view-btn" data-protocol-export="${protocol.id}">${protocolMessage('action.export')}</button>
+            <button type="button" class="ghost-btn protocol-edit-btn" data-protocol-edit="${protocol.id}">${protocolMessage('list.edit')}</button>
+            <button type="button" class="danger-btn protocol-delete-btn" data-protocol-delete="${protocol.id}">${protocolMessage('list.delete')}</button>
           </div>
           <button
             type="button"
@@ -128,20 +133,19 @@ export function createProtocolListController({
             data-protocol-menu-trigger="${protocol.id}"
             aria-haspopup="menu"
             aria-expanded="${localState.activeMenuProtocolId === protocol.id ? 'true' : 'false'}"
-            aria-label="Protocol actions"
-            title="Protocol actions"
+            ${protocolAttributes({ 'aria-label': 'action.menu', title: 'action.menu' })}
           >...</button>
           ${localState.activeMenuProtocolId === protocol.id ? `
             <div class="protocol-action-menu protocol-preview-block" role="menu">
-              <button type="button" class="ghost-btn protocol-action-item" data-protocol-action="edit" data-protocol-id="${protocol.id}">Edit</button>
-              <button type="button" class="ghost-btn protocol-action-item" data-protocol-action="export" data-protocol-id="${protocol.id}">Export PDF</button>
+              <button type="button" class="ghost-btn protocol-action-item" data-protocol-action="edit" data-protocol-id="${protocol.id}">${protocolMessage('list.edit')}</button>
+              <button type="button" class="ghost-btn protocol-action-item" data-protocol-action="export" data-protocol-id="${protocol.id}">${protocolMessage('action.export')}</button>
               ${(contextActions?.list('protocol') || []).map(action => `<button type="button" class="ghost-btn protocol-action-item" data-protocol-action="plugin" data-context-action="${safeText(action.key)}" data-protocol-id="${protocol.id}" ${action.requiresAgent ? 'data-requires-agent' : ''}>${safeText(action.label)}</button>`).join('')}
-              <button type="button" class="ghost-btn protocol-action-item protocol-action-item-danger" data-protocol-action="delete" data-protocol-id="${protocol.id}">Delete</button>
+              <button type="button" class="ghost-btn protocol-action-item protocol-action-item-danger" data-protocol-action="delete" data-protocol-id="${protocol.id}">${protocolMessage('list.delete')}</button>
             </div>
           ` : ''}
         </div>
       </article>
-    `).join('');
+    `).join(''));
 
     ui.protocolList.querySelectorAll('[data-protocol-view]').forEach((button) => {
       button.addEventListener('click', () => onViewProtocol(button.dataset.protocolView));
@@ -206,7 +210,7 @@ export function createProtocolListController({
           const key = button.dataset.contextAction;
           renderList();
           const result = await contextActions.invoke(key, { kind: 'protocol', protocolId });
-          if (!result.ok) globalThis.alert?.(result.error || 'Could not open the plugin action.');
+          if (!result.ok) globalThis.alert?.(result.error || protocolText('list.pluginError'));
           return;
         }
 

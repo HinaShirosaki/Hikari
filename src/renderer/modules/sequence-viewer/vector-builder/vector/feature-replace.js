@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../../lib/i18n/presentation.js";
+import "../../localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../../../lib/html.js';
 import { normalizeFeatureType } from '../../feature-types.js';
 import { parseInputRecords } from '../../parsing.js';
@@ -70,7 +73,7 @@ function createVectorFeatureReplace({
     if (!elements.vectorBuilderFeatureReplaceStatus) {
       return;
     }
-    elements.vectorBuilderFeatureReplaceStatus.textContent = String(message || '');
+    i18nUi.setOwnedText(elements.vectorBuilderFeatureReplaceStatus, String(message || ''));
     elements.vectorBuilderFeatureReplaceStatus.classList.toggle('is-error', Boolean(isError));
   }
 
@@ -80,8 +83,7 @@ function createVectorFeatureReplace({
     if (!feature || !range || !elements.vectorBuilderFeatureReplaceNote) {
       return;
     }
-    elements.vectorBuilderFeatureReplaceNote.textContent =
-      `Replacing ${feature.name || feature.type || 'feature'} at ${formatRangeLabel(range)} with a stored feature.`;
+    i18nUi.setText(elements.vectorBuilderFeatureReplaceNote, i18nUi.message("Replacing {p0} at {p1} with a stored feature.", { p0: feature.name || feature.type || 'feature', p1: formatRangeLabel(range) }));
   }
 
   function renderFeatureReplaceResults() {
@@ -92,14 +94,14 @@ function createVectorFeatureReplace({
     // Below the 2-character minimum no search has run, so the panel stays quiet
     // instead of claiming nothing matched.
     if (featureReplaceQuery.length < 2) {
-      host.innerHTML = '';
+      i18nUi.setHtml(host, '');
       return;
     }
     if (!featureReplaceResults.length) {
-      host.innerHTML = `<p class="small-note">No stored features matched "${escapeHtml(featureReplaceQuery)}".</p>`;
+      i18nUi.setHtml(host, `<p class="small-note">${i18nUi.html("No stored features matched \"")}${escapeHtml(featureReplaceQuery)}".</p>`);
       return;
     }
-    host.innerHTML = featureReplaceResults.map((feature) => {
+    i18nUi.setHtml(host, featureReplaceResults.map((feature) => {
       const length = Math.max(0, Number(feature?.sequenceLength) || normalizeSequenceText(feature?.sequence || '').length);
       const featureId = cleanText(feature?.id, 200);
       const hostCount = Math.max(0, Number(feature?.hostCount) || asArrayOf(feature?.hosts).length);
@@ -111,18 +113,18 @@ function createVectorFeatureReplace({
           role="button"
           tabindex="0"
           aria-pressed="${selected ? 'true' : 'false'}"
-          aria-label="Use ${escapeHtml(featureName)} feature"
+          ${i18nUi.attributeMessage("aria-label", i18nUi.message("Use {p0} feature", { p0: featureName }))}
           data-vector-replace-feature-id="${escapeHtml(featureId)}"
         >
           <div class="sequence-viewer-protein-builder-feature-head">
             <div>
               <strong>${escapeHtml(featureName)}</strong>
-              <p class="small-note">${escapeHtml(feature?.type || 'feature')} | ${length.toLocaleString()} bp | in ${hostCount} vector${hostCount === 1 ? '' : 's'}</p>
+              <p class="small-note">${i18nUi.render((feature?.type || i18nUi.message("feature")))} | ${length.toLocaleString()} bp | in ${hostCount} ${i18nUi.html("vector")}${hostCount === 1 ? '' : 's'}</p>
             </div>
           </div>
         </article>
       `;
-    }).join('');
+    }).join(''));
   }
 
   function asArrayOf(value) {
@@ -150,15 +152,15 @@ function createVectorFeatureReplace({
     }
     const feature = getSelectedStoredFeature();
     if (!feature) {
-      host.innerHTML = '<p class="small-note">Pick a stored feature to list the vectors that carry it.</p>';
+      i18nUi.setHtml(host, `<p class="small-note">${i18nUi.html("Pick a stored feature to list the vectors that carry it.")}</p>`);
       return;
     }
     const hosts = getStoredFeatureHosts(feature);
     if (!hosts.length) {
-      host.innerHTML = '<p class="small-note">No source vector is recorded for this feature.</p>';
+      i18nUi.setHtml(host, `<p class="small-note">${i18nUi.html("No source vector is recorded for this feature.")}</p>`);
       return;
     }
-    host.innerHTML = hosts.map((entry) => {
+    i18nUi.setHtml(host, hosts.map((entry) => {
       const hostId = cleanText(entry?.hostVectorId, 200);
       const selected = hostId === featureReplaceHostId;
       const length = Math.max(0, Number(entry?.sequenceLength) || 0);
@@ -170,11 +172,11 @@ function createVectorFeatureReplace({
           aria-pressed="${selected ? 'true' : 'false'}"
           data-vector-replace-host-id="${escapeHtml(hostId)}"
         >
-          <strong>${escapeHtml(cleanText(entry?.hostVectorName, 160) || 'stored vector')}</strong>
-          <span class="small-note">${length.toLocaleString()} bp | ${escapeHtml(cleanText(entry?.topology, 40) || 'circular')} | ${copies} copy${copies === 1 ? '' : ' sites'}</span>
+          <strong>${i18nUi.render((cleanText(entry?.hostVectorName, 160) || i18nUi.message("stored vector")))}</strong>
+          <span class="small-note">${length.toLocaleString()} bp | ${i18nUi.render((cleanText(entry?.topology, 40) || i18nUi.message("circular")))} | ${copies} ${i18nUi.html("copy")}${i18nUi.render((copies === 1 ? '' : i18nUi.message(" sites")))}</span>
         </button>
       `;
-    }).join('');
+    }).join(''));
   }
 
   function renderFeatureReplacePreview(message = '') {
@@ -187,11 +189,10 @@ function createVectorFeatureReplace({
       ? featureReplaceHostRecords.get(cleanText(selectedHost.hostVectorId, 200))
       : null;
     if (record?.sequence?.length) {
-      host.innerHTML = buildSequenceMapSvg(record, { features: asArrayOf(record.features) });
+      i18nUi.setHtml(host, buildSequenceMapSvg(record, { features: asArrayOf(record.features) }));
       return;
     }
-    host.innerHTML = `<p class="small-note">${escapeHtml(message
-      || (selectedHost ? 'Loading plasmid preview...' : 'Pick a source vector to preview it.'))}</p>`;
+    i18nUi.setHtml(host, `<p class="small-note">${i18nUi.render((message || (selectedHost ? i18nUi.message("Loading plasmid preview...") : i18nUi.message("Pick a source vector to preview it."))))}</p>`);
   }
 
   function syncFeatureReplaceConfirm() {
@@ -292,7 +293,7 @@ function createVectorFeatureReplace({
 
     if (!storagePath) {
       clearFeatureReplaceSelection();
-      setFeatureReplaceStatus('Set Storage Folder Path in Settings to search stored features.', true);
+      setFeatureReplaceStatus(i18nUi.text("Set Storage Folder Path in Settings to search stored features."), true);
       return;
     }
     if (query.length < 2) {
@@ -302,11 +303,11 @@ function createVectorFeatureReplace({
     }
     if (!bridge?.sequenceLibrarySearchFeatures) {
       clearFeatureReplaceSelection();
-      setFeatureReplaceStatus('Feature search API unavailable.', true);
+      setFeatureReplaceStatus(i18nUi.text("Feature search API unavailable."), true);
       return;
     }
 
-    setFeatureReplaceStatus(`Searching for "${query}"...`);
+    setFeatureReplaceStatus(i18nUi.text("Searching for \"{p0}\"...", { p0: query }));
     try {
       const response = await bridge.sequenceLibrarySearchFeatures({ storagePath, query, limit: 24 });
       if (requestId !== featureReplaceSearchRequestId) {
@@ -327,7 +328,7 @@ function createVectorFeatureReplace({
         return;
       }
       clearFeatureReplaceSelection();
-      setFeatureReplaceStatus(error?.message || 'Failed to search stored features.', true);
+      setFeatureReplaceStatus((((((error?.message || i18nUi.text("Failed to search stored features.")))))), true);
     }
   }
 
@@ -340,7 +341,7 @@ function createVectorFeatureReplace({
   function openFeatureReplaceDialog(record, range) {
     const candidates = getRecordedFeaturesInRange(record, range);
     if (!candidates.length) {
-      setStatus('No replaceable feature in that range. Primer binding sites cannot be replaced.', true);
+      setStatus(i18nUi.text("No replaceable feature in that range. Primer binding sites cannot be replaced."), true);
       return;
     }
 
@@ -359,9 +360,7 @@ function createVectorFeatureReplace({
     renderFeatureReplaceSelection();
     const hasStorage = Boolean(getStoragePath());
     setFeatureReplaceStatus(
-      hasStorage
-        ? ''
-        : 'Set Storage Folder Path in Settings to search stored features.',
+      (((((hasStorage ? '' : i18nUi.text("Set Storage Folder Path in Settings to search stored features.")))))),
       !hasStorage
     );
     if (elements.vectorBuilderFeatureReplaceOverlay) {
@@ -382,7 +381,7 @@ function createVectorFeatureReplace({
 
     const storedSequence = normalizeSequenceText(stored.sequence || '');
     if (!storedSequence.length) {
-      setFeatureReplaceStatus('That stored feature has no sequence to insert.', true);
+      setFeatureReplaceStatus(i18nUi.text("That stored feature has no sequence to insert."), true);
       return;
     }
 
@@ -411,7 +410,7 @@ function createVectorFeatureReplace({
         donorName: sourceVectorName
       });
     } catch (error) {
-      setFeatureReplaceStatus(error?.message || 'Failed to replace the feature.', true);
+      setFeatureReplaceStatus((((((error?.message || i18nUi.text("Failed to replace the feature.")))))), true);
       return;
     }
 
@@ -443,10 +442,10 @@ function createVectorFeatureReplace({
     try {
       await persistFeatureMutation(nextRecord, `Replaced ${previousName} with ${nextName}.`);
     } catch (error) {
-      setStatus(error?.message || 'Replaced the feature but failed to save it.', true);
+      setStatus((((((error?.message || i18nUi.text("Replaced the feature but failed to save it.")))))), true);
       return;
     }
-    setStatus(`Replaced ${previousName} with stored feature ${nextName} (${replacement.length.toLocaleString()} bp).`);
+    setStatus(i18nUi.text("Replaced {p0} with stored feature {p1} ({p2} bp).", { p0: previousName, p1: nextName, p2: replacement.length.toLocaleString() }));
   }
 
   return {

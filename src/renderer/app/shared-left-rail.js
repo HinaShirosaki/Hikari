@@ -1,3 +1,6 @@
+import { createPresentation } from "../lib/i18n/presentation.js";
+import "../lib/i18n/shell.js";
+const i18nUi = createPresentation("shell");
 const STORAGE_KEY = 'hikari_shared_left_rail_width_v2';
 const DEFAULT_WIDTH = 280;
 const MIN_WIDTH = 240;
@@ -205,8 +208,8 @@ export function initSharedLeftRailResizers({
     }
     toggle.classList.toggle('is-folded', folded);
     toggle.setAttribute('aria-expanded', String(!folded));
-    toggle.setAttribute('aria-label', folded ? 'Open left rail' : 'Fold left rail');
-    toggle.title = folded ? 'Open left rail' : 'Fold left rail';
+    i18nUi.setAttribute(toggle, "aria-label", (folded ? i18nUi.message("Open left rail") : i18nUi.message("Fold left rail")));
+    i18nUi.setAttribute(toggle, "title", (folded ? i18nUi.message("Open left rail") : i18nUi.message("Fold left rail")));
 
     const closestView = layout.closest?.('.view');
     if (!closestView || closestView.classList?.contains('is-active')) {
@@ -243,7 +246,7 @@ export function initSharedLeftRailResizers({
     if (!toggle.isConnected) {
       toggle.type = 'button';
       toggle.className = FOLD_TOGGLE_CLASS;
-      toggle.innerHTML = foldToggleIconMarkup();
+      i18nUi.setHtml(toggle, foldToggleIconMarkup());
       toggle.setAttribute('data-left-rail-fold-toggle', 'true');
       toggle.addEventListener('click', () => {
         layout.classList.toggle(FOLDED_CLASS);

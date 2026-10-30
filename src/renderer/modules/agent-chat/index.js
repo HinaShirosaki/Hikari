@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("agent");
 import { trimText } from './shared.js';
 import { hydrateAgentChatIcons, renderAgentChatIcon } from './icons.js';
 import { createAgentChatSessionManager } from './session-manager.js';
@@ -17,6 +20,7 @@ import { mapExperimentDataToLlmJson } from './state-snapshot.js';
 import { createNotebookDraftAgentAdapter } from '../biology-notebook/agent/index.js';
 import { createProtocolAgentAdapter } from '../protocol/agent/index.js';
 import { normalizeScopeKey } from '../app-state/agent-chat-normalizer.js';
+import { agentAttributes, agentMessage, setAgentText } from './localization.js';
 
 export { mapExperimentDataToLlmJson };
 
@@ -99,18 +103,18 @@ export function initAgentChat({
     const hasInjectedText = Array.isArray(contexts)
       && contexts.some((context) => String(context?.text || '').trim());
     if (!hasInjectedText) {
-      dom.hiddenContextList.innerHTML = '';
+      i18nUi.setHtml(dom.hiddenContextList, '');
       dom.hiddenContextList.hidden = true;
       return;
     }
     dom.hiddenContextList.hidden = false;
-    dom.hiddenContextList.innerHTML = `
-      <span class="agent-attachment-pill agent-hidden-context-pill" title="Selected text will be included with the next message">
+    i18nUi.setHtml(dom.hiddenContextList, `
+      <span class="agent-attachment-pill agent-hidden-context-pill" ${agentAttributes({ title: 'attachment.contextTitle' })}>
         ${renderAgentChatIcon('context', { className: 'agent-hidden-context-icon' })}
-        <span>Text</span>
-        <button type="button" data-agent-remove-hidden-context aria-label="Remove selected text context">${renderAgentChatIcon('close', { className: 'agent-attachment-remove-icon' })}</button>
+        ${agentMessage('attachment.text')}
+        <button type="button" data-agent-remove-hidden-context ${agentAttributes({ 'aria-label': 'attachment.removeContext' })}>${renderAgentChatIcon('close', { className: 'agent-attachment-remove-icon' })}</button>
       </span>
-    `;
+    `);
   }
   const syncStateSnapshot = (projectId) => buildSyncedStateSnapshot({ api, state, projectId });
   const sessionManager = createAgentChatSessionManager({
@@ -200,7 +204,8 @@ export function initAgentChat({
     if (!fileChangesButton || !api?.agentFilesStatus) return;
     try {
       const result = await api.agentFilesStatus();
-      fileChangesButton.textContent = result?.pending?.length ? `File changes (${result.pending.length})` : 'File changes';
+      if (result?.pending?.length) setAgentText(fileChangesButton, 'composer.fileChangesCount', { count: result.pending.length });
+      else setAgentText(fileChangesButton, 'composer.fileChanges');
     } catch { /* Settings shows detailed access errors. */ }
   };
   api?.onAgentFilesChanged?.(() => { void refreshFileChanges(); });

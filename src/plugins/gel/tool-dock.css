@@ -97,8 +97,6 @@
 #gel-view .has-gel-tool-dock .gel-tool-groups,
 #gel-view .has-gel-tool-dock .gel-tool-group { border: 0; }
 #gel-view .has-gel-tool-dock .gel-tool-body { padding: 0; }
-#gel-view .has-gel-tool-dock .gel-figure-tools-head h3 { display: none; }
-#gel-view .has-gel-tool-dock .gel-figure-tools-head { justify-content: flex-end; }
 /* Menus open toward the canvas, clear of the icon strip. */
 #gel-view .has-gel-tool-dock #gel-export-menu { top: anchor(top); right: calc(anchor(left) + 10px); margin: 0; }
 #gel-view .gel-export-option { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 8px 12px; border-bottom: 1px solid var(--theme-border-soft); font-size: .8125rem; cursor: pointer; }

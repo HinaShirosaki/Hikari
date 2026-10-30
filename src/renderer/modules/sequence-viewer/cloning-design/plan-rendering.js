@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../../lib/html.js';
 import { cleanText, normalizeSequenceText } from '../shared.js';
 import { renderPrimerCopyButton } from '../primer-copy.js';
@@ -19,8 +22,8 @@ function renderPlanSummary(displayPlan = {}, source = {}, range = {}) {
     const threshold = cleanText(plan?.primerOligoPlan?.selectedThresholdLevel, 80) || 'none';
     return `
       <div class="sequence-viewer-cloning-design-summary-row">
-        <strong>${escapeHtml(entry?.label || 'Plan')}</strong>
-        <span>${escapeHtml(strategy)} | threshold ${escapeHtml(threshold)}</span>
+        <strong>${i18nUi.render((entry?.label || i18nUi.message("Plan")))}</strong>
+        <span>${escapeHtml(strategy)} ${i18nUi.html("| threshold")} ${escapeHtml(threshold)}</span>
       </div>
     `;
   }).join('');
@@ -28,12 +31,12 @@ function renderPlanSummary(displayPlan = {}, source = {}, range = {}) {
   return `
     <div class="sequence-viewer-cloning-design-plan-summary">
       <div class="sequence-viewer-cloning-design-summary-grid">
-        <div><strong>Route</strong><span>${escapeHtml(formatStrategyLabel(displayPlan.strategy))}</span></div>
-        <div><strong>Edit</strong><span>${escapeHtml(formatEditType(edit.type))}</span></div>
-        <div><strong>Template</strong><span>${escapeHtml(formatBp(summary.templateLength))}</span></div>
-        <div><strong>Final</strong><span>${escapeHtml(formatBp(summary.resultLength))}</span></div>
-        <div><strong>Amplicon</strong><span>${escapeHtml(rangeText)}</span></div>
-        <div><strong>Status</strong><span class="sequence-viewer-cloning-design-feasibility${displayPlan.feasible ? '' : ' is-review'}">${displayPlan.feasible ? 'Feasible' : 'Needs review'}</span></div>
+        <div><strong>${i18nUi.html("Route")}</strong><span>${escapeHtml(formatStrategyLabel(displayPlan.strategy))}</span></div>
+        <div><strong>${i18nUi.html("Edit")}</strong><span>${escapeHtml(formatEditType(edit.type))}</span></div>
+        <div><strong>${i18nUi.html("Template")}</strong><span>${escapeHtml(formatBp(summary.templateLength))}</span></div>
+        <div><strong>${i18nUi.html("Final")}</strong><span>${escapeHtml(formatBp(summary.resultLength))}</span></div>
+        <div><strong>${i18nUi.html("Amplicon")}</strong><span>${escapeHtml(rangeText)}</span></div>
+        <div><strong>${i18nUi.html("Status")}</strong><span class="sequence-viewer-cloning-design-feasibility${displayPlan.feasible ? '' : ' is-review'}">${i18nUi.render((displayPlan.feasible ? i18nUi.message("Feasible") : i18nUi.message("Needs review")))}</span></div>
       </div>
       ${planRows ? `<div class="sequence-viewer-cloning-design-summary-rows">${planRows}</div>` : ''}
     </div>
@@ -42,7 +45,7 @@ function renderPlanSummary(displayPlan = {}, source = {}, range = {}) {
 
 function renderPrimerTable(primers = []) {
   if (!primers.length) {
-    return '<p class="small-note">No primer set was generated for this route.</p>';
+    return `<p class="small-note">${i18nUi.html("No primer set was generated for this route.")}</p>`;
   }
 
   return `
@@ -50,9 +53,9 @@ function renderPrimerTable(primers = []) {
       <table class="sequence-viewer-cloning-design-primer-table">
         <thead>
           <tr>
-            <th scope="col">Primer / role</th>
-            <th scope="col">Sequence <span class="sequence-viewer-cloning-design-direction">5′ → 3′</span></th>
-            <th scope="col">Length</th>
+            <th scope="col">${i18nUi.html("Primer / role")}</th>
+            <th scope="col">${i18nUi.html("Sequence")} <span class="sequence-viewer-cloning-design-direction">5′ → 3′</span></th>
+            <th scope="col">${i18nUi.html("Length")}</th>
             <th scope="col">Tm</th>
             <th scope="col">GC</th>
           </tr>
@@ -64,7 +67,7 @@ function renderPrimerTable(primers = []) {
               ${index === 0 || primer?.groupLabel !== primers[index - 1]?.groupLabel ? `
                 <tbody>
                 <tr class="sequence-viewer-cloning-design-primer-group">
-                  <th colspan="5" scope="rowgroup">${escapeHtml(cleanText(primer?.groupLabel, 120) || 'Primers')}</th>
+                  <th colspan="5" scope="rowgroup">${i18nUi.render((cleanText(primer?.groupLabel, 120) || i18nUi.message("Primers")))}</th>
                 </tr>` : ''}
               <tr>
                 <td>
@@ -84,7 +87,7 @@ function renderPrimerTable(primers = []) {
                 <td>${escapeHtml(formatNumber(primer?.tm, 1))} °C</td>
                 <td>${escapeHtml(formatNumber(primer?.gcContent, 1))}%</td>
               </tr>
-              ${index === primers.length - 1 || primer?.groupLabel !== primers[index + 1]?.groupLabel ? '</tbody>' : ''}
+              ${index === primers.length - 1 || primer?.groupLabel !== primers[index + 1]?.groupLabel ? `</tbody>` : ''}
             `;
           }).join('')}
       </table>
@@ -105,14 +108,14 @@ function renderProcedure(displayPlan = {}) {
   });
 
   if (!steps.length) {
-    return '<p class="small-note">No procedure steps were generated.</p>';
+    return `<p class="small-note">${i18nUi.html("No procedure steps were generated.")}</p>`;
   }
 
   return `
     <ol class="sequence-viewer-cloning-design-procedure">
       ${steps.map((step) => `
         <li>
-          <strong>${escapeHtml(step.title || step.group || 'Step')}</strong>
+          <strong>${i18nUi.render((step.title || step.group || i18nUi.message("Step")))}</strong>
           <span>${escapeHtml(step.group ? `${step.group}: ${step.details}` : step.details)}</span>
         </li>
       `).join('')}
@@ -135,20 +138,20 @@ function renderRestrictionEnzymes(displayPlan = {}) {
     return `
       <li>
         <strong>${escapeHtml(name)}</strong>
-        <span>recognition ${escapeHtml(recognition)}${cut ? ` | cut ${escapeHtml(cut)}` : ''}</span>
+        <span>${i18nUi.html("recognition")} ${escapeHtml(recognition)}${i18nUi.render((cut ? i18nUi.message(" | cut {p0}", { p0: escapeHtml(cut) }) : ''))}</span>
       </li>
     `;
   }).join('');
 
   return `
     <ul class="sequence-viewer-cloning-design-enzyme-list">${rows}</ul>
-    <p class="small-note">Digest the backbone and the insert amplicon with this enzyme pair, then ligate.</p>
+    <p class="small-note">${i18nUi.html("Digest the backbone and the insert amplicon with this enzyme pair, then ligate.")}</p>
   `;
 }
 
 function renderWarnings(warnings = []) {
   if (!warnings.length) {
-    return '<p class="small-note">No route warnings.</p>';
+    return `<p class="small-note">${i18nUi.html("No route warnings.")}</p>`;
   }
   return warnings
     .map((warning) => `<p class="small-note sequence-viewer-cloning-design-warning">${escapeHtml(warning)}</p>`)

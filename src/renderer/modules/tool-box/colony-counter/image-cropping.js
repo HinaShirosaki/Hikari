@@ -1,4 +1,7 @@
-import { escapeHtml } from '../common.js';
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("tools");
+import { toolFailure, toolStatusMarkup, toolUi } from '../localization.js';
 import { mergeFilesIntoInput } from '../../../lib/file-drop.js';
 import { EMPTY_MASK, loadImageElementFromFile, loadImageElementFromSrc } from './canvas-utils.js';
 
@@ -68,7 +71,7 @@ function createColonyImageCropping({
     colonyState.lastModelStats = null;
     renderPreviewCanvas();
     renderColonySummary();
-    setColonyStatus('All colony markers cleared.');
+    setColonyStatus(toolUi('colony.markersCleared'));
     updateControlState();
   }
 
@@ -123,17 +126,17 @@ function createColonyImageCropping({
       return;
     }
 
-    setColonyStatus('Loading image...');
+    setColonyStatus(toolUi('colony.imageLoading'));
     try {
       await loadColonyImage(file);
       if (syncFileInput) {
         mergeFilesIntoInput(colonyImageInput, [file], { append: false });
       }
     } catch (error) {
-      const message = error?.message || 'Image load failed.';
+      const message = toolFailure(error, 'colony.imageFailed');
       setColonyStatus(message, true);
       if (colonySummary) {
-        colonySummary.innerHTML = `<p class="small-note">${escapeHtml(message)}</p>`;
+        i18nUi.setHtml(colonySummary, `<p class="small-note">${toolStatusMarkup(message)}</p>`);
       }
     }
   }
@@ -141,17 +144,17 @@ function createColonyImageCropping({
   // Enter crop mode by copying the current source canvas into the CropperJS host image.
   async function startCropMode() {
     if (!colonyState.hasImage || !colonySourceCanvas) {
-      setColonyStatus('Load an image before cropping.', true);
+      setColonyStatus(toolUi('colony.loadBeforeCrop'), true);
       return;
     }
 
     if (typeof window.Cropper !== 'function') {
-      setColonyStatus('CropperJS is unavailable. Ensure ./vendor/cropperjs/cropper.min.js is loaded.', true);
+      setColonyStatus(toolUi('colony.cropperUnavailable'), true);
       return;
     }
 
     if (!colonyCropperImage || !colonyCropperShell) {
-      setColonyStatus('Cropper host is unavailable in the UI.', true);
+      setColonyStatus(toolUi('colony.cropHostUnavailable'), true);
       return;
     }
 
@@ -166,7 +169,7 @@ function createColonyImageCropping({
       background: false,
       checkCrossOrigin: false
     });
-    setColonyStatus('Crop mode active. Apply crop to continue counting.');
+    setColonyStatus(toolUi('colony.cropActive'));
     updateControlState();
   }
 
@@ -182,7 +185,7 @@ function createColonyImageCropping({
       imageSmoothingQuality: 'high'
     });
     if (!croppedCanvas || !croppedCanvas.width || !croppedCanvas.height) {
-      setColonyStatus('Crop failed. Try selecting a larger area.', true);
+      setColonyStatus(toolUi('colony.cropFailed'), true);
       return;
     }
 

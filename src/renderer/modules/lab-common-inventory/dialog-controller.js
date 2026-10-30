@@ -1,3 +1,4 @@
+import { setChemicalText } from './localization.js';
 export function installChemicalDialog(ctx) {
   const { chemicalDialogOverlay, chemicalDialogTitle, chemicalForm, chemicalId, chemicalName } = ctx.elements;
   const renderLocationOptions = (...args) => ctx.renderLocationOptions(...args);
@@ -6,7 +7,7 @@ function updateChemicalDialogTitle() {
   if (!chemicalDialogTitle) {
     return;
   }
-  chemicalDialogTitle.textContent = chemicalId.value ? 'Edit Chemical' : 'Add Chemical';
+  setChemicalText(chemicalDialogTitle, chemicalId.value ? 'dialog.edit' : 'dialog.add');
 }
 
 function openChemicalDialog() {

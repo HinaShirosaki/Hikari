@@ -1,3 +1,4 @@
+const { stripI18nMarkup } = require('../../../../support/i18n-markup.cjs');
 module.exports = function registerEdgeSequenceViewerWorkspaceSuiteVectorBuilder(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
@@ -80,7 +81,7 @@ test('[EDGE] sequence-viewer back actions share one compact accessible control',
     assert.match(button, new RegExp(`aria-label="${label}"`));
     assert.match(button, new RegExp(`title="${label}"`));
     assert.match(button, /<svg[^>]*aria-hidden="true"[^>]*>[\s\S]*<path d="M19 12H5M11 6l-6 6 6 6"><\/path>[\s\S]*<\/svg>/);
-    assert.match(button, new RegExp(`<span class="sr-only">${label}<\\/span>`));
+    assert.match(button, new RegExp(`<span class="sr-only"[^>]*>${label}<\\/span>`));
   });
 
   const sharedCss = readSource('ui/css/views/sequence-viewer-view/shell-and-builders.css');
@@ -420,7 +421,7 @@ test('[EDGE] sequence-viewer home Vector Builder button opens the previewed libr
 
   // The home preview draws straight from the entry's stored GBK, no iframe.
   const previewHost = document.getElementById('sequence-viewer-preview-host');
-  assert.match(previewHost.innerHTML, /vector-map__backbone/);
+  assert.match(stripI18nMarkup(previewHost.innerHTML), /vector-map__backbone/);
   assert.equal(/<iframe/.test(previewHost.innerHTML), false);
 
   trigger(document.getElementById('sequence-viewer-home-vector-builder-btn'), 'click', { preventDefault() {} });
@@ -429,7 +430,7 @@ test('[EDGE] sequence-viewer home Vector Builder button opens the previewed libr
 
   assert.equal(document.getElementById('sequence-viewer-vector-builder-workspace').hidden, false);
   assert.equal(document.getElementById('sequence-viewer-vector-builder-title').textContent, 'pHomeVector');
-  assert.match(document.getElementById('sequence-viewer-vector-builder-map').innerHTML, /data-feature-index="0"/);
+  assert.match(stripI18nMarkup(document.getElementById('sequence-viewer-vector-builder-map').innerHTML), /data-feature-index="0"/);
 });
 
 test('[EDGE] sequence-viewer vector builder renders an interactive circular map and selects features', () => {
@@ -443,9 +444,9 @@ test('[EDGE] sequence-viewer vector builder renders an interactive circular map 
   assert.equal(workspace.hidden, false);
   assert.equal(document.getElementById('sequence-viewer-vector-builder-title').textContent, 'pVector');
   // Arcs are clickable and carry the index the editing controllers resolve on.
-  assert.match(map.innerHTML, /data-feature-index="0"/);
-  assert.match(map.innerHTML, /data-feature-index="1"/);
-  assert.match(map.innerHTML, /vector-map__backbone/);
+  assert.match(stripI18nMarkup(map.innerHTML), /data-feature-index="0"/);
+  assert.match(stripI18nMarkup(map.innerHTML), /data-feature-index="1"/);
+  assert.match(stripI18nMarkup(map.innerHTML), /vector-map__backbone/);
   assert.equal(/NaN/.test(map.innerHTML), false);
   // Nothing selected yet, so no feature carries the active outline.
   assert.equal(/vector-map__feature--active/.test(map.innerHTML), false);
@@ -453,8 +454,8 @@ test('[EDGE] sequence-viewer vector builder renders an interactive circular map 
   trigger(map, 'mousedown', { button: 0, target: featureTarget(1) });
 
   // Selection now shows only on the feature itself -- there is no detail panel.
-  assert.match(map.innerHTML, /vector-map__feature--active/);
-  assert.match(map.innerHTML, /vector-map__label--active/);
+  assert.match(stripI18nMarkup(map.innerHTML), /vector-map__feature--active/);
+  assert.match(stripI18nMarkup(map.innerHTML), /vector-map__label--active/);
 
   trigger(workspace, 'mousedown', { button: 0, target: workspace });
 
@@ -478,8 +479,8 @@ test('[EDGE] sequence-viewer vector builder deletes a feature and its bases from
 
   assert.equal(contextMenu.hidden, false);
   // The selected feature supplies the range, so the menu offers its exact span.
-  assert.match(contextMenu.innerHTML, /Delete Bases \(18 bp\)/);
-  assert.match(contextMenu.innerHTML, /Insert Protein Construct/);
+  assert.match(stripI18nMarkup(contextMenu.innerHTML), /Delete Bases \(18 bp\)/);
+  assert.match(stripI18nMarkup(contextMenu.innerHTML), /Insert Protein Construct/);
   // Feature annotation actions live in the detail workspace, not on the map.
   assert.equal(/data-vector-action="add-feature"/.test(contextMenu.innerHTML), false);
   assert.equal(/data-vector-action="edit-feature"/.test(contextMenu.innerHTML), false);
@@ -491,9 +492,9 @@ test('[EDGE] sequence-viewer vector builder deletes a feature and its bases from
 
   // 61 bp minus the 18 bp feature; the CDS annotation goes with its bases while
   // the downstream terminator survives and shifts back by 18.
-  assert.match(map.innerHTML, /43 bp/);
+  assert.match(stripI18nMarkup(map.innerHTML), /43 bp/);
   assert.equal(/data-feature-index="1"/.test(map.innerHTML), false);
-  assert.match(map.innerHTML, /Terminator/);
+  assert.match(stripI18nMarkup(map.innerHTML), /Terminator/);
   // The derived sequence title may retain His6 as the deleted target; the
   // feature label itself must be gone from the map.
   assert.equal(/vector-map__label-text[^>]*>His6<\/text>/.test(map.innerHTML), false);
@@ -525,7 +526,7 @@ test('[EDGE] sequence-viewer vector builder edits bases from the keyboard in its
   editTextarea.value = 'GGGCCC';
   trigger(editForm, 'submit', { preventDefault() {} });
   await flushAsync();
-  assert.match(map.innerHTML, /49 bp/);
+  assert.match(stripI18nMarkup(map.innerHTML), /49 bp/);
   // The edit shifted feature indices, so nothing stays selected.
   assert.equal(/vector-map__feature--active/.test(map.innerHTML), false);
 
@@ -534,7 +535,7 @@ test('[EDGE] sequence-viewer vector builder edits bases from the keyboard in its
   assert.equal(editTitle.textContent, 'Delete Bases');
   trigger(editForm, 'submit', { preventDefault() {} });
   await flushAsync();
-  assert.match(map.innerHTML, /29 bp/);
+  assert.match(stripI18nMarkup(map.innerHTML), /29 bp/);
   // A second Delete with nothing selected is a no-op, not another deletion.
   pressKey('Delete');
   assert.equal(overlay.hidden, true);
@@ -691,7 +692,7 @@ test('[EDGE] sequence-viewer vector builder swaps in a feature from the stored d
   trigger(map, 'contextmenu', { clientX: 40, clientY: 40, target: featureTarget(0) });
 
   // The base-level replace was superseded by the feature-level one.
-  assert.match(contextMenu.innerHTML, /Replace Feature\.\.\./);
+  assert.match(stripI18nMarkup(contextMenu.innerHTML), /Replace Feature\.\.\./);
   assert.equal(/data-vector-action="replace-bases"/.test(contextMenu.innerHTML), false);
 
   trigger(contextMenu, 'click', { target: contextActionTarget('replace-feature') });
@@ -724,18 +725,18 @@ test('[EDGE] sequence-viewer vector builder swaps in a feature from the stored d
   assert.equal(searchCalls.length, 2);
   assert.equal(searchCalls[0].query, 'older');
   assert.equal(searchCalls[1].query, 'flag');
-  assert.match(results.innerHTML, /FLAG tag/);
+  assert.match(stripI18nMarkup(results.innerHTML), /FLAG tag/);
   pendingSearches[0].resolve({
     ok: true,
     results: [{ id: 'feat_old', name: 'Older result', type: 'CDS', sequence: 'ATGC', hosts: [] }]
   });
   await flushAsync();
   await flushAsync();
-  assert.match(results.innerHTML, /FLAG tag/);
+  assert.match(stripI18nMarkup(results.innerHTML), /FLAG tag/);
   assert.equal(/Older result/.test(results.innerHTML), false);
-  assert.match(results.innerHTML, /in 2 vectors/);
+  assert.match(stripI18nMarkup(results.innerHTML), /in 2 vectors/);
   // A result is picked, not applied: the vector it comes from is chosen next.
-  assert.match(results.innerHTML, /data-vector-replace-feature-id="feat_flag"/);
+  assert.match(stripI18nMarkup(results.innerHTML), /data-vector-replace-feature-id="feat_flag"/);
   assert.equal(results.innerHTML.includes('feature-use-btn'), false);
   assert.equal(document.getElementById('sequence-viewer-vector-builder-feature-replace-confirm').disabled, true);
   assert.equal(document.getElementById('sequence-viewer-vector-builder-feature-replace-status').textContent, '');
@@ -767,11 +768,11 @@ test('[EDGE] sequence-viewer vector builder swaps in a feature from the stored d
   // and its plasmid is drawn.
   const hosts = document.getElementById('sequence-viewer-vector-builder-feature-replace-hosts');
   const preview = document.getElementById('sequence-viewer-vector-builder-feature-replace-preview');
-  assert.match(hosts.innerHTML, /pFLAG-A/);
-  assert.match(hosts.innerHTML, /pFLAG-B/);
-  assert.match(hosts.innerHTML, /data-vector-replace-host-id="entry_a"[^>]*/);
+  assert.match(stripI18nMarkup(hosts.innerHTML), /pFLAG-A/);
+  assert.match(stripI18nMarkup(hosts.innerHTML), /pFLAG-B/);
+  assert.match(stripI18nMarkup(hosts.innerHTML), /data-vector-replace-host-id="entry_a"[^>]*/);
   assert.equal(getCalls.map((call) => call.id).join(','), 'entry_a');
-  assert.match(preview.innerHTML, /<svg/);
+  assert.match(stripI18nMarkup(preview.innerHTML), /<svg/);
   assert.equal(overlay.hidden, false);
 
   // Choosing the other vector previews that one instead.
@@ -790,7 +791,7 @@ test('[EDGE] sequence-viewer vector builder swaps in a feature from the stored d
   assert.equal(getCalls.map((call) => call.id).join(','), 'entry_a,entry_b');
 
   // Nothing is rewritten until Confirm.
-  assert.match(map.innerHTML, /His6/);
+  assert.match(stripI18nMarkup(map.innerHTML), /His6/);
   assert.equal(document.getElementById('sequence-viewer-vector-builder-feature-replace-confirm').disabled, false);
   trigger(
     document.getElementById('sequence-viewer-vector-builder-feature-replace-confirm'),
@@ -803,10 +804,10 @@ test('[EDGE] sequence-viewer vector builder swaps in a feature from the stored d
   assert.equal(overlay.hidden, true);
   // 18 bp swapped for the stored 12 bp leaves 61 - 6 = 55 bp, carrying the
   // stored feature's name; the downstream feature survives the length change.
-  assert.match(map.innerHTML, /55 bp/);
-  assert.match(map.innerHTML, /FLAG tag/);
+  assert.match(stripI18nMarkup(map.innerHTML), /55 bp/);
+  assert.match(stripI18nMarkup(map.innerHTML), /FLAG tag/);
   assert.equal(/His6/.test(map.innerHTML), false);
-  assert.match(map.innerHTML, /Terminator/);
+  assert.match(stripI18nMarkup(map.innerHTML), /Terminator/);
 });
 
 test('[EDGE] sequence-viewer vector builder inserts on the chosen side, in strand order', async () => {
@@ -823,10 +824,10 @@ test('[EDGE] sequence-viewer vector builder inserts on the chosen side, in stran
   trigger(map, 'contextmenu', { clientX: 40, clientY: 40, target: featureTarget(0) });
 
   // A span offers both sides; the caret-only case keeps a single entry.
-  assert.match(contextMenu.innerHTML, /Insert Bases Before 5'\.\.\./);
-  assert.match(contextMenu.innerHTML, /Insert Bases After 3'\.\.\./);
-  assert.match(contextMenu.innerHTML, /Insert Protein Construct Before 5'/);
-  assert.match(contextMenu.innerHTML, /Insert Protein Construct After 3'/);
+  assert.match(stripI18nMarkup(contextMenu.innerHTML), /Insert Bases Before 5'\.\.\./);
+  assert.match(stripI18nMarkup(contextMenu.innerHTML), /Insert Bases After 3'\.\.\./);
+  assert.match(stripI18nMarkup(contextMenu.innerHTML), /Insert Protein Construct Before 5'/);
+  assert.match(stripI18nMarkup(contextMenu.innerHTML), /Insert Protein Construct After 3'/);
 
   // Inserts ten bases through the menu on a fresh record and reports where both
   // features ended up, which pins the insertion point between them.
@@ -897,7 +898,7 @@ test('[EDGE] sequence-viewer Primers toggle hides primers in both workspaces and
   const vectorToggle = document.getElementById('sequence-viewer-vector-builder-primers-toggle');
   const detailToggle = document.getElementById('sequence-viewer-primers-toggle');
 
-  assert.match(map.innerHTML, /vector-map__primer/);
+  assert.match(stripI18nMarkup(map.innerHTML), /vector-map__primer/);
   assert.equal(vectorToggle.checked, true);
 
   vectorToggle.checked = false;
@@ -906,7 +907,7 @@ test('[EDGE] sequence-viewer Primers toggle hides primers in both workspaces and
   // The primer track is gone but the feature itself still renders, and hiding
   // must renumber cleanly rather than leave His6 pointing at the primer's index.
   assert.equal(/vector-map__primer/.test(map.innerHTML), false);
-  assert.match(map.innerHTML, /data-feature-index="0"/);
+  assert.match(stripI18nMarkup(map.innerHTML), /data-feature-index="0"/);
   assert.equal(/data-feature-index="1"/.test(map.innerHTML), false);
   assert.equal(detailToggle.checked, false, 'detail toolbar box should follow the vector builder box');
 
@@ -914,7 +915,7 @@ test('[EDGE] sequence-viewer Primers toggle hides primers in both workspaces and
   trigger(detailToggle, 'change');
   trigger(document.getElementById('sequence-viewer-vector-builder-btn'), 'click', { preventDefault() {} });
 
-  assert.match(map.innerHTML, /vector-map__primer/);
+  assert.match(stripI18nMarkup(map.innerHTML), /vector-map__primer/);
   assert.equal(vectorToggle.checked, true, 'vector builder box should follow the detail toolbar box');
 });
 
@@ -948,7 +949,7 @@ test('[EDGE] sequence-viewer vector builder designs primers on the map and annot
 
   trigger(map, 'mousedown', { button: 0, target: featureTarget(0) });
   trigger(map, 'contextmenu', { clientX: 40, clientY: 40, target: featureTarget(0) });
-  assert.match(contextMenu.innerHTML, /Design Primer/);
+  assert.match(stripI18nMarkup(contextMenu.innerHTML), /Design Primer/);
 
   trigger(contextMenu, 'click', { target: contextActionTarget('design-primer') });
   await flushAsync();
@@ -956,14 +957,14 @@ test('[EDGE] sequence-viewer vector builder designs primers on the map and annot
   // The dialog is shared with the detail workspace, so it has to be reachable
   // while only the vector builder is visible.
   assert.equal(Boolean(overlay.hidden), false);
-  assert.match(result.innerHTML, /Pcr Forward/);
-  assert.match(result.innerHTML, /Pcr Reverse/);
+  assert.match(stripI18nMarkup(result.innerHTML), /Pcr Forward/);
+  assert.match(stripI18nMarkup(result.innerHTML), /Pcr Reverse/);
 
   // Designing writes the pair onto the record, so the map redraws with the
   // primer track — the toggle's own track, only drawn for primer_bind features.
-  assert.match(map.innerHTML, /vector-map__primer/);
-  assert.match(map.innerHTML, /pVector 1-61 F/);
-  assert.match(map.innerHTML, /pVector 1-61 R/);
+  assert.match(stripI18nMarkup(map.innerHTML), /vector-map__primer/);
+  assert.match(stripI18nMarkup(map.innerHTML), /pVector 1-61 F/);
+  assert.match(stripI18nMarkup(map.innerHTML), /pVector 1-61 R/);
 
   // Going back must not drag the dialog into the detail workspace.
   trigger(document.getElementById('sequence-viewer-vector-builder-back-btn'), 'click', { preventDefault() {} });
@@ -1008,7 +1009,7 @@ test('[EDGE] sequence-viewer vector builder folds Protein Builder in as an on-ma
 
   trigger(addProteinForm, 'submit', { preventDefault() {} });
   assert.equal(addProteinOverlay.hidden, true);
-  assert.match(document.getElementById('sequence-viewer-protein-builder-workflow').innerHTML, /Long custom protein/);
+  assert.match(stripI18nMarkup(document.getElementById('sequence-viewer-protein-builder-workflow').innerHTML), /Long custom protein/);
 
   const workflow = document.getElementById('sequence-viewer-protein-builder-workflow');
   const countBlocks = () => (workflow.innerHTML.match(/data-protein-builder-row-id=/g) || []).length;
@@ -1026,16 +1027,16 @@ test('[EDGE] sequence-viewer vector builder folds Protein Builder in as an on-ma
   trigger(addProteinForm, 'submit', { preventDefault() {} });
   assert.equal(addProteinOverlay.hidden, true);
   assert.equal(countBlocks(), blockCount);
-  assert.match(workflow.innerHTML, /Edited protein/);
-  assert.match(workflow.innerHTML, />22 aa</);
+  assert.match(stripI18nMarkup(workflow.innerHTML), /Edited protein/);
+  assert.match(stripI18nMarkup(workflow.innerHTML), />22 aa</);
 
   const codonUsage = document.getElementById('sequence-viewer-protein-builder-codon-usage');
-  assert.match(codonUsage.innerHTML, /E\. coli \(K-12\)/);
-  assert.match(codonUsage.innerHTML, /Yeast \(S\. cerevisiae\)/);
+  assert.match(stripI18nMarkup(codonUsage.innerHTML), /E\. coli \(K-12\)/);
+  assert.match(stripI18nMarkup(codonUsage.innerHTML), /Yeast \(S\. cerevisiae\)/);
   codonUsage.value = 'yeast';
   trigger(codonUsage, 'change');
   trigger(document.getElementById('sequence-viewer-protein-builder-build-dna-btn'), 'click');
-  assert.match(document.getElementById('sequence-viewer-protein-builder-dna-sequence').innerHTML, /sequence-viewer-protein-builder-block-custom/);
+  assert.match(stripI18nMarkup(document.getElementById('sequence-viewer-protein-builder-dna-sequence').innerHTML), /sequence-viewer-protein-builder-block-custom/);
 
   trigger(insertBtn, 'click');
   await flushAsync();

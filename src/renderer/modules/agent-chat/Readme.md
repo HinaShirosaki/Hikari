@@ -43,6 +43,11 @@ The rest of the folder is split by responsibility:
 - `shared.js`, `text.js`: common text, array, mapping, and tool-label helpers.
 - `state-snapshot.js`, `context-mappers.js`, `experiment-llm-mapper.js`: thin Hikari state snapshot and experiment-data mapping.
 - `markdown.js`: small markdown renderer used by chat output.
+- `locales/en.js`, `locales/es.js`, `localization.js`: the `agent` UI catalog, bound markup/status helpers (`agentUi()`
+  descriptors, an English-only translator for status-pill tone) and folder disclosure labels.
+  Messages, meta, session/folder names, prompts sent to the agent and persisted review reasons
+  stay canonical. The bundled Spanish preview has interaction checks
+  in `tests/fixtures/i18n/agent-checks.mjs`. Live progress, trace, Python and purchase rendering are a later batch.
 
 Notebook-draft normalization and persistence live in `modules/biology-notebook/agent/`; generated-protocol normalization and persistence live in `modules/protocol/agent/`. Agent Chat renders and dispatches those review items through the feature adapters without owning either record schema.
 

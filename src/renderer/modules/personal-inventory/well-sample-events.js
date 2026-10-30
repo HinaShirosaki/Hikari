@@ -1,3 +1,4 @@
+import { sampleUi } from './localization.js';
 import { makeCopySampleCode } from '../../lib/sample-records.js';
 import { containerToCsv, mergeContainerCsv, parseContainerCsv } from './csv-io.js';
 import { readTypeFieldsFrom } from './type-fields.js';
@@ -6,15 +7,15 @@ function importContainerCsv(ctx, section, container, csvText) {
   try {
     const { created, updated, skipped, recoded } = mergeContainerCsv(ctx.state, section, container, parseContainerCsv(csvText));
     const notes = [
-      skipped ? ` Skipped ${skipped} row${skipped === 1 ? '' : 's'} whose well is not in this container.` : '',
-      recoded.length ? ` Renamed codes that clashed with an earlier row: ${recoded.map(({ from, to }) => `${from} → ${to}`).join(', ')}.` : ''
-    ].join('');
-    ctx.uiState.wellEditorStatus = `Imported ${created + updated} samples (${created} new, ${updated} updated).${notes}`;
+      skipped ? sampleUi('csv.skipped', { count: skipped }) : '',
+      recoded.length ? sampleUi('csv.recoded', { codes: recoded.map(({ from, to }) => `${from} → ${to}`).join(', ') }) : ''
+    ];
+    ctx.uiState.wellEditorStatus = [sampleUi('csv.imported', { count: created + updated, created, updated }), ...notes];
     if (created || updated) {
       ctx.persist();
     }
   } catch (error) {
-    ctx.uiState.wellEditorStatus = `Import failed: ${error?.message || 'could not read the CSV file.'}`;
+    ctx.uiState.wellEditorStatus = error?.message ? sampleUi('csv.failed', { error: error.message }) : sampleUi('csv.readFailed');
   }
 }
 
@@ -34,7 +35,7 @@ function exportContainerCsv(ctx, section, container) {
   link.download = `${safeFilePart(section, 'inventory')}-${safeFilePart(container.name, 'container')}.csv`;
   link.click();
   URL.revokeObjectURL(link.href);
-  ctx.uiState.wellEditorStatus = `Exported ${container.name || 'container'} CSV.`;
+  ctx.uiState.wellEditorStatus = sampleUi(container.name ? 'csv.exported' : 'csv.exportedUnnamed', container.name ? { name: container.name } : {});
 }
 
 export function bindWellSampleEvents(ctx) {
@@ -88,7 +89,7 @@ export function bindWellSampleEvents(ctx) {
       const sample = helpers.getSampleById(uiState.cloningSampleId);
       uiState.cloningSampleId = null;
       if (dragClone.count > 0) {
-        uiState.wellEditorStatus = `Cloned ${sample ? (sample.code || sample.name) : 'sample'} into ${dragClone.count} well${dragClone.count === 1 ? '' : 's'}.`;
+        uiState.wellEditorStatus = sampleUi(sample ? 'status.cloned' : 'status.clonedUnnamed', { ...(sample ? { name: sample.code || sample.name } : {}), count: dragClone.count });
         persist();
       }
       renderSections();
@@ -166,14 +167,14 @@ export function bindWellSampleEvents(ctx) {
       const notesInput = inventorySections.querySelector('[data-well-sample-notes]');
       const name = String(nameInput?.value || '').trim();
       if (!name) {
-        uiState.wellEditorStatus = 'Sample name is required.';
+        uiState.wellEditorStatus = sampleUi('status.nameRequired');
         renderSections();
         return;
       }
       const code = helpers.normalizeSampleCode(codeInput?.value) || sample.code || helpers.makeDefaultSampleCode();
       const duplicate = (state.samples || []).find((item) => item.code === code && item.id !== sample.id);
       if (duplicate) {
-        uiState.wellEditorStatus = `Sample code ${code} already exists.`;
+        uiState.wellEditorStatus = sampleUi('status.duplicateCode', { code });
         renderSections();
         return;
       }
@@ -191,7 +192,7 @@ export function bindWellSampleEvents(ctx) {
       sample.location = helpers.isLocationEmpty(sample.location) ? helpers.buildAutoLocationFromLink(section, container, index) : sample.location;
       sample.updatedAt = new Date().toISOString();
       uiState.editingSampleId = sample.id;
-      uiState.wellEditorStatus = `Saved sample ${sample.code || sample.name}.`;
+      uiState.wellEditorStatus = sampleUi('status.saved', { name: sample.code || sample.name });
       persist();
       renderSections();
     });
@@ -207,7 +208,7 @@ export function bindWellSampleEvents(ctx) {
       }
       state.samples = state.samples.filter((item) => item !== sample);
       uiState.editingSampleId = '';
-      uiState.wellEditorStatus = `Deleted sample ${sample.code || sample.name || sample.id}.`;
+      uiState.wellEditorStatus = sampleUi('status.deleted', { name: sample.code || sample.name || sample.id });
       persist();
       renderSections();
     });
@@ -221,11 +222,11 @@ export function bindWellSampleEvents(ctx) {
       }
       if (uiState.cloningSampleId === sample.id) {
         uiState.cloningSampleId = null;
-        uiState.wellEditorStatus = 'Fill wells cancelled.';
+        uiState.wellEditorStatus = sampleUi('status.fillCancelled');
       } else {
         helpers.ensureSamples();
         uiState.cloningSampleId = sample.id;
-        uiState.wellEditorStatus = `Drag across wells to fill with ${sample.code || sample.name}.`;
+        uiState.wellEditorStatus = sampleUi('status.fillReady', { name: sample.code || sample.name });
       }
       renderSections();
     });
@@ -290,14 +291,14 @@ export function bindWellSampleEvents(ctx) {
       const notesInput = inventorySections.querySelector('[data-well-sample-new-notes]');
       const name = String(nameInput?.value || '').trim();
       if (!name) {
-        uiState.wellEditorStatus = 'Sample name is required.';
+        uiState.wellEditorStatus = sampleUi('status.nameRequired');
         renderSections();
         return;
       }
       const code = helpers.normalizeSampleCode(codeInput?.value) || helpers.makeDefaultSampleCode();
       const duplicate = (state.samples || []).find((item) => item.code === code);
       if (duplicate) {
-        uiState.wellEditorStatus = `Sample code ${code} already exists.`;
+        uiState.wellEditorStatus = sampleUi('status.duplicateCode', { code });
         renderSections();
         return;
       }
@@ -321,7 +322,7 @@ export function bindWellSampleEvents(ctx) {
       pendingStructureDrafts.delete(getPendingStructureKey('well-new'));
       state.samples.push(sample);
       uiState.editingSampleId = sample.id;
-      uiState.wellEditorStatus = `Created sample ${sample.code}.`;
+      uiState.wellEditorStatus = sampleUi('status.created', { code: sample.code });
       persist();
       renderSections();
     });

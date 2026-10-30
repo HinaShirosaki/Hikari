@@ -1,5 +1,9 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
+import { setNotebookText, setNotebookAttribute } from '../localization.js';
 import { resolveEntryExperimentName } from '../entry/entry-helpers.js';
-import { buildProtocolStepsHtml, buildViewerMeta } from '../entry/viewer-renderer.js';
+import { buildProtocolStepsHtml, buildViewerMetaHtml } from '../entry/viewer-renderer.js';
 import { buildPlaceholderPrefill } from '../protocol/placeholder-prefill.js';
 import { resolveSampleTypeForPlaceholder } from '../samples/sample-helpers.js';
 
@@ -84,12 +88,14 @@ function createNotebookViewerRender({
       notebookProtocolTitle.hidden = false;
     }
     syncNotebookTitle(protocol);
-    notebookProtocolMeta.textContent = buildViewerMeta({ entry });
+    notebookProtocolMeta.removeAttribute?.('data-i18n');
+    notebookProtocolMeta.removeAttribute?.('data-i18n-params');
+    i18nUi.setHtml(notebookProtocolMeta, buildViewerMetaHtml({ entry }));
 
     if (entry) {
       seedSampleLinkDrafts(entry);
     }
-    notebookSteps.innerHTML = buildProtocolStepsHtml({
+    i18nUi.setHtml(notebookSteps, buildProtocolStepsHtml({
       protocol,
       values: entry?.values || {},
       // Only a fresh page gets suggestions; an existing page shows what was recorded.
@@ -102,7 +108,7 @@ function createNotebookViewerRender({
       settings: state.settings || {},
       samplePlaceholderTypeAliases: SAMPLE_PLACEHOLDER_TYPE_ALIASES,
       getSampleLink: (key) => getSampleLinkDrafts().get(key)
-    });
+    }));
 
     notebookResult.value = entry?.result || '';
     resultTableController.renderEditor(resultTablesOverride ?? resultTableOverride ?? entry?.resultTables ?? entry?.resultTable ?? null);
@@ -138,7 +144,7 @@ function createNotebookViewerRender({
       return;
     }
     notebookProjectDashboard.hidden = true;
-    notebookProjectDashboard.innerHTML = '';
+    i18nUi.setHtml(notebookProjectDashboard, '');
   }
 
   function showProjectDashboard(projectId, projectName = '') {
@@ -188,19 +194,18 @@ function createNotebookViewerRender({
     exportBtn.type = 'button';
     exportBtn.className = 'ghost-btn';
     exportBtn.id = 'biology-notebook-project-export-pdf-btn';
-    exportBtn.textContent = 'Export All Pages as PDF';
+    setNotebookText(exportBtn, 'project.export');
     exportBtn.addEventListener('click', () => {
       const entries = projectDashboardRenderer.getProjectNotebookEntries(project) || [];
       exportBtn.disabled = true;
-      const originalLabel = exportBtn.textContent;
-      exportBtn.textContent = 'Exporting...';
+      setNotebookText(exportBtn, 'project.exporting');
       Promise.resolve(linkedWorkActions.exportProjectPagesPdf({ project, entries }))
         .catch((error) => {
           console.error('Failed to export project notebook PDF:', error);
         })
         .finally(() => {
           exportBtn.disabled = false;
-          exportBtn.textContent = originalLabel;
+          setNotebookText(exportBtn, 'project.export');
         });
     });
     actionsContainer.appendChild(exportBtn);
@@ -215,7 +220,7 @@ function createNotebookViewerRender({
     protocolEditor.clearDraft();
     setSampleLinkDrafts(new Map());
     sampleLinkMenu.close();
-    notebookSteps.innerHTML = '';
+    i18nUi.setHtml(notebookSteps, '');
     notebookSteps.hidden = false;
     notebookResult.value = '';
     clearPendingNotebookResultFiles();
@@ -227,11 +232,11 @@ function createNotebookViewerRender({
       notebookExperimentName.hidden = true;
     }
     if (notebookProtocolTitle) {
-      notebookProtocolTitle.textContent = '';
+      i18nUi.setText(notebookProtocolTitle, '');
       notebookProtocolTitle.hidden = false;
     }
     resetNotebookNameGenerationState(null, null);
-    notebookProtocolMeta.textContent = 'Select a notebook page or start a new one.';
+    setNotebookText(notebookProtocolMeta, 'viewer.choose');
     setEditingEntryId(null);
     protocolEditor.syncControls(null, null);
     renderLinkedPreviews(null);
@@ -252,9 +257,9 @@ function createNotebookViewerRender({
     if (!saveNotebookBtn) {
       return;
     }
-    setNotebookSaveButtonLabel('Save notebook page');
+    setNotebookSaveButtonLabel('action.save');
     if (clarifySaveNotebookBtn) {
-      clarifySaveNotebookBtn.textContent = 'Clarify and Save';
+      setNotebookText(clarifySaveNotebookBtn, 'action.clarify');
     }
     protocolEditor.syncControls(resolveViewerProtocol(getActiveEntry()), getActiveEntry());
   }
@@ -262,11 +267,11 @@ function createNotebookViewerRender({
   function setNotebookSaveBusy(isBusy, { clarify = false } = {}) {
     if (saveNotebookBtn) {
       saveNotebookBtn.disabled = isBusy;
-      setNotebookSaveButtonLabel(isBusy && !clarify ? 'Saving notebook page…' : 'Save notebook page');
+      setNotebookSaveButtonLabel(isBusy && !clarify ? 'action.saving' : 'action.save');
     }
     if (clarifySaveNotebookBtn) {
       clarifySaveNotebookBtn.disabled = isBusy;
-      clarifySaveNotebookBtn.textContent = isBusy && clarify ? 'Clarifying...' : 'Clarify and Save';
+      setNotebookText(clarifySaveNotebookBtn, isBusy && clarify ? 'action.clarifying' : 'action.clarify');
     }
   }
 
@@ -274,12 +279,12 @@ function createNotebookViewerRender({
     if (!saveNotebookBtn) {
       return;
     }
-    saveNotebookBtn.setAttribute('aria-label', label);
-    saveNotebookBtn.setAttribute('data-hover-caption', label);
+    setNotebookAttribute(saveNotebookBtn, 'aria-label', label);
+    setNotebookAttribute(saveNotebookBtn, 'data-hover-caption', label);
     saveNotebookBtn.removeAttribute('title');
     const accessibleLabel = saveNotebookBtn.querySelector('.sr-only');
     if (accessibleLabel) {
-      accessibleLabel.textContent = label;
+      setNotebookText(accessibleLabel, label);
     }
   }
 

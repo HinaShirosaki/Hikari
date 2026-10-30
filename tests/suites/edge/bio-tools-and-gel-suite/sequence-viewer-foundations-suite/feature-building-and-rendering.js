@@ -1,3 +1,4 @@
+const { stripI18nMarkup } = require('../../../../support/i18n-markup.cjs');
 module.exports = function registerEdgeSequenceViewerFoundationsSuiteFeatureBuildingAndRendering(context = {}) {
   const scope = context.scope || {};
   const { assert, test, sequenceViewerInternals } = scope;
@@ -300,10 +301,10 @@ test('[EDGE] sequence-viewer restriction renderer emits px-based geometry with l
     ]
   });
 
-  assert.match(html, /sequence-viewer-restriction-label/);
-  assert.match(html, /sequence-viewer-restriction-box/);
-  assert.match(html, /sequence-viewer-restriction-cut-svg/);
-  assert.match(html, /sequence-viewer-line-restriction-track" style="width:[0-9.]+px;height:[0-9.]+px;[^"]*"/);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-restriction-label/);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-restriction-box/);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-restriction-cut-svg/);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-line-restriction-track" style="width:[0-9.]+px;height:[0-9.]+px;[^"]*"/);
 
   const styleMatch = html.match(
     /class="sequence-viewer-restriction-annot[^"]*"\s+data-feature-index="0"\s+style="([^"]+)"/
@@ -355,8 +356,8 @@ test('[EDGE] sequence-viewer restriction renderer stacks overlapping site labels
     ]
   });
 
-  assert.match(html, /--sequence-viewer-restriction-lanes:2;/);
-  assert.match(html, /class="sequence-viewer-strand-pair" style="padding-top:[0-9.]+px;"/);
+  assert.match(stripI18nMarkup(html), /--sequence-viewer-restriction-lanes:2;/);
+  assert.match(stripI18nMarkup(html), /class="sequence-viewer-strand-pair" style="padding-top:[0-9.]+px;"/);
 
   const styles = [...html.matchAll(
     /class="sequence-viewer-restriction-annot[^"]*"\s+data-feature-index="\d+"\s+style="([^"]+)"/g
@@ -388,7 +389,7 @@ test('[EDGE] sequence-viewer line feature renderer emits px-based span bars', ()
     ]
   });
 
-  assert.match(html, /sequence-viewer-line-features" style="width:[0-9.]+px;height:[0-9.]+px;margin-left:[0-9.]+px;"/);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-line-features" style="width:[0-9.]+px;height:[0-9.]+px;margin-left:[0-9.]+px;"/);
   const styleMatch = html.match(
     /class="sequence-viewer-line-feature sequence-viewer-line-feature-bar[^"]*"\s+data-feature-index="0"\s+style="([^"]+)"/
   );
@@ -399,7 +400,7 @@ test('[EDGE] sequence-viewer line feature renderer emits px-based span bars', ()
   assert.match(styleMatch[1], /--sequence-viewer-feature-color:#[0-9a-f]{6};/i);
   assert.equal(styleMatch[1].includes('background:'), false);
   assert.equal(styleMatch[1].includes('%'), false);
-  assert.match(html, /sequence-viewer-line-feature-label/);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-line-feature-label/);
 });
 test('[EDGE] sequence-viewer ORF features render as line-local span bars', () => {
   const orfFeatures = sequenceViewerInternals.buildOrfFeatures('ATGAAATAGCCC', 'linear', { minAaLength: 2 });
@@ -412,8 +413,8 @@ test('[EDGE] sequence-viewer ORF features render as line-local span bars', () =>
   });
 
   assert.equal(orfFeatures.length > 0, true);
-  assert.match(html, /sequence-viewer-line-feature-bar/);
-  assert.match(html, /ORF \+1/);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-line-feature-bar/);
+  assert.match(stripI18nMarkup(html), /ORF \+1/);
 });
 test('[EDGE] sequence-viewer primer features render as directional 5-prime to 3-prime oligos', () => {
   const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml('A'.repeat(48), [], {
@@ -436,8 +437,8 @@ test('[EDGE] sequence-viewer primer features render as directional 5-prime to 3-
     ]
   });
 
-  assert.match(html, /sequence-viewer-line-feature-primer-forward/);
-  assert.match(html, /sequence-viewer-line-feature-primer-reverse/);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-line-feature-primer-forward/);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-line-feature-primer-reverse/);
 
   // Which chrome carries the direction depends on OLIGO_PRIMER_STYLE, so the
   // contract is checked against whichever drawing the viewer is built with.
@@ -451,8 +452,8 @@ test('[EDGE] sequence-viewer primer features render as directional 5-prime to 3-
   assert.equal((html.match(/sequence-viewer-primer-end-five/g) || []).length, 2);
   assert.equal((html.match(/sequence-viewer-primer-end-three/g) || []).length, 2);
   assert.equal((html.match(/sequence-viewer-primer-arrow/g) || []).length, 2);
-  assert.match(html, /5′/);
-  assert.match(html, /3′/);
+  assert.match(stripI18nMarkup(html), /5′/);
+  assert.match(stripI18nMarkup(html), /3′/);
 });
 test('[EDGE] sequence-viewer selected ORF translation context uses genomic left-to-right anchors on reverse strand', () => {
   const sequence = 'CTATTTCAT';
@@ -552,7 +553,7 @@ test('[EDGE] sequence-viewer dual-strand renderer puts primers on the strand sid
   // Every primer stays clickable on both fragments, but is labelled only once.
   assert.equal((html.match(/sequence-viewer-line-feature-primer-reverse/g) || []).length, 2);
   [0, 1, 2].forEach((index) => {
-    assert.match(html, new RegExp(`data-feature-index="${index}"`));
+    assert.match(stripI18nMarkup(html), new RegExp(`data-feature-index="${index}"`));
   });
   assert.equal((html.match(/>revP</g) || []).length, 1);
   assert.equal((html.match(/>fwdP</g) || []).length, 1);
@@ -577,17 +578,17 @@ test('[EDGE] sequence-viewer dual-strand renderer renders an explicit reference-
     }
   });
 
-  assert.match(html, /sequence-viewer-alignment-comparison/);
-  assert.match(html, /sequence-viewer-alignment-reference-row/);
-  assert.match(html, /sequence-viewer-alignment-guide-row/);
-  assert.match(html, /sequence-viewer-alignment-query-row/);
-  assert.match(html, /sequence-viewer-alignment-query-base-mismatch/);
-  assert.match(html, /sequence-viewer-alignment-query-base-deletion/);
-  assert.match(html, /sequence-viewer-alignment-query-base-gap/);
-  assert.match(html, /sequence-viewer-alignment-reference-base-mismatch/);
-  assert.match(html, /sequence-viewer-alignment-guide-base-match/);
-  assert.match(html, /sequence-viewer-alignment-guide-base-mismatch/);
-  assert.match(html, /sequence-viewer-alignment-guide-base-deletion/);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-alignment-comparison/);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-alignment-reference-row/);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-alignment-guide-row/);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-alignment-query-row/);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-alignment-query-base-mismatch/);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-alignment-query-base-deletion/);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-alignment-query-base-gap/);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-alignment-reference-base-mismatch/);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-alignment-guide-base-match/);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-alignment-guide-base-mismatch/);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-alignment-guide-base-deletion/);
 
   const topIndex = html.indexOf('sequence-viewer-strand-row-top');
   const referenceIndex = html.indexOf('sequence-viewer-alignment-reference-row');
@@ -612,8 +613,8 @@ test('[EDGE] sequence-viewer dual-strand renderer inserts AB1 trace between refe
   });
 
   assert.equal((html.match(/sequence-viewer-inline-trace-row/g) || []).length, 2);
-  assert.doesNotMatch(html, /sequence-viewer-inline-alignment-trace/);
-  assert.doesNotMatch(html, /sequence-viewer-alignment-trace-scroll/);
+  assert.doesNotMatch(stripI18nMarkup(html), /sequence-viewer-inline-alignment-trace/);
+  assert.doesNotMatch(stripI18nMarkup(html), /sequence-viewer-alignment-trace-scroll/);
 
   const firstLineStart = html.indexOf('data-line-start="0"');
   const secondLineStart = html.indexOf('data-line-start="24"');
@@ -662,12 +663,12 @@ test('[EDGE] sequence-viewer dual-strand renderer color-codes amino-acid cells w
     orfTranslationContext: context
   });
 
-  assert.match(html, /sequence-viewer-aa-chip/);
-  assert.doesNotMatch(html, /data-aa-display="TAG"/);
-  assert.match(html, /data-aa-codon="ATG"/);
-  assert.match(html, /data-aa-codon-positions="0,1,2"/);
-  assert.match(html, /Right-click to change this amino acid/);
-  assert.match(html, /--sequence-viewer-aa-chip-color:#[0-9a-f]{6};/i);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-aa-chip/);
+  assert.doesNotMatch(stripI18nMarkup(html), /data-aa-display="TAG"/);
+  assert.match(stripI18nMarkup(html), /data-aa-codon="ATG"/);
+  assert.match(stripI18nMarkup(html), /data-aa-codon-positions="0,1,2"/);
+  assert.match(stripI18nMarkup(html), /Right-click to change this amino acid/);
+  assert.match(stripI18nMarkup(html), /--sequence-viewer-aa-chip-color:#[0-9a-f]{6};/i);
 });
 test('[EDGE] sequence-viewer dual-strand renderer emits a cross-strand cursor at exact base boundary', () => {
   const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml('ACGTACGTACGT', [], {
@@ -683,15 +684,15 @@ test('[EDGE] sequence-viewer dual-strand renderer emits a cross-strand cursor at
   assert.match(cursorStyle[1], /left:[0-9.]+px;/);
   assert.match(cursorStyle[1], /height:[0-9.]+px;/);
   assert.equal(cursorStyle[1].includes('%'), false);
-  assert.match(html, /data-line-start="0"/);
-  assert.match(html, /data-line-end="12"/);
+  assert.match(stripI18nMarkup(html), /data-line-start="0"/);
+  assert.match(stripI18nMarkup(html), /data-line-end="12"/);
 });
 test('[EDGE] sequence-viewer dual-strand renderer shows 5/3 orientation and paired highlights', () => {
   const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml('ACGTAC', [{ start: 1, end: 4 }]);
-  assert.match(html, /sequence-viewer-strand-row-top/);
-  assert.match(html, /sequence-viewer-strand-row-bottom/);
-  assert.match(html, /5'/);
-  assert.match(html, /3'/);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-strand-row-top/);
+  assert.match(stripI18nMarkup(html), /sequence-viewer-strand-row-bottom/);
+  assert.match(stripI18nMarkup(html), /5'/);
+  assert.match(stripI18nMarkup(html), /3'/);
   const plainText = stripHtmlTags(html);
   assert.match(plainText, /CGT/);
   assert.match(plainText, /GCA/);
@@ -708,10 +709,10 @@ test('[EDGE] sequence-viewer feature detail formatter includes core metadata', (
     source: 'legacy_annotation',
     segments: [{ start: 0, end: 4 }]
   }, 8);
-  assert.match(html, /ori/);
-  assert.match(html, /origin/);
-  assert.match(html, /Strand:<\/strong> -/);
-  assert.match(html, /99.12%/);
-  assert.match(html, /87.56%/);
+  assert.match(stripI18nMarkup(html), /ori/);
+  assert.match(stripI18nMarkup(html), /origin/);
+  assert.match(stripI18nMarkup(html), /Strand:<\/strong> -/);
+  assert.match(stripI18nMarkup(html), /99.12%/);
+  assert.match(stripI18nMarkup(html), /87.56%/);
 });
 };

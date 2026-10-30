@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
 import { calculateBufferRecipe, calculateFixedReaction } from '../../../lib/bench-calculations.js';
 import { resultTextAfterName } from '../../../lib/notebook-tool-calculations.js';
 
@@ -19,7 +22,7 @@ function createToolCalculations({
 } = {}) {
   function setPlaceholder(element, value) {
     if (element) {
-      element.placeholder = String(value || '');
+      i18nUi.setAttribute(element, "placeholder", String(value || ''));
     }
   }
 

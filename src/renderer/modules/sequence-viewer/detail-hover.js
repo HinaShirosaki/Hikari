@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../lib/html.js';
 import { buildFeatureLocationText } from './feature-model.js';
 import { FEATURE_TOOLTIP_OFFSET_PX } from './constants.js';
@@ -27,7 +30,7 @@ function buildFeatureHoverTooltipHtml(feature, sequenceLength, recordSequence) {
       <p class="sequence-viewer-feature-hover-title">${escapeHtml(feature?.name || '-')}</p>
       ${renderPrimerNameCopyButton(feature)}
     </div>
-    <p>${escapeHtml(feature?.type || '-')} | Strand ${strand}</p>
+    <p>${escapeHtml(feature?.type || '-')} ${i18nUi.html("| Strand")} ${strand}</p>
     <p>${escapeHtml(location)}</p>
     <p>${escapeHtml(meta)}</p>
     ${renderCdsProteinHoverSection(feature, recordSequence)}
@@ -74,7 +77,7 @@ export function createSequenceHoverTooltipController(rootDocument) {
       }
       const label = result.kind === 'name' ? 'primer name' : 'primer sequence';
       showTransientNotice(
-        result.copied ? `Copied ${label}.` : 'Clipboard access is unavailable.',
+        (((((result.copied ? i18nUi.message("Copied {p0}.", { p0: label }) : i18nUi.message("Clipboard access is unavailable.")))))),
         { type: result.copied ? 'success' : 'error' }
       );
       // Stays up: name and sequence are two buttons, and copying one is no
@@ -91,7 +94,7 @@ export function createSequenceHoverTooltipController(rootDocument) {
     rootDocument?.querySelectorAll?.('[data-sequence-hover-tooltip]').forEach(node => {
       if (node !== tooltip) node.hidden = true;
     });
-    tooltip.innerHTML = buildFeatureHoverTooltipHtml(feature, sequenceLength, recordSequence);
+    i18nUi.setHtml(tooltip, buildFeatureHoverTooltipHtml(feature, sequenceLength, recordSequence));
     interactivity.setInteractive(tooltip.innerHTML.includes('sequence-viewer-primer-copy-btn'));
     tooltip.hidden = false;
 

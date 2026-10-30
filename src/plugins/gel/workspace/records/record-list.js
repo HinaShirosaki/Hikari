@@ -1,3 +1,5 @@
+import { createPresentation } from "../../i18n.mjs";
+const i18nUi = createPresentation("gel");
 // The saved-gel list in the rail: which records the search term keeps, and the
 // markup each row is drawn with.
 function createGelRecordList({
@@ -30,15 +32,15 @@ function createGelRecordList({
     const rows = records.filter((record) => matchesSearch(record, term));
 
     if (elements.gelBrowserCount) {
-      elements.gelBrowserCount.textContent = term ? `${rows.length}/${records.length}` : String(records.length);
+      i18nUi.setText(elements.gelBrowserCount, (term ? `${rows.length}/${records.length}` : String(records.length)));
     }
 
     if (!rows.length) {
-      elements.gelList.innerHTML = '<p class="small-note gel-browser-empty">No saved gels found.</p>';
+      i18nUi.setHtml(elements.gelList, `<p class="small-note gel-browser-empty">${i18nUi.html("No saved gels found.")}</p>`);
       return;
     }
 
-    elements.gelList.innerHTML = rows.map((record) => {
+    i18nUi.setHtml(elements.gelList, rows.map((record) => {
       const title = record.name || record.id || 'Untitled gel';
       const safeTitle = runtime.safeText(title);
       const safeId = runtime.safeText(record.id);
@@ -48,13 +50,13 @@ function createGelRecordList({
             <p class="gel-browser-item-title">${safeTitle}</p>
           </div>
           <div class="card-actions gel-browser-item-actions">
-            <button type="button" class="row-action-icon-btn" data-gel-edit="${safeId}" aria-label="Edit ${safeTitle}" title="Edit">
+            <button type="button" class="row-action-icon-btn" data-gel-edit="${safeId}" ${i18nUi.attributeMessage("aria-label", i18nUi.message("Edit {p0}", { p0: safeTitle }))} title="Edit" data-i18n-title="gel.full.c2c76cb1">
               <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                 <path d="M12 20h9" />
                 <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
               </svg>
             </button>
-            <button type="button" class="row-action-icon-btn row-action-icon-btn-danger" data-gel-delete="${safeId}" aria-label="Delete ${safeTitle}" title="Delete">
+            <button type="button" class="row-action-icon-btn row-action-icon-btn-danger" data-gel-delete="${safeId}" ${i18nUi.attributeMessage("aria-label", i18nUi.message("Delete {p0}", { p0: safeTitle }))} title="Delete" data-i18n-title="gel.full.5797ea6a">
               <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                 <path d="M3 6h18" />
                 <path d="M8 6V4h8v2" />
@@ -66,7 +68,7 @@ function createGelRecordList({
           </div>
         </article>
       `;
-    }).join('');
+    }).join(''));
   }
 
   return {

@@ -63,6 +63,7 @@ function calculateBufferIngredient({
   let addVolumeMl = 0;
   let massG = 0;
   let status = '';
+  let displayMessage = null;
 
   if (manual) {
     quantityText = manual.text;
@@ -80,6 +81,7 @@ function calculateBufferIngredient({
     if (!bufferConcentrationsCompatible(stock, final)) {
       status = 'warning';
       resultText = `${resolvedName}: stock and final concentration units are not compatible.`;
+      displayMessage = { id: 'buffer.incompatible', params: {} };
     } else if (!missing.length) {
       const stockBaseValue = bufferConcentrationBaseValue(stock);
       const finalBaseValue = bufferConcentrationBaseValue(final);
@@ -88,9 +90,11 @@ function calculateBufferIngredient({
         if (addVolumeMl > volume.value) {
           status = 'warning';
           resultText = `${resolvedName}: final concentration is higher than stock concentration.`;
+          displayMessage = { id: 'buffer.higher', params: {} };
         } else {
           quantityText = formatBufferVolumeDual(addVolumeMl);
           resultText = `${resolvedName}: ${quantityText} stock.`;
+          displayMessage = { id: 'buffer.stock', params: { quantity: quantityText } };
         }
       } else {
         missing.push('stock concentration');
@@ -153,6 +157,7 @@ function calculateBufferIngredient({
     formulaText,
     missing,
     status,
+    displayMessage,
     details: [{
       name: resolvedName,
       form: resolvedForm,

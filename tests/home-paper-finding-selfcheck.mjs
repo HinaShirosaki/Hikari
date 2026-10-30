@@ -1,3 +1,5 @@
+import markup from './support/i18n-markup.cjs';
+const { stripI18nMarkup } = markup;
 import assert from 'node:assert/strict';
 import { initPaperFindingWidget } from '../src/renderer/modules/home-dashboard/paper-finding.js';
 
@@ -48,8 +50,8 @@ assert.equal(summary.textContent, 'Loading schedules…');
 await Promise.resolve();
 await Promise.resolve();
 assert.equal(summary.textContent, '1 active schedule');
-assert.match(list.innerHTML, /Delivery &amp; Discovery/);
-assert.match(list.innerHTML, /Every 2 weeks/);
+assert.match(stripI18nMarkup(list.innerHTML), /Delivery &amp; Discovery/);
+assert.match(stripI18nMarkup(list.innerHTML), /Every 2 weeks/);
 
 openBtn.click();
 assert.equal(opened, 1);
@@ -113,17 +115,17 @@ await Promise.resolve();
 await Promise.resolve();
 assert.equal(resultSummary.textContent, '2 papers found · 1 active schedule');
 assert.equal((resultList.innerHTML.match(/data-paper-finding-result/g) || []).length, 2);
-assert.match(resultList.innerHTML, /Atlas &lt;Project&gt;/);
-assert.match(resultList.innerHTML, /A useful paper/);
-assert.match(resultList.innerHTML, /Ada Lovelace, Katherine Johnson/);
-assert.match(resultList.innerHTML, /Nature Methods · 2026 · Crossref · DOI 10\.1000\/useful/);
-assert.match(resultList.innerHTML, /A concise result summary\./);
-assert.match(resultList.innerHTML, /Why it matters:<\/strong> It directly supports the project\./);
-assert.match(resultList.innerHTML, /href="https:\/\/example\.org\/useful"/);
+assert.match(stripI18nMarkup(resultList.innerHTML), /Atlas &lt;Project&gt;/);
+assert.match(stripI18nMarkup(resultList.innerHTML), /A useful paper/);
+assert.match(stripI18nMarkup(resultList.innerHTML), /Ada Lovelace, Katherine Johnson/);
+assert.match(stripI18nMarkup(resultList.innerHTML), /Nature Methods · 2026 · Crossref · DOI 10\.1000\/useful/);
+assert.match(stripI18nMarkup(resultList.innerHTML), /A concise result summary\./);
+assert.match(stripI18nMarkup(resultList.innerHTML), /Why it matters:<\/strong> It directly supports the project\./);
+assert.match(stripI18nMarkup(resultList.innerHTML), /href="https:\/\/example\.org\/useful"/);
 assert.doesNotMatch(resultList.innerHTML, /Metadata only/, 'the download policy is stated once, not per card');
 assert.equal(resultNextRun.hidden, false);
-assert.match(resultNextRun.innerHTML, /<span>Next [^<]+<\/span><span title="[^"]+">Metadata only<\/span>/);
-assert.match(resultList.innerHTML, /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+assert.match(stripI18nMarkup(resultNextRun.innerHTML), /<span>Next [^<]+<\/span><span[^>]*title="[^"]+">Metadata only<\/span>/);
+assert.match(stripI18nMarkup(resultList.innerHTML), /&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
 assert.doesNotMatch(resultList.innerHTML, /<script>|javascript:alert/);
 
 // Download shows only where there is something to fetch (a DOI or http URL).
@@ -138,12 +140,12 @@ clickDownload();
 assert.equal(downloadCalls.length, 1);
 assert.equal(downloadCalls[0].taskId, 'atlas-task');
 assert.equal(downloadCalls[0].paper.doi, '10.1000/useful');
-assert.match(resultList.innerHTML, /disabled>Downloading…/);
+assert.match(stripI18nMarkup(resultList.innerHTML), /disabled>Downloading…/);
 clickDownload();
 assert.equal(downloadCalls.length, 1, 'a second click while downloading is ignored');
 finishDownload({ ok: true, download_status: 'completed', file_name: 'useful.pdf' });
 await new Promise((resolve) => setImmediate(resolve));
-assert.match(resultList.innerHTML, />Download<svg/);
+assert.match(stripI18nMarkup(resultList.innerHTML), />Download<svg/);
 
 const pollingSummary = new Element();
 const pollingList = new Element();
@@ -273,8 +275,8 @@ initPaperFindingWidget({
 await Promise.resolve();
 await Promise.resolve();
 assert.doesNotMatch(savedList.innerHTML, /Already in the project/);
-assert.match(savedList.innerHTML, /Saved this round/);
-assert.match(savedList.innerHTML, /home-paper-finding-saved[^>]*>Saved</);
+assert.match(stripI18nMarkup(savedList.innerHTML), /Saved this round/);
+assert.match(stripI18nMarkup(savedList.innerHTML), /home-paper-finding-saved[^>]*>Saved</);
 assert.doesNotMatch(savedList.innerHTML, /data-paper-finding-download=/, 'a saved card offers Open, not Download');
 const openKey = savedList.innerHTML.match(/data-paper-finding-open="([^"]+)"/)[1];
 savedList.listeners.get('click')({

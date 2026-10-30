@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("plate");
 import { createChartStylePicker, SHAPE_OPTIONS, LINE_STYLE_OPTIONS, FRAME_STYLE_OPTIONS } from './chart-style-pickers.js';
 import { createChartTextControls } from './chart-text-controls.js';
 import { deleteChartPreset, getChartPreset, listChartPresets, sanitizePresetName, saveChartPreset, FIGURE_CLASSIC_PRESET } from './chart-presets.js';
@@ -10,7 +13,7 @@ import { mountPlotElementControls } from './plot-element-controls.js';
 export function mountChartControls(container, { store, promptForName, agentElements } = {}) {
   if (!container || !store) return { refresh() {}, destroy() {} };
   const askName = promptForName || ((message, initial) => globalThis.prompt?.(message, initial));
-  container.innerHTML = PANEL_HTML;
+  i18nUi.setHtml(container, PANEL_HTML);
   const q = (key) => container.querySelector(`[data-cc="${key}"]`);
   const selection = { series: null, text: 'title', customTick: {} };
   let activeTab = 'frame';
@@ -18,7 +21,7 @@ export function mountChartControls(container, { store, promptForName, agentEleme
   let form;
   let elementControls;
   function notice(message = '') {
-    q('validation').textContent = message;
+    i18nUi.setText(q('validation'), message);
     q('validation').hidden = !message;
   }
   function apply(patch) {
@@ -36,7 +39,7 @@ export function mountChartControls(container, { store, promptForName, agentEleme
         if (refreshing) return;
         apply(key === 'frameStyle' ? { [key]: value } : seriesStylePatch(store.getStyle(), selection.series, key, value));
       } });
-    q(key).querySelector('button').setAttribute('aria-label', key === 'frameStyle' ? 'Frame style' : key === 'pointShape' ? 'Symbol shape' : 'Line pattern');
+    i18nUi.setAttribute(q(key).querySelector('button'), "aria-label", (key === 'frameStyle' ? i18nUi.message("Frame style") : (key === 'pointShape' ? i18nUi.message("Symbol shape") : i18nUi.message("Line pattern"))));
   });
   const textControls = createChartTextControls(q('textBar'), {
     basicOnly: true,
@@ -226,6 +229,6 @@ export function mountChartControls(container, { store, promptForName, agentEleme
     container.removeEventListener('click', onClick);
     container.removeEventListener('keydown', onKeyDown);
     Object.values(pickers).forEach((picker) => picker.destroy());
-    textControls.destroy(); container.innerHTML = '';
+    textControls.destroy(); i18nUi.setHtml(container, '');
   } };
 }

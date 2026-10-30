@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../../lib/i18n/presentation.js";
+import "../../localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../../../lib/html.js';
 import { featureLabelBase, fixed, partitionFeatures, polar, primerAnchors } from './geometry.js';
 import { CIRCULAR_VIEWBOX_MIN, CIRCULAR_VIEWBOX_SIZE, LABEL_COLUMN_X, LABEL_LINE_HEIGHT, LABEL_PAD, MIN_ARC_FRACTION, PRIMER_HEAD_PX, PRIMER_MIN_SPAN_PX, PRIMER_RING_GAP, RADIUS, RING_GAP, RING_WIDTH, TAU, TICK_COUNT } from './map-constants.js';
@@ -238,7 +241,7 @@ function buildCircularMapSvg(record, options = {}) {
       viewBox="${CIRCULAR_VIEWBOX_MIN} ${CIRCULAR_VIEWBOX_MIN} ${CIRCULAR_VIEWBOX_SIZE} ${CIRCULAR_VIEWBOX_SIZE}"
       preserveAspectRatio="xMidYMid meet"
       role="img"
-      aria-label="${escapeHtml(`${name} circular plasmid map`)}"
+      ${i18nUi.attributeMessage("aria-label", i18nUi.message("{p0} circular plasmid map", { p0: name }))}
     >
       <circle class="vector-map__backbone" cx="0" cy="0" r="${RADIUS}"></circle>
       ${renderCircularTicks(sequenceLength)}
@@ -247,7 +250,7 @@ function buildCircularMapSvg(record, options = {}) {
       ${labelMarkup}
       <text class="vector-map__title" x="0" y="-10" text-anchor="middle">${escapeHtml(name)}</text>
       <text class="vector-map__subtitle" x="0" y="14" text-anchor="middle">${sequenceLength.toLocaleString()} bp</text>
-      <text class="vector-map__subtitle" x="0" y="34" text-anchor="middle">circular</text>
+      <text class="vector-map__subtitle" x="0" y="34" text-anchor="middle">${i18nUi.svg("circular")}</text>
     </svg>
   `;
 }

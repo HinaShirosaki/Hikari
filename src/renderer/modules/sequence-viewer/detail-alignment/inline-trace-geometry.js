@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { cleanText } from '../shared.js';
 import { INLINE_TRACE_HEIGHT, INLINE_TRACE_SIGNAL_HEIGHT, INLINE_TRACE_SIGNAL_TOP, TRACE_MAX_PATH_POINTS, TRACE_PIXELS_PER_BASE } from './trace-constants.js';
 import { buildSmoothTracePathData, clampTraceValue, formatSvgNumber, smoothTraceValues } from './trace-normalizing.js';
@@ -199,7 +202,7 @@ function renderInlineTraceLineHtml(displayTrace, traceCells, lineStart, lineEnd,
           style="width:${traceWidth.toFixed(3)}px;"
           viewBox="0 0 ${formatSvgNumber(traceWidth)} ${INLINE_TRACE_HEIGHT}"
           role="img"
-          aria-label="Chromatogram bases ${lineStart + 1}-${lineEnd}"
+          ${i18nUi.attributeMessage("aria-label", i18nUi.message("Chromatogram bases {p0}-{p1}", { p0: lineStart + 1, p1: lineEnd }))}
           data-alignment-anchor-count="${coordinateMap.anchors.length}"
           data-alignment-first-base-x="${formatSvgNumber(firstAnchor.x)}"
           data-alignment-last-base-x="${formatSvgNumber(lastAnchor.x)}"

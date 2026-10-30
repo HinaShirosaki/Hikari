@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { FALLBACK_CHAR_ADVANCE_PX } from '../constants.js';
 import { resolveSequenceBoundaryFromEvent } from '../detail-layout.js';
 import { createSequenceViewerSequenceEditingController } from '../detail-sequence-editing.js';
@@ -473,7 +476,7 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
     elements.vectorBuilderFeatureReplaceConfirm?.addEventListener('click', (event) => {
       event.preventDefault();
       if (!getSelectedStoredFeature()) {
-        setFeatureReplaceStatus('Pick a stored feature before confirming.', true);
+        setFeatureReplaceStatus(i18nUi.text("Pick a stored feature before confirming."), true);
         return;
       }
       void applyFeatureReplace(getSelectedFeatureReplaceId());

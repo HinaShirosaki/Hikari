@@ -24,6 +24,15 @@ dialog requires one.
 - `name-suggestions.js`: plasmid name suggestions from the sequence library (circular and linear entries, since the library has no plasmid flag).
 - `chemical-structure-clipboard.js`: reads ChemDraw/MOL/SMILES or an image from the clipboard through `hikariApi.readChemicalClipboard`.
 - `csv-io.js`: per-container CSV import/export keyed by well label; import upserts by sample code.
+- `locales/en.js`, `locales/es.js`, `localization.js`: storage navigation, summary, menus, container
+  dialogs, type/dimension labels, well tooltips, sample editor fields/actions,
+  canonical-value option labels, structure controls and CSV result feedback.
+  These UI labels keep the shared layout helpers, CSV schema, stored names,
+  sample vocabulary and type IDs unchanged. Locale changes update bound nodes
+  without rebuilding drafts. The bundled Spanish preview is covered
+  by real interaction checks in `samples-checks.mjs` and `samples-editor-checks.mjs`;
+  English is the shipped default. `SAMPLE_TYPE_FIELDS` and stored option values
+  remain canonical; backend/parser details stay literal.
 
 Containers are saved one file per container under `Samples/<zone>/` in the storage root (`src/main/storage/sample-containers.js`).
 

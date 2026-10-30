@@ -1,3 +1,6 @@
+import "./localization.js";
+import { createPresentation } from "../../lib/i18n/presentation.js";
+const i18nUi = createPresentation("home");
 import { showTransientNotice } from '../../lib/notify.js';
 import { asArray, ensureObject } from '../../lib/normalize.js';
 
@@ -180,7 +183,7 @@ export function initPaperFindingWidget({
     }
     const expanded = new Set([...(list.querySelectorAll?.('details[open]') || [])]
       .map((detail) => detail.dataset.paperFindingKey));
-    list.innerHTML = markup;
+    i18nUi.setHtml(list, markup);
     lastMarkup = markup;
     list.querySelectorAll?.('details[data-paper-finding-key]').forEach((detail) => {
       detail.open = expanded.has(detail.dataset.paperFindingKey);
@@ -197,10 +200,10 @@ export function initPaperFindingWidget({
       Number.isFinite(new Date(task?.next_run_at || task?.nextRunAt || '').getTime())
     ));
     const parts = [
-      scheduled ? `<span>${escapeText(nextRunForTask(scheduled))}</span>` : '',
-      hasPapers ? '<span title="Paper finder saves citation details only; use Download to save a PDF to the project.">Metadata only</span>' : ''
+      scheduled ? `<span>${i18nUi.renderOwned(nextRunForTask(scheduled))}</span>` : '',
+      hasPapers ? `<span ${i18nUi.attribute("title", "Only citation details are saved; use Download to save a PDF to the project.")}>${i18nUi.html("Metadata only")}</span>` : ''
     ].filter(Boolean);
-    nextRun.innerHTML = parts.join('');
+    i18nUi.setHtml(nextRun, parts.join(''));
     nextRun.hidden = !parts.length;
   }
 
@@ -242,21 +245,21 @@ export function initPaperFindingWidget({
           ${bibliography ? `<span class="home-paper-finding-citation">${escapeText(bibliography)}</span>` : ''}
         </div>
         <h3 class="home-paper-finding-title">${escapeText(title)}</h3>
-        ${reasonText ? `<p class="home-paper-finding-reason"><strong>Why it matters:</strong> ${escapeText(reasonText)}</p>` : ''}
+        ${reasonText ? `<p class="home-paper-finding-reason"><strong>${i18nUi.html("Why it matters:")}</strong> ${escapeText(reasonText)}</p>` : ''}
         ${hasDetails || url || canDownload || savedPath ? `
           <div class="home-paper-finding-links">
             ${hasDetails ? `
               <details class="home-paper-finding-details" data-paper-finding-key="${escapeText(key)}">
-                <summary>${summaryText ? 'Summary' : 'Details'}<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg></summary>
+                <summary>${i18nUi.render((summaryText ? i18nUi.message("Summary") : i18nUi.message("Details")))}<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg></summary>
                 ${summaryText ? `<p class="home-paper-finding-summary">${escapeText(summaryText)}</p>` : ''}
                 ${authors ? `<p class="home-paper-finding-authors">${escapeText(authors)}</p>` : ''}
                 ${meta.length ? `<p class="home-paper-finding-meta">${escapeText(meta.join(' · '))}</p>` : ''}
               </details>
             ` : ''}
-            ${url ? `<a class="home-paper-finding-source" href="${escapeText(url)}" target="_blank" rel="noreferrer noopener">Source<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 17 17 7M8 7h9v9"/></svg></a>` : ''}
-            ${canDownload ? `<button type="button" class="home-paper-finding-source" data-paper-finding-download="${escapeText(key)}" title="Save the PDF to ${escapeText(projectName)}"${isDownloading ? ' disabled' : ''}>${isDownloading ? 'Downloading…' : 'Download'}<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4v11m-5-5 5 5 5-5M5 20h14"/></svg></button>` : ''}
-            ${savedPath ? `<span class="home-paper-finding-saved" title="Saved to ${escapeText(projectName)}">Saved<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg></span>` : ''}
-            ${canOpen ? `<button type="button" class="home-paper-finding-source" data-paper-finding-open="${escapeText(key)}" title="Open in Papers">Open</button>` : ''}
+            ${url ? `<a class="home-paper-finding-source" href="${escapeText(url)}" target="_blank" rel="noreferrer noopener">${i18nUi.html("Source")}<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 17 17 7M8 7h9v9"/></svg></a>` : ''}
+            ${canDownload ? `<button type="button" class="home-paper-finding-source" data-paper-finding-download="${escapeText(key)}" ${i18nUi.attributeMessage("title", i18nUi.message("Save the PDF to {p0}", { p0: projectName }))}${isDownloading ? ' disabled' : ''}>${i18nUi.render((isDownloading ? i18nUi.message("Downloading…") : i18nUi.message("Download")))}<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 4v11m-5-5 5 5 5-5M5 20h14"/></svg></button>` : ''}
+            ${savedPath ? `<span class="home-paper-finding-saved" ${i18nUi.attributeMessage("title", i18nUi.message("Saved to {p0}", { p0: projectName }))}>${i18nUi.html("Saved")}<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg></span>` : ''}
+            ${canOpen ? `<button type="button" class="home-paper-finding-source" data-paper-finding-open="${escapeText(key)}" title="Open in Papers" data-i18n-title="home.full.b3b7756b">${i18nUi.html("Open")}</button>` : ''}
           </div>
         ` : ''}
       </article>
@@ -271,17 +274,17 @@ export function initPaperFindingWidget({
       runBtn.disabled = running;
     }
     if (running) {
-      summary.textContent = 'Finding papers…';
+      i18nUi.setText(summary, i18nUi.message("Finding papers…"));
       return;
     }
     if (availabilityMessage) {
-      summary.textContent = availabilityMessage;
+      i18nUi.setText(summary, availabilityMessage);
       renderScheduleFooter([]);
-      setListMarkup('<button type="button" class="ghost-btn home-paper-finding-setup" data-paper-finding-setup>Open project notebooks →</button>');
+      setListMarkup(`<button type="button" class="ghost-btn home-paper-finding-setup" data-paper-finding-setup>${i18nUi.html("Open project notebooks →")}</button>`);
       return;
     }
     if (tasks === null) {
-      summary.textContent = 'Loading schedules…';
+      i18nUi.setText(summary, i18nUi.message("Loading schedules…"));
       setListMarkup('');
       return;
     }
@@ -289,14 +292,10 @@ export function initPaperFindingWidget({
     const activeTasks = tasks.filter((task) => task?.enabled !== false);
     const foundPapers = papersForTasks(tasks);
     renderScheduleFooter(activeTasks, foundPapers.length > 0);
-    summary.textContent = foundPapers.length
-      ? `${foundPapers.length} paper${foundPapers.length === 1 ? '' : 's'} found · ${activeTasks.length} active schedule${activeTasks.length === 1 ? '' : 's'}`
-      : tasks.length
-        ? `${activeTasks.length} active schedule${activeTasks.length === 1 ? '' : 's'}`
-        : '';
+    i18nUi.setText(summary, (foundPapers.length ? i18nUi.message((foundPapers.length === 1 ? (activeTasks.length === 1 ? "{p0} paper found · {p2} active schedule" : "{p0} paper found · {p2} active schedules") : (activeTasks.length === 1 ? "{p0} papers found · {p2} active schedule" : "{p0} papers found · {p2} active schedules")), { p0: foundPapers.length, p2: activeTasks.length }) : (tasks.length ? i18nUi.message((activeTasks.length === 1 ? "{p0} active schedule" : "{p0} active schedules"), { p0: activeTasks.length }) : '')));
 
     if (!tasks.length) {
-      setListMarkup('<button type="button" class="ghost-btn home-paper-finding-setup" data-paper-finding-setup><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg>Set up paper finding</button>');
+      setListMarkup(`<button type="button" class="ghost-btn home-paper-finding-setup" data-paper-finding-setup><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg>${i18nUi.html("Set up paper finding")}</button>`);
       return;
     }
 
@@ -312,7 +311,7 @@ export function initPaperFindingWidget({
         <div class="home-row home-paper-finding-row${paused ? ' is-muted' : ''}">
           <div class="home-row-copy">
             <div class="home-row-name">${escapeText(projectNameForTask(task))}</div>
-            <div class="home-row-meta">${escapeText(`${cadenceForTask(task)} · ${nextRunForTask(task)}`)}</div>
+            <div class="home-row-meta">${i18nUi.renderOwned(cadenceForTask(task))} · ${i18nUi.renderOwned(nextRunForTask(task))}</div>
           </div>
         </div>
       `;
@@ -400,19 +399,19 @@ export function initPaperFindingWidget({
     try {
       const response = await api.downloadFoundPaper(target.task.id, target.paper);
       if (response?.ok !== true) {
-        showTransientNotice(cleanText(response?.error) || 'Paper download failed.', { type: 'error' });
+        showTransientNotice((((((cleanText(response?.error) || i18nUi.message("Paper download failed.")))))), { type: 'error' });
       } else if (response.download_status === 'completed') {
-        showTransientNotice(`Saved ${cleanText(response.file_name) || 'the PDF'} to ${projectName}.`);
+        showTransientNotice(i18nUi.message("Saved {p0} to {p1}.", { p0: cleanText(response.file_name) || 'the PDF', p1: projectName }));
         // Main marked the card saved; reload so it turns into Saved · Open.
         if (request) {
           await request;
         }
         await refresh();
       } else {
-        showTransientNotice('Paper download is still running.');
+        showTransientNotice(i18nUi.message("Paper download is still running."));
       }
     } catch (error) {
-      showTransientNotice(cleanText(error?.message) || 'Paper download failed.', { type: 'error' });
+      showTransientNotice((((((cleanText(error?.message) || i18nUi.message("Paper download failed.")))))), { type: 'error' });
     } finally {
       downloading.delete(key);
       renderTasks();
@@ -428,7 +427,7 @@ export function initPaperFindingWidget({
     try {
       await onOpenPaper({ filePath, relativePath: cleanText(ensureObject(paper.local_file).relative_path) });
     } catch (error) {
-      showTransientNotice(cleanText(error?.message) || 'Could not open the saved PDF.', { type: 'error' });
+      showTransientNotice((((((cleanText(error?.message) || i18nUi.message("Could not open the saved PDF.")))))), { type: 'error' });
     }
   }
 

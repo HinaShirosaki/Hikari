@@ -1,3 +1,4 @@
+import { setToolText } from '../localization.js';
 // Enables/disables the toolbar buttons and switches the preview cursor based on
 // whether an image is loaded, a crop or mask is in progress, and markers exist.
 function createColonyControlState({
@@ -53,7 +54,7 @@ function createColonyControlState({
     }
     if (colonyStartMaskBtn) {
       colonyStartMaskBtn.disabled = !hasImage || cropActive || busy;
-      colonyStartMaskBtn.textContent = drawingMask ? 'Cancel Mask' : 'Draw Mask';
+      setToolText(colonyStartMaskBtn, drawingMask ? 'colony.cancelMask' : 'colony.drawMask');
     }
     if (colonyClearMaskBtn) {
       colonyClearMaskBtn.disabled = !hasImage || cropActive || busy || drawingMask || !hasActiveMask();

@@ -1,3 +1,7 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("protocol");
+import { setProtocolText } from './localization.js';
 import { exportProtocolPdf } from '../pdf-export/index.js';
 
 // Switching the protocol detail column between empty / editor / view, plus the
@@ -66,8 +70,12 @@ function createProtocolDetailPanels({
     if (!ui.protocolViewTitle || !ui.protocolViewContent) {
       return;
     }
-    ui.protocolViewTitle.textContent = protocol.name || 'Protocol';
-    ui.protocolViewContent.innerHTML = previewHelpers.buildProtocolPreviewMarkup(protocol);
+    if (protocol.name) {
+      ui.protocolViewTitle.removeAttribute?.('data-i18n');
+      ui.protocolViewTitle.removeAttribute?.('data-i18n-params');
+      i18nUi.setText(ui.protocolViewTitle, protocol.name);
+    } else setProtocolText(ui.protocolViewTitle, 'viewer.protocol');
+    i18nUi.setHtml(ui.protocolViewContent, previewHelpers.buildProtocolPreviewMarkup(protocol));
     selectionInsightsController?.refreshHost?.('protocol-view');
   }
 
@@ -94,7 +102,7 @@ function createProtocolDetailPanels({
     showEmptyPanel({ resetEditor: localState.protocolDetailMode === 'edit' });
   }
 
-  function openEditorWithDraft(protocol, headingText, options = {}) {
+  function openEditorWithDraft(protocol, headingKey, options = {}) {
     localState.isCreateEditorMode = options.isCreateMode !== false;
     localState.currentProtocolDraft = draftHelpers.cloneDraftFromProtocol(protocol);
 
@@ -102,7 +110,7 @@ function createProtocolDetailPanels({
       getImportController()?.resetProtocolJsonImportUi();
     }
     if (ui.protocolEditorHeading) {
-      ui.protocolEditorHeading.textContent = headingText;
+      setProtocolText(ui.protocolEditorHeading, headingKey);
     }
 
     previewHelpers.populateEditorFormFromDraft(ui, localState.currentProtocolDraft);
@@ -115,7 +123,7 @@ function createProtocolDetailPanels({
 
   function onCreateProtocol() {
     setSelectedProtocol('');
-    openEditorWithDraft(draftHelpers.createEmptyDraft(), 'Create Protocol', { isCreateMode: true });
+    openEditorWithDraft(draftHelpers.createEmptyDraft(), 'editor.create', { isCreateMode: true });
   }
 
   function editProtocol(protocolId) {
@@ -125,7 +133,7 @@ function createProtocolDetailPanels({
     }
     setSelectedProtocol(protocol.id);
     getListController()?.renderList?.();
-    openEditorWithDraft(protocol, 'Edit Protocol', { isCreateMode: false });
+    openEditorWithDraft(protocol, 'editor.edit', { isCreateMode: false });
   }
 
   function viewProtocol(protocolId) {

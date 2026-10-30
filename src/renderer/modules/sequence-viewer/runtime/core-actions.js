@@ -1,7 +1,10 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../../lib/html.js';
 import { readStoragePathFromLocalState } from '../storage.js';
 import { clamp } from '../shared.js';
-import { showTransientNotice } from '../../../lib/notify.js';
+import { dnaDisplayText, dnaNotice } from '../localization.js';
 
 export function createSequenceViewerCoreActions({ options, elements, state }) {
   function getBridge() {
@@ -59,10 +62,10 @@ export function createSequenceViewerCoreActions({ options, elements, state }) {
 
   // Status feedback belongs in the app notification system so it does not
   // reserve space inside individual workspaces.
+  // Messages are dnaUi() descriptors or verbatim parser/backend text.
   function setStatus(message, isError = false) {
-    const text = String(message || '').trim();
-    if (text) {
-      showTransientNotice(text, { type: isError ? 'error' : 'success' });
+    if (dnaDisplayText(message)) {
+      dnaNotice(message, { type: isError ? 'error' : 'success' });
     }
   }
 
@@ -74,9 +77,9 @@ export function createSequenceViewerCoreActions({ options, elements, state }) {
       ...state.errors.map((text) => `<p class="small-note" style="color:var(--theme-danger);">${escapeHtml(text)}</p>`),
       ...state.warnings.map((text) => `<p class="small-note">${escapeHtml(text)}</p>`)
     ];
-    elements.messageBox.innerHTML = rows.length
+    i18nUi.setHtml(elements.messageBox, rows.length
       ? rows.join('')
-      : '<p class="small-note">No parser warnings.</p>';
+      : `<p class="small-note">${i18nUi.html("No parser warnings.")}</p>`);
   }
 
   function getSelectedRecord() {

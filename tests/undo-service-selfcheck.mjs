@@ -125,8 +125,8 @@ function makeHarness() {
 {
   const state = { value: 0 };
   const buttons = {
-    'global-undo-btn': { disabled: false, setAttribute() {}, addEventListener() {} },
-    'global-redo-btn': { disabled: false, setAttribute() {}, addEventListener() {} }
+    'global-undo-btn': { disabled: false, attributes: {}, setAttribute(key, value) { this.attributes[key] = value; }, getAttribute(key) { return this.attributes[key] ?? null; }, addEventListener() {} },
+    'global-redo-btn': { disabled: false, attributes: {}, setAttribute(key, value) { this.attributes[key] = value; }, getAttribute(key) { return this.attributes[key] ?? null; }, addEventListener() {} }
   };
   const documentObject = {
     activeElement: null,

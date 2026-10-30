@@ -1,4 +1,8 @@
-import { showTransientNotice } from '../../lib/notify.js';
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("chemicals");
+import { chemicalDisplayText, bindChemicalMessage, chemicalNotice } from './localization.js';
+import { buildChemicalImportResultMarkup } from './import-presentation.js';
 
 export function installBlockchainAndMessages(ctx) {
   const { createId, state } = ctx;
@@ -60,21 +64,31 @@ function broadcastInventoryUpdate(chemical) {
 
 function setChemicalImportStatus(message, tone = 'idle') {
   if (tone === 'error' && message) {
-    showTransientNotice(message, { type: 'error' });
+    chemicalNotice(message, { type: 'error' });
   }
   if (!chemicalImportStatus) {
     return;
   }
-  const text = String(message || '');
-  chemicalImportStatus.textContent = text;
+  const text = chemicalDisplayText(message);
+  bindChemicalMessage(chemicalImportStatus, message);
   chemicalImportStatus.hidden = !text;
   chemicalImportStatus.dataset.status = tone;
+}
+
+function setChemicalImportResult(result, inference, fileName) {
+  if (!chemicalImportStatus) return;
+  chemicalImportStatus.removeAttribute?.('data-i18n');
+  chemicalImportStatus.removeAttribute?.('data-i18n-params');
+  i18nUi.setHtml(chemicalImportStatus, buildChemicalImportResultMarkup(result, inference, fileName));
+  chemicalImportStatus.hidden = false;
+  chemicalImportStatus.dataset.status = inference.llmError ? 'warning' : 'success';
 }
 
   Object.assign(ctx, {
     simpleHash,
     appendBlock,
     broadcastInventoryUpdate,
-    setChemicalImportStatus
+    setChemicalImportStatus,
+    setChemicalImportResult
   });
 }

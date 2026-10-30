@@ -1,7 +1,7 @@
 import { buildFolderKey, getLibraryFolders } from './model.js';
-import { showTransientNotice } from '../../lib/notify.js';
 import { startInlineRename } from '../../lib/folder-tree.js';
 import { positionContextMenu } from '../../lib/context-menu.js';
+import { paperNotice, paperText, paperUi, setPaperAttribute } from './localization.js';
 
 // The journal-club folder rail's context menu and drag-and-drop: create,
 // rename, delete a folder, and validate a paper drop onto one.
@@ -192,11 +192,12 @@ function createLibraryFolderMenu({
     libraryState.selectedFolderKey = folder.key;
     setFolderExpanded(folder.key, true);
     renderLibrarySidebar(folder.key);
-    startInlineRename(findFolderMain(folder.key), {
+    const input = startInlineRename(findFolderMain(folder.key), {
       value: folder.name,
-      label: 'Rename folder',
+      label: paperText('menu.renameLabel'),
       onCommit: (nextName) => commitFolderRename(folder.key, nextName)
     });
+    setPaperAttribute(input, 'aria-label', 'menu.renameLabel');
   }
 
   function validateRenamedFolderName(nextName = '', currentFolderId = '') {
@@ -204,7 +205,7 @@ function createLibraryFolderMenu({
     if (!normalizedName) {
       return {
         ok: false,
-        error: 'Folder name cannot be empty.'
+        error: paperUi('menu.nameEmpty')
       };
     }
     const duplicate = (state.journalClubs || []).find((club) => (
@@ -214,7 +215,7 @@ function createLibraryFolderMenu({
     if (duplicate) {
       return {
         ok: false,
-        error: 'A folder with this name already exists.'
+        error: paperUi('menu.nameDuplicate')
       };
     }
     return {
@@ -231,7 +232,7 @@ function createLibraryFolderMenu({
 
     const validation = validateRenamedFolderName(rawName, folder.id);
     if (!validation.ok) {
-      showTransientNotice(validation.error, { type: 'error' });
+      paperNotice(validation.error, { type: 'error' });
       return;
     }
 
@@ -258,7 +259,7 @@ function createLibraryFolderMenu({
     }
 
     const canDelete = typeof windowRef?.confirm !== 'function'
-      || windowRef.confirm('Delete this journal club folder and its papers?');
+      || windowRef.confirm(paperText('menu.confirmDelete'));
     if (!canDelete) {
       return;
     }

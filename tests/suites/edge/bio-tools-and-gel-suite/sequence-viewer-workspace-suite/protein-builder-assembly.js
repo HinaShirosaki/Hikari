@@ -56,7 +56,6 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
     'sequence-viewer-file-name',
     'sequence-viewer-load-btn',
     'sequence-viewer-annotate-btn',
-    'sequence-viewer-recognize-backbone-btn',
     'sequence-viewer-alignment-open-btn',
     'sequence-viewer-alignment-toggle',
     'sequence-viewer-alignment-session-select',

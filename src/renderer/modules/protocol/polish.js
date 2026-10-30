@@ -1,4 +1,7 @@
-import { showTransientNotice } from '../../lib/notify.js';
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("protocol");
+import { protocolUi, protocolError, protocolDisplayText, bindProtocolMessage, setProtocolText, protocolNotice } from './localization.js';
 
 function formatProtocolPolishTextBlock(value, fallback = '[blank]') {
   const normalized = String(value || '').trim();
@@ -64,7 +67,7 @@ export function createProtocolPolishController({
     localState.isProtocolPolishPending = nextPending === true;
     if (ui.protocolPolishBtn) {
       ui.protocolPolishBtn.disabled = localState.isProtocolPolishPending;
-      ui.protocolPolishBtn.textContent = localState.isProtocolPolishPending ? 'Polishing...' : 'Polish Protocol';
+      setProtocolText(ui.protocolPolishBtn, localState.isProtocolPolishPending ? 'polish.polishing' : 'action.polish');
     }
     if (ui.protocolPolishApplyBtn) {
       ui.protocolPolishApplyBtn.disabled = localState.isProtocolPolishPending || !localState.polishedProtocolDraft;
@@ -73,15 +76,15 @@ export function createProtocolPolishController({
 
   function setProtocolPolishStatus(message = '', options = {}) {
     if (options.state === 'error' && message) {
-      showTransientNotice(message, { type: 'error' });
+      protocolNotice(message, { type: 'error' });
     }
     if (!ui.protocolPolishStatus) {
       return;
     }
 
-    const normalized = String(message || '').trim();
+    const normalized = protocolDisplayText(message).trim();
     const stateLabel = String(options.state || '').trim();
-    ui.protocolPolishStatus.textContent = normalized;
+    bindProtocolMessage(ui.protocolPolishStatus, message);
     ui.protocolPolishStatus.hidden = !normalized;
 
     if (stateLabel) {
@@ -98,10 +101,10 @@ export function createProtocolPolishController({
     setProtocolPolishStatus('');
 
     if (ui.protocolPolishOriginalPreview) {
-      ui.protocolPolishOriginalPreview.innerHTML = '';
+      i18nUi.setHtml(ui.protocolPolishOriginalPreview, '');
     }
     if (ui.protocolPolishResultPreview) {
-      ui.protocolPolishResultPreview.innerHTML = '';
+      i18nUi.setHtml(ui.protocolPolishResultPreview, '');
     }
   }
 
@@ -226,14 +229,14 @@ export function createProtocolPolishController({
     renderProtocolPreviewInto(ui.protocolPolishOriginalPreview, localState.protocolPolishSourceDraft, { includeNameSection: true });
 
     if (!hasDraftContent(localState.protocolPolishSourceDraft)) {
-      const message = 'Add some protocol content first, then try polishing again.';
+      const message = protocolUi('polish.required');
       renderProtocolPolishEmptyState(ui.protocolPolishResultPreview, message, { state: 'error' });
       setProtocolPolishStatus(message, { state: 'error' });
       return;
     }
 
     renderProtocolPolishLoadingState(ui.protocolPolishResultPreview);
-    setProtocolPolishStatus('Generating a polished version from the current editor draft.');
+    setProtocolPolishStatus(protocolUi('polish.status'));
     setProtocolPolishPendingState(true);
 
     const requestToken = ++localState.protocolPolishRequestToken;
@@ -253,7 +256,7 @@ export function createProtocolPolishController({
 
       const nextPolishedDraft = normalizePolishedProtocolResponse(rawResponse, localState.protocolPolishSourceDraft);
       if (!nextPolishedDraft) {
-        throw new Error('The model response could not be converted into a polished protocol.');
+        throw protocolError('polish.invalid');
       }
 
       localState.polishedProtocolDraft = nextPolishedDraft;
@@ -263,7 +266,7 @@ export function createProtocolPolishController({
       if (requestToken !== localState.protocolPolishRequestToken || ui.protocolPolishOverlay?.hidden) {
         return;
       }
-      const message = String(error?.message || error || 'Failed to polish this protocol.');
+      const message = error || protocolUi('polish.error');
       renderProtocolPolishEmptyState(ui.protocolPolishResultPreview, message, { state: 'error' });
       setProtocolPolishStatus(message, { state: 'error' });
     } finally {

@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
 import { showTransientNotice } from '../../../lib/notify.js';
 import {
   getContainerLayout,
@@ -82,7 +85,7 @@ export function createNotebookQuickSampleController({
     if (!status) {
       return;
     }
-    status.textContent = String(message || '');
+    i18nUi.setOwnedText(status, String(message || ''));
     status.classList?.toggle?.('is-error', Boolean(isError));
   }
 
@@ -99,7 +102,7 @@ export function createNotebookQuickSampleController({
       }
       const screenReaderLabel = submitBtn.querySelector?.('.sr-only');
       if (screenReaderLabel) {
-        screenReaderLabel.textContent = label;
+        i18nUi.setText(screenReaderLabel, label);
       }
     }
   }
@@ -130,7 +133,7 @@ export function createNotebookQuickSampleController({
     if (!locationList) {
       return;
     }
-    locationList.innerHTML = locationNames.map((locationName) => {
+    i18nUi.setHtml(locationList, locationNames.map((locationName) => {
       const display = getSampleInventoryLocationDisplay(locationName);
       const containerCount = asArray(state?.inventory?.[locationName]).length;
       const sampleCount = asArray(state?.samples).filter((sample) => sample?.inventoryLink?.section === locationName).length;
@@ -140,12 +143,12 @@ export function createNotebookQuickSampleController({
           <span class="biology-notebook-quick-sample-location-badge">${safeText(display.short)}</span>
           <span class="biology-notebook-quick-sample-location-copy">
             <strong>${safeText(display.title)}</strong>
-            <small>${safeText(`${containerCount} container${containerCount === 1 ? '' : 's'}`)}</small>
+            <small>${i18nUi.render(i18nUi.message((containerCount === 1 ? "{p0} container" : "{p0} containers"), { p0: containerCount }))}</small>
           </span>
-          <span class="biology-notebook-quick-sample-location-count" aria-label="${safeText(`${sampleCount} sample${sampleCount === 1 ? '' : 's'}`)}">${safeText(String(sampleCount))}</span>
+          <span class="biology-notebook-quick-sample-location-count" ${i18nUi.attributeMessage("aria-label", i18nUi.message((sampleCount === 1 ? "{p0} sample" : "{p0} samples"), { p0: sampleCount }))}>${safeText(String(sampleCount))}</span>
         </button>
       `;
-    }).join('');
+    }).join(''));
   }
 
   function renderGridLabel() {
@@ -156,7 +159,7 @@ export function createNotebookQuickSampleController({
     const positionLabel = isMultiWellContainer(selectedContainer.container)
       ? (Number.isInteger(selectedWellIndex) ? getContainerWellName(selectedContainer.container, selectedWellIndex) : 'Select position')
       : 'Single position';
-    gridLabel.textContent = `${containerName} · ${positionLabel}`;
+    i18nUi.setText(gridLabel, `${containerName} · ${positionLabel}`);
   }
 
   function renderGrid() {
@@ -164,10 +167,10 @@ export function createNotebookQuickSampleController({
       return;
     }
     if (!selectedContainer) {
-      gridLabel.textContent = selectedLocation ? 'Choose a container' : 'Grid box';
+      i18nUi.setText(gridLabel, (selectedLocation ? i18nUi.message("Choose a container") : i18nUi.message("Grid box")));
       grid.className = 'biology-notebook-quick-sample-grid is-empty';
       grid.removeAttribute?.('style');
-      grid.innerHTML = '<p class="small-note">No containers in this location.</p>';
+      i18nUi.setHtml(grid, `<p class="small-note">${i18nUi.html("No containers in this location.")}</p>`);
       return;
     }
 
@@ -176,12 +179,12 @@ export function createNotebookQuickSampleController({
       const occupied = linkedSamplesAt(state, selectedContainer, null).length;
       grid.className = 'biology-notebook-quick-sample-grid is-single';
       grid.removeAttribute?.('style');
-      grid.innerHTML = `
+      i18nUi.setHtml(grid, `
         <button type="button" class="biology-notebook-quick-sample-well is-selected${occupied ? ' is-occupied' : ''}" data-quick-sample-well="single" aria-pressed="true">
-          Single
+          ${i18nUi.html("Single")}
           ${occupied ? `<span>${safeText(String(occupied))}</span>` : ''}
         </button>
-      `;
+      `);
       selectedWellIndex = null;
       renderGridLabel();
       return;
@@ -194,7 +197,7 @@ export function createNotebookQuickSampleController({
     grid.style.setProperty('--quick-sample-grid-rows', String(layout.rows));
     grid.style.setProperty('--quick-sample-grid-aspect-x', String(layout.cols));
     grid.style.setProperty('--quick-sample-grid-aspect-y', String(layout.rows));
-    grid.innerHTML = Array.from({ length: count }, (_item, index) => {
+    i18nUi.setHtml(grid, Array.from({ length: count }, (_item, index) => {
       const label = getContainerWellName(container, index);
       const occupied = linkedSamplesAt(state, selectedContainer, index).length;
       const selected = index === selectedWellIndex;
@@ -204,7 +207,7 @@ export function createNotebookQuickSampleController({
           ${occupied ? `<span>${safeText(String(occupied))}</span>` : ''}
         </button>
       `;
-    }).join('');
+    }).join(''));
     renderGridLabel();
   }
 
@@ -220,9 +223,9 @@ export function createNotebookQuickSampleController({
   function renderContainerOptions(previousKey = '') {
     const locationContainers = containers.filter((item) => item.section === selectedLocation);
     if (containerSelect) {
-      containerSelect.innerHTML = locationContainers
-        .map((item) => `<option value="${safeText(item.key)}">${safeText(item.container.name || 'Container')}</option>`)
-        .join('');
+      i18nUi.setHtml(containerSelect, locationContainers
+        .map((item) => `<option value="${safeText(item.key)}">${i18nUi.render((item.container.name || i18nUi.message("Container")))}</option>`)
+        .join(''));
     }
     const next = findContainer(locationContainers, previousKey) || locationContainers[0] || null;
     selectContainer(next?.key || '');
@@ -250,9 +253,9 @@ export function createNotebookQuickSampleController({
       return;
     }
     const entries = getEditableSampleTypeEntries(state?.settings);
-    typeInput.innerHTML = entries.map((entry) => (
+    i18nUi.setHtml(typeInput, entries.map((entry) => (
       `<option value="${safeText(entry.type)}">${safeText(entry.label)}</option>`
-    )).join('');
+    )).join(''));
     typeInput.value = entries.some((entry) => entry.type === 'plasmid') ? 'plasmid' : (entries[0]?.type || '');
   }
 
@@ -299,17 +302,17 @@ export function createNotebookQuickSampleController({
     event?.preventDefault?.();
     const name = String(nameInput?.value || '').trim();
     if (!name) {
-      setStatus('Enter a sample name.', true);
+      setStatus(i18nUi.text("Enter a sample name."), true);
       nameInput?.focus?.();
       return null;
     }
     if (!selectedContainer) {
-      setStatus('Choose a container for this sample.', true);
+      setStatus(i18nUi.text("Choose a container for this sample."), true);
       return null;
     }
     const requestedCode = normalizeSampleCode(codeInput?.value);
     if (requestedCode && asArray(state?.samples).some((sample) => sample?.code === requestedCode)) {
-      setStatus(`Sample code ${requestedCode} already exists.`, true);
+      setStatus(i18nUi.text("Sample code {p0} already exists.", { p0: requestedCode }), true);
       codeInput?.focus?.();
       return null;
     }
@@ -319,7 +322,7 @@ export function createNotebookQuickSampleController({
     try {
       const entry = await ensureEntry?.();
       if (!entry) {
-        setStatus('Open a notebook page before adding a sample.', true);
+        setStatus(i18nUi.text("Open a notebook page before adding a sample."), true);
         return null;
       }
       const nowIso = new Date().toISOString();
@@ -345,7 +348,7 @@ export function createNotebookQuickSampleController({
         source: 'notebook-quick-add'
       });
       if (!capture) {
-        setStatus('Could not link the sample to this notebook page.', true);
+        setStatus(i18nUi.text("Could not link the sample to this notebook page."), true);
         return null;
       }
       state.samples = asArray(state.samples);
@@ -361,7 +364,7 @@ export function createNotebookQuickSampleController({
       close();
       return record;
     } catch (error) {
-      setStatus(error?.message || 'Could not add the sample.', true);
+      setStatus((((((error?.message || i18nUi.text("Could not add the sample.")))))), true);
       return null;
     } finally {
       setBusy(false);

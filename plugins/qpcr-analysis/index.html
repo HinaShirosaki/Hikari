@@ -4,68 +4,71 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'">
-  <title>qPCR Analysis</title>
+  <title><span data-i18n="qpcr.full.93b5f9f1">qPCR Analysis</span></title>
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
 <main>
-  <div class="mode-switch" aria-label="Analysis method">
-    <button id="expression-mode" type="button" aria-pressed="true" aria-controls="expression-inputs">Relative expression</button>
-    <button id="curve-mode" type="button" aria-pressed="false" aria-controls="curve-inputs">Standard curve</button>
+  <div class="mode-switch" aria-label="Analysis method" data-i18n-aria-label="qpcr.full.b1010eec">
+    <button id="expression-mode" type="button" aria-pressed="true" aria-controls="expression-inputs"><span data-i18n="qpcr.full.9ec26869">Relative expression</span></button>
+    <button id="curve-mode" type="button" aria-pressed="false" aria-controls="curve-inputs"><span data-i18n="qpcr.full.98ee9e03">Standard curve</span></button>
   </div>
   <form id="analysis-form">
     <section id="expression-inputs">
       <div class="fields">
-        <label>Target gene <input id="target-name" maxlength="200" placeholder="e.g. IL6"></label>
-        <label>Reference gene <input id="reference-name" maxlength="200" placeholder="e.g. GAPDH"></label>
-        <label>Calibrator group <input id="calibrator" list="group-options" maxlength="200" value="Control" required></label>
+        <label><span data-i18n="qpcr.full.40bedf25">Target gene</span> <input id="target-name" maxlength="200" placeholder="e.g. IL6"></label>
+        <label><span data-i18n="qpcr.full.e0b6766b">Reference gene</span> <input id="reference-name" maxlength="200" placeholder="e.g. GAPDH" data-i18n-placeholder="qpcr.full.f2d74ddf"></label>
+        <label><span data-i18n="qpcr.full.bd718a49">Calibrator group</span> <input id="calibrator" list="group-options" maxlength="200" value="Control" required></label>
       </div>
       <datalist id="group-options"></datalist>
-      <label for="expression-data">Sample Ct values</label>
-      <p id="expression-help" class="hint">Paste four tab-separated columns: Sample, Group, Target Ct, Reference Ct. One row per biological sample; separate technical Ct replicates with commas. The header is optional.</p>
+      <label for="expression-data"><span data-i18n="qpcr.full.9bfa68c">Sample Ct values</span></label>
+      <p id="expression-help" class="hint"><span data-i18n="qpcr.full.bbff7ccb">Paste four tab-separated columns: Sample, Group, Target Ct, Reference Ct. One row per biological sample; separate technical Ct replicates with commas. The header is optional.</span></p>
       <textarea id="expression-data" rows="7" maxlength="60000" spellcheck="false" wrap="off" aria-describedby="expression-help" placeholder="Sample&#9;Group&#9;Target Ct&#9;Reference Ct"></textarea>
-      <p class="method-note">ΔCt = mean target Ct − mean reference Ct. ΔΔCt = sample ΔCt − mean calibrator ΔCt. Fold change = 2<sup>−ΔΔCt</sup>. This model assumes approximately equal target and reference efficiencies near 100%.</p>
+      <p class="method-note"><span data-i18n="qpcr.full.78fc2ad9">ΔCt = mean target Ct − mean reference Ct. ΔΔCt = sample ΔCt − mean calibrator ΔCt. Fold change = 2</span><sup>−ΔΔCt</sup><span data-i18n="qpcr.full.b4c65abc">. This model assumes approximately equal target and reference efficiencies near 100%.</span></p>
     </section>
     <section id="curve-inputs" hidden>
-      <label for="curve-data">Standard Ct values</label>
-      <p id="curve-help" class="hint">Paste two tab-separated columns: Quantity, Ct. Use at least three distinct positive quantities in the same units; separate technical Ct replicates with commas. The header is optional.</p>
+      <label for="curve-data"><span data-i18n="qpcr.full.85e4e903">Standard Ct values</span></label>
+      <p id="curve-help" class="hint"><span data-i18n="qpcr.full.79c40c7c">Paste two tab-separated columns: Quantity, Ct. Use at least three distinct positive quantities in the same units; separate technical Ct replicates with commas. The header is optional.</span></p>
       <textarea id="curve-data" rows="7" maxlength="60000" spellcheck="false" wrap="off" aria-describedby="curve-help" placeholder="Quantity&#9;Ct"></textarea>
-      <p class="method-note">Fit mean Ct against log₁₀ starting quantity, weighting each quantity equally. Efficiency = (10<sup>−1/slope</sup> − 1) × 100%.</p>
+      <p class="method-note"><span data-i18n="qpcr.full.4fcebc57">Fit mean Ct against log₁₀ starting quantity, weighting each quantity equally. Efficiency = (10</span><sup><span data-i18n="qpcr.full.73620e7c">−1/slope</span></sup> − 1) × 100%.</p>
     </section>
     <div class="actions">
-      <button type="submit" class="primary" id="analyze">Analyze</button>
-      <button type="button" id="load-example">Load example</button>
-      <button type="button" id="save-inputs" disabled>Save inputs</button>
+      <button type="submit" class="primary" id="analyze"><span data-i18n="qpcr.full.64619f73">Analyze</span></button>
+      <button type="button" id="load-example"><span data-i18n="qpcr.full.6e4fde2b">Load example</span></button>
+      <button type="button" id="save-inputs" disabled><span data-i18n="qpcr.full.bde841cd">Save inputs</span></button>
       <span id="save-status" class="hint" role="status" aria-live="polite"></span>
     </div>
   </form>
-  <p id="analysis-status" role="status" aria-live="polite">Paste your data or load an example.</p>
-  <section id="results" hidden aria-label="Analysis results">
+  <p id="analysis-status" role="status" aria-live="polite"><span data-i18n="qpcr.full.df2d8c53">Paste your data or load an example.</span></p>
+  <section id="results" hidden aria-label="Analysis results" data-i18n-aria-label="qpcr.full.55187971">
     <div id="metrics" class="metrics"></div>
     <div id="curve-plot" hidden></div>
-    <h2 id="result-heading">Results by sample</h2>
+    <h2 id="result-heading"><span data-i18n="qpcr.full.a75c70ec">Results by sample</span></h2>
     <div class="table-scroll" tabindex="0" role="region" aria-labelledby="result-heading"><table id="result-table"></table></div>
     <section id="group-results" hidden>
-      <h2 id="group-heading">Group summary</h2>
+      <h2 id="group-heading"><span data-i18n="qpcr.full.9e5dec">Group summary</span></h2>
       <div class="table-scroll" tabindex="0" role="region" aria-labelledby="group-heading"><table id="group-table"></table></div>
-      <p class="hint">n counts biological samples. Group fold change is the geometric mean of sample fold changes. SD is the sample standard deviation of biological ΔCt values; no significance test is performed.</p>
+      <p class="hint"><span data-i18n="qpcr.full.4230ad73">n counts biological samples. Group fold change is the geometric mean of sample fold changes. SD is the sample standard deviation of biological ΔCt values; no significance test is performed.</span></p>
     </section>
-    <div class="actions"><button type="button" id="export-results" disabled>Export TSV</button><span id="export-status" role="status" aria-live="polite" class="hint"></span></div>
+    <div class="actions"><button type="button" id="export-results" disabled><span data-i18n="qpcr.full.42c2a6be">Export TSV</span></button><span id="export-status" role="status" aria-live="polite" class="hint"></span></div>
   </section>
-  <section class="notebook-area" aria-label="Save results to notebook">
-    <label for="notebook-entry">Notebook page</label>
+  <section class="notebook-area" aria-label="Save results to notebook" data-i18n-aria-label="qpcr.full.8e572130">
+    <label for="notebook-entry"><span data-i18n="qpcr.full.a471aa6b">Notebook page</span></label>
     <div class="notebook-controls">
-      <select id="notebook-entry" disabled><option value="">Connect to load notebook pages</option></select>
-      <button id="refresh-notebooks" type="button" disabled>Refresh</button>
-      <button id="append-results" type="button" disabled>Append results</button>
+      <select id="notebook-entry" disabled><option value="" data-i18n="qpcr.full.6d710f97">Connect to load notebook pages</option></select>
+      <button id="refresh-notebooks" type="button" disabled><span data-i18n="qpcr.full.815aad4">Refresh</span></button>
+      <button id="append-results" type="button" disabled><span data-i18n="qpcr.full.75d8090b">Append results</span></button>
     </div>
-    <p id="notebook-status" class="hint" role="status" aria-live="polite">Choose an existing page after analyzing.</p>
+    <p id="notebook-status" class="hint" role="status" aria-live="polite"><span data-i18n="qpcr.full.2cfd9518">Choose an existing page after analyzing.</span></p>
   </section>
-  <div class="connection"><p id="host-status" class="hint" role="status" aria-live="polite">Connecting to Hikari…</p><button id="connect" type="button" hidden>Try again</button></div>
-  <details><summary>Method references</summary><p><a href="https://www.thermofisher.com/us/en/home/life-science/pcr/real-time-pcr/real-time-pcr-learning-center/real-time-pcr-basics/essentials-real-time-pcr.html" target="_blank" rel="noopener noreferrer">Applied Biosystems comparative Ct method</a> · <a href="https://www.bio-rad.com/webroot/web/pdf/lsr/literature/10031339.pdf" target="_blank" rel="noopener noreferrer">Bio-Rad PCR efficiency guide</a></p></details>
+  <div class="connection"><p id="host-status" class="hint" role="status" aria-live="polite"><span data-i18n="qpcr.full.5cc90dfc">Connecting to Hikari…</span></p><button id="connect" type="button" hidden><span data-i18n="qpcr.full.213e90fa">Try again</span></button></div>
+  <details><summary><span data-i18n="qpcr.full.f4f299ba">Method references</span></summary><p><a href="https://www.thermofisher.com/us/en/home/life-science/pcr/real-time-pcr/real-time-pcr-learning-center/real-time-pcr-basics/essentials-real-time-pcr.html" target="_blank" rel="noopener noreferrer"><span data-i18n="qpcr.full.241d1b23">Applied Biosystems comparative Ct method</span></a> · <a href="https://www.bio-rad.com/webroot/web/pdf/lsr/literature/10031339.pdf" target="_blank" rel="noopener noreferrer"><span data-i18n="qpcr.full.9e2bd507">Bio-Rad PCR efficiency guide</span></a></p></details>
 </main>
 <script src="./hikari.js"></script>
 <script src="./analysis.js"></script>
+<script src="./locales/en.js"></script>
+<script src="./locales/es.js"></script>
+<script src="./i18n.js"></script>
 <script src="./main.js"></script>
 </body>
 </html>

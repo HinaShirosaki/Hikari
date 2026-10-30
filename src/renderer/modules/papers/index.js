@@ -1,3 +1,4 @@
+import "./localization.js";
 import { createPapersPdfViewer } from './pdf-viewer/index.js';
 import { printPdfBytes } from '../print/index.js';
 import { createPapersActions } from './actions.js';
@@ -9,7 +10,6 @@ import { normalizePaperSummary } from './normalizers.js';
 import { bindFileDropTarget } from '../../lib/file-drop.js';
 import { boxesToPdfQuadPoints, normalizeHighlightBoxes, normalizePageDimension } from './pdf-viewer/pdf-viewer-geometry.js';
 import { getPaperDisplayTitle, hasPaperPdfMetadata, normalizePaperPdfMetadata } from './pdf-metadata.js';
-import { showTransientNotice } from '../../lib/notify.js';
 import { createDiscoveryMerge } from './management/discovery-merge.js';
 import { createStoredPaperDiscovery } from './management/discover-stored.js';
 import { createExternalLinkOpener } from './management/external-links.js';
@@ -18,6 +18,7 @@ import { searchPaperDatabaseForSelectedText } from './management/paper-search-te
 import { createPaperResearchBrief } from './research-brief.js';
 import { createPapersWorkspaceControls } from './workspace-controls.js';
 import { createPaperAgentChatContextGetter } from './agent-context.js';
+import { paperFailure, paperNotice, paperUi, setPaperAttribute } from './localization.js';
 
 // Papers view: library rail (folders = projects + journal clubs), pdf.js
 // viewer with highlights/comments, and LLM summaries/extractions. PDFs live
@@ -455,28 +456,26 @@ export function initPapersManagement({
       elements.paperCommentSidebar.hidden = !outlineOpen;
     }
     if (elements.paperCommentToggleBtn) {
-      const label = !outlineOpen
-        ? 'Open outline & bookmarks'
-        : 'Close outline & bookmarks';
+      const label = outlineOpen ? 'panel.closeOutline' : 'panel.openOutline';
       elements.paperCommentToggleBtn.classList?.toggle('is-collapsed', !outlineOpen);
       elements.paperCommentToggleBtn.setAttribute?.('aria-expanded', String(outlineOpen));
-      elements.paperCommentToggleBtn.setAttribute?.('aria-label', label);
-      elements.paperCommentToggleBtn.title = label;
+      setPaperAttribute(elements.paperCommentToggleBtn, 'aria-label', label);
+      setPaperAttribute(elements.paperCommentToggleBtn, 'title', label);
     }
     if (elements.paperDetailsSidebar) elements.paperDetailsSidebar.hidden = !detailsOpen;
     if (elements.paperDetailsToggleBtn) {
-      const label = detailsOpen ? 'Close paper details' : 'Open paper details';
+      const label = detailsOpen ? 'panel.closeDetails' : 'panel.openDetails';
       elements.paperDetailsToggleBtn.setAttribute('aria-expanded', String(detailsOpen));
-      elements.paperDetailsToggleBtn.setAttribute('aria-label', label);
-      elements.paperDetailsToggleBtn.title = label;
+      setPaperAttribute(elements.paperDetailsToggleBtn, 'aria-label', label);
+      setPaperAttribute(elements.paperDetailsToggleBtn, 'title', label);
     }
     if (detailsOpen) context.renderSummarySection();
     if (elements.paperResearchBrief) elements.paperResearchBrief.hidden = !briefOpen;
     if (elements.paperBriefToggleBtn) {
-      const label = briefOpen ? 'Close research brief' : 'Open research brief';
+      const label = briefOpen ? 'panel.closeBrief' : 'panel.openBrief';
       elements.paperBriefToggleBtn.setAttribute('aria-expanded', String(briefOpen));
-      elements.paperBriefToggleBtn.setAttribute('aria-label', label);
-      elements.paperBriefToggleBtn.title = label;
+      setPaperAttribute(elements.paperBriefToggleBtn, 'aria-label', label);
+      setPaperAttribute(elements.paperBriefToggleBtn, 'title', label);
     }
     context.renderResearchBrief?.();
     context.syncWorkspaceControls?.();
@@ -505,7 +504,7 @@ export function initPapersManagement({
       }
       printPdfBytes(bytes, { title: getPaperDisplayTitle(activePaper) || 'Paper' });
     } catch (error) {
-      showTransientNotice(String(error?.message || error || 'Failed to open the PDF for printing.'), { type: 'error' });
+      paperNotice(paperFailure(error, 'notice.printFailed'), { type: 'error' });
     }
   });
 
@@ -525,10 +524,10 @@ export function initPapersManagement({
       await actions.uploadAndViewPaperFile(files[0]);
     },
     onRejected: () => {
-      showTransientNotice('Drop one PDF file to import and view it.', { type: 'error' });
+      paperNotice(paperUi('notice.dropOne'), { type: 'error' });
     },
     onError: (error) => {
-      showTransientNotice(String(error?.message || error || 'Failed to open dropped PDF.'), { type: 'error' });
+      paperNotice(paperFailure(error, 'notice.dropOpenFailed'), { type: 'error' });
     }
   });
 
@@ -559,7 +558,7 @@ export function initPapersManagement({
       paper = findPaper();
     }
     if (!paper) {
-      showTransientNotice('This PDF is not in the paper library yet.', { type: 'error' });
+      paperNotice(paperUi('notice.notInLibrary'), { type: 'error' });
       return false;
     }
     await actions.viewPaperPdf(paper.id);

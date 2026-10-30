@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
 function getElement(doc, id) {
   return doc?.getElementById?.(id) || null;
 }
@@ -10,7 +13,7 @@ function addListener(element, eventName, handler, options) {
 
 function setText(element, value) {
   if (element) {
-    element.textContent = String(value || '');
+    i18nUi.setOwnedText(element, String(value || ''));
   }
 }
 

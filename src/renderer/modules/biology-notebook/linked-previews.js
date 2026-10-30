@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("notebook");
 import {
   getAssayAxisTemplateValues,
   getPlateDefinition,
@@ -185,7 +188,7 @@ export function buildNotebookAssayPlatePreviewHtml(assay, safeText) {
   }
 
   const note = totalWells > 384
-    ? `<p class="small-note">Previewing first ${maxRows} rows x ${maxColumns} columns for ${safeText(definition.label)}.</p>`
+    ? `<p class="small-note">${i18nUi.html("Previewing first")} ${maxRows} ${i18nUi.html("rows x")} ${maxColumns} ${i18nUi.html("columns for")} ${safeText(definition.label)}.</p>`
     : '';
 
   return `

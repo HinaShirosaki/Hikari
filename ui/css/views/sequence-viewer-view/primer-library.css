@@ -1,5 +1,8 @@
+/* Longer translated filter labels push Primers onto its own line instead of
+   wrapping inside the switch. */
 .sequence-viewer-library-filter-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: stretch;
   gap: var(--space-8);
   width: fit-content;

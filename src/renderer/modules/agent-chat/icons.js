@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("agent");
 const ICON_PATHS = Object.freeze({
   attach: '<path d="m20.5 10.5-8.8 8.8a5 5 0 0 1-7.1-7.1l9.2-9.2a3.5 3.5 0 0 1 5 5L9.6 17a2 2 0 0 1-2.8-2.8l8.4-8.4" />',
   chat: '<path d="M6.5 4.5h11a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3h-7l-3.5 3.25V15.5h-.5a3 3 0 0 1-3-3v-5a3 3 0 0 1 3-3Z" /><path d="M8.5 10h.01M12 10h.01M15.5 10h.01" />',
@@ -42,7 +45,7 @@ export function hydrateAgentChatIcons(rootDocument = globalThis.document) {
     icon.setAttribute('aria-hidden', 'true');
     icon.setAttribute('focusable', 'false');
     icon.setAttribute('data-agent-chat-icon', iconName);
-    icon.innerHTML = paths;
+    i18nUi.setHtml(icon, paths);
     placeholder.replaceWith(icon);
   }
 }

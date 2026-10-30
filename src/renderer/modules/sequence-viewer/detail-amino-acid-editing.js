@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../lib/html.js';
 import {
   STANDARD_AMINO_ACIDS,
@@ -50,7 +53,7 @@ export function createSequenceViewerAminoAcidEditingController(config = {}) {
     activeContext = null;
     if (options?.hideMenu !== false && elements.featureContextMenu) {
       elements.featureContextMenu.hidden = true;
-      elements.featureContextMenu.innerHTML = '';
+      i18nUi.setHtml(elements.featureContextMenu, '');
     }
   }
 
@@ -95,7 +98,7 @@ export function createSequenceViewerAminoAcidEditingController(config = {}) {
             class="sequence-viewer-aa-replacement-option"
             data-sequence-aa-replacement="${entry.code}"
             title="${escapeHtml(`${entry.name} (${entry.code}) - ${codon}`)}"
-            aria-label="${escapeHtml(`Change to ${entry.name} (${entry.code}), codon ${codon}`)}"
+            ${i18nUi.attributeMessage("aria-label", i18nUi.message("Change to {p0} ({p1}), codon {p2}", { p0: entry.name, p1: entry.code, p2: codon }))}
           >
             <span class="sequence-viewer-aa-replacement-code">${entry.code}</span>
             <span class="sequence-viewer-aa-replacement-short">${entry.shortName}</span>
@@ -104,16 +107,16 @@ export function createSequenceViewerAminoAcidEditingController(config = {}) {
       })
       .join('');
 
-    elements.featureContextMenu.innerHTML = `
+    i18nUi.setHtml(elements.featureContextMenu, `
       <div class="sequence-viewer-aa-edit-context">
         <p class="sequence-viewer-aa-edit-title"><strong>${escapeHtml(context.aminoAcid)}</strong> ${escapeHtml(currentName)}</p>
         <p class="small-note">${escapeHtml(`${context.codon} - ${formatPositionLabel(context.codonPositions)}`)}</p>
-        <p class="small-note">Change to (uses the codon with the fewest DNA substitutions):</p>
-        <div class="sequence-viewer-aa-replacement-grid" role="group" aria-label="Replacement amino acid">
+        <p class="small-note">${i18nUi.html("Change to (uses the codon with the fewest DNA substitutions):")}</p>
+        <div class="sequence-viewer-aa-replacement-grid" role="group" ${i18nUi.attribute("aria-label", "Replacement amino acid")}>
           ${options}
         </div>
       </div>
-    `;
+    `);
     elements.featureContextMenu.hidden = false;
     positionFloatingMenu(elements.featureContextMenu, Number(event?.clientX) + 4, Number(event?.clientY) + 4);
   }
@@ -134,7 +137,7 @@ export function createSequenceViewerAminoAcidEditingController(config = {}) {
       });
       return true;
     } catch (error) {
-      setStatus(error?.message || 'Failed to change the amino acid.', true);
+      setStatus((((((error?.message || i18nUi.text("Failed to change the amino acid.")))))), true);
       return false;
     }
   }

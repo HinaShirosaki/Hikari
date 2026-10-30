@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { createSequenceViewerAlignmentController } from '../alignment-controller.js';
 import { createSequenceViewerAnnotationController } from '../annotation.js';
 import { createSequenceViewerCloningDesignController } from '../cloning-design.js';
@@ -39,6 +42,7 @@ export function setupSequenceViewerControllers(ctx) {
     onRenameLibraryFolder: actions.upsertLibraryFolder,
     onDeleteLibraryFolder: actions.deleteLibraryFolder,
     onMoveLibraryEntry: actions.moveLibraryEntryToFolder,
+    onRecognizeBackbone: actions.recognizeCurrentBackboneInsert,
     onLibraryEntryLoaded: ({ alignments }) => {
       actions.setAlignmentSessions(alignments);
       controllers.alignment?.handleReferenceRecordChanged?.();
@@ -74,7 +78,6 @@ export function setupSequenceViewerControllers(ctx) {
     persistFeatureMutation: actions.persistFeatureMutation,
     onRequestSave: actions.saveCurrentRecordToLibrary,
     onRequestAnnotate: () => controllers.annotation?.annotateCurrentRecord?.(),
-    onRequestRecognizeBackbone: actions.recognizeCurrentBackboneInsert,
     onApplySequenceEdit: actions.applySequenceEdit,
     onApplyAminoAcidEdit: actions.applyAminoAcidEdit,
     onSetSequenceOrigin: actions.setSequenceOrigin,
@@ -174,9 +177,7 @@ export function setupSequenceViewerControllers(ctx) {
     onRequestProteinInsert: (target) => {
       actions.showProteinBuilderWorkspace();
       controllers.proteinBuilder?.render?.();
-      actions.setStatus(target
-        ? 'Compose the construct, then use Insert Into Vector to splice it into the open plasmid.'
-        : 'Compose the construct, then assemble it into a stored backbone.');
+      actions.setStatus((((((target ? i18nUi.text("Compose the construct, then use Insert Into Vector to splice it into the open plasmid.") : i18nUi.text("Compose the construct, then assemble it into a stored backbone.")))))));
     }
   });
 

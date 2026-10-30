@@ -1,7 +1,7 @@
-import {
-  axisLabel,
-  oppositeAxis
-} from './shared.js';
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("plate");
+import { oppositeAxis } from './shared.js';
 import {
   applyAxisTemplate,
   getAssayAxisTemplateValues,
@@ -21,6 +21,7 @@ import {
 } from './concentration-utils.js';
 import { createAxisValues } from './layout/axis-values.js';
 import { createPlateInteractions } from './layout/plate-interactions.js';
+import { plateUi, setPlateText } from './localization.js';
 
 export function createAssayLayoutManager({
   runtime,
@@ -211,7 +212,7 @@ export function createAssayLayoutManager({
     setLayoutFromAxisAndOverrides();
     renderPlatePreview();
     renderResultTable();
-    setLayoutStatus(`Switched axes. Sample axis is now ${axisLabel(assaySampleAxisInput.value)}.`);
+    setLayoutStatus(plateUi(assaySampleAxisInput.value === 'column' ? 'status.axisColumn' : 'status.axisRow'));
   }
 
   function restoreAssayLayoutState(assay, def) {
@@ -265,7 +266,7 @@ export function createAssayLayoutManager({
       ? normalizeCurrentAxisTemplateValues(sourceValues, def, sampleAxis)
       : getAxisTemplateValues();
 
-    assayPlatePreview.innerHTML = buildPlatePreviewHtml({
+    i18nUi.setHtml(assayPlatePreview, buildPlatePreviewHtml({
       def,
       sampleAxis,
       layout: runtime.currentLayout,
@@ -275,7 +276,7 @@ export function createAssayLayoutManager({
       plateEditField: runtime.plateEditField,
       activeWellEditorId: runtime.activeWellEditorId,
       safeText
-    });
+    }));
 
     if (serialDilution.isOpen()) {
       serialDilution.render();
@@ -291,7 +292,7 @@ export function createAssayLayoutManager({
     runtime.currentResults = {};
     renderPlatePreview();
     renderResultTable();
-    setLayoutStatus('Cleared all well mappings.');
+    setLayoutStatus(plateUi('status.clearedMappings'));
     setCsvStatus('');
     updateActiveWellPreviewState();
     if (typeof clearAnalysisOutput === 'function') {
@@ -304,14 +305,14 @@ export function createAssayLayoutManager({
       return;
     }
     const def = getCurrentDefinition();
-    assayPlateDefinition.textContent = `Plate layout: ${def.rows} rows x ${def.columns} columns (${def.rows * def.columns} wells).`;
+    setPlateText(assayPlateDefinition, 'status.plateLayout', { rows: def.rows, columns: def.columns, wells: def.rows * def.columns });
   }
 
   function renderAssayNumberDisplay(numberText = '') {
     if (!assayNumberDisplay) {
       return;
     }
-    assayNumberDisplay.textContent = numberText || '';
+    i18nUi.setText(assayNumberDisplay, (numberText || ''));
   }
 
   function onPlateTypeChange() {
@@ -330,9 +331,7 @@ export function createAssayLayoutManager({
     if (typeof clearAnalysisOutput === 'function') {
       clearAnalysisOutput();
     }
-    setCsvStatus(droppedResults > 0
-      ? `Plate resized. ${droppedResults} result${droppedResults === 1 ? '' : 's'} outside the new layout were dropped.`
-      : '');
+    setCsvStatus(droppedResults > 0 ? plateUi('status.resizeDropped', { count: droppedResults }) : '');
   }
 
   const { exportCsvTemplate, onImportCsv } = createLayoutCsv({

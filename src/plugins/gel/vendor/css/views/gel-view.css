@@ -28,7 +28,6 @@
   min-width: 0;
 }
 
-
 /* Keep the Gel workspace frame fixed on desktop. The viewer and tool rail own
  * their overflow so a large image or long tool list cannot scroll the module
  * itself. */
@@ -172,7 +171,6 @@
   font-family: var(--font-app);
 }
 
-
 .gel-peak-editor-dialog.app-dialog-surface {
   --app-dialog-width: 1180px;
   --app-dialog-max-height: 920px;
@@ -242,15 +240,11 @@
   cursor: crosshair;
 }
 
-
-
 .gel-peak-editor-chart .peak-editor-grid {
   stroke: var(--theme-border-soft);
   stroke-width: 1;
   stroke-dasharray: 4 5;
 }
-
-
 
 .gel-peak-editor-chart .peak-editor-path {
   fill: none;
@@ -920,140 +914,7 @@
   display: grid;
   grid-template-columns: var(--gel-lane-label-width) minmax(0, 1fr);
   column-gap: 0;
-  row-gap: var(--space-10);
   min-width: 0;
-}
-
-.gel-lane-table-toolbar {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-12);
-}
-
-.gel-lane-table-toolbar p {
-  margin: 0;
-}
-
-.gel-lane-table-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-8);
-  flex-wrap: wrap;
-}
-
-.gel-lane-table-ladder-choice {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-6);
-  white-space: nowrap;
-}
-
-.gel-lane-table-ladder-choice input {
-  margin: 0;
-}
-
-.gel-lane-table-wrap {
-  overflow-x: auto;
-}
-
-.gel-lane-table-labels {
-  display: grid;
-  /* Collapsed table borders add one CSS pixel to each nominal 40px row. */
-  grid-auto-rows: 41px;
-  min-width: 0;
-}
-
-.gel-lane-table-label-head,
-.gel-lane-table-label-cell {
-  border: 1px solid var(--theme-border-soft);
-  padding: 0;
-  text-align: center;
-  background: var(--theme-surface);
-}
-
-.gel-lane-table-label-head {
-  display: grid;
-  place-items: center;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--theme-text);
-  background: var(--theme-surface-subtle);
-}
-
-.gel-lane-table-label-cell {
-  background: var(--theme-surface-muted);
-}
-
-.gel-lane-table-grid-shell,
-.gel-lane-table-grid-offsets {
-  min-width: 0;
-}
-
-.gel-lane-table-grid-offsets {
-  box-sizing: border-box;
-}
-
-.gel-lane-table {
-  width: 100%;
-  min-width: 0;
-  border-collapse: collapse;
-  table-layout: fixed;
-}
-
-.gel-lane-table th,
-.gel-lane-table td {
-  border: 1px solid var(--theme-border-soft);
-  padding: 0;
-  height: 40px;
-  text-align: center;
-  vertical-align: middle;
-  background: var(--theme-surface);
-}
-
-.gel-lane-table thead th {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--theme-text);
-  background: var(--theme-surface-subtle);
-}
-
-.gel-lane-table tbody th {
-  font-weight: 500;
-  background: var(--theme-surface-muted);
-}
-
-.gel-lane-table .gel-lane-table-excluded-cell {
-  visibility: hidden;
-}
-
-.gel-lane-table-input {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  height: 100%;
-  min-height: 40px;
-  padding: var(--space-8) var(--space-10);
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  font: inherit;
-  font-size: 0.78rem;
-  line-height: 1.2;
-  color: var(--theme-text);
-  text-align: center;
-}
-
-.gel-lane-table-input::placeholder {
-  color: var(--theme-text-muted);
-}
-
-.gel-lane-table-input:focus {
-  outline: none;
-  background: var(--theme-surface);
 }
 
 /* Extracted from ui/css/themes/modes.css */
@@ -1116,13 +977,9 @@ body.theme-night .gel-lane-profile-chart .lane-profile-axis-label {
   fill: var(--theme-text-muted);
 }
 
-
-
 body.theme-night .gel-peak-editor-chart .peak-editor-grid {
   stroke: var(--theme-border-soft);
 }
-
-
 
 body.theme-night .gel-peak-editor-chart .peak-editor-path,
 body.theme-night .gel-peak-editor-chart .peak-editor-apex {
@@ -1155,38 +1012,6 @@ body.theme-night .gel-tool-actions .ghost-btn.is-active {
   border-color: var(--theme-success-line);
   background: var(--theme-success-soft);
   color: var(--theme-success-ink);
-}
-
-body.theme-night .gel-lane-table th,
-body.theme-night .gel-lane-table td {
-  border-color: var(--theme-border-soft);
-  background: var(--theme-surface);
-}
-
-body.theme-night .gel-lane-table thead th {
-  color: var(--theme-text);
-  background: var(--theme-surface-subtle);
-}
-
-body.theme-night .gel-lane-table-label-head {
-  color: var(--theme-text);
-  background: var(--theme-surface-subtle);
-}
-
-body.theme-night .gel-lane-table-label-cell {
-  background: var(--theme-surface-muted);
-}
-
-body.theme-night .gel-lane-table-input {
-  color: var(--theme-text);
-}
-
-body.theme-night .gel-lane-table-input::placeholder {
-  color: var(--theme-text-muted);
-}
-
-body.theme-night .gel-lane-table-input:focus {
-  background: var(--theme-surface-elevated);
 }
 
 /* Extracted from ui/css/overrides/cross-view-fixes.css */
@@ -1271,31 +1096,6 @@ body.theme-night .gel-lane-table-input:focus {
 
   .gel-peak-editor-header {
     align-items: flex-start;
-  }
-
-  .gel-lane-table-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .gel-lane-table-actions {
-    justify-content: flex-start;
-  }
-
-  .gel-lane-table-shell {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .gel-lane-table-labels {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .gel-viewer-stage.has-lane-table .gel-image-row {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .gel-lane-table-label-spacer {
-    display: none;
   }
 }
 

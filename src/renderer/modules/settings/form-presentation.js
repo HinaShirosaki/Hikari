@@ -1,3 +1,5 @@
+import { setTranslatedText } from '../../lib/i18n/dom.js';
+
 // Drafts belong to their form, so navigation and background catalog refreshes
 // cannot silently discard work in another settings section.
 export function createSettingsFormPresentation({ document, onRestoreModel }) {
@@ -25,8 +27,10 @@ export function createSettingsFormPresentation({ document, onRestoreModel }) {
     const dirty = entry.baseline !== null && !same(read(form), entry.baseline);
     form.querySelector('[type="submit"]').disabled = entry.saving || !dirty;
     form.querySelector('[data-settings-discard]').disabled = entry.saving || !dirty;
-    form.querySelector('[data-settings-save-status]').textContent = message
-      || (entry.saving ? 'Saving…' : dirty ? 'Unsaved changes' : 'All changes saved');
+    const key = message || (entry.saving ? 'common.status.saving'
+      : dirty ? 'common.status.unsaved' : 'common.status.saved');
+    const status = form.querySelector('[data-settings-save-status]');
+    setTranslatedText(status, key);
     preview();
   }
 
@@ -65,10 +69,10 @@ export function createSettingsFormPresentation({ document, onRestoreModel }) {
         await save(event);
         entry.baseline = read(form);
         entry.saving = false;
-        update(form, 'Changes saved');
+        update(form, 'common.status.saveSuccess');
       } catch {
         entry.saving = false;
-        update(form, 'Could not save changes. Please try again.');
+        update(form, 'common.status.saveError');
       } finally {
         form.inert = false;
       }

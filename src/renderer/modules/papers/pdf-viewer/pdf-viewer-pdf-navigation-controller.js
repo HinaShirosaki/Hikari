@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("papers");
 import { clamp } from './pdf-viewer-anchors.js';
 import {
   DEFAULT_ZOOM,
@@ -6,6 +9,7 @@ import {
   ZOOM_STEP,
   ZOOM_WHEEL_SENSITIVITY
 } from './pdf-viewer-constants.js';
+import { paperFailure, paperUi } from '../localization.js';
 
 export const installPdfViewerPdfNavigationController = (ctx) => {
   const { state } = ctx;
@@ -54,7 +58,7 @@ export const installPdfViewerPdfNavigationController = (ctx) => {
     }
     const pageNumber = await resolveDestinationPageNumber(destination);
     if (!pageNumber) {
-      ctx.setStatus('Unable to follow this PDF link.', true);
+      ctx.setStatus(paperUi('viewer.linkFailed'), true);
       return;
     }
     state.pendingNavigationPageNumber = pageNumber;
@@ -128,20 +132,20 @@ export const installPdfViewerPdfNavigationController = (ctx) => {
   async function openExternalLink(url) {
     const externalUrl = String(url || '').trim();
     if (!externalUrl || typeof state.onExternalLink !== 'function') {
-      ctx.setStatus('External link opening is unavailable in this build.', true);
+      ctx.setStatus(paperUi('viewer.externalUnavailable'), true);
       return;
     }
-    ctx.setStatus('Opening external website...');
+    ctx.setStatus(i18nUi.text("Opening external website..."));
     try {
       const result = await state.onExternalLink(externalUrl);
       if (result?.ok === true) {
-        ctx.setStatus('Opened external website.');
+        ctx.setStatus(i18nUi.text("Opened external website."));
       } else {
         const error = String(result?.error || '').trim();
-        ctx.setStatus(error || 'External website was not opened.');
+        ctx.setStatus((((((error || i18nUi.text("External website was not opened.")))))));
       }
     } catch (error) {
-      ctx.setStatus(String(error?.message || error || 'Failed to open external website.'), true);
+      ctx.setStatus(paperFailure(error, 'viewer.externalFailed'), true);
     }
   }
 

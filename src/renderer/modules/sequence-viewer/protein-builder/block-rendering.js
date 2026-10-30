@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../../lib/html.js';
 import { buildSequenceMapSvg } from '../vector-builder/sequence-map.js';
 import { cleanText } from '../shared.js';
@@ -49,7 +52,7 @@ export function installProteinBuilderBlockRendering(ctx) {
     if (!elements.proteinBuilderCommonBlocks) {
       return;
     }
-    elements.proteinBuilderCommonBlocks.innerHTML = COMMON_BLOCK_GROUPS.map((group) => renderCommonGroup(group)).join('');
+    i18nUi.setHtml(elements.proteinBuilderCommonBlocks, COMMON_BLOCK_GROUPS.map((group) => renderCommonGroup(group)).join(''));
   };
 
   ctx.renderFeatureSearchResults = function renderFeatureSearchResults() {
@@ -63,15 +66,15 @@ export function installProteinBuilderBlockRendering(ctx) {
     // Below the 2-character minimum no search has run, so the panel stays quiet
     // instead of claiming nothing matched.
     if (query.length < 2) {
-      elements.proteinBuilderFeatureSearchResults.innerHTML = '';
+      i18nUi.setHtml(elements.proteinBuilderFeatureSearchResults, '');
       return;
     }
     if (!results.length) {
-      elements.proteinBuilderFeatureSearchResults.innerHTML = `<p class="small-note">No stored features matched "${escapeHtml(query)}".</p>`;
+      i18nUi.setHtml(elements.proteinBuilderFeatureSearchResults, `<p class="small-note">${i18nUi.html("No stored features matched \"")}${escapeHtml(query)}".</p>`);
       return;
     }
 
-    elements.proteinBuilderFeatureSearchResults.innerHTML = results.map((feature) => {
+    i18nUi.setHtml(elements.proteinBuilderFeatureSearchResults, results.map((feature) => {
       const meta = buildFeatureResultMeta(feature);
       const featureId = cleanText(feature?.id, 200);
       const selected = featureId && featureId === cleanText(state.featureSelectedId, 200);
@@ -85,9 +88,9 @@ export function installProteinBuilderBlockRendering(ctx) {
         >
           <div class="sequence-viewer-protein-builder-feature-head">
             <div>
-              <strong>${escapeHtml(feature?.name || 'feature')}</strong>
+              <strong>${i18nUi.render((feature?.name || i18nUi.message("feature")))}</strong>
               <p class="small-note sequence-viewer-protein-picker-meta">
-                <span class="sequence-viewer-protein-picker-type">${escapeHtml(feature?.type || 'feature')}</span>
+                <span class="sequence-viewer-protein-picker-type">${i18nUi.render((feature?.type || i18nUi.message("feature")))}</span>
                 <span>${escapeHtml(meta.lengthText)}</span>
                 <span>${escapeHtml(meta.hostText)}</span>
               </p>
@@ -99,14 +102,14 @@ export function installProteinBuilderBlockRendering(ctx) {
             : ''}
         </article>
       `;
-    }).join('');
+    }).join(''));
   };
 
   // The picked feature's source vectors, and the plasmid the chosen one sits in.
   ctx.renderFeatureSourcePanel = function renderFeatureSourcePanel() {
     const feature = ctx.getSelectedSearchFeature();
     if (elements.proteinBuilderFeatureSummary) {
-      elements.proteinBuilderFeatureSummary.textContent = feature?.name || (feature ? 'Selected protein' : 'Select protein');
+      i18nUi.setText(elements.proteinBuilderFeatureSummary, (feature?.name || (feature ? i18nUi.message("Selected protein") : i18nUi.message("Select protein"))));
     }
     if (elements.proteinBuilderFeatureSource) {
       elements.proteinBuilderFeatureSource.hidden = !feature;
@@ -117,7 +120,7 @@ export function installProteinBuilderBlockRendering(ctx) {
     }
     const hosts = ctx.getSearchFeatureHosts(feature);
     if (elements.proteinBuilderFeatureHosts) {
-      elements.proteinBuilderFeatureHosts.innerHTML = hosts.length
+      i18nUi.setHtml(elements.proteinBuilderFeatureHosts, hosts.length
         ? hosts.map((entry) => {
           const hostId = cleanText(entry?.hostVectorId, 200);
           const selected = hostId === cleanText(state.featureHostId, 200);
@@ -130,12 +133,12 @@ export function installProteinBuilderBlockRendering(ctx) {
               aria-pressed="${selected ? 'true' : 'false'}"
               data-protein-builder-feature-host-id="${escapeAttribute(hostId)}"
             >
-              <strong class="sequence-viewer-protein-picker-host-name">${escapeHtml(cleanText(entry?.hostVectorName, 160) || 'stored vector')}</strong>
-              <span class="small-note">${length.toLocaleString()} bp | ${escapeHtml(cleanText(entry?.topology, 40) || 'circular')} | ${copies} copy${copies === 1 ? '' : ' sites'}</span>
+              <strong class="sequence-viewer-protein-picker-host-name">${i18nUi.render((cleanText(entry?.hostVectorName, 160) || i18nUi.message("stored vector")))}</strong>
+              <span class="small-note">${length.toLocaleString()} bp | ${i18nUi.render((cleanText(entry?.topology, 40) || i18nUi.message("circular")))} | ${copies} ${i18nUi.html("copy")}${i18nUi.render((copies === 1 ? '' : i18nUi.message(" sites")))}</span>
             </button>
           `;
         }).join('')
-        : '<p class="small-note">No source vector is recorded for this feature.</p>';
+        : `<p class="small-note">${i18nUi.html("No source vector is recorded for this feature.")}</p>`);
     }
     ctx.renderFeatureSourcePreview();
   };
@@ -150,13 +153,12 @@ export function installProteinBuilderBlockRendering(ctx) {
       ? state.featureHostRecords.get(cleanText(host.hostVectorId, 200))
       : null;
     if (record?.sequence?.length) {
-      elements.proteinBuilderFeaturePreview.innerHTML = buildSequenceMapSvg(
+      i18nUi.setHtml(elements.proteinBuilderFeaturePreview, buildSequenceMapSvg(
         record,
         { features: Array.isArray(record.features) ? record.features : [] }
-      );
+      ));
       return;
     }
-    elements.proteinBuilderFeaturePreview.innerHTML = `<p class="small-note">${escapeHtml(message
-      || (host ? 'Loading plasmid preview...' : 'Pick a source vector to preview it.'))}</p>`;
+    i18nUi.setHtml(elements.proteinBuilderFeaturePreview, `<p class="small-note">${i18nUi.render((message || (host ? i18nUi.message("Loading plasmid preview...") : i18nUi.message("Pick a source vector to preview it."))))}</p>`);
   };
 }

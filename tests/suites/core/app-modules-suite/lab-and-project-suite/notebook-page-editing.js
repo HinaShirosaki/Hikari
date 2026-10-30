@@ -1,3 +1,4 @@
+const { stripI18nMarkup } = require('../../../../support/i18n-markup.cjs');
 module.exports = function registerAppLabAndProjectSuiteNotebookPageEditing(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
@@ -145,10 +146,10 @@ test('biology-notebook prefers stored protocol snapshots over live protocol reco
 
   assert.equal(document.getElementById('biology-notebook-protocol-title').textContent, 'Stored Snapshot Name');
   assert.equal(document.getElementById('biology-notebook-experiment-name').hidden, true);
-  assert.match(document.getElementById('biology-notebook-steps').innerHTML, /Stored notebook step with/);
-  assert.match(document.getElementById('biology-notebook-steps').innerHTML, /data-nb-key-ref="volume"/);
-  assert.match(document.getElementById('biology-notebook-steps').innerHTML, />15 mL</);
-  assert.doesNotMatch(document.getElementById('biology-notebook-steps').innerHTML, /Live library step/);
+  assert.match(stripI18nMarkup(document.getElementById('biology-notebook-steps').innerHTML), /Stored notebook step with/);
+  assert.match(stripI18nMarkup(document.getElementById('biology-notebook-steps').innerHTML), /data-nb-key-ref="volume"/);
+  assert.match(stripI18nMarkup(document.getElementById('biology-notebook-steps').innerHTML), />15 mL</);
+  assert.doesNotMatch(stripI18nMarkup(document.getElementById('biology-notebook-steps').innerHTML), /Live library step/);
   assert.equal(document.getElementById('biology-notebook-page-starter').hidden, true);
 
   const notebookWorkspace = document.getElementById('biology-notebook-viewer-column');
@@ -159,7 +160,7 @@ test('biology-notebook prefers stored protocol snapshots over live protocol reco
   assert.equal(notebookWorkspace.classList.contains('is-file-drop-active'), true);
   trigger(notebookWorkspace, 'drop', { dataTransfer });
   assert.equal(notebookWorkspace.classList.contains('is-file-drop-active'), false);
-  assert.match(document.getElementById('biology-notebook-result-attachments').innerHTML, /workspace-drop\.png/);
+  assert.match(stripI18nMarkup(document.getElementById('biology-notebook-result-attachments').innerHTML), /workspace-drop\.png/);
 
   trigger(document.getElementById('biology-notebook-protocol-title'), 'dblclick');
   assert.equal(document.getElementById('biology-notebook-protocol-title').hidden, true);
@@ -512,11 +513,11 @@ test('biology-notebook places Clarify and Save inside the notes composer', () =>
     'biology-notebook-view',
     'notebook-and-tables.css'
   ), 'utf8');
-  assert.match(html, /class="biology-notebook-notes-field"[\s\S]*?for="biology-notebook-result"[\s\S]*?class="biology-notebook-notes-composer"[\s\S]*?id="biology-notebook-result"[\s\S]*?id="clarify-save-biology-notebook-btn"/);
-  assert.match(html, /<label for="biology-notebook-result">Notes<\/label>/);
-  assert.doesNotMatch(html, /class="form-actions"[\s\S]*?id="clarify-save-biology-notebook-btn"/);
-  assert.doesNotMatch(html, /class="biology-notebook-linked-toolbar"/);
-  assert.match(html, /id="biology-notebook-table-context-menu"[^>]*role="menu"[\s\S]*?id="biology-notebook-add-table-row-btn"[^>]*role="menuitem"[\s\S]*?id="biology-notebook-add-table-column-btn"[^>]*role="menuitem"[\s\S]*?id="biology-notebook-remove-table-btn"[^>]*role="menuitem"/);
+  assert.match(stripI18nMarkup(html), /class="biology-notebook-notes-field"[\s\S]*?for="biology-notebook-result"[\s\S]*?class="biology-notebook-notes-composer"[\s\S]*?id="biology-notebook-result"[\s\S]*?id="clarify-save-biology-notebook-btn"/);
+  assert.match(stripI18nMarkup(html), /<label for="biology-notebook-result"(?: data-i18n="notebook.viewer.notes")?>Notes<\/label>/);
+  assert.doesNotMatch(stripI18nMarkup(html), /class="form-actions"[\s\S]*?id="clarify-save-biology-notebook-btn"/);
+  assert.doesNotMatch(stripI18nMarkup(html), /class="biology-notebook-linked-toolbar"/);
+  assert.match(stripI18nMarkup(html), /id="biology-notebook-table-context-menu"[^>]*role="menu"[\s\S]*?id="biology-notebook-add-table-row-btn"[^>]*role="menuitem"[\s\S]*?id="biology-notebook-add-table-column-btn"[^>]*role="menuitem"[\s\S]*?id="biology-notebook-remove-table-btn"[^>]*role="menuitem"/);
   assert.match(css, /\.biology-notebook-linked-results:empty,[\s\S]*?\.biology-notebook-tool-calculations:empty\s*\{[^}]*display:\s*none;/s);
   assert.match(css, /\.biology-notebook-notes-composer\s*\{[^}]*position:\s*relative;/s);
   assert.match(css, /\.biology-notebook-notes-composer textarea\s*\{[^}]*padding:\s*var\(--space-10\)\s+var\(--space-12\)\s+50px;/s);
@@ -550,9 +551,9 @@ test('biology-notebook quick sample submit is a compact accessible icon', () => 
   const submitStart = html.indexOf('<button id="biology-notebook-quick-sample-submit-btn"');
   const submitButton = html.slice(submitStart, html.indexOf('</button>', submitStart) + 9);
 
-  assert.match(submitButton, /class="primary-btn biology-notebook-quick-sample-submit-btn"[^>]*type="submit"[^>]*aria-label="Add Sample"[^>]*title="Add Sample"/);
-  assert.match(submitButton, /<svg[^>]*aria-hidden="true"[\s\S]*?<span class="sr-only">Add Sample<\/span>/);
-  assert.doesNotMatch(submitButton, />\s*Add Sample\s*<\/button>/);
+  assert.match(stripI18nMarkup(submitButton), /class="primary-btn biology-notebook-quick-sample-submit-btn"[^>]*type="submit"[^>]*aria-label="Add Sample"[^>]*title="Add Sample"/);
+  assert.match(stripI18nMarkup(submitButton), /<svg[^>]*aria-hidden="true"[\s\S]*?<span class="sr-only">Add Sample<\/span>/);
+  assert.doesNotMatch(stripI18nMarkup(submitButton), />\s*Add Sample\s*<\/button>/);
   assert.match(css, /\.biology-notebook-quick-sample-submit-btn\s*\{[^}]*width:\s*34px;[^}]*min-width:\s*34px;[^}]*height:\s*34px;[^}]*padding:\s*0;/s);
   assert.match(controllerSource, /function setBusy\(isBusy\)[\s\S]*?setAttribute\?\.\('aria-label', label\)[\s\S]*?querySelector\?\.\('\.sr-only'\)/);
   assert.doesNotMatch(controllerSource, /submitBtn\.textContent\s*=/);
@@ -574,13 +575,13 @@ test('biology-notebook buffer preparer floats one autocomplete menu and appends 
     'biology-notebook-view',
     'rail-and-projects.css'
   ), 'utf8');
-  assert.match(html, /<tbody id="biology-notebook-tool-buffer-rows">/);
-  assert.match(html, /id="biology-notebook-tool-buffer-add-row-anchor"[\s\S]*?id="biology-notebook-tool-buffer-add-row"[^>]*><svg class="btn-icon"[^>]*><path d="M12 5v14M5 12h14"\/><\/svg><\/button>/);
-  assert.match(html, /id="biology-notebook-tool-buffer-adjustment-row"/);
+  assert.match(stripI18nMarkup(html), /<tbody id="biology-notebook-tool-buffer-rows">/);
+  assert.match(stripI18nMarkup(html), /id="biology-notebook-tool-buffer-add-row-anchor"[\s\S]*?id="biology-notebook-tool-buffer-add-row"[^>]*><svg class="btn-icon"[^>]*><path d="M12 5v14M5 12h14"\/><\/svg><\/button>/);
+  assert.match(stripI18nMarkup(html), /id="biology-notebook-tool-buffer-adjustment-row"/);
   const molarityButtonStart = html.indexOf('<button id="biology-notebook-add-molarity-btn"');
   const molarityButton = html.slice(molarityButtonStart, html.indexOf('</button>', molarityButtonStart) + 9);
-  assert.match(molarityButton, /aria-label="Add molarity table"[\s\S]*?<svg[^>]*aria-hidden="true"[^>]*focusable="false"[\s\S]*?<span class="sr-only">Add molarity table<\/span>/);
-  assert.doesNotMatch(molarityButton, /biology-notebook-molarity-icon/);
+  assert.match(stripI18nMarkup(molarityButton), /aria-label="Add molarity table"[\s\S]*?<svg[^>]*aria-hidden="true"[^>]*focusable="false"[\s\S]*?<span class="sr-only">Add molarity table<\/span>/);
+  assert.doesNotMatch(stripI18nMarkup(molarityButton), /biology-notebook-molarity-icon/);
   assert.match(css, /\.biology-notebook-buffer-suggestions--floating\s*\{[^}]*position:\s*fixed;[^}]*z-index:\s*120;/s);
 
   // Drive the real sidebar controller over a small DOM stand-in.
@@ -681,7 +682,7 @@ test('biology-notebook buffer preparer floats one autocomplete menu and appends 
   menu(1).scrollHeight = 150;
   nameInput(1).fire('focus');
   assert.equal(menu(1).hidden, false);
-  assert.match(menu(1).innerHTML, /data-buffer-candidate=/);
+  assert.match(stripI18nMarkup(menu(1).innerHTML), /data-buffer-candidate=/);
   assert.equal(nameInput(1).getAttribute('aria-expanded'), 'true');
   assert.equal(menu(1).parentElement, doc.body);
   assert.equal(menu(1).classList.contains('biology-notebook-buffer-suggestions--floating'), true);
@@ -725,7 +726,7 @@ test('biology-notebook buffer preparer starts blank, records without a button, a
   );
   assert.doesNotMatch(bufferSection, /value="100"|placeholder="(?:Tris Base|NaCl|Tween 20|Ingredient|MW|empty or 1 M|2000x|50 mM|150 mM|10% v\/v|0\.1% v\/v|stock|final|7\.4)"/);
   // Opening a tool records its table on the page, so there is nothing to press.
-  assert.doesNotMatch(html, /biology-notebook-tool-insert-notes-btn|biology-notebook-tool-use-placeholder-btn|biology-notebook-tool-record-btn/);
+  assert.doesNotMatch(stripI18nMarkup(html), /biology-notebook-tool-insert-notes-btn|biology-notebook-tool-use-placeholder-btn|biology-notebook-tool-record-btn/);
   assert.doesNotMatch(toolSource, /stepsHost|useForActivePlaceholder|recordBtn|usePlaceholderBtn/);
   assert.match(compounds, /name: 'Bis-Tris',[^\n]*pKa: 6\.5/);
   assert.match(compounds, /name: 'CAPS',[^\n]*pKa: 10\.4/);
@@ -738,11 +739,11 @@ test('biology-notebook buffer preparer starts blank, records without a button, a
   assert.match(bufferSection, /id="biology-notebook-tool-buffer-amount-1"[^>]*type="text"/);
   assert.match(bufferSection, /id="biology-notebook-tool-buffer-note-1"/);
   assert.match(reactionSection, /id="biology-notebook-tool-reaction-note-1"/);
-  assert.doesNotMatch(html, /biology-notebook-tool-buffer-output-\d|biology-notebook-tool-reaction-output-\d/);
+  assert.doesNotMatch(stripI18nMarkup(html), /biology-notebook-tool-buffer-output-\d|biology-notebook-tool-reaction-output-\d/);
   // The MW cell is too narrow to give up room to a spinner.
   assert.match(sheetCss, /\.biology-notebook-buffer-sheet input\[type="number"\]::-webkit-inner-spin-button\s*\{[^}]*appearance:\s*none;/s);
   // The sheets are the whole readout: no summary, formula or status line beside them.
-  assert.doesNotMatch(html, /biology-notebook-tool-output|biology-notebook-tool-formula|biology-notebook-tool-status/);
+  assert.doesNotMatch(stripI18nMarkup(html), /biology-notebook-tool-output|biology-notebook-tool-formula|biology-notebook-tool-status/);
 });
 test('biology-notebook edits only the saved page protocol copy and keeps the original protocol unchanged', () => {
   const document = createMockDocument([
@@ -873,8 +874,8 @@ test('biology-notebook edits only the saved page protocol copy and keeps the ori
   assert.equal(state.notebookEntries[0].protocolSnapshot.steps[0].placeholders[0].id, 'volume');
   assert.equal(state.notebookEntries[0].protocolSnapshot.steps[0].placeholders[0].name, 'Sample volume');
   assert.equal(state.notebookEntries[0].values['volume'], '15 mL');
-  assert.match(document.getElementById('biology-notebook-steps').innerHTML, /Sample volume/);
-  assert.match(document.getElementById('biology-notebook-steps').innerHTML, /Mix thoroughly\./);
+  assert.match(stripI18nMarkup(document.getElementById('biology-notebook-steps').innerHTML), /Sample volume/);
+  assert.match(stripI18nMarkup(document.getElementById('biology-notebook-steps').innerHTML), /Mix thoroughly\./);
   assert.ok(persistCalls >= 1);
   assert.ok(notebookChangedCalls >= 1);
 });
@@ -1399,8 +1400,8 @@ test('biology-notebook placeholder context menu exposes only a plain Add Table a
   const token = { dataset: { nbKeyRef: 'temperature' } };
 
   controller.open({ wrap, token, x: 100, y: 100 });
-  assert.match(menu.innerHTML, /role="menuitem"[^>]*data-placeholder-add-table[^>]*>[\s\S]*?Add Table[\s\S]*?<\/button>/);
-  assert.doesNotMatch(menu.innerHTML, /Placeholder variable|Search samples|data-sample-link-results|ghost-btn|Add table from this variable/i);
+  assert.match(stripI18nMarkup(menu.innerHTML), /role="menuitem"[^>]*data-placeholder-add-table[^>]*>[\s\S]*?Add Table[\s\S]*?<\/button>/);
+  assert.doesNotMatch(stripI18nMarkup(menu.innerHTML), /Placeholder variable|Search samples|data-sample-link-results|ghost-btn|Add table from this variable/i);
   menu.listeners.click({
     target: action,
     preventDefault() {}
@@ -1601,7 +1602,7 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   // The reaction sheet is still open on this page, so its table is standing
   // aside; closing the tool brings it back.
   const calculationsHost = document.getElementById('biology-notebook-tool-calculations');
-  assert.doesNotMatch(calculationsHost.innerHTML, /Fixed Volume Reaction/);
+  assert.doesNotMatch(stripI18nMarkup(calculationsHost.innerHTML), /Fixed Volume Reaction/);
   trigger(document.getElementById('biology-notebook-tool-tab-reaction'), 'click');
   assert.equal(document.getElementById('biology-notebook-tool-workspace').hidden, true);
   const renderedCalculations = calculationsHost.innerHTML;
@@ -1649,10 +1650,10 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   assert.match(editedReaction.table.footerRows[0][3], /90 uL/);
 
   // The trash button on a table takes it off the page.
-  assert.match(calculationsHost.innerHTML, /data-tool-calculation-remove="/);
+  assert.match(stripI18nMarkup(calculationsHost.innerHTML), /data-tool-calculation-remove="/);
   trigger(calculationsHost, 'click', { target: { dataset: { toolCalculationRemove: editedReaction.id } } });
-  assert.doesNotMatch(calculationsHost.innerHTML, /Fixed Volume Reaction/);
-  assert.match(calculationsHost.innerHTML, /Buffer Preparer/);
+  assert.doesNotMatch(stripI18nMarkup(calculationsHost.innerHTML), /Fixed Volume Reaction/);
+  assert.match(stripI18nMarkup(calculationsHost.innerHTML), /Buffer Preparer/);
   trigger(document.getElementById('save-biology-notebook-btn'), 'click');
   await flushAsync();
   assert.equal(state.notebookEntries[0].toolCalculations.length, 1);

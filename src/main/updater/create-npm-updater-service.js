@@ -1,5 +1,6 @@
 'use strict';
 
+const { nativeText } = require('../lib/i18n.js');
 const childProcess = require('node:child_process');
 const nodeFs = require('node:fs');
 const os = require('node:os');
@@ -354,13 +355,13 @@ function createNpmUpdaterService(deps = {}) {
     }
     const result = await showMessage({
       type: 'info',
-      title: 'Hikari Update Available',
-      message: `Hikari ${release.version} is available.`,
+      title: nativeText("Hikari Update Available"),
+      message: nativeText("Hikari {p0} is available.", { p0: release.version }),
       detail: [
-        release.releaseNotes || `You are using Hikari ${status.currentVersion}.`,
-        `Update downloads and installs it in the background (${canInstallAppCode(release) ? 'under a minute' : 'a few minutes'}; you can keep working), then restarts Hikari.`
+        release.releaseNotes || nativeText("You are using Hikari {version}.", { version: status.currentVersion }),
+        nativeText("Update downloads and installs it in the background ({duration}; you can keep working), then restarts Hikari.", { duration: nativeText(canInstallAppCode(release) ? "under a minute" : "a few minutes") })
       ].join('\n\n'),
-      buttons: ['Update', 'Later'],
+      buttons: [nativeText("Update"), nativeText("Later")],
       defaultId: 0,
       cancelId: 1,
       noLink: true

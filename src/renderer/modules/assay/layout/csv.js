@@ -1,5 +1,6 @@
 import { escapeCsv, parseCsvLine, sanitizeFilePart } from '../shared.js';
 import { buildAllWells, layoutToMap, normalizeLayout } from '../plate-model.js';
+import { plateUi } from '../localization.js';
 
 // CSV plate-template export and import. Self-contained leaf wired by index.js.
 export function createLayoutCsv({
@@ -40,7 +41,7 @@ export function createLayoutCsv({
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-    setCsvStatus(`Exported ${def.label} CSV template.`);
+    setCsvStatus(plateUi('status.exportedTemplate', { count: def.value }));
   }
 
   async function onImportCsv(event) {
@@ -55,7 +56,7 @@ export function createLayoutCsv({
         .map((line) => line.trim())
         .filter(Boolean);
       if (!lines.length) {
-        setCsvStatus('Import failed: CSV file is empty.', true);
+        setCsvStatus(plateUi('status.csvEmpty'), true);
         return;
       }
 
@@ -66,7 +67,7 @@ export function createLayoutCsv({
       const indexSample = header.indexOf('sample_id');
       const indexConcentration = header.indexOf('concentration');
       if (indexWell < 0 && (indexRow < 0 || indexColumn < 0)) {
-        setCsvStatus('Import failed: CSV needs "well" or both "row" and "column" columns.', true);
+        setCsvStatus(plateUi('status.csvColumns'), true);
         return;
       }
 
@@ -96,9 +97,9 @@ export function createLayoutCsv({
       setLayoutFromAxisAndOverrides();
       renderPlatePreview();
       renderResultTable();
-      setCsvStatus(`Imported ${runtime.currentLayout.length} mapped wells from ${file.name}.`);
+      setCsvStatus(plateUi('status.csvImported', { count: runtime.currentLayout.length, file: file.name }));
     } catch {
-      setCsvStatus('Import failed: could not parse CSV file.', true);
+      setCsvStatus(plateUi('status.csvParse'), true);
     } finally {
       if (assayImportFile) {
         assayImportFile.value = '';

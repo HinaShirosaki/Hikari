@@ -15,3 +15,10 @@
 - `tools/`: calculation sidebar; its cross-feature record model lives in `renderer/lib/notebook-tool-calculations.js`
 
 Keep new behavior in the owning package and reserve `index.js` for view-level wiring.
+
+`localization.js` registers `locales/en.js` under `notebook`. Navigation, project
+and experiment dialogs, viewer/editor labels, state badges, metadata dates, and
+save/export states use bound display text. Record names, protocol snapshots,
+placeholder content, state IDs, storage paths, and PDF content remain unchanged.
+Project dashboards, attachments, bench tools, quick samples and other rich runtime
+controls are later batches. See [incremental i18n](../../../../docs/renderer/architecture/i18n.md).

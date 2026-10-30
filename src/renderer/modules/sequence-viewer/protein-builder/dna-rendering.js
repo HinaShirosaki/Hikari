@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../../lib/html.js';
 import { buildDnaConstruct } from './dna-construct.js';
 import { escapeAttribute } from './row-factory.js';
@@ -24,9 +27,7 @@ export function installProteinBuilderDnaRendering(ctx) {
       state.dnaConstruct = null;
     }
     if (elements.proteinBuilderDnaMeta) {
-      elements.proteinBuilderDnaMeta.textContent = state.dnaConstruct?.sequence?.length
-        ? `${state.dnaConstruct.length} nt | ${state.dnaConstruct.parts.length} block${state.dnaConstruct.parts.length === 1 ? '' : 's'}`
-        : 'DNA build not run yet.';
+      i18nUi.setText(elements.proteinBuilderDnaMeta, (state.dnaConstruct?.sequence?.length ? i18nUi.message((state.dnaConstruct.parts.length === 1 ? "{p0} nt | {p1} block" : "{p0} nt | {p1} blocks"), { p0: state.dnaConstruct.length, p1: state.dnaConstruct.parts.length }) : i18nUi.message("DNA build not run yet.")));
     }
     if (elements.proteinBuilderCopyDnaBtn) {
       elements.proteinBuilderCopyDnaBtn.disabled = !state.dnaConstruct?.ok || !state.dnaConstruct?.sequence;
@@ -36,7 +37,7 @@ export function installProteinBuilderDnaRendering(ctx) {
     }
 
     if (!state.dnaConstruct) {
-      elements.proteinBuilderDnaSequence.innerHTML = '<p class="small-note">Click Build DNA Sequence to generate a coding sequence for the current chain.</p>';
+      i18nUi.setHtml(elements.proteinBuilderDnaSequence, `<p class="small-note">${i18nUi.html("Click Build DNA Sequence to generate a coding sequence for the current chain.")}</p>`);
       return;
     }
 
@@ -45,14 +46,13 @@ export function installProteinBuilderDnaRendering(ctx) {
         ...(Array.isArray(state.dnaConstruct.errors) ? state.dnaConstruct.errors : []),
         ...(Array.isArray(state.dnaConstruct.warnings) ? state.dnaConstruct.warnings : [])
       ].filter(Boolean);
-      elements.proteinBuilderDnaSequence.innerHTML = messages.length
+      i18nUi.setHtml(elements.proteinBuilderDnaSequence, messages.length
         ? messages.map((message) => `<p class="small-note">${escapeHtml(message)}</p>`).join('')
-        : '<p class="small-note">Unable to generate a DNA sequence.</p>';
+        : `<p class="small-note">${i18nUi.html("Unable to generate a DNA sequence.")}</p>`);
       return;
     }
 
-    elements.proteinBuilderDnaSequence.innerHTML =
-      `<span class="sequence-viewer-protein-builder-sequence-text">${renderHighlightedDna(state.dnaConstruct.sequence, state.dnaConstruct.highlightParts || state.dnaConstruct.parts)}</span>`;
+    i18nUi.setHtml(elements.proteinBuilderDnaSequence, `<span class="sequence-viewer-protein-builder-sequence-text">${renderHighlightedDna(state.dnaConstruct.sequence, state.dnaConstruct.highlightParts || state.dnaConstruct.parts)}</span>`);
   };
 
   ctx.buildCurrentDnaSequence = function buildCurrentDnaSequence() {

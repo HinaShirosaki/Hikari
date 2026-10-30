@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { sanitizeProteinAssemblySequence } from './assembly-model.js';
 import { cleanText } from '../shared.js';
 
@@ -9,15 +12,15 @@ export function installProteinBuilderEvents(ctx) {
       || globalThis?.window?.navigator?.clipboard
       || globalThis?.navigator?.clipboard;
     if (!value || !clipboard?.writeText) {
-      ctx.setBuilderStatus(`Unable to copy the ${label} sequence.`, true);
+      ctx.setBuilderStatus(i18nUi.text("Unable to copy the {p0} sequence.", { p0: label }), true);
       return false;
     }
     try {
       await clipboard.writeText(value);
-      ctx.setBuilderStatus(`Copied the ${label} sequence.`);
+      ctx.setBuilderStatus(i18nUi.text("Copied the {p0} sequence.", { p0: label }));
       return true;
     } catch {
-      ctx.setBuilderStatus(`Unable to copy the ${label} sequence.`, true);
+      ctx.setBuilderStatus(i18nUi.text("Unable to copy the {p0} sequence.", { p0: label }), true);
       return false;
     }
   }
@@ -27,7 +30,7 @@ export function installProteinBuilderEvents(ctx) {
     // the standalone stored-backbone path, its map menu for targeted inserts.
     elements.proteinBuilderBackBtn?.addEventListener('click', () => {
       ctx.onNavigateHome();
-      ctx.setBuilderStatus('Returned to Sequence Library.');
+      ctx.setBuilderStatus(i18nUi.text("Returned to Sequence Library."));
     });
 
     // The assembled sequence is editable so an initiator M, a stop, or a point
@@ -58,7 +61,7 @@ export function installProteinBuilderEvents(ctx) {
       ctx.render();
       if (applied.dropped.length) {
         ctx.setBuilderStatus(
-          `Ignored ${applied.dropped.join(', ')}: the assembled sequence takes the 20 amino acids and *.`,
+          i18nUi.text("Ignored {p0}: the assembled sequence takes the 20 amino acids and *.", { p0: applied.dropped.join(', ') }),
           true
         );
       }
@@ -68,7 +71,7 @@ export function installProteinBuilderEvents(ctx) {
       event.preventDefault?.();
       ctx.setAssembledSequenceOverride('');
       ctx.render();
-      ctx.setBuilderStatus('Assembled sequence reset to the block chain.');
+      ctx.setBuilderStatus(i18nUi.text("Assembled sequence reset to the block chain."));
     });
 
     elements.proteinBuilderCopyProteinBtn?.addEventListener('click', () => {
@@ -82,7 +85,7 @@ export function installProteinBuilderEvents(ctx) {
     elements.proteinBuilderCodonUsageSelect?.addEventListener('change', () => {
       ctx.invalidateDnaConstruct();
       ctx.renderDnaConstruct();
-      ctx.setBuilderStatus('Codon usage changed. Build the DNA sequence again.');
+      ctx.setBuilderStatus(i18nUi.text("Codon usage changed. Build the DNA sequence again."));
     });
 
     elements.proteinBuilderAddProteinBtn?.addEventListener('click', () => {
@@ -137,7 +140,7 @@ export function installProteinBuilderEvents(ctx) {
 
     elements.proteinBuilderCancelVectorBtn?.addEventListener('click', () => {
       ctx.onCancelVectorInsert();
-      ctx.setBuilderStatus('Cancelled the vector insertion target.');
+      ctx.setBuilderStatus(i18nUi.text("Cancelled the vector insertion target."));
     });
 
     elements.proteinBuilderCommonBlocks?.addEventListener('click', (event) => {
@@ -148,7 +151,7 @@ export function installProteinBuilderEvents(ctx) {
         return;
       }
       ctx.addLibraryRow(type, libraryId);
-      ctx.setBuilderStatus(`Added ${libraryId} to the chain.`);
+      ctx.setBuilderStatus(i18nUi.text("Added {p0} to the chain.", { p0: libraryId }));
     });
 
     elements.proteinBuilderFeatureSearchInput?.addEventListener('keydown', (event) => {
@@ -193,14 +196,12 @@ export function installProteinBuilderEvents(ctx) {
       event.preventDefault?.();
       if (!ctx.addSelectedFeatureRow()) {
         ctx.setFeatureSearchStatus(
-          ctx.getSelectedSearchFeature()
-            ? 'Wait for the selected source vector to finish loading before adding this block.'
-            : 'Pick a stored feature before adding a block.',
+          (((((ctx.getSelectedSearchFeature() ? i18nUi.text("Wait for the selected source vector to finish loading before adding this block.") : i18nUi.text("Pick a stored feature before adding a block.")))))),
           true
         );
         return;
       }
-      ctx.setBuilderStatus('Added feature-derived block to the chain.');
+      ctx.setBuilderStatus(i18nUi.text("Added feature-derived block to the chain."));
     });
 
     elements.proteinBuilderWorkflow?.addEventListener('click', (event) => {

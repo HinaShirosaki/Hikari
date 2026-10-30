@@ -32,7 +32,7 @@ Most feature code lives under `src/renderer/modules/`, while `src/renderer/core/
 
 The boot path is straightforward once you read it as a pipeline instead of a monolith:
 
-1. `loadState()` from `modules/app-state/index.js` creates the mutable renderer `state` from `localStorage`.
+1. `loadState()` from `modules/app-state/index.js` creates the mutable renderer `state` from `localStorage`. `app/localization.js` then synchronizes the document language and explicitly marked UI labels with the saved locale (English by default, with a Spanish preview). See [incremental i18n](i18n.md).
 2. The plugin bridge (`app/plugin-bridge.js`) and the plugin service registry (`app/plugin-services.js`) are created, and `installPlugins(...)` (`app/plugin-loader.js`) adds each enabled plugin's view and registry entry. This happens first because the navigation shell and search maps snapshot `APP_REGISTRY` and the `.view` sections.
 3. `APP_REGISTRY` and `APP_DOCK_ORDER` from `modules/app-registry.generated.js` are turned into global view aliases and search-scope maps.
 4. `applyAppearanceSnapshot(...)` applies the saved font size and day/night mode, and the shared left-rail resizers are installed.

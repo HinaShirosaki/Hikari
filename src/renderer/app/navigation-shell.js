@@ -1,3 +1,7 @@
+import { createPresentation } from "../lib/i18n/presentation.js";
+import "../lib/i18n/shell.js";
+const i18nUi = createPresentation("shell");
+import { setAppSubtitle, setShellAttribute } from '../lib/i18n/shell.js';
 import { applyAppearanceToDocument } from './appearance.js';
 import { createAppDock } from './navigation-shell/app-dock.js';
 import { createAgentChatRail } from './navigation-shell/agent-rail.js';
@@ -151,7 +155,7 @@ export function createNavigationShell({
     }
     topbarSearchShell.classList.toggle('is-expanded', expanded);
     topbarSearchToggle.setAttribute('aria-expanded', String(expanded));
-    topbarSearchToggle.setAttribute('aria-label', expanded ? 'Search' : 'Open search');
+    setShellAttribute(topbarSearchToggle, 'aria-label', expanded ? 'search.title' : 'search.open');
     topbarSearchInput.inert = !expanded;
     topbarSearchInput.setAttribute('aria-hidden', String(!expanded));
     if (expanded) {
@@ -222,10 +226,10 @@ export function createNavigationShell({
 
     const subtitleView = activeNavView;
     if (pageTitle && !pageTitle.classList?.contains?.('topbar-timekeeping')) {
-      pageTitle.textContent = 'Hikari';
+      i18nUi.setText(pageTitle, 'Hikari');
     }
     if (pageSubtitle) {
-      pageSubtitle.textContent = TITLES[subtitleView] || '';
+      setAppSubtitle(pageSubtitle, subtitleView, TITLES);
     }
     renderAppNavigation(activeNavView);
     syncNavigationState(activeNavView);

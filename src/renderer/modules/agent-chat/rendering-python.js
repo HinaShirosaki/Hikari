@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("agent");
 import { renderMarkdown } from './markdown.js';
 import { asArray, trimText } from './shared.js';
 
@@ -105,13 +108,13 @@ function renderPythonOutputCard(output, safeText) {
     return `
       <article class="agent-python-output-card agent-python-output-card-image">
         <header class="agent-python-output-header">
-          <strong>${safeText(trimText(output.title, 160) || 'Image output')}</strong>
+          <strong>${i18nUi.render((trimText(output.title, 160) || i18nUi.message("Image output")))}</strong>
           ${meta ? `<span>${safeText(meta)}</span>` : ''}
         </header>
         <img
           class="agent-python-output-image"
           src="${safeText(dataUri)}"
-          alt="${safeText(trimText(output.alt, 200) || 'Python sandbox image output')}"
+          ${i18nUi.attributeMessage("alt", (trimText(output.alt, 200) || i18nUi.message("Python sandbox image output")))}
         />
       </article>
     `;
@@ -124,7 +127,7 @@ function renderPythonOutputCard(output, safeText) {
   return `
     <article class="agent-python-output-card">
       <header class="agent-python-output-header">
-        <strong>${safeText(trimText(output.title, 160) || 'Text output')}</strong>
+        <strong>${i18nUi.render((trimText(output.title, 160) || i18nUi.message("Text output")))}</strong>
         <span>${safeText(format)}</span>
       </header>
       ${body}
@@ -138,8 +141,8 @@ export function renderPythonSandboxRuns(runs, safeText) {
     return '';
   }
   return `
-    <section class="agent-python-output-group" aria-label="Python sandbox outputs">
-      <h4>Python Sandbox Output</h4>
+    <section class="agent-python-output-group" ${i18nUi.attribute("aria-label", "Python sandbox outputs")}>
+      <h4>${i18nUi.html("Python Sandbox Output")}</h4>
       ${visibleRuns.map((run) => {
         const summary = [
           trimText(run.label, 160),
@@ -157,13 +160,13 @@ export function renderPythonSandboxRuns(runs, safeText) {
               ${asArray(run.outputs).map((output) => renderPythonOutputCard(output, safeText)).join('')}
             </div>
             ${trimText(run.error, 1200) ? `
-              <details><summary>Error</summary><pre class="agent-meta-json">${safeText(trimText(run.error, 1200))}</pre></details>
+              <details><summary>${i18nUi.html("Error")}</summary><pre class="agent-meta-json">${safeText(trimText(run.error, 1200))}</pre></details>
             ` : ''}
             ${showStdout ? `
-              <details><summary>stdout</summary><pre class="agent-meta-json">${safeText(trimText(run.stdout, 12000))}</pre></details>
+              <details><summary>${i18nUi.html("stdout")}</summary><pre class="agent-meta-json">${safeText(trimText(run.stdout, 12000))}</pre></details>
             ` : ''}
             ${showStderr ? `
-              <details><summary>stderr</summary><pre class="agent-meta-json">${safeText(trimText(run.stderr, 12000))}</pre></details>
+              <details><summary>${i18nUi.html("stderr")}</summary><pre class="agent-meta-json">${safeText(trimText(run.stderr, 12000))}</pre></details>
             ` : ''}
           </div>
         `;

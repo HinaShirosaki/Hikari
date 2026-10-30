@@ -1,3 +1,5 @@
+import { createPresentation } from "../../i18n.mjs";
+const i18nUi = createPresentation("gel");
 import { buildLanesFromManualSegmentation } from '../analysis/analysis-core.js';
 import { detectLanes } from '../analysis/auto-lanes.js';
 import { getViewerToolLabel, renderViewerToolbar } from './manual-ui.js';
@@ -72,18 +74,18 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     const label = getViewerToolLabel(runtime.selectedViewerTool);
     if (label) {
       if (runtime.selectedViewerTool === 'dividers') {
-        deps.setStatus('Click to add lane boundaries, or drag an existing divider to move it. The outermost dividers mark the gel edges.');
+        deps.setStatus(i18nUi.text("Click to add lane boundaries, or drag an existing divider to move it. The outermost dividers mark the gel edges."));
         return;
       }
       if (runtime.selectedViewerTool === 'lane-vertices') {
-        deps.setStatus('Drag a lane’s corner handles to correct tilt.');
+        deps.setStatus(i18nUi.text("Drag a lane’s corner handles to correct tilt."));
         return;
       }
       if (runtime.selectedViewerTool === 'ladder-mw') {
-        deps.setStatus('Click a band in the ladder lane to enter its MW; drag a label to move it.');
+        deps.setStatus(i18nUi.text("Click a band in the ladder lane to enter its MW; drag a label to move it."));
         return;
       }
-      deps.setStatus(`${label}: click the gel.`);
+      deps.setStatus(i18nUi.text("{p0}: click the gel.", { p0: label }));
       return;
     }
     deps.setStatus('');
@@ -157,14 +159,14 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       || !Number.isFinite(segmentation.gelRight)
       || segmentation.gelRight <= segmentation.gelLeft + 2
     ) {
-      deps.setStatus('Add at least two lane dividers to define the gel edges before finishing.');
+      deps.setStatus(i18nUi.text("Add at least two lane dividers to define the gel edges before finishing."));
       return false;
     }
     updateLaneSegmentation({ dividerDone: true });
     clearCanvasTool('dividers');
     renderOverrideStatus();
     deps.renderCanvas();
-    deps.setStatus('Lanes set. Next: Ladder or Bands.');
+    deps.setStatus(i18nUi.text("Lanes set. Next: Ladder or Bands."));
     return true;
   }
 
@@ -375,7 +377,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
 
   function onAutoDetectLanes() {
     if (!runtime.currentImage?.gray) {
-      deps.setStatus('Load a gel image before auto-detecting lanes.');
+      deps.setStatus(i18nUi.text("Load a gel image before auto-detecting lanes."));
       return;
     }
     const normalized = normalizeManualOverrides(runtime.manualOverrides);
@@ -394,7 +396,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     });
     const peakCount = result?.peaks?.length ?? 0;
     if (!result || peakCount < 2) {
-      deps.setStatus('Auto-detection found no clear lanes (at least two are required). Adjust the image crop or set lane dividers manually.');
+      deps.setStatus(i18nUi.text("Auto-detection found no clear lanes (at least two are required). Adjust the image crop or set lane dividers manually."));
       return;
     }
     updateLaneSegmentation({
@@ -420,7 +422,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       ? ` Lane(s) ${inferredLaneNumbers} inferred as blank from spacing; verify their positions.` : '';
     const countNote = result.countMismatch
       ? ` Expected ${expectedLaneCount}; found ${peakCount}. Add missing boundaries or correct the expected count.` : '';
-    deps.setStatus(`Auto-detected ${peakCount} lane(s).${inferenceNote}${countNote} Check the dividers, then click Finish dividers.`);
+    deps.setStatus(i18nUi.text("Auto-detected {p0} lane(s).{p1}{p2} Check the dividers, then click Finish dividers.", { p0: peakCount, p1: inferenceNote, p2: countNote }));
   }
 
   function onResetManualOverrides() {

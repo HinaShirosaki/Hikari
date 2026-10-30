@@ -1,3 +1,5 @@
+import { createPresentation } from "../../i18n.mjs";
+const i18nUi = createPresentation("gel");
 import { clamp } from '../shared.js';
 import { findLaneDividerNearPointer } from './divider-target.js';
 
@@ -10,8 +12,8 @@ export function createDividerMenu({ runtime, elements, onRemove }) {
   menu.className = 'gel-menu gel-divider-menu';
   menu.setAttribute('popover', 'auto');
   menu.setAttribute('role', 'menu');
-  menu.setAttribute('aria-label', 'Lane divider');
-  menu.innerHTML = `<button type="button" role="menuitem"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6m4-6v6" /></svg><span>Remove divider</span></button>`;
+  i18nUi.setAttribute(menu, "aria-label", i18nUi.message("Lane divider"));
+  i18nUi.setHtml(menu, `<button type="button" role="menuitem"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 6h18M9 6V4h6v2M5 6l1 14h12l1-14M10 10v6m4-6v6" /></svg><span>${i18nUi.html("Remove divider")}</span></button>`);
   (documentObject.getElementById('gel-view') || documentObject.body).append(menu);
   const button = menu.querySelector('button');
   let pending = null;
@@ -55,7 +57,7 @@ export function createDividerMenu({ runtime, elements, onRemove }) {
     }
   }
   function onToggle(event) { if (event.newState === 'closed') pending = null; }
-  function onViewportChange(event) { if (!menu.contains(event.target)) close(); }
+  function onViewportChange(event) { if (!event.target?.nodeType || !menu.contains(event.target)) close(); }
   canvas.addEventListener('contextmenu', onContextMenu);
   button.addEventListener('click', onRemoveClick);
   menu.addEventListener('keydown', onKeyDown);

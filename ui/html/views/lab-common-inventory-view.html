@@ -3,48 +3,48 @@
         <aside class="chemical-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
           <div class="chemical-sidebar-stack">
             <section class="chemical-sidebar-section app-left-rail-section">
-              <div class="chemical-quick-actions" aria-label="Chemical actions">
-                <button type="button" id="chemical-open-add-btn" class="lab-add-icon-btn chemical-action-icon-btn chemical-add-btn" aria-label="Add chemical" data-hover-caption="Add chemical">
+              <div class="chemical-quick-actions" aria-label="Chemical actions" data-i18n-aria-label="chemicals.action.group">
+                <button type="button" id="chemical-open-add-btn" class="lab-add-icon-btn chemical-action-icon-btn chemical-add-btn" aria-label="Add chemical" data-hover-caption="Add chemical" data-i18n-aria-label="chemicals.action.add" data-i18n-hover-caption="chemicals.action.add">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M12 5v14M5 12h14"></path>
                   </svg>
-                  <span class="sr-only">Add chemical</span>
+                  <span class="sr-only" data-i18n="chemicals.action.add">Add chemical</span>
                 </button>
-                <button type="button" id="chemical-import-btn" class="ghost-btn chemical-action-icon-btn chemical-import-btn" aria-label="Import chemicals" data-hover-caption="Import chemicals">
+                <button type="button" id="chemical-import-btn" class="ghost-btn chemical-action-icon-btn chemical-import-btn" aria-label="Import chemicals" data-hover-caption="Import chemicals" data-i18n-aria-label="chemicals.action.import" data-i18n-hover-caption="chemicals.action.import">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M12 3v11"></path>
                     <path d="m7.5 8 4.5-5 4.5 5"></path>
                     <path d="M5 14v5h14v-5"></path>
                   </svg>
-                  <span class="sr-only">Import chemicals</span>
+                  <span class="sr-only" data-i18n="chemicals.action.import">Import chemicals</span>
                 </button>
               </div>
               <input id="chemical-import-file" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
               <p id="chemical-import-status" class="small-note chemical-import-status" hidden></p>
               <label class="chemical-search-field">
-                Search
-                <input id="chemical-search" type="search" placeholder="Name, CAS, vendor, catalog, location" />
+                <span data-i18n="chemicals.search.label">Search</span>
+                <input id="chemical-search" type="search" placeholder="Name, CAS, vendor, catalog, location"  data-i18n-placeholder="chemicals.search.placeholder"/>
               </label>
             </section>
 
             <section class="chemical-sidebar-section app-left-rail-section">
               <label>
-                Filter Location
+                <span data-i18n="chemicals.filter.location">Filter Location</span>
                 <select id="chemical-filter-location">
-                  <option value="">All locations</option>
+                  <option value="" data-i18n="chemicals.filter.all">All locations</option>
                 </select>
               </label>
               <label>
-                Sort By
+                <span data-i18n="chemicals.sort.label">Sort By</span>
                 <select id="chemical-sort">
-                  <option value="updated_desc">Updated (Newest)</option>
-                  <option value="updated_asc">Updated (Oldest)</option>
-                  <option value="name_asc">Name (A-Z)</option>
-                  <option value="name_desc">Name (Z-A)</option>
-                  <option value="location_asc">Location Number (Low-High)</option>
-                  <option value="location_desc">Location Number (High-Low)</option>
-                  <option value="expiration_asc">Expiration (Soonest)</option>
-                  <option value="expiration_desc">Expiration (Latest)</option>
+                  <option value="updated_desc" data-i18n="chemicals.sort.updated_desc">Updated (Newest)</option>
+                  <option value="updated_asc" data-i18n="chemicals.sort.updated_asc">Updated (Oldest)</option>
+                  <option value="name_asc" data-i18n="chemicals.sort.name_asc">Name (A-Z)</option>
+                  <option value="name_desc" data-i18n="chemicals.sort.name_desc">Name (Z-A)</option>
+                  <option value="location_asc" data-i18n="chemicals.sort.location_asc">Location Number (Low-High)</option>
+                  <option value="location_desc" data-i18n="chemicals.sort.location_desc">Location Number (High-Low)</option>
+                  <option value="expiration_asc" data-i18n="chemicals.sort.expiration_asc">Expiration (Soonest)</option>
+                  <option value="expiration_desc" data-i18n="chemicals.sort.expiration_desc">Expiration (Latest)</option>
                 </select>
               </label>
             </section>
@@ -55,8 +55,8 @@
           <div class="chemical-list-panel">
             <div class="chemical-panel-head">
               <div class="chemical-panel-copy">
-                <h2>Chemicals</h2>
-                <p id="chemical-results-summary" class="small-note">Showing 0 chemicals.</p>
+                <h2 data-i18n="chemicals.list.title">Chemicals</h2>
+                <p id="chemical-results-summary" class="small-note"><span data-i18n="chemicals.full.5891b961">Showing 0 chemicals.</span></p>
               </div>
             </div>
 
@@ -65,10 +65,10 @@
 
           <div id="chemical-detail-panel" class="chemical-detail-panel" hidden>
             <div class="chemical-panel-head">
-              <h3 id="chemical-detail-title">Chemical Details</h3>
+              <h3 id="chemical-detail-title"><span data-i18n="chemicals.full.48a331e3">Chemical Details</span></h3>
               <div class="chemical-detail-actions">
-                <button type="button" id="chemical-detail-edit-btn" class="row-action-icon-btn" aria-label="Edit chemical" title="Open this chemical in the form for editing"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
-                <button type="button" id="chemical-detail-delete-btn" class="row-action-icon-btn row-action-icon-btn-danger" aria-label="Delete chemical" title="Permanently delete this chemical"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg></button>
+                <button type="button" id="chemical-detail-edit-btn" class="row-action-icon-btn" aria-label="Edit chemical" title="Open this chemical in the form for editing" data-i18n-title="chemicals.action.editTitle" data-i18n-aria-label="chemicals.action.edit"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                <button type="button" id="chemical-detail-delete-btn" class="row-action-icon-btn row-action-icon-btn-danger" aria-label="Delete chemical" title="Permanently delete this chemical" data-i18n-title="chemicals.action.deleteTitle" data-i18n-aria-label="chemicals.action.delete"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg></button>
               </div>
             </div>
             <div id="chemical-detail-content" class="stack-form"></div>
@@ -80,63 +80,63 @@
         <div class="chemical-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="chemical-dialog-title">
           <div class="chemical-dialog-head app-dialog-head">
             <div>
-              <h3 id="chemical-dialog-title">Add Chemical</h3>
+              <h3 id="chemical-dialog-title" data-i18n="chemicals.dialog.add">Add Chemical</h3>
             </div>
-            <button type="button" id="chemical-dialog-close-btn" class="app-dialog-close-btn" aria-label="Close chemical dialog" data-hover-caption="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            <button type="button" id="chemical-dialog-close-btn" class="app-dialog-close-btn" aria-label="Close chemical dialog" data-hover-caption="Close" data-i18n-aria-label="chemicals.dialog.close" data-i18n-hover-caption="chemicals.action.close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           </div>
 
           <form id="chemical-form" class="form-grid">
             <input type="hidden" id="chemical-id" />
             <label>
-              Name (Required)
+              <span data-i18n="chemicals.form.name">Name (Required)</span>
               <input id="chemical-name" required />
             </label>
             <label>
-              CAS Number (Required)
+              <span data-i18n="chemicals.form.cas">CAS Number (Required)</span>
               <input id="chemical-cas" required />
             </label>
             <label>
-              Location (Required)
+              <span data-i18n="chemicals.form.location">Location (Required)</span>
               <select id="chemical-location" required></select>
             </label>
             <label>
-              Vendor
+              <span data-i18n="chemicals.field.vendor">Vendor</span>
               <input id="chemical-vendor" />
             </label>
             <label>
-              Catalog Number
+              <span data-i18n="chemicals.field.catalogNumber">Catalog Number</span>
               <input id="chemical-catalog-number" />
             </label>
             <label>
-              Unit Size
+              <span data-i18n="chemicals.field.unitSize">Unit Size</span>
               <input id="chemical-unit-size" />
             </label>
             <label>
-              Price
+              <span data-i18n="chemicals.field.price">Price</span>
               <input id="chemical-price" />
             </label>
             <label>
-              Amount in Stock
+              <span data-i18n="chemicals.field.amountInStock">Amount in Stock</span>
               <input id="chemical-stock" />
             </label>
             <label class="chemical-form-field-wide">
-              URL
+              <span data-i18n="chemicals.field.url">URL</span>
               <input id="chemical-url" />
             </label>
             <label>
-              Expiration Date
+              <span data-i18n="chemicals.field.expirationDate">Expiration Date</span>
               <input id="chemical-expiration" type="date" />
             </label>
             <div class="form-actions chemical-form-actions">
-              <button type="submit" class="primary-btn" title="Save this chemical to the inventory">Save Chemical</button>
-              <button type="button" id="chemical-cancel-btn" class="ghost-btn" title="Discard changes and close the dialog">Cancel</button>
+              <button type="submit" class="primary-btn" title="Save this chemical to the inventory" data-i18n-title="chemicals.action.saveTitle" data-i18n="chemicals.action.save">Save Chemical</button>
+              <button type="button" id="chemical-cancel-btn" class="ghost-btn" title="Discard changes and close the dialog" data-i18n-title="chemicals.action.cancelTitle" data-i18n="chemicals.action.cancel">Cancel</button>
             </div>
           </form>
         </div>
       </div>
 
       <div class="panel" hidden>
-        <h3>Blockchain Records</h3>
+        <h3 data-i18n="chemicals.audit.title">Blockchain Records</h3>
         <div id="inventory-blockchain-list" class="stack-form"></div>
       </div>
     </section>

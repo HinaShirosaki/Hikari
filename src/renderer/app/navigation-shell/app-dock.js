@@ -1,3 +1,9 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "../../lib/i18n/shell.js";
+const i18nUi = createPresentation("shell");
+import { i18n } from '../../lib/i18n/index.js';
+import { appLabel, bindAppLabel, setAppSubtitle, setShellAttribute } from '../../lib/i18n/shell.js';
+
 // Keep modules in registry order, folding those that do not fit into More.
 function createAppDock({
   documentObject,
@@ -72,7 +78,7 @@ function createAppDock({
       if (context) {
         context.font = labelStyle?.font || `500 ${0.8125 * rootFont}px sans-serif`;
       }
-      const textWidth = context?.measureText(activeApp.label).width || activeApp.label.length * 0.5 * rootFont;
+      const textWidth = context?.measureText(appLabel(activeApp)).width || appLabel(activeApp).length * 0.5 * rootFont;
       labelExtra = Math.max(0, textWidth + 22 + 2 * rootFont + 2 - buttonWidth);
     }
     const requiredWidth = (count, overflow) => padding + count * buttonWidth
@@ -108,7 +114,7 @@ function createAppDock({
     icon.setAttribute('aria-hidden', 'true');
     if (iconMarkup) {
       const template = documentObject.createElement('template');
-      template.innerHTML = iconMarkup.trim();
+      i18nUi.setHtml(template, iconMarkup.trim());
       const svg = template.content.firstElementChild;
       if (svg) {
         svg.setAttribute('aria-hidden', 'true');
@@ -126,9 +132,6 @@ function createAppDock({
     button.className = menu ? 'app-nav-btn app-more-item' : 'app-nav-btn app-dock-btn';
     button.dataset.view = app.viewId;
     button.dataset.appId = app.id;
-    button.dataset.label = app.label;
-    button.title = app.label;
-    button.setAttribute('aria-label', app.label);
     if (menu) {
       button.setAttribute('role', 'menuitem');
     }
@@ -138,7 +141,7 @@ function createAppDock({
 
     const label = documentObject.createElement('span');
     label.className = menu ? 'app-more-label' : 'app-dock-label';
-    label.textContent = app.label;
+    bindAppLabel(button, label, app);
     button.append(label);
     return button;
   }
@@ -242,18 +245,31 @@ function createAppDock({
     if (moreBtn) {
       const isOverflowActive = Boolean(activeApp && renderedOverflowApps.some((app) => app.id === activeApp.id));
       moreBtn.classList.toggle('is-active', isOverflowActive);
-      const label = isOverflowActive ? `More modules: ${activeApp.label}` : 'More modules';
-      moreBtn.setAttribute('aria-label', label);
-      moreBtn.title = label;
+      const key = isOverflowActive ? 'navigation.moreActive' : 'navigation.more';
+      const params = { name: appLabel(activeApp) };
+      setShellAttribute(moreBtn, 'aria-label', key, params);
+      setShellAttribute(moreBtn, 'title', key, params);
+      setShellAttribute(moreBtn, 'data-caption', 'navigation.more');
     }
     documentObject.body.dataset.activeView = activeNavView;
     if (pageTitle && !pageTitle.classList?.contains?.('topbar-timekeeping')) {
-      pageTitle.textContent = 'Hikari';
+      i18nUi.setText(pageTitle, 'Hikari');
     }
     if (pageSubtitle) {
-      pageSubtitle.textContent = TITLES[activeNavView] || '';
+      setAppSubtitle(pageSubtitle, activeNavView, TITLES);
     }
   }
+
+  // Only the dock responds to translated label widths; feature forms stay intact.
+  i18n.subscribe(() => {
+    for (const button of appNavButtons) {
+      const app = getAppForView(button.dataset.view);
+      const label = button.querySelector('.app-dock-label, .app-more-label');
+      if (app && label) bindAppLabel(button, label, app);
+    }
+    renderAppNavigation();
+    syncNavigationState(getActiveViewId());
+  });
 
   return {
     getDockCapacity,

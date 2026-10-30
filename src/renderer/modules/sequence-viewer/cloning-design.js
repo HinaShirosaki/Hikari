@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../lib/html.js';
 import { clamp, cleanText, normalizeSequenceText } from './shared.js';
 import { copyPrimerValueFromEvent } from './primer-copy.js';
@@ -148,7 +151,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
       return;
     }
     const designState = getDesignState();
-    elements.cloningDesignStrategyList.innerHTML = availableStrategies()
+    i18nUi.setHtml(elements.cloningDesignStrategyList, availableStrategies()
       .map((strategy) => `
         <button
           type="button"
@@ -159,7 +162,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
           ${escapeHtml(strategy.label)}
         </button>
       `)
-      .join('');
+      .join(''));
   }
 
   function renderPlanResult() {
@@ -173,39 +176,39 @@ export function createSequenceViewerCloningDesignController(config = {}) {
     const displayPlan = designState.displayPlan;
 
     if (!hasDesignSource()) {
-      elements.cloningDesignResult.innerHTML = '<p class="small-note">No sequence edit is available for primer design.</p>';
+      i18nUi.setHtml(elements.cloningDesignResult, `<p class="small-note">${i18nUi.html("No sequence edit is available for primer design.")}</p>`);
       return;
     }
 
     if (!displayPlan) {
-      elements.cloningDesignResult.innerHTML = '<p class="small-note">Choose a route, then design primers.</p>';
+      i18nUi.setHtml(elements.cloningDesignResult, `<p class="small-note">${i18nUi.html("Choose a route, then design primers.")}</p>`);
       return;
     }
 
     const restrictionEnzymesHtml = renderRestrictionEnzymes(displayPlan);
-    elements.cloningDesignResult.innerHTML = `
+    i18nUi.setHtml(elements.cloningDesignResult, `
       <section class="sequence-viewer-cloning-design-result-section">
         <div class="result-card-head">
-          <h4>Plan</h4>
+          <h4>${i18nUi.html("Plan")}</h4>
         </div>
         ${renderPlanSummary(displayPlan, source, range)}
       </section>
       ${restrictionEnzymesHtml ? `
       <section class="sequence-viewer-cloning-design-result-section">
         <div class="result-card-head">
-          <h4>Digestion Enzymes</h4>
+          <h4>${i18nUi.html("Digestion Enzymes")}</h4>
         </div>
         ${restrictionEnzymesHtml}
       </section>` : ''}
       <section class="sequence-viewer-cloning-design-result-section sequence-viewer-cloning-design-result-section-compact">
         <div class="result-card-head">
-          <h4>Primers <span class="sequence-viewer-cloning-design-count">${asArray(displayPlan.primers).length}</span></h4>
+          <h4>${i18nUi.html("Primers")} <span class="sequence-viewer-cloning-design-count">${asArray(displayPlan.primers).length}</span></h4>
           <div class="form-actions">
           ${asArray(displayPlan.primers).length
-            ? '<button type="button" class="ghost-btn" data-cloning-design-action="save-primers">Save All to Primer Library</button>'
+            ? `<button type="button" class="ghost-btn" data-cloning-design-action="save-primers">${i18nUi.html("Save All to Primer Library")}</button>`
             : ''}
           ${isCloningDesignPlanActionable(displayPlan)
-            ? '<button type="button" class="ghost-btn" data-cloning-design-action="order-primers">Order Primers</button>'
+            ? `<button type="button" class="ghost-btn" data-cloning-design-action="order-primers">${i18nUi.html("Order Primers")}</button>`
             : ''}
           </div>
         </div>
@@ -213,17 +216,17 @@ export function createSequenceViewerCloningDesignController(config = {}) {
       </section>
       <section class="sequence-viewer-cloning-design-result-section sequence-viewer-cloning-design-result-section-compact">
         <div class="result-card-head">
-          <h4>Procedure</h4>
+          <h4>${i18nUi.html("Procedure")}</h4>
         </div>
         ${renderProcedure(displayPlan)}
       </section>
       ${asArray(displayPlan.warnings).length ? `
-      <section class="sequence-viewer-cloning-design-result-section sequence-viewer-cloning-design-warnings" aria-label="Design warnings">
-        <div class="result-card-head"><h4>Warnings</h4></div>
+      <section class="sequence-viewer-cloning-design-result-section sequence-viewer-cloning-design-warnings" data-i18n-aria-label="dna.full.2c41ea5c" aria-label="Design warnings">
+        <div class="result-card-head"><h4>${i18nUi.html("Warnings")}</h4></div>
         ${renderWarnings(asArray(displayPlan.warnings))}
       </section>` : ''}
 
-    `;
+    `);
   }
 
   function syncControls() {
@@ -248,12 +251,10 @@ export function createSequenceViewerCloningDesignController(config = {}) {
       elements.cloningDesignConfirmBtn.disabled = Boolean(designState.storedAgentDesign) || confirmPending
         || !hasSource
         || !canConfirmCloningDesignPlan(designState.displayPlan);
-      elements.cloningDesignConfirmBtn.textContent = confirmPending ? 'Confirming…' : 'Confirm Design';
+      i18nUi.setText(elements.cloningDesignConfirmBtn, (confirmPending ? i18nUi.message("Confirming…") : i18nUi.message("Confirm Design")));
     }
     if (elements.cloningDesignStatus) {
-      elements.cloningDesignStatus.textContent = hasSource
-        ? `${formatStrategyLabel(designState.strategy)} ready.`
-        : 'Edit the active sequence to enable cloning design.';
+      i18nUi.setOwnedText(elements.cloningDesignStatus, (hasSource ? i18nUi.message("{p0} ready.", { p0: formatStrategyLabel(designState.strategy) }) : i18nUi.message("Edit the active sequence to enable cloning design.")));
       elements.cloningDesignStatus.classList.toggle('is-error', !hasSource);
     }
   }
@@ -276,7 +277,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
 
   function designPrimers() {
     if (!hasDesignSource()) {
-      setStatus('Edit the active sequence before opening cloning design.', true);
+      setStatus(i18nUi.text("Edit the active sequence before opening cloning design."), true);
       render();
       return;
     }
@@ -325,7 +326,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
       ? ` Saved Notebook page “${notebookResult.entry.experimentName}”.`
       : (notebookError ? ` The Notebook page could not be saved: ${notebookError}.` : '');
     setStatus(
-      `${formatStrategyLabel(designState.strategy)} designed ${primerCount.toLocaleString()} primer${primerCount === 1 ? '' : 's'}.${notebookStatus}`,
+      i18nUi.text((primerCount === 1 ? "{p0} designed {p1} primer.{p3}" : "{p0} designed {p1} primers.{p3}"), { p0: formatStrategyLabel(designState.strategy), p1: primerCount.toLocaleString(), p3: notebookStatus }),
       !displayPlan?.feasible || Boolean(notebookError)
     );
     render();
@@ -346,7 +347,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
     const primers = asArray(confirmedPlan?.primers);
     if (confirmPending) return null;
     if (designState.storedAgentDesign || !hasDesignSource() || !canConfirmCloningDesignPlan(confirmedPlan)) {
-      setStatus('Generate primers for the current sequence before confirming the design.', true);
+      setStatus(i18nUi.text("Generate primers for the current sequence before confirming the design."), true);
       return null;
     }
     confirmPending = true;
@@ -380,11 +381,11 @@ export function createSequenceViewerCloningDesignController(config = {}) {
       if (confirmedSource?.proteinBuilderDesign) onReturnToDetail();
       const needsReview = !confirmedPlan.feasible;
       const message = describeCloningDesignConfirmation(result);
-      setStatus(needsReview ? `${message} Design still needs review; check the design warnings.` : message,
+      setStatus((((((needsReview ? i18nUi.text("{p0} Design still needs review; check the design warnings.", { p0: message }) : message))))),
         needsReview || result.templates.some((template) => template.error || template.unplaced.length));
       return result;
     } catch (error) {
-      setStatus(error?.message || 'Failed to confirm the design.', true);
+      setStatus((((((error?.message || i18nUi.text("Failed to confirm the design.")))))), true);
       return null;
     } finally {
       confirmPending = false;
@@ -414,7 +415,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
   }
   function open() {
     if (!hasDesignSource()) {
-      setStatus('Edit the active sequence before opening cloning design.', true);
+      setStatus(i18nUi.text("Edit the active sequence before opening cloning design."), true);
       render();
       return false;
     }
@@ -488,7 +489,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
         if (isCloningDesignPlanActionable(displayPlan)) {
           onRequestPrimerOrder(asArray(displayPlan.primers));
         } else {
-          setStatus('Generate a feasible, complete primer design before ordering primers.', true);
+          setStatus(i18nUi.text("Generate a feasible, complete primer design before ordering primers."), true);
         }
         return;
       }
@@ -499,9 +500,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
         }
         const label = result.kind === 'sequence' ? 'primer sequence' : 'primer name';
         setStatus(
-          result.copied
-            ? `Copied ${label}.`
-            : `Clipboard access is unavailable. Copy the ${label} directly from the table.`,
+          (((((result.copied ? i18nUi.text("Copied {p0}.", { p0: label }) : i18nUi.text("Clipboard access is unavailable. Copy the {p0} directly from the table.", { p0: label })))))),
           !result.copied
         );
       })();

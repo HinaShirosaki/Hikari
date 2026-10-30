@@ -2,7 +2,7 @@ import {
   readChemicalStructureClipboard,
   toChemicalStructureDraftFromCandidate
 } from './chemical-structure-clipboard.js';
-import { showTransientNotice } from '../../lib/notify.js';
+import { sampleUi, sampleNotice, sampleClipboardMessage } from './localization.js';
 
 export function installStructureActions(ctx) {
   const { helpers, pendingStructureDrafts, persist } = ctx;
@@ -11,7 +11,7 @@ async function applyStructurePasteCandidates(candidates, formats = []) {
   const supportedCandidates = (Array.isArray(candidates) ? candidates : [])
     .filter((candidate) => candidate?.sourceFormat !== 'image');
   if (!supportedCandidates.length) {
-    ctx.setStructureStatus(ctx.buildStructureClipboardNotFoundMessage(formats), true);
+    ctx.setStructureStatus(sampleClipboardMessage(formats), true);
     return false;
   }
 
@@ -24,8 +24,8 @@ async function applyStructurePasteCandidates(candidates, formats = []) {
     }
   }
 
-  ctx.setStructureStatus('Cannot save that structure yet. Try SMILES or MOL/SDF data.', true);
-  showTransientNotice('Cannot save that structure yet. Try SMILES or MOL/SDF data.', { type: 'error' });
+  ctx.setStructureStatus(sampleUi('structure.unsupported'), true);
+  sampleNotice(sampleUi('structure.unsupported'), { type: 'error' });
   return false;
 }
 
@@ -52,7 +52,7 @@ async function pasteInventoryStructure(button) {
   }
   ctx.structurePasteContext = context;
   try {
-    ctx.setStructureStatus('Reading chemical structure from clipboard...');
+    ctx.setStructureStatus(sampleUi('structure.reading'));
     const clipboard = await readChemicalStructureClipboard();
     await applyStructurePasteCandidates(clipboard.candidates, clipboard.formats);
   } finally {
@@ -76,19 +76,19 @@ function applyCapturedStructureDraft(draft) {
       persist();
     }
     if (!normalized) {
-      showTransientNotice('No structure detected.', { type: 'error' });
+      sampleNotice(sampleUi('structure.empty'), { type: 'error' });
     }
-    ctx.setStructureStatus(normalized ? 'Structure saved for this sample.' : 'No structure detected.', !normalized);
+    ctx.setStructureStatus(normalized ? sampleUi('structure.saved') : sampleUi('structure.empty'), !normalized);
     return;
   }
 
   if (normalized) {
     pendingStructureDrafts.set(context.pendingKey, normalized);
-    ctx.setStructureStatus('Structure ready. Click Add Sample to save it.');
+    ctx.setStructureStatus(sampleUi('structure.ready'));
   } else {
     pendingStructureDrafts.delete(context.pendingKey);
-    showTransientNotice('No structure detected.', { type: 'error' });
-    ctx.setStructureStatus('No structure detected.', true);
+    sampleNotice(sampleUi('structure.empty'), { type: 'error' });
+    ctx.setStructureStatus(sampleUi('structure.empty'), true);
   }
 }
 

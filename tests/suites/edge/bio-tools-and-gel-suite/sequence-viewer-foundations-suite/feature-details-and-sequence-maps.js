@@ -1,3 +1,4 @@
+const { stripI18nMarkup } = require('../../../../support/i18n-markup.cjs');
 module.exports = function registerEdgeSequenceViewerFoundationsSuiteFeatureDetailsAndSequenceMaps(context = {}) {
   const scope = context.scope || {};
   const { assert, test, sequenceViewerInternals } = scope;
@@ -16,10 +17,10 @@ test('[EDGE] sequence-viewer feature detail formatter shows grouped restriction-
     segments: [{ start: 12, end: 18 }]
   }, 40);
 
-  assert.match(html, /Recognition Site:/);
-  assert.match(html, /Cut Patterns:/);
-  assert.match(html, /AatII, ZraI/);
-  assert.match(html, /Thermo Fisher Scientific, New England Biolabs/);
+  assert.match(stripI18nMarkup(html), /Recognition Site:/);
+  assert.match(stripI18nMarkup(html), /Cut Patterns:/);
+  assert.match(stripI18nMarkup(html), /AatII, ZraI/);
+  assert.match(stripI18nMarkup(html), /Thermo Fisher Scientific, New England Biolabs/);
 });
 test('[EDGE] sequence-viewer feature detail formatter shows ORF metadata when present', () => {
   const html = sequenceViewerInternals.formatSelectedFeatureDetailHtml({
@@ -36,12 +37,12 @@ test('[EDGE] sequence-viewer feature detail formatter shows ORF metadata when pr
     segments: [{ start: 9, end: 129 }]
   }, 256);
 
-  assert.match(html, /<strong>ORF:<\/strong>/);
-  assert.match(html, /Frame \+1/);
-  assert.match(html, /39 aa/);
-  assert.match(html, /120 nt/);
-  assert.match(html, /Start ATG/);
-  assert.match(html, /Stop TAA/);
+  assert.match(stripI18nMarkup(html), /<strong>ORF:<\/strong>/);
+  assert.match(stripI18nMarkup(html), /Frame \+1/);
+  assert.match(stripI18nMarkup(html), /39 aa/);
+  assert.match(stripI18nMarkup(html), /120 nt/);
+  assert.match(stripI18nMarkup(html), /Start ATG/);
+  assert.match(stripI18nMarkup(html), /Stop TAA/);
 });
 test('[EDGE] sequence-viewer feature detail formatter calculates CDS protein properties from translation qualifiers', () => {
   const html = sequenceViewerInternals.formatSelectedFeatureDetailHtml({
@@ -52,11 +53,11 @@ test('[EDGE] sequence-viewer feature detail formatter calculates CDS protein pro
     segments: [{ start: 0, end: 6 }]
   }, 6);
 
-  assert.match(html, /<strong>Protein:<\/strong>/);
-  assert.match(html, /1 aa/);
-  assert.match(html, /Monoisotopic MW 149\.05 Da/);
-  assert.match(html, /pI \d+\.\d{2}/);
-  assert.match(html, /from translation/);
+  assert.match(stripI18nMarkup(html), /<strong>Protein:<\/strong>/);
+  assert.match(stripI18nMarkup(html), /1 aa/);
+  assert.match(stripI18nMarkup(html), /Monoisotopic MW 149\.05 Da/);
+  assert.match(stripI18nMarkup(html), /pI \d+\.\d{2}/);
+  assert.match(stripI18nMarkup(html), /from translation/);
 });
 test('[EDGE] sequence-viewer feature detail formatter derives CDS protein properties from DNA when translation is absent', () => {
   const html = sequenceViewerInternals.formatSelectedFeatureDetailHtml({
@@ -68,10 +69,10 @@ test('[EDGE] sequence-viewer feature detail formatter derives CDS protein proper
     sequence: 'ATGAAATAA'
   });
 
-  assert.match(html, /<strong>Protein:<\/strong>/);
-  assert.match(html, /2 aa/);
-  assert.match(html, /Monoisotopic MW 277\.15 Da/);
-  assert.match(html, /derived from CDS DNA/);
+  assert.match(stripI18nMarkup(html), /<strong>Protein:<\/strong>/);
+  assert.match(stripI18nMarkup(html), /2 aa/);
+  assert.match(stripI18nMarkup(html), /Monoisotopic MW 277\.15 Da/);
+  assert.match(stripI18nMarkup(html), /derived from CDS DNA/);
 });
 test('[EDGE] sequence-viewer feature detail formatter exposes an expandable CDS protein detail block', () => {
   const html = sequenceViewerInternals.formatSelectedFeatureDetailHtml({
@@ -83,10 +84,10 @@ test('[EDGE] sequence-viewer feature detail formatter exposes an expandable CDS 
     sequence: 'ATGAAAGCTAAAGGTTTTAAAGCTTGGAAATAA'
   });
 
-  assert.match(html, /<details class="sequence-viewer-protein-details">/);
-  assert.match(html, /CDS length: 33 nt/);
-  assert.match(html, /Composition: A 2 \(20\.0%\) · F 1 \(10\.0%\)/);
-  assert.match(html, /MKAKGFKAWK/);
+  assert.match(stripI18nMarkup(html), /<details class="sequence-viewer-protein-details">/);
+  assert.match(stripI18nMarkup(html), /CDS length: 33 nt/);
+  assert.match(stripI18nMarkup(html), /Composition: A 2 \(20\.0%\) · F 1 \(10\.0%\)/);
+  assert.match(stripI18nMarkup(html), /MKAKGFKAWK/);
 });
 const MAP_FEATURES = [
   { name: 'AmpR', type: 'cds', strand: 1, segments: [{ start: 140, end: 980 }] },

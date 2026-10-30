@@ -330,7 +330,6 @@ test('[EDGE] sequence-viewer protein builder can build DNA from the active vecto
     'sequence-viewer-file-name',
     'sequence-viewer-load-btn',
     'sequence-viewer-annotate-btn',
-    'sequence-viewer-recognize-backbone-btn',
     'sequence-viewer-alignment-open-btn',
     'sequence-viewer-alignment-toggle',
     'sequence-viewer-alignment-session-select',
@@ -530,7 +529,7 @@ test('[EDGE] sequence-viewer protein builder uses flat sections instead of neste
     path.join(__dirname, 'ui', 'html', 'views', 'sequence-viewer-view.html'),
     'utf8'
   );
-  assert.match(html, /id="sequence-viewer-protein-builder-add-protein-btn"[^>]*><svg class="btn-icon"[^>]*><path d="M12 5v14M5 12h14"\/><\/svg>Protein<\/button>/);
+  assert.match(html, /id="sequence-viewer-protein-builder-add-protein-btn"[^>]*><svg class="btn-icon"[^>]*><path d="M12 5v14M5 12h14"\/><\/svg><span[^>]*>Protein<\/span><\/button>/);
   assert.match(html, /id="sequence-viewer-protein-builder-add-protein-form"[^>]*role="dialog"[^>]*aria-modal="true"/);
   const dnaBuildTitleStart = html.indexOf('class="sequence-viewer-protein-builder-dna-title"');
   const codonUsageStart = html.indexOf('id="sequence-viewer-protein-builder-codon-usage"');
@@ -539,8 +538,8 @@ test('[EDGE] sequence-viewer protein builder uses flat sections instead of neste
   assert.ok(codonUsageStart > dnaBuildTitleStart);
   assert.ok(codonOptimizeStart > codonUsageStart);
   assert.match(html.slice(codonOptimizeStart), /^id="sequence-viewer-protein-builder-feature-codon-optimize"[^>]*type="checkbox"/);
-  assert.match(html, /id="sequence-viewer-protein-builder-copy-protein-btn"[^>]*class="ghost-btn sequence-viewer-protein-builder-copy-btn"[^>]*aria-label="Copy protein sequence"[^>]*>[\s\S]*?<svg[^>]*>[\s\S]*?<span class="sr-only">Copy protein sequence<\/span>[\s\S]*?<\/button>/);
-  assert.match(html, /id="sequence-viewer-protein-builder-copy-dna-btn"[^>]*class="ghost-btn sequence-viewer-protein-builder-copy-btn"[^>]*aria-label="Copy DNA sequence"[^>]*>[\s\S]*?<svg[^>]*>[\s\S]*?<span class="sr-only">Copy DNA sequence<\/span>[\s\S]*?<\/button>/);
+  assert.match(html, /id="sequence-viewer-protein-builder-copy-protein-btn"[^>]*class="ghost-btn sequence-viewer-protein-builder-copy-btn"[^>]*aria-label="Copy protein sequence"[^>]*>[\s\S]*?<svg[^>]*>[\s\S]*?<span class="sr-only"[^>]*>Copy protein sequence<\/span>[\s\S]*?<\/button>/);
+  assert.match(html, /id="sequence-viewer-protein-builder-copy-dna-btn"[^>]*class="ghost-btn sequence-viewer-protein-builder-copy-btn"[^>]*aria-label="Copy DNA sequence"[^>]*>[\s\S]*?<svg[^>]*>[\s\S]*?<span class="sr-only"[^>]*>Copy DNA sequence<\/span>[\s\S]*?<\/button>/);
   assert.match(html, /id="sequence-viewer-protein-builder-protein-sequence-highlight"[^>]*role="button"[^>]*tabindex="0"/);
 });
 test('[EDGE] protein builder manual DNA input validates coding sequence and retains codons', () => {

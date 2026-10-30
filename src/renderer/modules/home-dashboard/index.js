@@ -1,3 +1,5 @@
+import './localization.js';
+import { translateTree } from '../../lib/i18n/dom.js';
 import {
   ensureDashboardState,
   ensureSamplesState,
@@ -127,6 +129,7 @@ export function initHomeDashboard({
       persist();
     }
     Object.values(widgets).forEach((widget) => widget.render());
+    translateTree(document.getElementById('home-view'));
   }
 
   // Escape priority must match the original: passage > timer > notebook > incubation.

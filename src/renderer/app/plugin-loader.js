@@ -1,3 +1,6 @@
+import { createPresentation } from "../lib/i18n/presentation.js";
+import "../lib/i18n/shell.js";
+const i18nUi = createPresentation("shell");
 // Boots user-installed plugins at app start. Each enabled plugin from
 // state.settings.plugins becomes a normal app view (a `.view` section holding
 // a sandboxed iframe) plus an APP_REGISTRY entry, so navigation, search, and
@@ -40,15 +43,15 @@ export async function loadPluginIcons({ plugins, appRegistry, api, documentObjec
       if (plugin.tool) {
         const tileLabel = documentObject?.getElementById?.(`${pluginToolId(plugin.id)}-tile`)?.querySelector?.('.label');
         const heading = section?.querySelector?.('.tool-head h3');
-        if (tileLabel) tileLabel.textContent = plugin.name;
-        if (heading) heading.textContent = plugin.name;
+        if (tileLabel) i18nUi.setText(tileLabel, plugin.name);
+        if (heading) i18nUi.setText(heading, plugin.name);
       }
       section?.setAttribute('data-plugin-name', plugin.name);
       section?.setAttribute('aria-label', plugin.name);
       const frame = section?.querySelector?.('.plugin-frame');
       if (frame) {
         const summary = describePlugin(plugin, { isRemote: isSameOriginSafeUrl(plugin.embedUrl) });
-        frame.title = summary;
+        i18nUi.setAttribute(frame, "title", summary);
         frame.setAttribute('aria-label', summary);
       }
     }));
@@ -119,7 +122,7 @@ async function startServedFrame({ frame, plugin, api, showError = true, beforeNa
     const message = String(error?.message || error).replace(/[<&]/g, '');
     frame.setAttribute('sandbox', LOCAL_SANDBOX);
     if (showError) {
-      frame.srcdoc = `<p style="font:13px system-ui;padding:16px">Could not start this plugin: ${message}</p>`;
+      frame.srcdoc = `<p style="font:13px system-ui;padding:16px">${i18nUi.html("Could not start this plugin:")} ${message}</p>`;
     }
     return { ok: false, error: message };
   }
@@ -200,7 +203,7 @@ function createPluginFrame(documentObject, plugin, isRemote = false) {
   const frame = documentObject.createElement('iframe');
   frame.className = 'plugin-frame';
   const summary = describePlugin(plugin, { isRemote });
-  frame.title = summary;
+  i18nUi.setAttribute(frame, "title", summary);
   frame.setAttribute('aria-label', summary);
   frame.setAttribute('sandbox', isRemote ? REMOTE_SANDBOX : LOCAL_SANDBOX);
   return frame;
@@ -229,7 +232,7 @@ function installToolFrame({ documentObject, plugin, bridge, api }) {
   tile.setAttribute('aria-controls', panelId);
   const tileLabel = documentObject.createElement('span');
   tileLabel.className = 'label';
-  tileLabel.textContent = name;
+  i18nUi.setText(tileLabel, name);
   tile.append(tileLabel);
   grid.append(tile);
 
@@ -243,12 +246,12 @@ function installToolFrame({ documentObject, plugin, bridge, api }) {
   const head = documentObject.createElement('header');
   head.className = 'tool-head';
   const heading = documentObject.createElement('h3');
-  heading.textContent = name;
+  i18nUi.setText(heading, name);
   head.append(heading);
   if (plugin.description) {
     const note = documentObject.createElement('p');
     note.className = 'tool-head-note';
-    note.textContent = plugin.description;
+    i18nUi.setText(note, plugin.description);
     head.append(note);
   }
   const frame = createPluginFrame(documentObject, plugin);

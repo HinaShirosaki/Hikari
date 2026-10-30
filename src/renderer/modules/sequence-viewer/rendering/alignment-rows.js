@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../../lib/html.js';
 
 function normalizeAlignmentSequenceTrack(track, sequenceLength) {
@@ -59,7 +62,7 @@ function renderAlignmentQueryRowHtml(lineStart, lineEnd, alignmentSequenceTrack)
 
   return `
     <div class="sequence-viewer-strand-row sequence-viewer-alignment-query-row">
-      <span class="sequence-viewer-strand-end sequence-viewer-alignment-row-label" title="Aligned sequencing read">READ</span>
+      <span class="sequence-viewer-strand-end sequence-viewer-alignment-row-label" ${i18nUi.attribute("title", "Aligned sequencing read")}>${i18nUi.html("READ")}</span>
       <span class="sequence-viewer-seq-text sequence-viewer-alignment-query-text">
         <span class="sequence-viewer-seq-text-content">${body.join('')}</span>
       </span>
@@ -97,7 +100,7 @@ function renderAlignmentReferenceRowHtml(lineStart, lineEnd, referenceSequence, 
 
   return `
     <div class="sequence-viewer-strand-row sequence-viewer-alignment-reference-row">
-      <span class="sequence-viewer-strand-end sequence-viewer-alignment-row-label" title="Reference sequence">REF</span>
+      <span class="sequence-viewer-strand-end sequence-viewer-alignment-row-label" ${i18nUi.attribute("title", "Reference sequence")}>REF</span>
       <span class="sequence-viewer-seq-text sequence-viewer-alignment-reference-text">
         <span class="sequence-viewer-seq-text-content">${body.join('')}</span>
       </span>
@@ -133,8 +136,8 @@ function renderAlignmentGuideRowHtml(lineStart, lineEnd, alignmentSequenceTrack)
   }
 
   return `
-    <div class="sequence-viewer-strand-row sequence-viewer-alignment-guide-row" aria-label="Alignment guide: vertical bar means a match, multiplication sign means a mismatch, and minus means a deletion">
-      <span class="sequence-viewer-strand-end sequence-viewer-alignment-row-label" title="Alignment guide">&nbsp;</span>
+    <div class="sequence-viewer-strand-row sequence-viewer-alignment-guide-row" ${i18nUi.attribute("aria-label", "Alignment guide: vertical bar means a match, multiplication sign means a mismatch, and minus means a deletion")}>
+      <span class="sequence-viewer-strand-end sequence-viewer-alignment-row-label" ${i18nUi.attribute("title", "Alignment guide")}>&nbsp;</span>
       <span class="sequence-viewer-seq-text sequence-viewer-alignment-guide-text">
         <span class="sequence-viewer-seq-text-content">${body.join('')}</span>
       </span>

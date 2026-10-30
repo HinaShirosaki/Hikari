@@ -1,3 +1,5 @@
+import { createPresentation } from "../../i18n.mjs";
+const i18nUi = createPresentation("gel");
 import { hasAnyTargetBandWindow, normalizeManualOverrides } from '../shared.js';
 import { copyTextToClipboard } from '../../lib/clipboard.js';
 import { renderBandIntensityChart } from './band-intensity-chart.js';
@@ -47,15 +49,15 @@ export function createCellTableController({ runtime, elements, safeText, deps = 
     }
     copying = true;
     const status = elements.gelCellTableCopyStatus;
-    if (status) status.textContent = '';
+    if (status) i18nUi.setText(status, '');
     try {
       const text = [['Lane', 'Label', 'Band intensity'], ...rows]
         .map((row) => row.join('\t')).join('\n');
       const writeText = deps.writeClipboardText || ((value) => copyTextToClipboard(value, elements.gelCellTableHost?.ownerDocument));
       await writeText(text);
-      if (status) status.textContent = 'Table copied.';
+      if (status) i18nUi.setText(status, i18nUi.message("Table copied."));
     } catch {
-      if (status) status.textContent = 'Could not copy. Select the table and copy it manually.';
+      if (status) i18nUi.setText(status, i18nUi.message("Could not copy. Select the table and copy it manually."));
     } finally {
       copying = false;
     }
@@ -79,11 +81,11 @@ export function createCellTableController({ runtime, elements, safeText, deps = 
     const rows = getTableRows(measurements);
     renderBandIntensityChart(elements.gelBandIntensityChart, measurements, safeText);
     if (elements.gelCellTableCopyStatus && !copying) {
-      elements.gelCellTableCopyStatus.textContent = '';
+      i18nUi.setText(elements.gelCellTableCopyStatus, '');
     }
     if (!rows.length) {
       setCellTableVisibility(false);
-      host.innerHTML = '';
+      i18nUi.setHtml(host, '');
       return;
     }
 
@@ -93,23 +95,23 @@ export function createCellTableController({ runtime, elements, safeText, deps = 
         <tr class="gel-cell-row">
           <td>${safeText(lane)}</td>
           <td>${safeText(label)}</td>
-          <td class="num gel-cell-intensity" title="${safeText(method)}">${safeText(intensity)}${review ? '<span class="gel-intensity-review">Review background</span>' : ''}</td>
+          <td class="num gel-cell-intensity" title="${safeText(method)}">${safeText(intensity)}${review ? `<span class="gel-intensity-review">${i18nUi.html("Review background")}</span>` : ''}</td>
         </tr>
       `;
     }).join('');
 
-    host.innerHTML = `
+    i18nUi.setHtml(host, `
       <table class="gel-cell-table">
         <thead>
           <tr>
-            <th>Lane</th>
-            <th>Label</th>
-            <th class="num">Band intensity</th>
+            <th>${i18nUi.html("Lane")}</th>
+            <th>${i18nUi.html("Label")}</th>
+            <th class="num">${i18nUi.html("Band intensity")}</th>
           </tr>
         </thead>
         <tbody>${rowsHtml}</tbody>
       </table>
-    `;
+    `);
   }
 
   return { onCellTableCopy, renderCellTable };

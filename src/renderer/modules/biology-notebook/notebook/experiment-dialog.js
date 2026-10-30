@@ -1,4 +1,7 @@
-import { showTransientNotice } from '../../../lib/notify.js';
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
+import { notebookText, notebookMessage, setNotebookText, notebookNotice } from '../localization.js';
 
 // The New Experiment dialog: picking a project and protocol, searching the
 // protocol list, and starting the page once both are chosen.
@@ -46,14 +49,14 @@ function createExperimentDialog({
     return Boolean(notebookExperimentDialogOverlay && !notebookExperimentDialogOverlay.hidden);
   }
 
-  function setExperimentDialogStatus(message = '', { error = false } = {}) {
-    if (error && message) {
-      showTransientNotice(message, { type: 'error' });
+  function setExperimentDialogStatus(key = 'empty', { error = false } = {}) {
+    if (error && key) {
+      notebookNotice(key, {}, { type: 'error' });
     }
     if (!notebookExperimentDialogStatus) {
       return;
     }
-    notebookExperimentDialogStatus.textContent = String(message || '');
+    setNotebookText(notebookExperimentDialogStatus, key || 'empty');
     notebookExperimentDialogStatus.classList.toggle('is-error', Boolean(error));
   }
 
@@ -62,17 +65,17 @@ function createExperimentDialog({
     const protocol = isWorkflow() ? selectedWorkflow() : findSelectedProtocol();
     if (notebookExperimentStartBtn) {
       notebookExperimentStartBtn.disabled = !project || !protocol || (isWorkflow() && !protocol.blocks?.length);
-      notebookExperimentStartBtn.textContent = isWorkflow() ? 'Start process' : 'Start Experiment';
+      setNotebookText(notebookExperimentStartBtn, isWorkflow() ? 'experiment.startProcess' : 'experiment.start');
     }
     if (!isExperimentDialogOpen()) {
       return;
     }
     if (!project) {
-      setExperimentDialogStatus('Choose a project to start an experiment.');
+      setExperimentDialogStatus('experiment.chooseProject');
       return;
     }
     if (isWorkflow()) {
-      setExperimentDialogStatus(!state.workflowTemplates?.length ? 'Create a workflow template in Workflow first.' : protocol && !protocol.blocks?.length ? 'This template has no steps yet.' : '');
+      setExperimentDialogStatus(!state.workflowTemplates?.length ? 'experiment.createTemplate' : protocol && !protocol.blocks?.length ? 'experiment.emptyTemplate' : '');
       return;
     }
     if (!protocol) {
@@ -80,7 +83,7 @@ function createExperimentDialog({
       setExperimentDialogStatus(
         fromWorkspace
           ? ''
-          : 'Choose a protocol to start the experiment.'
+          : 'experiment.chooseProtocol'
       );
       return;
     }
@@ -93,7 +96,7 @@ function createExperimentDialog({
     }
     const project = findSelectedProject();
     if (!project) {
-      notebookExperimentProtocolResults.innerHTML = '';
+      i18nUi.setHtml(notebookExperimentProtocolResults, '');
       return;
     }
     const searchTerm = String(notebookProtocolSearchInput?.value || '').trim().toLowerCase();
@@ -102,14 +105,14 @@ function createExperimentDialog({
       .filter((protocol) => String(protocol?.name || '').toLowerCase().includes(searchTerm))
       .slice(0, 60);
     if (!matches.length) {
-      notebookExperimentProtocolResults.innerHTML = '<p class="biology-notebook-protocol-search-empty">No matching protocols.</p>';
+      i18nUi.setHtml(notebookExperimentProtocolResults, `<p class="biology-notebook-protocol-search-empty">${notebookMessage('experiment.noMatches')}</p>`);
       return;
     }
-    notebookExperimentProtocolResults.innerHTML = matches.map((protocol) => {
+    i18nUi.setHtml(notebookExperimentProtocolResults, matches.map((protocol) => {
       const id = String(protocol?.id || '').trim();
       const selected = id === selectedProtocolId ? ' is-selected' : '';
-      return `<button type="button" class="biology-notebook-protocol-search-result${selected}" data-notebook-experiment-protocol-id="${safeText(id)}" role="option" aria-selected="${id === selectedProtocolId ? 'true' : 'false'}">${safeText(protocol?.name || 'Untitled protocol')}</button>`;
-    }).join('');
+      return `<button type="button" class="biology-notebook-protocol-search-result${selected}" data-notebook-experiment-protocol-id="${safeText(id)}" role="option" aria-selected="${id === selectedProtocolId ? 'true' : 'false'}">${protocol?.name ? safeText(protocol.name) : notebookMessage('experiment.untitledProtocol')}</button>`;
+    }).join(''));
   }
 
   function restoreExperimentDialogSelection() {
@@ -135,7 +138,7 @@ function createExperimentDialog({
     }
     notebookExperimentDialogOverlay.hidden = true;
     if (notebookExperimentProtocolResults) {
-      notebookExperimentProtocolResults.innerHTML = '';
+      i18nUi.setHtml(notebookExperimentProtocolResults, '');
     }
     setExperimentDialogStatus('');
     experimentDialogPreviousSelection = null;
@@ -157,7 +160,7 @@ function createExperimentDialog({
     experimentDialogWorkspaceProjectId = String(options.projectId || getActiveProjectDashboardId() || notebookProjectSelect.value || '');
     if (elements.notebookExperimentKind) elements.notebookExperimentKind.value = options.kind === 'workflow' ? 'workflow' : 'protocol';
     if (elements.notebookExperimentWorkflow) {
-      elements.notebookExperimentWorkflow.innerHTML = '<option value="">Choose a workflow template</option>' + (state.workflowTemplates || []).map((item) => `<option value="${safeText(item.id)}">${safeText(item.name || 'Untitled template')}</option>`).join('');
+      i18nUi.setHtml(elements.notebookExperimentWorkflow, `<option value="" data-i18n="notebook.experiment.chooseTemplate">${notebookText('experiment.chooseTemplate')}</option>` + (state.workflowTemplates || []).map((item) => `<option value="${safeText(item.id)}"${item.name ? '' : ' data-i18n="notebook.experiment.untitledTemplate"'}>${safeText(item.name || notebookText('experiment.untitledTemplate'))}</option>`).join(''));
       elements.notebookExperimentWorkflow.value = options.templateId || '';
     }
     if (elements.notebookExperimentProcessName) elements.notebookExperimentProcessName.value = '';
@@ -204,12 +207,12 @@ function createExperimentDialog({
     if (isWorkflow()) {
       const template = selectedWorkflow();
       if (!project || !template?.blocks?.length) {
-        setExperimentDialogStatus('Choose a project and a workflow template with steps.', { error: true });
+        setExperimentDialogStatus('experiment.requireTemplate', { error: true });
         return;
       }
       const process = onCreateWorkflowProcess({ templateId: template.id, projectId: project.id, workflowName: elements.notebookExperimentProcessName?.value.trim() || '' });
       if (!process) {
-        setExperimentDialogStatus('Could not start the workflow process.', { error: true });
+        setExperimentDialogStatus('experiment.processError', { error: true });
         return;
       }
       closeExperimentDialog({ restoreSelection: true, returnFocus: false });
@@ -218,7 +221,7 @@ function createExperimentDialog({
     }
     const protocol = findSelectedProtocol();
     if (!project || !protocol) {
-      setExperimentDialogStatus('Choose both a project and a protocol before starting.', { error: true });
+      setExperimentDialogStatus('experiment.requireBoth', { error: true });
       if (!project) {
         notebookProjectSelect?.focus?.();
       } else {

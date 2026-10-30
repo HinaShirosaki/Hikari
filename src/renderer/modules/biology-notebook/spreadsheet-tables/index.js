@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
 import {
   addNotebookResultTableColumn,
   addNotebookResultTableRow,
@@ -170,7 +173,7 @@ export function createSpreadsheetTables({
     });
     grids = [];
     if (host) {
-      host.innerHTML = '';
+      i18nUi.setHtml(host, '');
     }
   }
 
@@ -192,7 +195,7 @@ export function createSpreadsheetTables({
     }
     if (message) {
       statusEl.hidden = false;
-      statusEl.textContent = message;
+      i18nUi.setOwnedText(statusEl, message);
       return;
     }
     const normalizedTables = normalizeNotebookResultTables(tables);
@@ -200,7 +203,7 @@ export function createSpreadsheetTables({
     if (!hasTables) {
       statusEl.hidden = false;
       statusEl.classList.remove('is-error');
-      statusEl.textContent = emptyMessage;
+      i18nUi.setOwnedText(statusEl, emptyMessage);
       return;
     }
     // A broken formula shows as #ERROR in its cell; the reason belongs somewhere the
@@ -208,7 +211,7 @@ export function createSpreadsheetTables({
     const formulaError = firstFormulaError();
     statusEl.classList.toggle('is-error', Boolean(formulaError));
     statusEl.hidden = !formulaError;
-    statusEl.textContent = formulaError;
+    i18nUi.setOwnedText(statusEl, formulaError);
   }
 
   function syncControls(tables = []) {
@@ -252,7 +255,7 @@ export function createSpreadsheetTables({
             const definition = component?.getDefinition?.() || {};
             return {
               field,
-              title: String(definition?.title || '').trim() || `Column ${index + 1}`
+              title: String(definition?.title || '').trim() || `Column ${index + 1}`, titleFormatter: () => i18nUi.render((String(definition?.title || '').trim() || i18nUi.message("Column {p0}", { p0: index + 1 }))), headerTooltip: () => i18nUi.render((String(definition?.title || '').trim() || i18nUi.message("Column {p0}", { p0: index + 1 })))
             };
           })
           .filter(Boolean)
@@ -313,24 +316,24 @@ export function createSpreadsheetTables({
     }
 
     if (!TabulatorLib) {
-      host.innerHTML = '<p class="small-note">Table editing is unavailable because Tabulator did not load.</p>';
-      showTransientNotice('Table editing is unavailable because Tabulator did not load.', { type: 'error' });
+      i18nUi.setHtml(host, `<p class="small-note">${i18nUi.html("Table editing is unavailable because Tabulator did not load.")}</p>`);
+      showTransientNotice(i18nUi.message("Table editing is unavailable because Tabulator did not load."), { type: 'error' });
       setStatus(draftTables, 'Table data is saved, but the Tabulator editor is unavailable right now.');
       return;
     }
 
     const showTablePicker = draftTables.length > 1;
-    host.innerHTML = draftTables.map((table, index) => `
+    i18nUi.setHtml(host, draftTables.map((table, index) => `
       <section class="spreadsheet-table-editor${index === activeTableIndex ? ' is-active' : ''}" data-result-table-editor="${index}">
         ${showTablePicker ? `
           <div class="spreadsheet-table-editor-head">
-            <button class="spreadsheet-table-select" type="button" data-result-table-select="${index}">Table${index + 1}</button>
+            <button class="spreadsheet-table-select" type="button" data-result-table-select="${index}">${i18nUi.html("Table")}${index + 1}</button>
           </div>
         ` : ''}
         <div class="spreadsheet-table" data-result-table-host="${index}" aria-label="${label} ${index + 1}"></div>
-        <button class="spreadsheet-table-add-row" type="button" data-result-table-add-row="${index}"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg>Add row</button>
+        <button class="spreadsheet-table-add-row" type="button" data-result-table-add-row="${index}"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg>${i18nUi.html("Add row")}</button>
       </section>
-    `).join('');
+    `).join(''));
 
     const tableHosts = Array.from(host.querySelectorAll?.('[data-result-table-host]') || []);
     grids = draftTables.map((table, index) => {

@@ -486,36 +486,37 @@ test('personal-inventory single container uses the same labeled set-samples form
   assert.equal(state.samples[0].inventoryLink.wellIndex, null);
 });
 test('personal-inventory sample editor actions are compact accessible icons', () => {
-  const singleEditorSource = fs.readFileSync(path.join(
-    __dirname,
-    'src',
-    'renderer',
-    'modules',
-    'personal-inventory',
-    'detail-single-editor.js'
-  ), 'utf8');
-  const wellEditorSource = fs.readFileSync(path.join(
-    __dirname,
-    'src',
-    'renderer',
-    'modules',
-    'personal-inventory',
-    'detail-well-editor.js'
-  ), 'utf8');
+  let linkedSamples = [];
+  const helpers = {
+    getLinkedSamples: () => linkedSamples,
+    renderSampleTypeOptions: () => '', getWellDataForType: () => ({ name: 'W1' })
+  };
+  const rendererOptions = { safeText: shared.safeText, helpers, uiState: {}, renderStructureAction: () => '' };
+  const singleRenderer = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'personal-inventory', 'detail-single-editor.js'))
+    .createSingleContainerEditorRenderer(rendererOptions);
+  const wellRenderer = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'personal-inventory', 'detail-well-editor.js'))
+    .createWellEditorRenderer(rendererOptions);
+  const container = { id: 'box-1', name: 'Box', wells: [{}] };
+  const singleEmpty = singleRenderer.renderSingleContainerEditor('Rack', container);
+  linkedSamples = [{ id: 'sample-1', type: 'plasmid' }]; rendererOptions.uiState.editingSampleId = 'sample-1';
+  const singleEditorMarkup = singleEmpty + singleRenderer.renderSingleContainerEditor('Rack', container);
+  const wellExisting = wellRenderer.renderWellEditor('Rack', container, 0);
+  rendererOptions.uiState.editingSampleId = '';
+  const wellEditorMarkup = wellExisting + wellRenderer.renderWellEditor('Rack', container, 0);
   const css = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'sample-registry-view.css'), 'utf8');
   const coreCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'base', 'core.css'), 'utf8');
 
-  assert.match(singleEditorSource, /class="lab-add-icon-btn inventory-add-sample-icon-btn"[^>]*data-single-sample-create="true"[^>]*aria-label="Add Sample"[^>]*data-hover-caption="Add sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Add Sample<\/span>/);
-  assert.match(wellEditorSource, /class="lab-add-icon-btn inventory-add-sample-icon-btn"[^>]*data-well-sample-create="\$\{index\}"[^>]*aria-label="Add Sample"[^>]*data-hover-caption="Add sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Add Sample<\/span>/);
-  assert.doesNotMatch(singleEditorSource, /data-single-sample-create="true">Add Sample<\/button>/);
-  assert.doesNotMatch(wellEditorSource, /data-well-sample-create="\$\{index\}">Add Sample<\/button>/);
+  assert.match(singleEditorMarkup, /class="lab-add-icon-btn inventory-add-sample-icon-btn"[^>]*data-single-sample-create="true"[^>]*aria-label="Add Sample"[^>]*data-hover-caption="Add sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only"><span[^>]*>Add Sample<\/span><\/span>/);
+  assert.match(wellEditorMarkup, /class="lab-add-icon-btn inventory-add-sample-icon-btn"[^>]*data-well-sample-create="0"[^>]*aria-label="Add Sample"[^>]*data-hover-caption="Add sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only"><span[^>]*>Add Sample<\/span><\/span>/);
+  assert.doesNotMatch(singleEditorMarkup, /data-single-sample-create="true">Add Sample<\/button>/);
+  assert.doesNotMatch(wellEditorMarkup, /data-well-sample-create="0">Add Sample<\/button>/);
   assert.match(coreCss, /\.lab-add-icon-btn\s*\{[^}]*width:\s*36px;[^}]*min-width:\s*36px;[^}]*height:\s*36px;[^}]*padding:\s*0;/s);
-  assert.match(singleEditorSource, /class="primary-btn inventory-sample-editor-icon-btn"[^>]*data-single-sample-save="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Save Sample"[^>]*data-hover-caption="Save sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Save Sample<\/span>/);
-  assert.match(singleEditorSource, /class="ghost-btn inventory-sample-editor-icon-btn"[^>]*data-single-sample-delete="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Delete Sample"[^>]*data-hover-caption="Delete sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Delete Sample<\/span>/);
-  assert.match(wellEditorSource, /class="primary-btn inventory-sample-editor-icon-btn"[^>]*data-well-sample-save="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Save Sample"[^>]*data-hover-caption="Save sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Save Sample<\/span>/);
-  assert.match(wellEditorSource, /class="ghost-btn inventory-sample-editor-icon-btn"[^>]*data-well-sample-delete="\$\{safeText\(activeSample\.id\)\}"[^>]*aria-label="Delete Sample"[^>]*data-hover-caption="Delete sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Delete Sample<\/span>/);
-  assert.doesNotMatch(singleEditorSource, />Save Sample<\/button>|>Delete Sample<\/button>/);
-  assert.doesNotMatch(wellEditorSource, />Save Sample<\/button>|>Delete Sample<\/button>/);
+  assert.match(singleEditorMarkup, /class="primary-btn inventory-sample-editor-icon-btn"[^>]*data-single-sample-save="sample-1"[^>]*aria-label="Save Sample"[^>]*data-hover-caption="Save sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only"><span[^>]*>Save Sample<\/span><\/span>/);
+  assert.match(singleEditorMarkup, /class="ghost-btn inventory-sample-editor-icon-btn"[^>]*data-single-sample-delete="sample-1"[^>]*aria-label="Delete Sample"[^>]*data-hover-caption="Delete sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only"><span[^>]*>Delete Sample<\/span><\/span>/);
+  assert.match(wellEditorMarkup, /class="primary-btn inventory-sample-editor-icon-btn"[^>]*data-well-sample-save="sample-1"[^>]*aria-label="Save Sample"[^>]*data-hover-caption="Save sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only"><span[^>]*>Save Sample<\/span><\/span>/);
+  assert.match(wellEditorMarkup, /class="ghost-btn inventory-sample-editor-icon-btn"[^>]*data-well-sample-delete="sample-1"[^>]*aria-label="Delete Sample"[^>]*data-hover-caption="Delete sample"[\s\S]*?<svg[\s\S]*?<span class="sr-only"><span[^>]*>Delete Sample<\/span><\/span>/);
+  assert.doesNotMatch(singleEditorMarkup, />Save Sample<\/button>|>Delete Sample<\/button>/);
+  assert.doesNotMatch(wellEditorMarkup, />Save Sample<\/button>|>Delete Sample<\/button>/);
   assert.match(css, /\.inventory-sample-editor-icon-btn\s*\{[^}]*width:\s*34px;[^}]*min-width:\s*34px;[^}]*height:\s*34px;[^}]*padding:\s*0;/s);
 });
 test('personal-inventory keeps folders nestable while physical containers remain distinct leaves', () => {

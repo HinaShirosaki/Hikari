@@ -6,6 +6,7 @@ import { initOligoTool } from './oligo-tool.js';
 import { initExtinctionTool } from './extinction-tool.js';
 import { initBufferTool } from './buffer-ui.js';
 import { initFixedReactionTool } from './fixed-reaction-ui.js';
+import { translateTree } from '../../lib/i18n/dom.js';
 
 export function initToolBox(options = {}) {
   const rootDocument = options?.document || globalThis?.document || null;
@@ -28,6 +29,7 @@ export function initToolBox(options = {}) {
   initExtinctionTool(sharedOptions);
   initBufferTool(sharedOptions);
   initFixedReactionTool(sharedOptions);
+  translateTree(rootDocument?.getElementById?.('tool-box-view'));
 
   return viewManager;
 }

@@ -42,6 +42,28 @@ for (const rotation of [0, 37, 90, -135, 360]) {
     });
   }
 }
+for (const rotation of [0, 37, -135]) {
+  test(`Shift resize at ${rotation}° keeps the ratio and the opposite anchor, and clamps proportionally`, () => {
+    const object = { x: 150, y: 220, width: 160, height: 100, rotation }, angle = rotation * Math.PI / 180;
+    for (const [direction, [horizontal, vertical]] of Object.entries(RESIZE_HANDLES)) {
+      const anchor = worldPoint(object, -horizontal, -vertical);
+      for (const delta of [40, -30, 20000, -20000]) {
+        const localX = horizontal * delta, localY = vertical * delta * 0.3;
+        const after = { ...object, ...resizeObject(object, direction,
+          localX * Math.cos(angle) - localY * Math.sin(angle), localX * Math.sin(angle) + localY * Math.cos(angle), object, true) };
+        close(after.width / after.height, object.width / object.height);
+        assert.ok(after.width >= 1 && after.width <= 8000 && after.height >= 1 && after.height <= 8000);
+        const fixed = worldPoint(after, -horizontal, -vertical);
+        close(fixed.x, anchor.x); close(fixed.y, anchor.y);
+      }
+    }
+  });
+}
+test('Shift resize follows the edge being dragged', () => {
+  const object = { x: 0, y: 0, width: 160, height: 100, rotation: 0 };
+  assert.deepEqual(resizeObject(object, 'e', 80, 999, object, true), { width: 240, height: 150, x: 0, y: -25 });
+  assert.deepEqual(resizeObject(object, 's', 999, 50, object, true), { width: 240, height: 150, x: -40, y: 0 });
+});
 test('resize cursors follow the visible orientation', () => {
   assert.equal(resizeCursor('n', 0), 'ns-resize');
   assert.equal(resizeCursor('n', 90), 'ew-resize');

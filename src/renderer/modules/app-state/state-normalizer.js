@@ -9,6 +9,7 @@ import {
 } from '../../lib/inventory-settings.js';
 import { defaultState, STARTUP_DEFAULT_VIEW_IDS } from './defaults.js';
 import { normalizeAppearanceMode } from './appearance.js';
+import { normalizeLocale } from '../../lib/i18n/locale.js';
 import { normalizePluginStorage } from '../../lib/plugin-storage.js';
 import { getPluginSettingsSchema, normalizePluginSettingsStore } from '../../../shared/plugin-settings.mjs';
 import { mergeBundledPluginEntries } from '../../lib/bundled-plugins.js';
@@ -143,6 +144,7 @@ function normalizeSettings(source) {
 
   return {
     ...structuredClone(defaultState.settings),
+    locale: normalizeLocale(rawSettings.locale),
     notebookSuggestionPauses: asObject(rawSettings.notebookSuggestionPauses),
     storagePath: String(rawSettings.storagePath || '').trim(),
     notebookPdf: normalizeNotebookPdfSettings(rawSettings.notebookPdf),

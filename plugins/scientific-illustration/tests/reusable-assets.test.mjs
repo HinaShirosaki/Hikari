@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createWorkspace, encodeText } from '../workspace.mjs';
 import { createDocument, normalizeObject } from '../model.mjs';
 import { selectionBounds } from '../grouping.mjs';
-import { ASSETS_PATH, snapshotAsset, instantiateAsset, normalizeAssetLibrary, validateAssetRequest } from '../reusable-assets.mjs';
+import { ASSETS_PATH, snapshotAsset, componentAsset, instantiateAsset, normalizeAssetLibrary, validateAssetRequest } from '../reusable-assets.mjs';
 
 function fixture() {
   const files = new Map(); let stored;
@@ -200,4 +200,36 @@ test('asset requests validate fields, enforce deadlines, and advertise their sch
   await seed(w); const args = await saveArgs(w);
   assert.equal((await w.request({ ...args, ids: ['a'] })).status, 'invalid_arguments');
   assert.equal((await w.request({ ...args, name: ' ' })).status, 'invalid_arguments');
+});
+
+test('generated SVG components save as one origin-based asset without a figure', () => {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5"/></svg>';
+  const objects = [{ id: 'membrane', type: 'vector', x: 300, y: 200, width: 120, height: 80, svg },
+    { id: 'nucleus', name: 'Nucleus', type: 'vector', x: 340, y: 220, width: 30, height: 30, svg }];
+  const args = { action: 'asset_save', expected_assets_revision: 'rev', request_id: 'req', name: 'Cell', objects };
+  assert.doesNotThrow(() => validateAssetRequest(args));
+  for (const bad of [{ objects: [] }, { objects: [{ id: 'label', type: 'text', text: 'Cell' }] }, { id: 'component' }])
+    assert.throws(() => validateAssetRequest({ ...args, ...bad }), /objects|Save takes/);
+  assert.throws(() => validateAssetRequest({ ...args, objects: undefined, id: 'component' }), /illustration_id/);
+  const asset = componentAsset('Cell', objects);
+  assert.deepEqual(asset.objects.map(object => [object.id, object.x, object.y, object.canvas]), [['membrane', 0, 0, 'main'], ['nucleus', 40, 20, 'main']]);
+  assert.deepEqual([asset.width, asset.height], [120, 80]);
+  assert.throws(() => componentAsset('Cell', [objects[0], objects[0]]), /Invalid reusable component objects/);
+});
+
+test('only runs that edited the canvas need an inspection before completing', async () => {
+  const host = fixture(), w = host.open(); await w.ready;
+  const run = (input, inspectionRunId) => w.request(input, Infinity, {}, { inspectionRunId, agentRequest: true });
+  assert.equal((await run({ action: 'read' }, 'asset-run')).inspection.complete, true);
+  assert.ok((await run({ action: 'asset_list' }, 'asset-run')).ok);
+  assert.equal((await run({ action: 'inspection_status' }, 'asset-run')).inspection.complete, true);
+  const current = await run({ action: 'read' }, 'draw-run');
+  assert.ok((await run({ action: 'asset_list' }, 'draw-run')).ok);
+  assert.ok((await run({ action: 'apply', expected_revision: current.revision, request_id: crypto.randomUUID(),
+    operations: [{ op: 'upsert', object: { id: 'label', type: 'text', text: 'Cell', x: 10, y: 10 } }] }, 'draw-run')).ok);
+  assert.equal((await run({ action: 'inspection_status' }, 'draw-run')).inspection.complete, false);
+  assert.equal((await run({ action: 'inspection_status' }, 'asset-run')).inspection.complete, true);
+  // A local edit is not an agent edit, but the next agent edit still is.
+  assert.ok((await apply(w, [{ op: 'update', id: 'label', patch: { text: 'Cell body' } }])).ok);
+  assert.equal((await run({ action: 'inspection_status' }, 'asset-run')).inspection.complete, true);
 });

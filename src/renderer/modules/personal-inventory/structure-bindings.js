@@ -1,4 +1,7 @@
-import { showTransientNotice } from '../../lib/notify.js';
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("samples");
+import { sampleUi, sampleNotice } from './localization.js';
 import { renderTypeFieldsMarkup } from './type-fields.js';
 
 export function bindStructureButtons(ctx) {
@@ -18,7 +21,7 @@ export function bindStructureButtons(ctx) {
       select.addEventListener('change', () => {
         const fields = select.closest?.('.well-inline-editor')?.querySelector('[data-sample-type-fields]');
         if (fields) {
-          fields.innerHTML = renderTypeFieldsMarkup(select.value);
+          i18nUi.setHtml(fields, renderTypeFieldsMarkup(select.value));
         }
       });
     });
@@ -27,8 +30,8 @@ export function bindStructureButtons(ctx) {
   inventorySections.querySelectorAll('[data-inventory-sample-structure-paste]').forEach((button) => {
     button.addEventListener('click', () => {
       pasteInventoryStructure(button).catch(() => {
-        setStructureStatus('Cannot read a chemical structure from the clipboard yet.', true);
-        showTransientNotice('Cannot read a chemical structure from the clipboard yet.', { type: 'error' });
+        setStructureStatus(sampleUi('structure.readError'), true);
+        sampleNotice(sampleUi('structure.readError'), { type: 'error' });
       });
     });
   });

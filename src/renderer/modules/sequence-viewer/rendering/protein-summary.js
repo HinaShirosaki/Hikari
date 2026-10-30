@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../../lib/html.js';
 import { getCdsProteinProperties } from '../protein-properties.js';
 
@@ -34,15 +37,15 @@ function formatProteinPropertySummary(properties, { includeDetails = true } = {}
   const dnaLength = Math.max(0, Number(properties.dnaLength) || 0);
 
   return [
-    `<p><strong>Protein:</strong> ${escapeHtml(parts.join(' · '))} <span class="small-note">(${escapeHtml(source)})</span></p>`,
+    `<p><strong>${i18nUi.html("Protein:")}</strong> ${escapeHtml(parts.join(' · '))} <span class="small-note">(${escapeHtml(source)})</span></p>`,
     invalidResidues.length
-      ? `<p class="small-note">Protein properties require known residues only; unknown residue(s) ${escapeHtml(invalidResidues.join(', '))} prevent exact MW/pI calculation.</p>`
+      ? `<p class="small-note">${i18nUi.html("Protein properties require known residues only; unknown residue(s)")} ${escapeHtml(invalidResidues.join(', '))} ${i18nUi.html("prevent exact MW/pI calculation.")}</p>`
       : '',
     includeDetails && sequence
       ? `<details class="sequence-viewer-protein-details">
-        <summary>Protein details</summary>
-        ${dnaLength ? `<p class="small-note">CDS length: ${dnaLength.toLocaleString()} nt</p>` : ''}
-        <p class="small-note">Composition: ${escapeHtml(composition.join(' · '))}</p>
+        <summary>${i18nUi.html("Protein details")}</summary>
+        ${dnaLength ? `<p class="small-note">${i18nUi.html("CDS length:")} ${dnaLength.toLocaleString()} nt</p>` : ''}
+        <p class="small-note">${i18nUi.html("Composition:")} ${escapeHtml(composition.join(' · '))}</p>
         <pre class="sequence-viewer-protein-sequence">${escapeHtml(sequence.match(/.{1,10}/g).join(' '))}</pre>
       </details>`
       : ''

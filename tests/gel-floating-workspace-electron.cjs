@@ -44,6 +44,9 @@ async function main() {
     </head><body class="plugin-gel"><div id="gel-host">${markup}</div>
     <script type="module">
       import { initGelAnalysis } from '${url('workspace/index.js')}';
+      window.qaErrors=[];
+      window.addEventListener('error',event=>{if(!/^ResizeObserver loop/.test(event.message))qaErrors.push(event.error?.stack||event.message)});
+      window.addEventListener('unhandledrejection',event=>qaErrors.push(event.reason?.stack||String(event.reason)));
       window.hikariApi={
         storeImportedFile:async data=>({ok:true,filePath:data.targetFolder+'/'+data.fileName,relativePath:data.targetFolder+'/'+data.fileName}),
         writeJsonFile:async data=>({ok:true,filePath:data.targetFolder+'/'+data.fileName,relativePath:data.targetFolder+'/'+data.fileName})
@@ -96,7 +99,8 @@ async function main() {
       if(await exec(code)) return;
       await new Promise(resolve=>setTimeout(resolve,30));
     }
-    throw new Error(`Timed out: ${code}\n${errors.join('\n')}`);
+    const diagnostic = await exec("JSON.stringify({crop:document.getElementById('gel-crop-mode-btn').outerHTML,barHidden:document.getElementById('gel-crop-bar').hidden,image:document.getElementById('gel-cropper-image').getAttribute('src')?.slice(0,70),workspace:document.querySelector('.gel-workspace').className,crops:document.querySelectorAll('#gel-crop-mode-btn').length,errors:window.qaErrors,status:document.getElementById('gel-status').textContent})");
+    throw new Error(`Timed out: ${code}\n${diagnostic}\n${errors.join('\n')}`);
   }
   function sameRect(a,b,label) {
     for(const key of ['x','y','width','height']) assert.ok(Math.abs(a[key]-b[key])<1, `${label}: ${key}: ${a[key]} → ${b[key]}`);
@@ -318,7 +322,7 @@ async function main() {
     await exec("click('gel-open-lane-table-btn');click('gel-add-table-btn')");
     await settle();
     async function checkDock() {
-      const dock=await exec(`(()=>{const panel=document.getElementById('gel-lane-table-panel'),canvas=rect('gel-canvas'),grid=document.querySelector('.gel-lane-table-grid-shell').getBoundingClientRect(),layer=document.querySelector('.gel-floating-layer').getBoundingClientRect();return {panel:panel.getBoundingClientRect().toJSON(),canvas,grid:grid.toJSON(),layer:layer.toJSON(),floating:Boolean(panel.closest('[data-gel-window],.gel-floating-layer')),hidden:panel.hidden}})()`);
+      const dock=await exec(`(()=>{const panel=document.getElementById('gel-lane-table-panel'),canvas=rect('gel-canvas'),grid=document.querySelector('.gel-table-strip-lanes').getBoundingClientRect(),layer=document.querySelector('.gel-floating-layer').getBoundingClientRect();return {panel:panel.getBoundingClientRect().toJSON(),canvas,grid:grid.toJSON(),layer:layer.toJSON(),floating:Boolean(panel.closest('[data-gel-window],.gel-floating-layer')),hidden:panel.hidden}})()`);
       assert.equal(dock.hidden,false,'The lane table dock is visible');
       assert.equal(dock.floating,false,'The lane table stays outside floating windows');
       assert.ok(dock.panel.bottom<=dock.canvas.top-8,'The lane table sits above the gel');
@@ -326,9 +330,13 @@ async function main() {
       assert.ok(dock.layer.top>=dock.panel.bottom,`Floating windows stay below the table: ${JSON.stringify({layer:dock.layer,panel:dock.panel})}`);
     }
     await checkDock();
-    await exec("document.querySelector('[data-gel-table-add-row]').click();document.querySelector('[data-gel-table-role=label]').value='Label';document.querySelector('[data-gel-table-role=label]').dispatchEvent(new Event('input',{bubbles:true}));");
+    // Same white-figure table as the Stack: one row is rotated captions over the lanes, more rows a borderless table.
+    assert.equal(await exec("document.querySelectorAll('#gel-lane-table-shell .gel-table-input.is-rotated').length"),6,'A one-row table is typed as rotated captions');
+    assert.equal(await exec("getComputedStyle(document.querySelector('.gel-table-strip-lanes')).backgroundColor"),'rgb(255, 255, 255)','The table strip is white like the figure');
+    await exec("document.querySelector('[data-gel-table-add-row]').click();document.querySelector('#gel-lane-table-shell .is-label').value='Label';document.querySelector('#gel-lane-table-shell .is-label').dispatchEvent(new Event('input',{bubbles:true}));");
     await settle();
     await checkDock();
+    assert.equal(await exec("document.querySelectorAll('#gel-lane-table-shell .gel-table-input.is-rotated').length"),0,'Two rows draw as a table');
     const dockedBaseline=await exec("rect('gel-canvas')");
     await exec("click('gel-process-image-btn')");
     assert.equal(await exec("document.getElementById('gel-processed-preview').checked"),true,'The Processed preview turns on');
@@ -348,12 +356,12 @@ async function main() {
     await exec("click('gel-open-lane-table-btn')");
     await settle();
     await checkDock();
-    assert.equal(await exec("document.querySelector('[data-gel-table-role=label]').value"),'Label','Hiding and reopening preserves table edits');
+    assert.equal(await exec("document.querySelector('#gel-lane-table-shell .is-label').value"),'Label','Hiding and reopening preserves table edits');
     fs.writeFileSync(path.join(output,'lane-table-docked.png'),(await win.webContents.capturePage()).toPNG());
     await exec("document.body.classList.add('theme-night')");
     await new Promise(resolve=>setTimeout(resolve,350));
     fs.writeFileSync(path.join(output,'lane-table-docked-night.png'),(await win.webContents.capturePage()).toPNG());
-    await exec("document.body.classList.remove('theme-night');for(let row=0;row<8;row++)document.querySelector('[data-gel-table-add-row]').click()");
+    await exec("document.body.classList.remove('theme-night');for(let row=0;row<18;row++)document.querySelector('[data-gel-table-add-row]').click()");
     await settle();
     await checkDock();
     assert.ok(await exec("(()=>{const body=document.querySelector('.gel-lane-table-body');return body.scrollHeight>body.clientHeight})()"),'Long tables scroll inside the dock');
@@ -377,7 +385,7 @@ async function main() {
     await exec("click('gel-cell-table-copy-btn')");
     await waitFor("document.getElementById('gel-cell-table-copy-status').textContent==='Table copied.'");
     assert.equal(await exec('qaCopiedText'),await exec("[...document.querySelectorAll('#gel-cell-table-host tr')].map(row=>[...row.cells].map(cell=>cell.textContent.trim()).join('\\t')).join('\\n')"),'Copy includes every header and row');
-    await exec("{const input=document.querySelector('[data-gel-table-role=value]');input.value='Control <A>';input.dispatchEvent(new Event('input',{bubbles:true}))}");
+    await exec("{const input=document.querySelector('#gel-lane-table-shell [data-table-lane]');input.value='Control <A>';input.dispatchEvent(new Event('input',{bubbles:true}))}");
     assert.match(await exec("document.querySelector('#gel-band-intensity-chart .gel-intensity-series title').textContent"),/Control <A>/,'An open graph reflects updated lane labels');
     const intensityBefore=await exec("rect('gel-cell-table-panel')");
     await exec("{const h=document.querySelector('#gel-cell-table-panel [data-gel-window-handle]');h.focus();h.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}))}");
@@ -606,6 +614,7 @@ async function main() {
     await exec('controller.destroy()');
     assert.equal(await exec("document.querySelector('.gel-floating-layer')"),null);
     assert.equal(await exec("document.querySelector('.gel-divider-menu')"),null,'Destroy removes the divider menu');
+    assert.deepEqual(await exec("window.qaErrors"),[]);
     assert.deepEqual(errors,[]);
     console.log('gel-floating-workspace-electron: passed (Band intensity graph/table/copy/live labels/empty state, stacked windows and bounds at 4 sizes, divider tolerance, MW editing, light/dark, table dock, crop rotation, disposal)');
   } finally { win.destroy();app.quit(); }

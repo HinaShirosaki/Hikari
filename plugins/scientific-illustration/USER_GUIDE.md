@@ -1,6 +1,6 @@
 # Figura
 
-Install this folder using **Settings → Skills & plugins**, enable it and reload.
+Install this folder using **Settings → Plugins**, enable it and reload.
 The **Figura** workspace then appears under **More**. Configure Hikari storage and sign in to Codex,
 enter a figure description, and click **Draw with Codex**. Progress appears in
 the workspace's chat rail. Each illustration has its own conversation and
@@ -19,21 +19,22 @@ edits. Missing or truncated Markdown is disclosed to the agent. Existing figures
 are preserved. These entry points require a Hikari host with the context-action
 API; older hosts still support drawing from the plugin's own composer.
 
-The **Illustrations** left rail contains saved figures. Use **+** to create
-one and the title field to rename it. Search filters titles; selecting a row
-opens its canvas. Each illustration saves independently. Your existing figure
-is added to this library automatically. The canvas uses the full editing width
-when a figure opens. The **Layers / Assets** buttons in the right toolbar open
-either panel in the shared rail beside it. Click the active button again or
-the panel's **Close** button to return that space to the canvas. At
-narrow widths this panel overlays the canvas and scrolls independently. The UI
-follows Hikari's day/night appearance and font scale. The tools share one outer
-strip with the folded agent chat toggle. Opening a
-component panel folds chat, and opening chat folds the component panel. Older
-Hikari builds retain a compact local right toolbar. The plugin uses Hikari's
-shared left rail width. Drag the rail divider to resize. Use the chevron
-beside the figure title to hide or show **Illustrations** and give the canvas
-more room. Hikari saves the
+The left rail holds your library. Its **Illustrations | Assets** switch shows
+either your saved figures or the reusable assets shared by all of them. Under
+**Illustrations**, use **+** to create a figure and the title field to rename
+it. Search filters titles; selecting a row opens its canvas. The switch and
+search stay pinned while the list scrolls, with its scrollbar at the rail's
+outer edge. Each illustration saves independently. Your existing figure is
+added to this library automatically. The canvas uses the full editing width
+when a figure opens. The **Layers** button in the right toolbar opens the layer
+panel beside it. Click it again or the panel's **Close** button to return that
+space to the canvas. At narrow widths this panel overlays the canvas and
+scrolls independently. The UI follows Hikari's day/night appearance and font
+scale. The tools share one outer strip with the folded agent chat toggle.
+Opening Layers folds chat, and opening chat folds Layers. Older Hikari builds
+retain a compact local right toolbar. The plugin uses Hikari's shared left rail
+width. Drag the rail divider to resize. Use the chevron beside the figure title
+to hide or show the library and give the canvas more room. Hikari saves the
 folded state per plugin through `app.setLeftRailFolded` (the `layout` permission).
 On older Hikari builds the toggle stays hidden until this API is available.
 An existing installation without `layout` permission needs the folder re-added
@@ -46,7 +47,10 @@ and labels intact. The migration saves a new scene file before committing the
 library index, leaving the original file recoverable.
 Select objects on a canvas or in the layer list; drag to move and use the
 eight handles to resize. Vector and raster artwork stretches with the box:
-corners adjust both dimensions, edge midpoints adjust one dimension.
+corners adjust both dimensions, edge midpoints adjust one dimension. Hold Shift
+while dragging a handle to keep the proportions; the artwork then scales without
+stretching, and the opposite corner or edge stays in place. Text and
+multi-component selections always resize proportionally.
 Clicks on transparent pixels in images and vector artwork pass through to
 visible components underneath. On empty canvas they begin area selection.
 Text keeps a fixed aspect ratio with every handle; its box and font scale together.
@@ -184,7 +188,7 @@ also avoid converting text to paths; glyph-shaped paths cannot be reliably
 distinguished from legitimate illustration geometry.
 
 Placement honors the SVG source's aspect ratio (`xMidYMid meet` by default).
-Manual resizing with a handle or a Width/Height field deliberately sets the
+Manual resizing with a handle (without Shift) or a Width/Height field deliberately sets the
 SVG root's `preserveAspectRatio` to `none`, so the artwork stretches along with
 the box rather than leaving proportional artwork inside a changed viewport.
 This source change is saved with the geometry, visible to Codex and included
@@ -291,12 +295,13 @@ per asset and 64 megapixels decoded.
 There is no per-request asset-count or combined-import-byte quota, or plugin
 quota on native image-generation calls. Saved scene/file size limits remain.
 
-Before completing a drawing run, Codex must render the canvas and review
+Before completing a run that edited the canvas, Codex must render it and review
 placement, clipping, labels, artwork and scientific relationships. The agent records its observations through
 `inspect`; a render alone is insufficient. Any subsequent edit, undo/redo,
 reload or new run requires another inspection. Hikari gives a skipped
 inspection one automatic follow-up, then reports the run as incomplete if
 the review is still missing. Saved artwork remains available for editing.
+A run that leaves the canvas unchanged, such as a generated asset, needs no inspection.
 This enforces a visual review workflow; the review can still contain mistakes
 or scientific uncertainty.
 
@@ -305,11 +310,8 @@ or scientific uncertainty.
 ### Reusable components
 
 Select one layer, a group, or several layers on one canvas. Right-click the
-selection, choose **Save as an asset…**, and give it a name. The
-**Layers / Assets** buttons in the right toolbar open either panel;
-clicking its active button again closes the rail. Only one panel is visible
-at a time. **Assets** provides searchable
-previews. Click an asset to place an editable
+selection, choose **Save as an asset…**, and give it a name; the left rail
+then switches to **Assets**. **Assets** provides searchable previews. Click an asset to place an editable
 copy on the active canvas. Large assets fit within 70% of the destination;
 smaller assets keep their saved size. Copies get fresh IDs and keep their
 rotations, relative positions, paint order, raster bytes, and text formatting.
@@ -319,6 +321,15 @@ Remove an asset with its trash control; already placed copies are retained.
 Use **Assets → Import asset…** to save an SVG, PNG, JPEG, or WebP file directly
 to the library. Give it a name in the preview. Raster imports require the same
 text-free review as canvas artwork; SVG keeps its editable vector form.
+
+Use **Assets → Generate asset…** to have Codex make one new reusable component
+without changing the canvas. Describe it and click **Generate with Codex**. Codex picks SVG or image
+generation from the figure's **Image generation settings**, as when drawing. The
+request goes to this figure's chat, which opens to show progress. An SVG asset
+is a set of separately editable vector layers; an image-generation asset is one
+text-free image that follows the figure's image style. Codex previews the saved
+asset, replaces it if it needs fixes, and the asset appears in Assets ready to
+insert. The button is hidden while Codex is unavailable.
 
 Place a raster asset on the canvas, select the image and click **Crop selected image** in the
 toolbar. Drag the crop handles directly in the canvas or enter pixel bounds,
@@ -366,7 +377,7 @@ saves survive reloads, and retries do not duplicate a committed snapshot.
 | `asset_list` | Takes only `action`; returns asset names, IDs, dimensions, layer counts and `assets_revision`. |
 | `asset_read` | `asset_id`, optional `include_assets:true`; returns `component` with relative object coordinates, SVG and text properties. Raster bytes are omitted by default. |
 | `asset_render` | `asset_id`; returns a native PNG preview up to 400 pixels. Does not satisfy or invalidate canvas inspection. |
-| `asset_save` | `illustration_id`, `expected_revision`, `expected_assets_revision`, unique `request_id`, `name`, and exactly one of component/group `id`, component `ids`, or `raster_asset` plus `textFree:true`. A raster file can be saved without placing it. Saves without altering canvas geometry or revision. |
+| `asset_save` | `illustration_id`, `expected_revision`, `expected_assets_revision`, unique `request_id`, `name`, and exactly one of component/group `id`, component `ids`, `raster_asset` plus `textFree:true`, or `objects`. A raster file can be saved without placing it. `objects` builds an asset from 1–200 `type:"vector"` SVG objects in one coordinate space, without placing them or needing `illustration_id`/`expected_revision`. Saves without altering canvas geometry or revision. |
 | `asset_delete` | `asset_id`, `expected_assets_revision`, unique `request_id`. Removes only the saved snapshot. |
 
 Insert through normal revision-guarded `apply`, for example:

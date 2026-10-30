@@ -1,5 +1,6 @@
 'use strict';
 
+const { nativeText } = require('../lib/i18n.js');
 const path = require('node:path');
 const {
   parseAssayResultImportFile,
@@ -137,7 +138,7 @@ function registerDataIpc(deps = {}) {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const currentPath = typeof normalizedPayload?.currentPath === 'string' ? normalizedPayload.currentPath.trim() : '';
     const result = await dialog.showOpenDialog({
-      title: 'Select Storage Folder',
+      title: nativeText("Select Storage Folder"),
       defaultPath: currentPath || undefined,
       properties: ['openDirectory', 'createDirectory']
     });

@@ -25,48 +25,48 @@
         >
           <div class="app-dialog-head inventory-add-container-head">
             <div>
-              <h3 id="inventory-add-container-title">Add Container</h3>
+              <h3 id="inventory-add-container-title" data-i18n="samples.dialog.add">Add Container</h3>
               <p id="inventory-add-container-note" class="small-note" hidden></p>
             </div>
-            <button id="inventory-add-container-close" type="button" class="app-dialog-close-btn" aria-label="Close add container dialog" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            <button id="inventory-add-container-close" type="button" class="app-dialog-close-btn" data-i18n-aria-label="samples.dialog.close" aria-label="Close add container dialog" data-i18n-title="samples.action.close" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           </div>
           <label>
-            <span id="inventory-add-item-name-label">Container Name</span>
-            <input id="inventory-add-container-name" placeholder="e.g. Box A" required />
+            <span id="inventory-add-item-name-label" data-i18n="samples.form.containerName">Container Name</span>
+            <input id="inventory-add-container-name" data-i18n-placeholder="samples.form.containerPlaceholder" placeholder="e.g. Box A" required />
           </label>
           <label>
-            Location
+            <span data-i18n="samples.form.location">Location</span>
             <select id="inventory-add-container-location" required>
-              <option value="">Select location</option>
+              <option value="" data-i18n="samples.form.selectLocation">Select location</option>
             </select>
           </label>
           <label id="inventory-add-container-type-field">
-            Type
+            <span data-i18n="samples.form.type">Type</span>
             <select id="inventory-add-container-type">
-              <option value="box25">25-well grid box (5 × 5)</option>
-              <option value="box49">49-well grid box (7 × 7)</option>
-              <option value="box64">64-well grid box (8 × 8)</option>
-              <option value="box81">81-well grid box</option>
-              <option value="box100">100-well grid box (10 × 10)</option>
-              <option value="customGrid">Custom grid box</option>
-              <option value="plate96">96-well plate</option>
-              <option value="single">Single container (tube/bottle)</option>
+              <option value="box25" data-i18n="samples.form.box25">25-well grid box (5 × 5)</option>
+              <option value="box49" data-i18n="samples.form.box49">49-well grid box (7 × 7)</option>
+              <option value="box64" data-i18n="samples.form.box64">64-well grid box (8 × 8)</option>
+              <option value="box81" data-i18n="samples.form.box81">81-well grid box</option>
+              <option value="box100" data-i18n="samples.form.box100">100-well grid box (10 × 10)</option>
+              <option value="customGrid" data-i18n="samples.form.customGrid">Custom grid box</option>
+              <option value="plate96" data-i18n="samples.form.plate96">96-well plate</option>
+              <option value="single" data-i18n="samples.form.single">Single container (tube/bottle)</option>
             </select>
           </label>
           <div id="inventory-add-container-grid-fields" class="inventory-custom-grid-fields" hidden>
             <label>
-              Rows
+              <span data-i18n="samples.form.rows">Rows</span>
               <input id="inventory-add-container-rows" type="number" min="1" max="24" step="1" value="9" />
             </label>
             <label>
-              Columns
+              <span data-i18n="samples.form.columns">Columns</span>
               <input id="inventory-add-container-cols" type="number" min="1" max="24" step="1" value="9" />
             </label>
-            <p class="small-note inventory-custom-grid-note">Custom grid boxes reuse the same visual style as the 81-well box.</p>
+            <p class="small-note inventory-custom-grid-note" data-i18n="samples.form.customNote">Custom grid boxes reuse the same visual style as the 81-well box.</p>
           </div>
           <div class="form-actions">
-            <button id="inventory-add-container-submit" type="submit" class="primary-btn">Save Container</button>
-            <button id="inventory-add-container-cancel" type="button" class="ghost-btn">Cancel</button>
+            <button id="inventory-add-container-submit" data-i18n="samples.action.saveContainer" type="submit" class="primary-btn">Save Container</button>
+            <button id="inventory-add-container-cancel" data-i18n="samples.action.cancel" type="button" class="ghost-btn">Cancel</button>
           </div>
         </form>
       </div>

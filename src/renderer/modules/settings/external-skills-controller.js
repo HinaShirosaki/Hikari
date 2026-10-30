@@ -1,3 +1,6 @@
+import "./localization.js";
+import { createPresentation } from "../../lib/i18n/presentation.js";
+const i18nUi = createPresentation("settings");
 function normalizeDisabledNames(value = []) {
   return Array.isArray(value)
     ? value.map((item) => String(item || '').trim()).filter(Boolean)
@@ -102,11 +105,11 @@ export function createExternalSkillsController({
     const skills = catalog.skills || [];
 
     if (!skills.length) {
-      listElement.innerHTML = '<p class="small-note">No external skills discovered.</p>';
+      i18nUi.setHtml(listElement, `<p class="small-note">${i18nUi.html("No external skills discovered.")}</p>`);
       return;
     }
 
-    listElement.innerHTML = skills.map((skill) => {
+    i18nUi.setHtml(listElement, skills.map((skill) => {
       const individuallyEnabled = !disabledSet.has(skill.name.toLowerCase());
       const blockedByDependency = globallyEnabled
         && individuallyEnabled
@@ -137,7 +140,7 @@ export function createExternalSkillsController({
               <span>${escapeHtml(skill.name)}</span>
               <span class="settings-skill-command">${commandText}</span>
             </div>
-            <p class="small-note settings-skill-description">${escapeHtml(skill.description || 'No description provided.')}</p>
+            <p class="small-note settings-skill-description">${i18nUi.render((skill.description || i18nUi.message("No description provided.")))}</p>
             <p class="small-note">${escapeHtml(statusText)} ${escapeHtml(modelText)}.</p>
             ${pathText}
           </div>
@@ -147,7 +150,7 @@ export function createExternalSkillsController({
           </label>
         </div>
       `;
-    }).join('');
+    }).join(''));
 
     listElement.querySelectorAll('[data-external-skill-toggle]').forEach((input) => {
       input.addEventListener('change', () => {

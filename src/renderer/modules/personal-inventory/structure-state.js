@@ -3,6 +3,7 @@ import {
   normalizeStructureData,
   toStructureDraft
 } from '../../lib/compound-structure.js';
+import { bindSampleStatus, setSampleText } from './localization.js';
 
 export function installStructureState(ctx) {
   const { helpers, pendingStructureDrafts, uiState } = ctx;
@@ -33,7 +34,7 @@ function getStructureTypeInput(mode) {
 function setStructureStatus(message, isError = false) {
   const status = inventorySections?.querySelector('[data-inventory-sample-structure-status]');
   if (status) {
-    status.textContent = String(message || '');
+    bindSampleStatus(status, message);
     status.classList.toggle('is-error', Boolean(isError && message));
   }
 }
@@ -49,7 +50,7 @@ function syncStructureButtons() {
       const draft = sample
         ? normalizeStructureData(sample.compoundStructure)
         : normalizeStructureData(pendingStructureDrafts.get(getPendingStructureKey(mode)));
-      button.textContent = draft ? 'Replace Structure' : 'Paste Structure';
+      setSampleText(button, draft ? 'structure.replace' : 'structure.paste');
     }
   });
   inventorySections?.querySelectorAll('[data-inventory-sample-structure-preview]').forEach((preview) => {

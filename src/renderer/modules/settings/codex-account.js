@@ -1,3 +1,7 @@
+import "./localization.js";
+import { createPresentation } from "../../lib/i18n/presentation.js";
+const i18nUi = createPresentation("settings");
+import { setSettingsText } from './localization.js';
 import {
   DEFAULT_AGENT_LLM_PROVIDER as DEFAULT_LLM_PROVIDER
 } from '../codex-model-catalog.generated.js';
@@ -75,7 +79,7 @@ function createCodexAccountSettings({
     if (clearCodexLoginBtn) {
       clearCodexLoginBtn.hidden = !codexLoginConfig.loggedIn && codexLoginConfig.source !== 'stored';
       clearCodexLoginBtn.disabled = codexLoginConfig.source === 'env';
-      clearCodexLoginBtn.textContent = connected ? 'Sign out' : 'Clear saved login';
+      i18nUi.setText(clearCodexLoginBtn, (connected ? i18nUi.message("Sign out") : i18nUi.message("Clear saved login")));
     }
 
     const cliMissing = codexLoginConfig.cliAvailable === false;
@@ -83,49 +87,47 @@ function createCodexAccountSettings({
     if (settingCodexInstallCommand) settingCodexInstallCommand.value = codexLoginConfig.cliInstallCommand || '';
     if (copyCodexInstallCommandBtn) copyCodexInstallCommandBtn.disabled = !codexLoginConfig.cliInstallCommand;
     if (settingCodexInstallHelp) {
-      settingCodexInstallHelp.textContent = `Run this command in ${codexLoginConfig.cliInstallShell || 'your terminal'} to install Codex CLI. Then click Check again and sign in with OpenAI. For a custom install location, restart Hikari after updating PATH or set HIKARI_CODEX_CLI to the executable path.`;
+      i18nUi.setText(settingCodexInstallHelp, i18nUi.message("Run this command in {p0} to install Codex CLI. Then click Check again and sign in with OpenAI. For a custom install location, restart Hikari after updating PATH or set HIKARI_CODEX_CLI to the executable path.", { p0: codexLoginConfig.cliInstallShell || 'your terminal' }));
     }
     if (cliMissing) {
-      settingCodexStatus.textContent = codexLoginConfig.cliMessage || 'Codex CLI was not found on this computer.';
+      i18nUi.setOwnedText(settingCodexStatus, (codexLoginConfig.cliMessage || i18nUi.message("Codex CLI was not found on this computer.")));
       return;
     }
 
     const override = String(overrideMessage || '').trim();
     if (override) {
-      settingCodexStatus.textContent = `OpenAI account: ${override}`;
+      i18nUi.setOwnedText(settingCodexStatus, i18nUi.message("OpenAI account: {p0}", { p0: override }));
       return;
     }
 
     if (connected) {
       const identity = [codexLoginConfig.email, codexLoginConfig.planType].filter(Boolean).join(' · ');
-      settingCodexStatus.textContent = codexLoginConfig.source === 'env'
-        ? 'OpenAI account: connected through an environment token.'
-        : `OpenAI account: connected${identity ? ` (${identity})` : ''}.`;
+      i18nUi.setOwnedText(settingCodexStatus, (codexLoginConfig.source === 'env' ? i18nUi.message("OpenAI account: connected through an environment token.") : i18nUi.message("OpenAI account: connected{p0}.", { p0: identity ? ` (${identity})` : '' })));
       if (codexLoginConfig.cliVersion) {
-        settingCodexStatus.textContent += ` Codex CLI ${codexLoginConfig.cliVersion}; updates automatically.`;
+        i18nUi.appendText(settingCodexStatus, i18nUi.message(" Codex CLI {p0}; updates automatically.", { p0: codexLoginConfig.cliVersion }));
       }
       if (codexLoginConfig.cliUpdateError) {
-        settingCodexStatus.textContent += ` Automatic update failed: ${codexLoginConfig.cliUpdateError}`;
+        i18nUi.appendText(settingCodexStatus, i18nUi.message(" Automatic update failed: {p0}", { p0: codexLoginConfig.cliUpdateError }));
       }
       return;
     }
 
     if (codexLoginConfig.source === 'login_in_progress') {
-      settingCodexStatus.textContent = 'OpenAI account: sign-in is in progress in your browser.';
+      i18nUi.setOwnedText(settingCodexStatus, i18nUi.message("OpenAI account: sign-in is in progress in your browser."));
       return;
     }
 
     if (codexLoginConfig.expired) {
-      settingCodexStatus.textContent = 'OpenAI account: current session expired. Sign in with OpenAI again.';
+      i18nUi.setOwnedText(settingCodexStatus, i18nUi.message("OpenAI account: current session expired. Sign in with OpenAI again."));
       return;
     }
 
     if (codexLoginConfig.source === 'stored') {
-      settingCodexStatus.textContent = 'OpenAI account: stored credentials were found, but they are not usable right now. Sign in again or clear them.';
+      i18nUi.setOwnedText(settingCodexStatus, i18nUi.message("OpenAI account: stored credentials were found, but they are not usable right now. Sign in again or clear them."));
       return;
     }
 
-    settingCodexStatus.textContent = 'OpenAI account: not connected. Sign in to use Codex in Hikari.';
+    i18nUi.setOwnedText(settingCodexStatus, i18nUi.message("OpenAI account: not connected. Sign in to use Codex in Hikari."));
   }
 
   async function refreshCodexLoginStatus() {
@@ -135,8 +137,8 @@ function createCodexAccountSettings({
       codexLoginConfig = normalizeCodexLoginStatus({ ...codexLoginConfig, ok: false, loggedIn: false, canRefresh: false });
       setAgentAvailability(false);
       usage.clear();
-      renderCodexStatus('Codex login is unavailable.');
-      showTransientNotice('Codex login is unavailable.', { type: 'error' });
+      renderCodexStatus(i18nUi.text("Codex login is unavailable."));
+      showTransientNotice(i18nUi.message("Codex login is unavailable."), { type: 'error' });
       return codexLoginConfig;
     }
     if (checkCodexCliBtn) checkCodexCliBtn.disabled = true;
@@ -161,8 +163,8 @@ function createCodexAccountSettings({
       codexLoginConfig = normalizeCodexLoginStatus({ ...codexLoginConfig, ok: false, loggedIn: false, canRefresh: false });
       setAgentAvailability(false);
       usage.clear();
-      renderCodexStatus('Failed to load Codex login status.');
-      showTransientNotice('Failed to load Codex login status.', { type: 'error' });
+      renderCodexStatus(i18nUi.text("Failed to load Codex login status."));
+      showTransientNotice(i18nUi.message("Failed to load Codex login status."), { type: 'error' });
       return codexLoginConfig;
     } finally {
       if (checkCodexCliBtn && revision === codexStatusRevision) checkCodexCliBtn.disabled = false;
@@ -173,23 +175,23 @@ function createCodexAccountSettings({
     const status = await refreshCodexLoginStatus();
     if (status.cliAvailable === false) return { ok: false };
     if (!window.hikariApi?.loginCodexLlm) {
-      renderCodexStatus('Codex login is unavailable.');
-      showTransientNotice('Codex login is unavailable.', { type: 'error' });
+      renderCodexStatus(i18nUi.text("Codex login is unavailable."));
+      showTransientNotice(i18nUi.message("Codex login is unavailable."), { type: 'error' });
       return { ok: false };
     }
     try {
       const result = await window.hikariApi.loginCodexLlm();
       if (!result?.ok) {
-        renderCodexStatus(result?.error || 'Failed to start the OpenAI login flow.');
-        showTransientNotice(result?.error || 'Failed to start the OpenAI login flow.', { type: 'error' });
+        renderCodexStatus((((((result?.error || i18nUi.text("Failed to start the OpenAI login flow.")))))));
+        showTransientNotice((((((result?.error || i18nUi.message("Failed to start the OpenAI login flow.")))))), { type: 'error' });
         return result;
       }
-      renderCodexStatus(result?.message || 'OpenAI login opened. Finish the Codex sign-in flow in your browser, then return here.');
+      renderCodexStatus((((((result?.message || i18nUi.text("OpenAI login opened. Finish the Codex sign-in flow in your browser, then return here.")))))));
       scheduleCodexLoginStatusRefresh();
       return result;
     } catch {
-      renderCodexStatus('Failed to start the OpenAI login flow.');
-      showTransientNotice('Failed to start the OpenAI login flow.', { type: 'error' });
+      renderCodexStatus(i18nUi.text("Failed to start the OpenAI login flow."));
+      showTransientNotice(i18nUi.message("Failed to start the OpenAI login flow."), { type: 'error' });
       return { ok: false };
     }
   }
@@ -202,8 +204,8 @@ function createCodexAccountSettings({
     if (clearingCodexLogin) return;
     clearCodexLoginRefreshTimers();
     if (!window.hikariApi?.clearCodexLlmLogin) {
-      renderCodexStatus('Codex login reset is unavailable.');
-      showTransientNotice('Codex login reset is unavailable.', { type: 'error' });
+      renderCodexStatus(i18nUi.text("Codex login reset is unavailable."));
+      showTransientNotice(i18nUi.message("Codex login reset is unavailable."), { type: 'error' });
       return;
     }
 
@@ -215,17 +217,17 @@ function createCodexAccountSettings({
     try {
       const result = await window.hikariApi.clearCodexLlmLogin();
       if (!result?.ok) {
-        renderCodexStatus(result?.error || 'Failed to clear the saved Codex login.');
-        showTransientNotice(result?.error || 'Failed to clear the saved Codex login.', { type: 'error' });
+        renderCodexStatus((((((result?.error || i18nUi.text("Failed to clear the saved Codex login.")))))));
+        showTransientNotice((((((result?.error || i18nUi.message("Failed to clear the saved Codex login.")))))), { type: 'error' });
         return;
       }
 
       codexLoginConfig = normalizeCodexLoginStatus(result?.status);
       setAgentAvailability(isCodexConnected(codexLoginConfig));
-      renderCodexStatus(result?.message || 'Cleared the saved Codex login.');
+      renderCodexStatus((((((result?.message || i18nUi.text("Cleared the saved Codex login.")))))));
     } catch {
-      renderCodexStatus('Failed to clear the saved Codex login.');
-      showTransientNotice('Failed to clear the saved Codex login.', { type: 'error' });
+      renderCodexStatus(i18nUi.text("Failed to clear the saved Codex login."));
+      showTransientNotice(i18nUi.message("Failed to clear the saved Codex login."), { type: 'error' });
     } finally {
       clearingCodexLogin = false;
       if (isCodexConnected(codexLoginConfig)) void usage.refresh();
@@ -238,7 +240,7 @@ function createCodexAccountSettings({
     if (!settingCodexDesktopMcpStatus) {
       return;
     }
-    settingCodexDesktopMcpStatus.textContent = String(message || '').trim();
+    i18nUi.setOwnedText(settingCodexDesktopMcpStatus, String(message || '').trim());
     settingCodexDesktopMcpStatus.dataset.state = String(stateName || '').trim();
   }
 
@@ -264,9 +266,9 @@ function createCodexAccountSettings({
   async function onCopyCodexInstallCommand() {
     try {
       const copied = await copyTextToClipboard(codexLoginConfig.cliInstallCommand);
-      showTransientNotice(copied ? 'Install command copied.' : 'Could not copy the install command. Select and copy it manually.', { type: copied ? 'success' : 'error' });
+      showTransientNotice((((((copied ? i18nUi.message("Install command copied.") : i18nUi.message("Could not copy the install command. Select and copy it manually.")))))), { type: copied ? 'success' : 'error' });
     } catch {
-      showTransientNotice('Could not copy the install command. Select and copy it manually.', { type: 'error' });
+      showTransientNotice(i18nUi.message("Could not copy the install command. Select and copy it manually."), { type: 'error' });
     }
   }
 
@@ -300,7 +302,7 @@ function createCodexAccountSettings({
 
   async function onPreviewCodexDesktopPrompt() {
     if (!settingCodexDesktopPreview?.open) return;
-    renderCodexDesktopMcpStatus('Preparing setup instructions…', 'working');
+    renderCodexDesktopMcpStatus(i18nUi.text("Preparing setup instructions…"), 'working');
     try {
       await prepareDesktopPrompt();
       renderCodexDesktopMcpStatus();
@@ -313,16 +315,16 @@ function createCodexAccountSettings({
   async function onCopyCodexDesktopMcpPrompt() {
     if (!copyCodexDesktopMcpPromptBtn) return;
     copyCodexDesktopMcpPromptBtn.disabled = true;
-    copyCodexDesktopMcpPromptBtn.textContent = 'Preparing…';
-    renderCodexDesktopMcpStatus('Preparing live connection…', 'working');
+    setSettingsText(copyCodexDesktopMcpPromptBtn, 'codex.preparing');
+    renderCodexDesktopMcpStatus(i18nUi.text("Preparing live connection…"), 'working');
     try {
       const prompt = await prepareDesktopPrompt();
       const copied = await copyTextToClipboard(prompt);
       if (!copied) throw new Error('Could not copy. Open View setup instructions and copy the text manually.');
-      copyCodexDesktopMcpPromptBtn.textContent = 'Copied';
-      renderCodexDesktopMcpStatus('Paste into a Codex Desktop task and send.', 'success');
+      setSettingsText(copyCodexDesktopMcpPromptBtn, 'codex.copied');
+      renderCodexDesktopMcpStatus(i18nUi.text("Paste into a Codex Desktop task and send."), 'success');
     } catch (error) {
-      copyCodexDesktopMcpPromptBtn.textContent = 'Copy setup instructions';
+      setSettingsText(copyCodexDesktopMcpPromptBtn, 'codex.copySetup');
       renderCodexDesktopMcpStatus(String(error?.message || error || 'Failed to copy the setup instructions.'), 'error');
     } finally {
       copyCodexDesktopMcpPromptBtn.disabled = false;
@@ -402,8 +404,8 @@ function createCodexAccountSettings({
         await startCodexLoginFlow();
       }
     } catch {
-      renderCodexStatus('Failed to start Codex login from settings.');
-      showTransientNotice('Failed to start Codex login from settings.', { type: 'error' });
+      renderCodexStatus(i18nUi.text("Failed to start Codex login from settings."));
+      showTransientNotice(i18nUi.message("Failed to start Codex login from settings."), { type: 'error' });
     }
   }
 

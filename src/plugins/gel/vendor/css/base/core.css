@@ -807,7 +807,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
 }
 
 .app-dock-btn-more::before {
-  content: 'More';
+  content: attr(data-caption);
 }
 
 .app-dock-btn.is-active::after {

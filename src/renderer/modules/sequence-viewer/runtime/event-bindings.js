@@ -1,5 +1,6 @@
 import { bindFileDropTarget } from '../../../lib/file-drop.js';
 import { FILE_ACCEPT, LIBRARY_STATUS_SAVED } from './config.js';
+import { bindDnaMessage, dnaFailure, dnaUi, setDnaText } from '../localization.js';
 
 export function bindSequenceViewerRuntimeEvents(ctx) {
   const { actions, controllers, dialogs, elements, state } = ctx;
@@ -13,20 +14,21 @@ export function bindSequenceViewerRuntimeEvents(ctx) {
       return;
     }
     try {
-      actions.setStatus('Loading file...');
+      actions.setStatus(dnaUi('status.loadingFile'));
       state.fileText = await actions.readFileAsText(file);
       state.fileName = String(file.name || '');
       if (elements.fileNameLabel) {
-        elements.fileNameLabel.textContent = state.fileName || 'No file selected';
+        if (state.fileName) bindDnaMessage(elements.fileNameLabel, state.fileName);
+        else setDnaText(elements.fileNameLabel, 'file.none');
       }
-      actions.setStatus(`Loaded file: ${state.fileName || 'input'}`);
+      actions.setStatus(dnaUi('status.loadedFile', { file: state.fileName || 'input' }));
     } catch (error) {
       state.fileText = '';
       state.fileName = '';
       if (elements.fileNameLabel) {
-        elements.fileNameLabel.textContent = 'No file selected';
+        setDnaText(elements.fileNameLabel, 'file.none');
       }
-      actions.setStatus(error.message || 'Failed to load file.', true);
+      actions.setStatus(dnaFailure(error, 'status.loadFileFailed'), true);
     }
   });
 
@@ -34,8 +36,8 @@ export function bindSequenceViewerRuntimeEvents(ctx) {
     target: elements.detailWorkspace || elements.filePanel,
     accept: FILE_ACCEPT,
     onFiles: ([file]) => actions.openDroppedSequenceFile(file),
-    onRejected: () => actions.setStatus('Drop a supported GBK, FASTA, FASTQ, or sequence text file.', true),
-    onError: (error) => actions.setStatus(String(error?.message || error || 'Failed to open dropped sequence file.'), true)
+    onRejected: () => actions.setStatus(dnaUi('notice.dropUnsupported'), true),
+    onError: (error) => actions.setStatus(dnaFailure(error, 'notice.dropFailed'), true)
   });
 
   elements.form?.addEventListener('submit', (event) => {

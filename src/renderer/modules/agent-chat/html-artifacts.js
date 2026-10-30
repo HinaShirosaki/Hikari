@@ -1,3 +1,4 @@
+import { agentMessage, setAgentText } from './localization.js';
 export function normalizeAgentHtmlArtifact(source) {
   if (!source || source.type !== 'html' || !/^[a-f0-9]{64}$/.test(source.id)
     || typeof source.title !== 'string' || !source.title.trim() || source.title.length > 220
@@ -20,8 +21,8 @@ export function renderAgentHtml(meta, safeText) {
   if (!artifacts.length) return '';
   return `<div class="agent-output-htmls">${artifacts.map(item => `
     <details class="agent-output-html agent-output-card" data-agent-html-id="${item.id}" open>
-      <summary class="agent-output-summary"><span class="agent-output-copy"><strong>${safeText(item.title)}</strong><span>Interactive output</span></span><span class="agent-output-disclosure" aria-hidden="true"></span></summary>
-      <div class="agent-output-html-frame" style="height:${item.height}rem" data-agent-html-frame="${item.id}"><p role="status">Loading interactive output…</p></div>
+      <summary class="agent-output-summary"><span class="agent-output-copy"><strong>${safeText(item.title)}</strong>${agentMessage('html.output')}</span><span class="agent-output-disclosure" aria-hidden="true"></span></summary>
+      <div class="agent-output-html-frame" style="height:${item.height}rem" data-agent-html-frame="${item.id}"><p role="status">${agentMessage('html.loading')}</p></div>
       ${item.caption ? `<p class="agent-output-html-caption">${safeText(item.caption)}</p>` : ''}
     </details>`).join('')}</div>`;
 }
@@ -41,7 +42,7 @@ export function mountAgentHtml(historyNode, messages, api) {
     if (!artifact) return;
     slot.dataset.htmlMounted = 'true';
     if (!api?.agentHtmlPreview) {
-      slot.textContent = 'Interactive HTML previews are unavailable in this build. Restart an updated Hikari build.';
+      setAgentText(slot, 'html.unavailable');
       return;
     }
     Promise.resolve().then(() => api.agentHtmlPreview(artifact)).then(result => {
@@ -54,7 +55,7 @@ export function mountAgentHtml(historyNode, messages, api) {
       frame.src = result.url;
       slot.replaceChildren(frame);
     }).catch(error => {
-      if (slot.isConnected) slot.textContent = `Interactive output could not load: ${String(error?.message || error)}`;
+      if (slot.isConnected) setAgentText(slot, 'html.failed', { error: String(error?.message || error) });
     });
   });
 }

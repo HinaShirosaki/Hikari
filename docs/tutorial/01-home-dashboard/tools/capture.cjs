@@ -200,7 +200,7 @@ async function main() {
   await shot('13-lab-activity', 'Inspect a day of lab activity', 'Select a square to read the activity breakdown below the heatmap.', '.home-tile-contribution',
     [['[data-contribution-day="2026-10-24"]', 'Select a day'], ['#dashboard-contribution-selected', 'Read its breakdown']]);
   await evaluate('document.body.dataset.agentAvailability = "offline";');
-  await check('getComputedStyle(document.getElementById("dashboard-quick-log-agent-btn")).display === "none" && getComputedStyle(document.querySelector(".home-tile-paper-finding")).display === "none"', 'Disconnected mode hides AI notebook preparation and Paper finder');
+  await check('getComputedStyle(document.getElementById("dashboard-quick-log-agent-btn")).display === "none" && getComputedStyle(document.querySelector(".home-tile-paper-finding")).display === "none"', 'Disconnected mode hides AI notebook preparation and Suggested papers');
   await shot('14-without-ai', 'Use Home without an AI connection', 'Local logging, timers, notebook notes, and reminders remain available.', '.home-column-capture',
     [['#dashboard-quick-log-save-btn', 'Local Save stays available'], ['#dashboard-notebook-page-list', 'Add notes to existing pages']]);
   fs.writeFileSync(path.join(folder, 'capture-manifest.json'), JSON.stringify(manifest, null, 2) + '\n');

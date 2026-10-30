@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("dna");
 import {
   cleanText,
   clamp,
@@ -234,25 +237,25 @@ export function createSequenceViewerAnnotationController(config = {}) {
 
     const record = getSelectedRecord();
     if (!record?.sequence?.length) {
-      setStatus('Load a record before annotation.', true);
+      setStatus(i18nUi.text("Load a record before annotation."), true);
       return;
     }
 
     const storagePath = String(getStoragePath() || '').trim();
     if (!storagePath) {
-      setStatus('Set Storage Folder Path in Settings before annotating from the sequence library.', true);
+      setStatus(i18nUi.text("Set Storage Folder Path in Settings before annotating from the sequence library."), true);
       return;
     }
 
     const bridge = getBridge();
     if (!bridge?.sequenceLibraryAnnotate) {
-      setStatus('Sequence annotation API unavailable.', true);
+      setStatus(i18nUi.text("Sequence annotation API unavailable."), true);
       return;
     }
 
     state.isAnnotating = true;
     detailController?.syncActionButtonsState?.();
-    setStatus(`Annotating ${record.name || 'record'} from stored SQL features...`);
+    setStatus(i18nUi.text("Annotating {p0} from stored SQL features...", { p0: record.name || 'record' }));
 
     try {
       const response = await bridge.sequenceLibraryAnnotate({
@@ -294,9 +297,7 @@ export function createSequenceViewerAnnotationController(config = {}) {
         if (hadPreviousSqlFeatures && state.activeEntryId) {
           await persistFeatureMutation(current, 'Cleared SQL-derived annotations.', { silentSuccess: true });
         }
-        setStatus(matchedFeatures.length
-          ? buildAlreadyPresentStatus(matchedFeatures.length)
-          : 'No SQL-backed annotations matched this sequence.');
+        setStatus((((((matchedFeatures.length ? buildAlreadyPresentStatus(matchedFeatures.length) : i18nUi.text("No SQL-backed annotations matched this sequence.")))))));
         return;
       }
 
@@ -318,10 +319,10 @@ export function createSequenceViewerAnnotationController(config = {}) {
       if (state.activeEntryId) {
         await persistFeatureMutation(current, summary, { silentSuccess: true });
       } else {
-        setStatus(`${summary} Save the record to persist changes.`);
+        setStatus(i18nUi.text("{p0} Save the record to persist changes.", { p0: summary }));
       }
     } catch (error) {
-      setStatus(error?.message || 'Sequence annotation failed.', true);
+      setStatus((((((error?.message || i18nUi.text("Sequence annotation failed.")))))), true);
     } finally {
       state.isAnnotating = false;
       detailController?.syncActionButtonsState?.();

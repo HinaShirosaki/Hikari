@@ -1,5 +1,9 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("tools");
 import { cleanNucleotideSequence, nucleotideCounts } from '../sequence-viewer/calculations/sequence.js';
 import { oligoExtinction, oligoMolecularWeight, oligoTm } from '../sequence-viewer/calculations/oligo.js';
+import { toolMessage } from './localization.js';
 
 export function initOligoTool(options = {}) {
   const rootDocument = options?.document || globalThis?.document || null;
@@ -17,7 +21,7 @@ export function initOligoTool(options = {}) {
     const type = rootDocument.getElementById('oligo-type')?.value;
     const sequence = cleanNucleotideSequence(rootDocument.getElementById('oligo-sequence')?.value, type);
     if (!sequence.length) {
-      oligoResult.innerHTML = '<p class="small-note">Enter an oligo sequence to calculate properties.</p>';
+      i18nUi.setHtml(oligoResult, `<p class="small-note">${toolMessage('oligo.empty')}</p>`);
       return;
     }
 
@@ -34,16 +38,16 @@ export function initOligoTool(options = {}) {
       .map((base) => `${base}:${counts[base]}`)
       .join('  ');
 
-    oligoResult.innerHTML = `
-      <p><strong>Type:</strong> ${type}</p>
-      <p><strong>Length:</strong> ${length} nt</p>
-      <p><strong>GC content:</strong> ${gcPercent.toFixed(2)}%</p>
-      <p><strong>Approx Tm:</strong> ${tm.toFixed(2)} C</p>
-      <p><strong>Approx molecular weight:</strong> ${mw.toFixed(2)} g/mol</p>
-      <p><strong>Extinction coefficient (260 nm):</strong> ${ext.toFixed(0)} M^-1 cm^-1</p>
-      <p><strong>A260 conversion:</strong> 1 A260 ~= ${ugPerMlA260.toFixed(2)} ug/mL</p>
-      <p><strong>Base counts:</strong> ${countsText}</p>
-    `;
+    i18nUi.setHtml(oligoResult, `
+      <p><strong>${toolMessage('result.type')}</strong> ${type}</p>
+      <p><strong>${toolMessage('result.length')}</strong> ${length} nt</p>
+      <p><strong>${toolMessage('result.gc')}</strong> ${gcPercent.toFixed(2)}%</p>
+      <p><strong>${toolMessage('result.tm')}</strong> ${tm.toFixed(2)} C</p>
+      <p><strong>${toolMessage('result.approxWeight')}</strong> ${mw.toFixed(2)} ${i18nUi.html("g/mol")}</p>
+      <p><strong>${toolMessage('result.extinction260')}</strong> ${ext.toFixed(0)} M^-1 cm^-1</p>
+      <p><strong>${toolMessage('result.a260')}</strong> 1 A260 ~= ${ugPerMlA260.toFixed(2)} ug/mL</p>
+      <p><strong>${toolMessage('result.baseCounts')}</strong> ${countsText}</p>
+    `);
   }
 
   oligoForm.addEventListener('input', renderOligo);

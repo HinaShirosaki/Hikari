@@ -1,3 +1,4 @@
+import './localization.js';
 import { requestLlmText } from '../../services/direct-llm.js';
 import { parseJsonFromText } from '../../lib/json.js';
 import { PLACEHOLDER_TOKEN_REGEX } from './constants.js';
@@ -436,7 +437,7 @@ export function initProtocolManagement({
       if (localState.protocolDetailMode === 'edit' && protocol) {
         // The history guard has already protected dirty drafts. Refresh a
         // clean open editor so its next Save cannot put back the old content.
-        openEditorWithDraft(protocol, 'Edit Protocol', { isCreateMode: false });
+        openEditorWithDraft(protocol, 'editor.edit', { isCreateMode: false });
       }
     },
     renderPlaceholderPresets,

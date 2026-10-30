@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../../lib/i18n/presentation.js";
+import "../../localization.js";
+const i18nUi = createPresentation("dna");
 import {
   buildVectorSequenceName,
   resolveVectorBackboneName
@@ -28,11 +31,11 @@ function createVectorProteinConstruct({
     const record = getSelectedRecord();
     const insertSequence = normalizeSequenceText(dnaConstruct?.sequence || '');
     if (!target) {
-      setStatus('Pick an insertion site on the vector map first.', true);
+      setStatus(i18nUi.text("Pick an insertion site on the vector map first."), true);
       return false;
     }
     if (!record?.sequence?.length || !insertSequence.length) {
-      setStatus('Build the construct DNA before inserting it into the vector.', true);
+      setStatus(i18nUi.text("Build the construct DNA before inserting it into the vector."), true);
       return false;
     }
 
@@ -43,7 +46,7 @@ function createVectorProteinConstruct({
       ? clamp(Math.round(Number(target.end) || start), start, sequenceLength)
       : start;
     if (mode === 'replace' && end <= start) {
-      setStatus('The replacement target is empty. Select a range on the map again.', true);
+      setStatus(i18nUi.text("The replacement target is empty. Select a range on the map again."), true);
       return false;
     }
 
@@ -55,7 +58,7 @@ function createVectorProteinConstruct({
     try {
       await onApplySequenceEdit({ mode, range: { start, end }, sequence: insertSequence });
     } catch (error) {
-      setStatus(error?.message || 'Failed to insert the protein construct.', true);
+      setStatus((((((error?.message || i18nUi.text("Failed to insert the protein construct.")))))), true);
       return false;
     }
 
@@ -122,10 +125,10 @@ function createVectorProteinConstruct({
     try {
       await persistFeatureMutation(nextRecord, `Inserted ${label} (${insertSequence.length} bp) into the vector.`);
     } catch (error) {
-      setStatus(error?.message || 'Inserted the construct but failed to save it.', true);
+      setStatus((((((error?.message || i18nUi.text("Inserted the construct but failed to save it.")))))), true);
       return true;
     }
-    setStatus(`Inserted ${label} (${insertSequence.length.toLocaleString()} bp) into ${nextRecord.name || 'the vector'}.`);
+    setStatus(i18nUi.text("Inserted {p0} ({p1} bp) into {p2}.", { p0: label, p1: insertSequence.length.toLocaleString(), p2: nextRecord.name || 'the vector' }));
     return true;
   }
 

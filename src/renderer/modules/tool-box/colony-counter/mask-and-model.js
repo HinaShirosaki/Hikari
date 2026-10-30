@@ -1,3 +1,4 @@
+import { toolFailure, toolUi } from '../localization.js';
 import { countColoniesWithModel } from '../colony-counter-model.js';
 import { EMPTY_MASK } from './canvas-utils.js';
 
@@ -13,17 +14,18 @@ function createMaskAndModelCount({
   renderPreviewCanvas,
   renderColonySummary,
   setColonyStatus,
-  updateControlState
+  updateControlState,
+  countWithModel = countColoniesWithModel
 } = {}) {
   const colonyState = state;
 
   function startMaskDrawing() {
     if (!colonyState.hasImage) {
-      setColonyStatus('Load an image before drawing a mask.', true);
+      setColonyStatus(toolUi('colony.loadBeforeMask'), true);
       return;
     }
     if (isCropModeActive()) {
-      setColonyStatus('Apply or cancel crop mode before drawing a mask.', true);
+      setColonyStatus(toolUi('colony.cropBeforeMask'), true);
       return;
     }
     if (colonyState.isDrawingMask) {
@@ -31,7 +33,7 @@ function createMaskAndModelCount({
       colonyState.maskDraft = null;
       colonyState.maskStartPoint = null;
       renderPreviewCanvas();
-      setColonyStatus('Mask drawing cancelled.');
+      setColonyStatus(toolUi('colony.maskCancelled'));
       updateControlState();
       return;
     }
@@ -39,7 +41,7 @@ function createMaskAndModelCount({
     colonyState.isDrawingMask = true;
     colonyState.maskDraft = null;
     colonyState.maskStartPoint = null;
-    setColonyStatus('Drag on the plate preview to draw the count mask.');
+    setColonyStatus(toolUi('colony.maskDrawing'));
     updateControlState();
   }
 
@@ -53,31 +55,31 @@ function createMaskAndModelCount({
     colonyState.maskStartPoint = null;
     renderPreviewCanvas();
     renderColonySummary();
-    setColonyStatus('Mask cleared. Auto Count will detect the plate automatically when no hand mask is drawn.');
+    setColonyStatus(toolUi('colony.maskCleared'));
     updateControlState();
   }
 
   async function runModelCount() {
     if (!colonyState.hasImage || !colonySourceCanvas) {
-      setColonyStatus('Load a plate image before running auto count.', true);
+      setColonyStatus(toolUi('colony.loadBeforeAuto'), true);
       return;
     }
     if (isCropModeActive()) {
-      setColonyStatus('Apply or cancel crop mode before running auto count.', true);
+      setColonyStatus(toolUi('colony.cropBeforeAuto'), true);
       return;
     }
     if (colonyState.isDrawingMask) {
-      setColonyStatus('Finish or cancel mask drawing before running auto count.', true);
+      setColonyStatus(toolUi('colony.maskBeforeAuto'), true);
       return;
     }
 
     const settings = getModelSettings();
     colonyState.isModelRunning = true;
     updateControlState();
-    setColonyStatus('Loading colony model and counting...');
+    setColonyStatus(toolUi('colony.modelLoading'));
 
     try {
-      const result = await countColoniesWithModel(colonySourceCanvas, {
+      const result = await countWithModel(colonySourceCanvas, {
         ...settings,
         mask: colonyState.mask
       });
@@ -107,7 +109,7 @@ function createMaskAndModelCount({
       renderColonySummary();
       setColonyStatus('');
     } catch (error) {
-      setColonyStatus(error?.message || 'Auto count failed.', true);
+      setColonyStatus(toolFailure(error, 'colony.autoFailed'), true);
       console.error('Colony auto count failed:', error);
     } finally {
       colonyState.isModelRunning = false;

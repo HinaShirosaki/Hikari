@@ -2,12 +2,12 @@ import { cleanText } from './shared.js';
 import { attachMapHoverLabel } from './vector-builder/map-hover.js';
 import { attachMapZoomGestures } from './vector-builder/map-zoom.js';
 import { bindFileDropTarget } from '../../lib/file-drop.js';
-import { showTransientNotice } from '../../lib/notify.js';
 import { createLibraryMenus } from './home/library-menus.js';
 import { createLibraryOpen } from './home/library-open.js';
 import { createLibraryRendering } from './home/library-rendering.js';
 import { createHomeFileOpen } from './home/file-open.js';
 import { createHomeNavigation } from './home/navigation.js';
+import { dnaFailure, dnaNotice, dnaUi } from './localization.js';
 
 export function createSequenceViewerHomeController(config = {}) {
   const rootDocument = config?.rootDocument || globalThis?.document || null;
@@ -39,6 +39,7 @@ export function createSequenceViewerHomeController(config = {}) {
   const onRenameLibraryFolder = config?.onRenameLibraryFolder || (async () => null);
   const onDeleteLibraryFolder = config?.onDeleteLibraryFolder || (async () => null);
   const onMoveLibraryEntry = config?.onMoveLibraryEntry || (async () => null);
+  const onRecognizeBackbone = config?.onRecognizeBackbone || (async () => null);
   const onLibraryEntryLoaded = typeof config?.onLibraryEntryLoaded === 'function'
     ? config.onLibraryEntryLoaded
     : () => {};
@@ -87,7 +88,7 @@ export function createSequenceViewerHomeController(config = {}) {
   // Errors surface as a transient toast; informational messages are dropped so the rail stays quiet.
   function setHomeStatus(message, isError = false) {
     if (isError && message) {
-      showTransientNotice(message, { type: 'error' });
+      dnaNotice(message, { type: 'error' });
     }
   }
 
@@ -196,6 +197,25 @@ export function createSequenceViewerHomeController(config = {}) {
     navigateToDetail: () => navigateToDetail()
   });
 
+  // Recognition reads the record open in detail and shows its dialog there, so
+  // the entry is opened first. An entry that is already open is not reloaded,
+  // which would throw away its alignment and view state.
+  async function recognizeLibraryEntryBackbone(entryId) {
+    const resolvedEntryId = cleanText(entryId, 200);
+    if (!resolvedEntryId) {
+      return;
+    }
+    if (state.activeEntryId === resolvedEntryId && state.records?.length) {
+      navigateToDetail();
+    } else {
+      await openLibraryEntryInDetail(resolvedEntryId);
+      if (state.activeEntryId !== resolvedEntryId) {
+        return;
+      }
+    }
+    await onRecognizeBackbone();
+  }
+
   const {
     openSequenceFileInDetail,
     openNewSequenceDetail,
@@ -284,10 +304,10 @@ export function createSequenceViewerHomeController(config = {}) {
       accept: combinedAccept,
       onFiles: ([file]) => openSequenceFileInDetail(file),
       onRejected: () => {
-        setHomeStatus('Drop a supported GBK, FASTA, FASTQ, or sequence text file.', true);
+        setHomeStatus(dnaUi('notice.dropUnsupported'), true);
       },
       onError: (error) => {
-        setHomeStatus(String(error?.message || error || 'Failed to open dropped sequence file.'), true);
+        setHomeStatus(dnaFailure(error, 'notice.dropFailed'), true);
       }
     });
 
@@ -439,6 +459,10 @@ export function createSequenceViewerHomeController(config = {}) {
           void deleteLibraryFolderFromContextMenu();
         } else if (action === 'move-entry') {
           void moveLibraryEntryFromContextMenu();
+        } else if (action === 'recognize-backbone') {
+          const entryId = getLibraryContextId();
+          hideLibraryContextMenus();
+          void recognizeLibraryEntryBackbone(entryId);
         }
       });
     });

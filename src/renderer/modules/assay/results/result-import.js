@@ -1,9 +1,12 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("plate");
 import { toRowLabel } from '../plate-model.js';
 import {
   detectAssayResultMatrixCandidates,
   getAssayResultImportTarget
 } from '../result-import-detector.js';
-import { showTransientNotice } from '../../../lib/notify.js';
+import { bindPlateMessage, plateError, plateFailure, plateMessage, plateNotice, plateUi, setPlateAttribute } from '../localization.js';
 
 // Owns the "attach result file" flow: parsing, the candidate-picker overlay,
 // preview grid, and applying a detected matrix back into the result table.
@@ -37,10 +40,10 @@ export function createResultImportController({
 
   function setResultImportStatus(message, isError = false) {
     if (isError && message) {
-      showTransientNotice(String(message), { type: 'error' });
+      plateNotice(message, { type: 'error' });
     }
     if (assayResultImportStatus) {
-      assayResultImportStatus.textContent = message || '';
+      bindPlateMessage(assayResultImportStatus, message);
       assayResultImportStatus.classList.toggle('is-error', Boolean(isError && message));
     }
   }
@@ -60,10 +63,10 @@ export function createResultImportController({
     destroyResultImportPreviewGrid();
     resultImportState = null;
     if (assayResultImportCandidates) {
-      assayResultImportCandidates.innerHTML = '';
+      i18nUi.setHtml(assayResultImportCandidates, '');
     }
     if (assayResultImportPreview) {
-      assayResultImportPreview.innerHTML = '';
+      i18nUi.setHtml(assayResultImportPreview, '');
     }
     setResultImportStatus('');
   }
@@ -113,15 +116,15 @@ export function createResultImportController({
     if (!assayResultImportPreview) {
       return;
     }
-    assayResultImportPreview.innerHTML = '';
+    i18nUi.setHtml(assayResultImportPreview, '');
     if (!candidate) {
-      assayResultImportPreview.innerHTML = '<p class="small-note">Select a detected matrix to preview it.</p>';
+      i18nUi.setHtml(assayResultImportPreview, `<p class="small-note">${plateMessage('import.previewEmpty')}</p>`);
       return;
     }
     if (!TabulatorLib) {
       const table = document.createElement('table');
       table.className = 'assay-serial-dilution-table assay-result-import-fallback-table';
-      table.innerHTML = `
+      i18nUi.setHtml(table, `
         <thead>
           <tr>
             <th></th>
@@ -136,14 +139,14 @@ export function createResultImportController({
             </tr>
           `).join('')}
         </tbody>
-      `;
+      `);
       assayResultImportPreview.append(table);
       return;
     }
     const host = document.createElement('div');
     host.className = 'assay-tabulator assay-result-import-preview-grid';
     host.setAttribute('role', 'grid');
-    host.setAttribute('aria-label', 'Read-only assay result import preview');
+    setPlateAttribute(host, 'aria-label', 'import.previewGrid');
     assayResultImportPreview.append(host);
     resultImportPreviewGrid = new TabulatorLib(host, {
       data: buildResultImportPreviewRows(candidate),
@@ -160,17 +163,17 @@ export function createResultImportController({
       return;
     }
     const { candidates, selectedId } = resultImportState;
-    assayResultImportCandidates.innerHTML = candidates.map((candidate) => {
+    i18nUi.setHtml(assayResultImportCandidates, candidates.map((candidate) => {
       const active = candidate.id === selectedId ? ' is-active' : '';
       const numericPercent = Math.round((candidate.numericRatio || 0) * 100);
       const fillPercent = Math.round((candidate.nonBlankRatio || 0) * 100);
       return `
         <button type="button" class="assay-result-import-choice${active}" data-result-import-candidate="${escapeHtml(candidate.id)}">
-          <strong>${escapeHtml(candidate.tableName || 'Sheet')} · ${escapeHtml(candidate.rangeLabel)}</strong>
-          <span>${escapeHtml(`${candidate.rows} x ${candidate.columns}`)} result cells · ${numericPercent}% numeric · ${fillPercent}% filled</span>
+          <strong>${candidate.tableName ? escapeHtml(candidate.tableName) : plateMessage('import.sheet')} · ${escapeHtml(candidate.rangeLabel)}</strong>
+          <span>${plateMessage('import.candidateMeta', { rows: candidate.rows, columns: candidate.columns, numeric: numericPercent, filled: fillPercent })}</span>
         </button>
       `;
-    }).join('');
+    }).join(''));
   }
 
   function selectResultImportCandidate(candidateId) {
@@ -204,7 +207,7 @@ export function createResultImportController({
     if (assayResultImportApplyBtn) {
       assayResultImportApplyBtn.disabled = !resultImportState.selectedId;
     }
-    setResultImportStatus(`Detected ${candidates.length} plate-sized matrix choices in ${fileName}.`);
+    setResultImportStatus(plateUi('import.detected', { count: candidates.length, file: fileName }));
     renderResultImportCandidates();
     selectResultImportCandidate(resultImportState.selectedId);
   }
@@ -234,25 +237,25 @@ export function createResultImportController({
           reject(error);
         }
       });
-      reader.addEventListener('error', () => reject(reader.error || new Error('Unable to read result file.')));
+      reader.addEventListener('error', () => reject(reader.error || plateError('import.readFailed')));
       reader.readAsArrayBuffer(file);
     });
   }
 
   async function applyResultImportCandidate(candidate) {
     if (!candidate || !resultImportState) {
-      setResultStatus('Select a result matrix before importing.', true);
+      setResultStatus(plateUi('import.selectMatrix'), true);
       return;
     }
     if (typeof persistResultAttachment !== 'function') {
-      setResultStatus('Result file attachment storage is unavailable.', true);
+      setResultStatus(plateUi('import.storageUnavailable'), true);
       return;
     }
 
     if (assayResultImportApplyBtn) {
       assayResultImportApplyBtn.disabled = true;
     }
-    setResultImportStatus(`Saving ${resultImportState.fileName} beside the assay plate...`);
+    setResultImportStatus(plateUi('import.saving', { file: resultImportState.fileName }));
 
     try {
       const importedFileName = resultImportState.fileName;
@@ -281,9 +284,9 @@ export function createResultImportController({
         });
       }
       closeResultImportDialog();
-      setResultStatus(`Imported ${counts.pastedCount} result value(s) from ${importedFileName}. Skipped ${counts.skippedCount} unmapped cell(s). Attached file saved beside the plate.`);
+      setResultStatus(plateUi('import.done', { pasted: counts.pastedCount, file: importedFileName, skipped: counts.skippedCount }));
     } catch (error) {
-      const message = String(error?.message || error || 'Unable to import result file.');
+      const message = plateFailure(error, 'import.failed');
       setResultImportStatus(message, true);
       setResultStatus(message);
       if (assayResultImportApplyBtn) {
@@ -298,15 +301,15 @@ export function createResultImportController({
     }
     const selectedAssayId = runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '';
     if (!selectedAssayId) {
-      setResultStatus('Select an assay plate before attaching a result file.', true);
+      setResultStatus(plateUi('import.selectAssay'), true);
       return;
     }
     if (typeof parseResultImportFile !== 'function') {
-      setResultStatus('Result file parser is unavailable.', true);
+      setResultStatus(plateUi('import.parserUnavailable'), true);
       return;
     }
 
-    setResultStatus(`Reading ${file.name}...`);
+    setResultStatus(plateUi('import.reading', { file: file.name }));
     try {
       const dataBase64 = await readResultImportFileBase64(file);
       const parsed = await parseResultImportFile({
@@ -316,8 +319,9 @@ export function createResultImportController({
       const importTarget = getAssayResultImportTarget(runtime.currentLayout, getCurrentDefinition());
       const candidates = detectAssayResultMatrixCandidates(parsed?.tables || [], importTarget);
       if (!candidates.length) {
-        const areaLabel = importTarget.source === 'mapped' ? 'mapped-area ' : '';
-        setResultStatus(`No ${importTarget.rows} x ${importTarget.columns} ${areaLabel}result matrix was detected in ${file.name}.`, true);
+        setResultStatus(plateUi(importTarget.source === 'mapped' ? 'import.noMappedMatrix' : 'import.noMatrix', {
+          rows: importTarget.rows, columns: importTarget.columns, file: file.name
+        }), true);
         return;
       }
       if (candidates.length === 1) {
@@ -338,7 +342,7 @@ export function createResultImportController({
         importTarget
       });
     } catch (error) {
-      const message = String(error?.message || error || 'Unable to read result file.');
+      const message = plateFailure(error, 'import.readFailed');
       setResultStatus(message, true);
       setResultImportStatus(message);
     }
@@ -354,12 +358,12 @@ export function createResultImportController({
 
   function onAttachResultFileClick() {
     if (!assayAttachResultFileBtn || !assayResultFileInput) {
-      setResultStatus('Result file attachment control is unavailable.', true);
+      setResultStatus(plateUi('import.controlUnavailable'), true);
       return;
     }
     const selectedAssayId = runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '';
     if (!selectedAssayId) {
-      setResultStatus('Select an assay plate before attaching a result file.', true);
+      setResultStatus(plateUi('import.selectAssay'), true);
       return;
     }
     assayResultFileInput.click();

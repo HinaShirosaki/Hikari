@@ -1,6 +1,7 @@
 import { trimText } from './shared.js';
 import { applyLiveProgressEvent } from './live-progress-state.js';
 import { extractPlotlyGraphArtifactFromProgressEvent } from './plotly-artifacts.js';
+import { agentFailure, agentUi } from './localization.js';
 
 export function bindAgentChatEvents({
   dom,
@@ -31,7 +32,7 @@ export function bindAgentChatEvents({
     dom.input.value = prompt;
     shell.syncComposerHeight();
     dom.input.focus();
-    shell.setStatus('Prompt ready.');
+    shell.setStatus(agentUi('status.promptReady'));
     return true;
   }
 
@@ -129,31 +130,31 @@ export function bindAgentChatEvents({
 
   dom.paperScreenshotBtn?.addEventListener('click', async () => {
     if (typeof captureImageAttachment !== 'function') {
-      shell.setStatus('Paper screenshot capture is unavailable.');
+      shell.setStatus(agentUi('status.screenshotUnavailable'));
       return;
     }
     dom.paperScreenshotBtn.disabled = true;
     dom.paperScreenshotBtn.classList.add('is-active');
     dom.paperScreenshotBtn.setAttribute('aria-pressed', 'true');
-    shell.setStatus('Drag over the paper to capture a screenshot.');
+    shell.setStatus(agentUi('status.screenshotDrag'));
     try {
       const result = await captureImageAttachment();
       if (!result?.ok) {
         if (!result?.cancelled) {
-          shell.setStatus(trimText(result?.error, 240) || 'Paper screenshot was not captured.');
+          shell.setStatus(trimText(result?.error, 240) || agentUi('status.screenshotNotCaptured'));
         }
         return;
       }
       const attachment = attachmentsController.addAttachment(result.attachment, { announce: false });
       if (!attachment) {
-        shell.setStatus('Paper screenshot was not attached.');
+        shell.setStatus(agentUi('status.screenshotNotAttached'));
         return;
       }
       dom.input.focus();
       shell.syncComposerHeight();
-      shell.setStatus('Paper screenshot attached.');
+      shell.setStatus(agentUi('status.screenshotAttached'));
     } catch (error) {
-      shell.setStatus(String(error?.message || error || 'Failed to capture paper screenshot.'));
+      shell.setStatus(agentFailure(error, 'status.screenshotFailed'));
     } finally {
       dom.paperScreenshotBtn.disabled = false;
       dom.paperScreenshotBtn.classList.remove('is-active');
@@ -208,6 +209,6 @@ export function bindAgentChatEvents({
       onPlotlyGraphArtifact(plotlyGraphArtifact, payload);
     }
     shell.renderHistoryView();
-    shell.setStatus(trimText(request.liveAssistantMessage?.text, 320) || 'Working on this...');
+    shell.setStatus(trimText(request.liveAssistantMessage?.text, 320) || agentUi('status.working'));
   });
 }

@@ -1,3 +1,5 @@
+import { createPresentation } from "../../i18n.mjs";
+const i18nUi = createPresentation("gel");
 import { cropGray, decodeImageFile, decodeImageSource, isTiffFile, normalizeDecodedImage } from './image-io.js';
 import { normalizeEnhancementSettings } from '../analysis/image-processing.js';
 import { createBackgroundPreprocessor } from '../analysis/background-processing.js';
@@ -11,7 +13,7 @@ export function createImageController({ runtime, elements, deps }) {
   const stage = elements.gelViewerStage;
   const notice = stage?.ownerDocument?.createElement('div');
   if (notice) {
-    notice.className = 'gel-processing-notice'; notice.textContent = 'Processing…';
+    notice.className = 'gel-processing-notice'; i18nUi.setText(notice, i18nUi.message("Processing…"));
     notice.setAttribute('role', 'status'); notice.setAttribute('aria-live', 'polite');
     notice.hidden = true; stage.append(notice);
   }
@@ -73,10 +75,10 @@ export function createImageController({ runtime, elements, deps }) {
       elements.gelContrastStrengthInput.value = String(enhancement.contrastBoost);
     }
     if (elements.gelDenoiseStrengthValue) {
-      elements.gelDenoiseStrengthValue.textContent = `${enhancement.denoiseStrength}%`;
+      i18nUi.setText(elements.gelDenoiseStrengthValue, `${enhancement.denoiseStrength}%`);
     }
     if (elements.gelContrastStrengthValue) {
-      elements.gelContrastStrengthValue.textContent = `${enhancement.contrastBoost}%`;
+      i18nUi.setText(elements.gelContrastStrengthValue, `${enhancement.contrastBoost}%`);
     }
   }
 
@@ -146,7 +148,7 @@ export function createImageController({ runtime, elements, deps }) {
       return;
     }
 
-    deps.setStatus('Loading gel image...');
+    deps.setStatus(i18nUi.text("Loading gel image..."));
     try {
       setCurrentImage(await decodeImageFile(file));
       runtime.originalImage = copyNormalizedImage(runtime.currentImage);
@@ -162,7 +164,7 @@ export function createImageController({ runtime, elements, deps }) {
       deps.renderCanvas();
       const pages = isTiffFile(file) ? runtime.currentImage.tiffPageCount || 1 : 1;
       // Only a multi-page TIFF needs saying which page was loaded.
-      deps.setStatus(pages > 1 ? `Loaded page ${runtime.currentImage.tiffPageIndex || 1} of ${pages}.` : '');
+      deps.setStatus(((pages > 1 ? i18nUi.text("Loaded page {p0} of {p1}.", { p0: runtime.currentImage.tiffPageIndex || 1, p1: pages }) : '')));
     } catch (error) {
       setCurrentImage(null);
       runtime.originalImage = null;
@@ -174,7 +176,7 @@ export function createImageController({ runtime, elements, deps }) {
       deps.leaveCropMode();
       deps.renderOverrideStatus();
       deps.renderCanvas();
-      deps.setStatus(error instanceof Error ? error.message : 'Failed to load image.');
+      deps.setStatus(((error instanceof Error ? error.message : i18nUi.text("Failed to load image."))));
     }
   }
 

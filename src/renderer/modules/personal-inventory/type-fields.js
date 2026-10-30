@@ -1,5 +1,6 @@
 import { normalizeSampleType } from '../../lib/inventory-settings.js';
 import { escapeHtml } from '../../lib/html.js';
+import { sampleAttributes, sampleMessage, sampleText } from './localization.js';
 
 // Type-specific fields, stored flat on record.details as { key: string }.
 // Keys are snake_case so they double as CSV column headers without a mapping.
@@ -69,15 +70,17 @@ export function normalizeSampleDetails(type, raw) {
 }
 
 export function renderTypeFieldsMarkup(type, details = null) {
-  return getTypeFields(type).map(({ key, label, placeholder = '', type: inputType = 'text', options, wide }) => {
+  const normalizedType = normalizeSampleType(type);
+  return getTypeFields(type).map(({ key, placeholder = '', type: inputType = 'text', options, wide }) => {
+    const messageKey = `field.${normalizedType}.${key}`;
     const value = String(details?.[key] || '');
     const control = options
       ? `<select data-sample-detail="${escapeHtml(key)}">
           <option value="">-</option>
-          ${options.map((option) => `<option value="${escapeHtml(option)}"${option === value ? ' selected' : ''}>${escapeHtml(option)}</option>`).join('')}
+          ${options.map((option) => `<option value="${escapeHtml(option)}" data-i18n="samples.option.${escapeHtml(option)}"${option === value ? ' selected' : ''}>${escapeHtml(sampleText(`option.${option}`))}</option>`).join('')}
         </select>`
-      : `<input data-sample-detail="${escapeHtml(key)}" type="${inputType}" value="${escapeHtml(value)}" placeholder="${escapeHtml(placeholder)}" />`;
-    return `<label${wide ? ' class="sample-type-field-wide"' : ''}>${escapeHtml(label)}${control}</label>`;
+      : `<input data-sample-detail="${escapeHtml(key)}" type="${inputType}" value="${escapeHtml(value)}" ${placeholder ? sampleAttributes({ placeholder: `${messageKey}.placeholder` }) : 'placeholder=""'} />`;
+    return `<label${wide ? ' class="sample-type-field-wide"' : ''}>${sampleMessage(messageKey)}${control}</label>`;
   }).join('');
 }
 

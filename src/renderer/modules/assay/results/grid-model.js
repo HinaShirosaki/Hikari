@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("plate");
 import { toRowLabel, wellIdFor } from '../plate-model.js';
 import { oppositeAxis } from '../shared.js';
 
@@ -79,7 +82,7 @@ export function createResultGridModel({ runtime, getSampleAxis, isMappedWell, es
         editable: false
       },
       {
-        title: axisDisplayLabel(metadata.rowField),
+        title: axisDisplayLabel(metadata.rowField), titleFormatter: () => i18nUi.renderOwned(axisDisplayLabel(metadata.rowField)),
         field: 'rowMeta',
         width: 92,
         minWidth: 92,

@@ -1,6 +1,10 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("papers");
 import { EMPTY_PAPER_PDF_METADATA, extractPaperPdfMetadata } from '../pdf-metadata.js';
 import { loadPdfJsModule } from './pdf-viewer-loader.js';
 import { bindPdfTextLayerSelection } from './pdf-viewer-text-selection.js';
+import { setPaperAttribute } from '../localization.js';
 
 async function loadPageMetrics(pdfDocument) {
   const metrics = [];
@@ -148,7 +152,7 @@ async function renderPageLinkLayer({
     return;
   }
 
-  record.linkLayer.innerHTML = '';
+  i18nUi.setHtml(record.linkLayer, '');
   const cssWidth = Math.max(Math.ceil(viewport.width), 1);
   const cssHeight = Math.max(Math.ceil(viewport.height), 1);
   record.linkLayer.style.width = `${cssWidth}px`;
@@ -182,8 +186,13 @@ async function renderPageLinkLayer({
       linkButton.style.top = `${rect.top}px`;
       linkButton.style.width = `${rect.width}px`;
       linkButton.style.height = `${rect.height}px`;
-      linkButton.setAttribute('aria-label', url ? `Open external website: ${url}` : 'Open PDF link');
-      linkButton.title = url || 'PDF link';
+      if (url) {
+        setPaperAttribute(linkButton, 'aria-label', 'viewer.openExternal', { url });
+        i18nUi.setAttribute(linkButton, "title", url);
+      } else {
+        setPaperAttribute(linkButton, 'aria-label', 'viewer.openLink');
+        setPaperAttribute(linkButton, 'title', 'viewer.linkTitle');
+      }
       linkButton.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
@@ -366,7 +375,7 @@ async function renderPageTextLayer({ page, viewport, record, isStale = () => fal
     } catch {}
     record.textSelectionCleanup = null;
   }
-  record.textLayer.innerHTML = '';
+  i18nUi.setHtml(record.textLayer, '');
   const cssWidth = Math.max(Math.ceil(viewport.width), 1);
   const cssHeight = Math.max(Math.ceil(viewport.height), 1);
   record.textLayer.style.width = `${cssWidth}px`;

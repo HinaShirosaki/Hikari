@@ -1,4 +1,4 @@
-import { showTransientNotice } from '../../lib/notify.js';
+import { plateError, plateNotice, plateUi } from './localization.js';
 import { PLATES_ROOT_FOLDER_NAME, recordFolderName } from '../../../shared/storage-layout.mjs';
 
 function encodeDataUrlPayload(dataUrl) {
@@ -145,10 +145,8 @@ export function createAssayArtifactStorage({
       ]);
     } catch (error) {
       console.warn('Failed to persist assay artifacts:', error);
-      showTransientNotice(
-        `Assay files were not written to the storage folder: ${String(error?.message || error || 'unknown error')}`,
-        { type: 'error' }
-      );
+      const detail = String(error?.message || error || '');
+      plateNotice(detail ? plateUi('storage.writeFailed', { error: detail }) : plateUi('storage.writeFailedUnknown'), { type: 'error' });
       return;
     }
 
@@ -195,16 +193,16 @@ export function createAssayArtifactStorage({
     const storageRoot = getStorageRoot();
     const targetFolder = buildAssayArtifactFolder(assay);
     if (!assay) {
-      throw new Error('Select an assay plate before attaching a result file.');
+      throw plateError('import.selectAssay');
     }
     if (!storageRoot || !targetFolder) {
-      throw new Error('Set a storage folder before attaching assay result files.');
+      throw plateError('storage.noFolder');
     }
     if (!dataBase64) {
-      throw new Error('Result attachment file data is missing.');
+      throw plateError('storage.missingData');
     }
     if (!window.hikariApi?.storeImportedFile) {
-      throw new Error('Result attachment storage is unavailable.');
+      throw plateError('storage.unavailable');
     }
 
     const stored = await window.hikariApi.storeImportedFile({
@@ -214,7 +212,7 @@ export function createAssayArtifactStorage({
       dataBase64
     });
     if (!stored?.ok) {
-      throw new Error(stored?.error || 'Unable to save result attachment.');
+      throw stored?.error ? new Error(stored.error) : plateError('storage.saveFailed');
     }
 
     return {

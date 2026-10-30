@@ -1,21 +1,21 @@
-<section id="home-view" class="view is-active" aria-label="Home">
+<section id="home-view" class="view is-active" aria-label="Home" data-i18n-aria-label="home.title">
       <div class="home-layout">
         <div class="home-column home-column-now">
           <section class="home-tile home-tile-timer" aria-labelledby="dashboard-timer-heading">
             <div class="home-tile-head">
-              <h2 id="dashboard-timer-heading">Lab timers <span id="dashboard-timer-status" class="home-widget-count" hidden></span></h2>
-              <button type="button" id="dashboard-timer-open-btn" class="home-add-btn" aria-label="Start timer" title="Start timer">
+              <h2 id="dashboard-timer-heading"><span data-i18n="home.timer.heading">Lab timers</span> <span id="dashboard-timer-status" class="home-widget-count" hidden></span></h2>
+              <button type="button" id="dashboard-timer-open-btn" class="home-add-btn" aria-label="Start timer" title="Start timer" data-i18n-aria-label="home.timer.start" data-i18n-title="home.timer.start">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
               </button>
             </div>
             <div id="dashboard-timer-active-list" class="dashboard-timer-active-list"></div>
-            <div id="dashboard-timer-preset-list" class="home-timer-presets" role="group" aria-label="Saved timers" hidden></div>
+            <div id="dashboard-timer-preset-list" class="home-timer-presets" role="group" aria-label="Saved timers" hidden data-i18n-aria-label="home.timer.saved"></div>
           </section>
 
           <section class="home-tile home-tile-passage" aria-labelledby="dashboard-passage-heading">
             <div class="home-tile-head">
-              <h2 id="dashboard-passage-heading">Cell passage <span id="dashboard-passage-summary" class="home-widget-count" hidden></span></h2>
-              <button type="button" id="dashboard-passage-add-btn" class="home-add-btn" aria-label="Add cell to passage reminder" title="Add reminder"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></button>
+              <h2 id="dashboard-passage-heading"><span data-i18n="home.passage.heading">Cell passage</span> <span id="dashboard-passage-summary" class="home-widget-count" hidden></span></h2>
+              <button type="button" id="dashboard-passage-add-btn" class="home-add-btn" aria-label="Add cell to passage reminder" title="Add reminder" data-i18n-aria-label="home.passage.addLabel" data-i18n-title="home.passage.add"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></button>
             </div>
             <div class="home-tile-scroll">
               <div id="dashboard-passage-list" class="dashboard-list dashboard-passage-list"></div>
@@ -24,8 +24,8 @@
 
           <section class="home-tile home-tile-incubation" aria-labelledby="dashboard-incubation-heading">
             <div class="home-tile-head">
-              <h2 id="dashboard-incubation-heading">Overnight incubation <span id="dashboard-incubation-summary" class="home-widget-count" hidden></span></h2>
-              <button type="button" id="dashboard-incubation-add-btn" class="home-add-btn" aria-label="Manage incubation locations" title="Manage locations"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h5m4 0h7M4 17h9m4 0h3M9 4v6m4-3h-4m4 7v6m4-3h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></button>
+              <h2 id="dashboard-incubation-heading"><span data-i18n="home.incubation.heading">Overnight incubation</span> <span id="dashboard-incubation-summary" class="home-widget-count" hidden></span></h2>
+              <button type="button" id="dashboard-incubation-add-btn" class="home-add-btn" aria-label="Manage incubation locations" title="Manage locations" data-i18n-aria-label="home.incubation.manageLabel" data-i18n-title="home.incubation.manage"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h5m4 0h7M4 17h9m4 0h3M9 4v6m4-3h-4m4 7v6m4-3h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg></button>
             </div>
             <div class="home-tile-scroll">
               <div id="dashboard-incubation-list" class="dashboard-list"></div>
@@ -36,8 +36,8 @@
         <div class="home-column home-column-capture">
           <section class="home-tile home-tile-quicklog" aria-labelledby="dashboard-quicklog-heading">
             <div class="home-tile-head">
-              <h2 id="dashboard-quicklog-heading">Experiment log</h2>
-              <button type="button" id="home-agent-reopen-btn" class="home-link-btn" data-requires-agent hidden>Continue notebook review</button>
+              <h2 id="dashboard-quicklog-heading" data-i18n="home.log.heading">Experiment log</h2>
+              <button type="button" id="home-agent-reopen-btn" class="home-link-btn" data-requires-agent hidden data-i18n="home.log.continue">Continue notebook review</button>
             </div>
             <textarea
               id="dashboard-quick-log-input"
@@ -45,10 +45,10 @@
               rows="4"
               aria-label="Experiment or observation"
               placeholder="Capture an experiment or observation…"
-            ></textarea>
+             data-i18n-aria-label="home.log.label" data-i18n-placeholder="home.log.placeholder"></textarea>
             <div class="home-quicklog-actions">
-              <button type="button" id="dashboard-quick-log-save-btn" class="ghost-btn" aria-label="Save experiment locally" title="Save locally"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg>Save</button>
-              <button type="button" id="dashboard-quick-log-agent-btn" class="primary-btn hikari-agent-action" title="Prepare notebook page (⌘/Ctrl + Enter)">Prepare notebook page</button>
+              <button type="button" id="dashboard-quick-log-save-btn" class="ghost-btn" aria-label="Save experiment locally" title="Save locally" data-i18n-aria-label="home.log.saveLabel" data-i18n-title="home.log.saveTitle"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg><span data-i18n="home.action.save">Save</span></button>
+              <button type="button" id="dashboard-quick-log-agent-btn" class="primary-btn hikari-agent-action" title="Prepare notebook page (⌘/Ctrl + Enter)" data-i18n="home.log.prepare" data-i18n-title="home.log.prepareTitle">Prepare notebook page</button>
             </div>
             <p id="dashboard-quick-log-status" class="small-note home-quicklog-status" aria-live="polite"></p>
             <div id="dashboard-quick-log-recent" class="home-quicklog-recent" hidden></div>
@@ -56,9 +56,9 @@
 
           <section class="home-tile home-tile-notebook-pages" aria-labelledby="dashboard-notebook-pages-heading">
             <div class="home-tile-head">
-              <h2 id="dashboard-notebook-pages-heading">Notebook notes</h2>
-              <p id="dashboard-notebook-pages-status" class="sr-only">Select a page to add a note.</p>
-              <button type="button" id="dashboard-notebook-open-btn" class="home-link-btn">View all<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+              <h2 id="dashboard-notebook-pages-heading" data-i18n="home.notebook.heading">Notebook notes</h2>
+              <p id="dashboard-notebook-pages-status" class="sr-only"><span data-i18n="home.full.4f46b7bc">Select a page to add a note.</span></p>
+              <button type="button" id="dashboard-notebook-open-btn" class="home-link-btn"><span data-i18n="home.notebook.viewAll">View all</span><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
             </div>
             <div class="home-tile-scroll">
               <div id="dashboard-notebook-page-list" class="dashboard-list"></div>
@@ -70,14 +70,14 @@
           <section class="home-tile home-tile-paper-finding" aria-labelledby="dashboard-paper-finding-heading" data-requires-agent>
             <div class="home-tile-head">
               <div class="home-tile-titles">
-                <h2 id="dashboard-paper-finding-heading">Paper finder</h2>
-                <p id="dashboard-paper-finding-summary" class="small-note">Loading schedules…</p>
+                <h2 id="dashboard-paper-finding-heading" data-i18n="home.papers.heading">Suggested papers</h2>
+                <p id="dashboard-paper-finding-summary" class="small-note"><span data-i18n="home.full.7c0ff581">Loading schedules…</span></p>
               </div>
               <div class="home-tile-head-actions">
-                <button type="button" id="dashboard-paper-finding-run-btn" class="home-add-btn" aria-label="Find papers now" title="Find papers now" hidden>
+                <button type="button" id="dashboard-paper-finding-run-btn" class="home-add-btn" aria-label="Find papers now" title="Find papers now" hidden data-i18n-aria-label="home.papers.find" data-i18n-title="home.papers.find">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path></svg>
                 </button>
-                <button type="button" id="dashboard-paper-finding-open-btn" class="home-add-btn" aria-label="Manage paper finding schedules" title="Manage schedules">
+                <button type="button" id="dashboard-paper-finding-open-btn" class="home-add-btn" aria-label="Manage paper finding schedules" title="Manage schedules" data-i18n-aria-label="home.papers.manageLabel" data-i18n-title="home.papers.manage">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h5m4 0h7M4 17h9m4 0h3M9 4v6m4-3h-4m4 7v6m4-3h-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
                 </button>
               </div>
@@ -90,21 +90,21 @@
 
           <section class="home-tile home-tile-contribution" aria-labelledby="dashboard-contribution-heading">
             <div class="home-tile-head">
-              <h2 id="dashboard-contribution-heading">Lab activity</h2>
+              <h2 id="dashboard-contribution-heading" data-i18n="home.activity.heading">Lab activity</h2>
               <div class="home-contribution-legend" aria-hidden="true">
-                <span>Less</span><i data-level="0"></i><i data-level="1"></i><i data-level="2"></i><i data-level="3"></i><i data-level="4"></i><span>More</span>
+                <span data-i18n="home.activity.less">Less</span><i data-level="0"></i><i data-level="1"></i><i data-level="2"></i><i data-level="3"></i><i data-level="4"></i><span data-i18n="home.activity.more">More</span>
               </div>
             </div>
             <p id="dashboard-contribution-summary" class="small-note home-contribution-stats"></p>
-            <div class="home-contribution-map" aria-label="Lab activity contribution heatmap">
+            <div class="home-contribution-map" aria-label="Lab activity contribution heatmap" data-i18n-aria-label="home.activity.heatmap">
               <div id="dashboard-contribution-months" class="home-contribution-months" aria-hidden="true"></div>
               <div class="home-contribution-body">
                 <div class="home-contribution-weekdays" aria-hidden="true">
-                  <span>Mon</span>
-                  <span>Wed</span>
-                  <span>Fri</span>
+                  <span data-i18n="home.activity.mon">Mon</span>
+                  <span data-i18n="home.activity.wed">Wed</span>
+                  <span data-i18n="home.activity.fri">Fri</span>
                 </div>
-                <div id="dashboard-contribution-grid" class="home-contribution-grid" role="grid" aria-label="Daily lab activity"></div>
+                <div id="dashboard-contribution-grid" class="home-contribution-grid" role="grid" aria-label="Daily lab activity" data-i18n-aria-label="home.activity.daily"></div>
               </div>
             </div>
             <p id="dashboard-contribution-selected" class="small-note home-contribution-selected" aria-live="polite"></p>
@@ -121,34 +121,34 @@
         >
           <div class="home-dialog-form">
             <div class="app-dialog-head">
-              <h3 id="dashboard-passage-dialog-title">Cell passage</h3>
+              <h3 id="dashboard-passage-dialog-title" data-i18n="home.passage.heading">Cell passage</h3>
               <button
                 type="button"
                 id="dashboard-passage-dialog-close-btn"
                 class="app-dialog-close-btn"
                 aria-label="Close cell passage panel"
                 title="Close"
-              ><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+               data-i18n-aria-label="home.passage.close" data-i18n-title="home.action.close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
             </div>
             <section class="home-dialog-section home-dialog-saved-section">
-              <h4>Passage schedule</h4>
+              <h4 data-i18n="home.passage.schedule">Passage schedule</h4>
               <div id="dashboard-passage-panel-list" class="dashboard-list dashboard-passage-list home-dialog-list"></div>
             </section>
             <form id="dashboard-passage-dialog-form" class="home-dialog-section">
-              <h4>New reminder</h4>
+              <h4 data-i18n="home.passage.new">New reminder</h4>
               <label class="dashboard-field">
-                Cell strain
+                <span data-i18n="home.passage.strain">Cell strain</span>
                 <input
                   id="dashboard-passage-strain-input"
                   type="text"
                   maxlength="80"
                   placeholder="e.g. HEK293"
                   required
-                />
+                 data-i18n-placeholder="home.passage.strainExample"/>
               </label>
               <div class="home-dialog-field-pair">
                 <label class="dashboard-field">
-                  Interval (days)
+                  <span data-i18n="home.passage.interval">Interval (days)</span>
                   <input
                     id="dashboard-passage-interval-input"
                     type="number"
@@ -156,10 +156,10 @@
                     step="1"
                     placeholder="e.g. 3"
                     required
-                  />
+                   data-i18n-placeholder="home.passage.intervalExample"/>
                 </label>
                 <label class="dashboard-field">
-                  Passage number
+                  <span data-i18n="home.passage.number">Passage number</span>
                   <input
                     id="dashboard-passage-number-input"
                     type="number"
@@ -167,11 +167,11 @@
                     step="1"
                     placeholder="e.g. 5"
                     required
-                  />
+                   data-i18n-placeholder="home.passage.numberExample"/>
                 </label>
               </div>
               <div class="home-dialog-actions">
-                <button type="submit" id="dashboard-passage-submit-btn" class="primary-btn">Add reminder</button>
+                <button type="submit" id="dashboard-passage-submit-btn" class="primary-btn" data-i18n="home.passage.add">Add reminder</button>
               </div>
             </form>
           </div>
@@ -187,24 +187,24 @@
         >
           <div class="home-dialog-form">
             <div class="app-dialog-head">
-              <h3 id="dashboard-timer-dialog-title">Start timer</h3>
+              <h3 id="dashboard-timer-dialog-title" data-i18n="home.timer.start">Start timer</h3>
               <button
                 type="button"
                 id="dashboard-timer-dialog-close-btn"
                 class="app-dialog-close-btn"
                 aria-label="Close start timer dialog"
                 title="Close"
-              ><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+               data-i18n-aria-label="home.timer.close" data-i18n-title="home.action.close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
             </div>
             <section class="home-dialog-section home-dialog-saved-section">
-              <h4>Saved timers</h4>
+              <h4 data-i18n="home.timer.saved">Saved timers</h4>
               <div id="dashboard-timer-template-list" class="home-timer-template-list"></div>
             </section>
             <form id="dashboard-timer-dialog-form" class="home-dialog-section">
-              <h4>New timer preset</h4>
+              <h4 data-i18n="home.timer.new">New timer preset</h4>
               <div class="home-timer-form-row">
                 <label class="dashboard-field">
-                  Timer name
+                  <span data-i18n="home.timer.name">Timer name</span>
                   <input
                     id="dashboard-timer-name-input"
                     type="text"
@@ -212,21 +212,21 @@
                     aria-label="Timer name"
                     placeholder="e.g. Wash"
                     required
-                  />
+                   data-i18n-aria-label="home.timer.name" data-i18n-placeholder="home.timer.example"/>
                 </label>
                 <label class="dashboard-field">
-                  Duration (min/h)
+                  <span data-i18n="home.timer.duration">Duration (min/h)</span>
                   <input
                     id="dashboard-timer-minutes-input"
                     type="text"
                     aria-label="Timer duration; enter minutes or hours"
                     placeholder="e.g. 90 min or 1.5 h"
                     required
-                  />
+                   data-i18n-aria-label="home.timer.durationLabel" data-i18n-placeholder="home.timer.durationExample"/>
                 </label>
               </div>
               <div class="home-dialog-actions">
-                <button type="submit" id="dashboard-timer-add-btn" class="primary-btn">Save preset</button>
+                <button type="submit" id="dashboard-timer-add-btn" class="primary-btn" data-i18n="home.timer.save">Save preset</button>
               </div>
             </form>
           </div>
@@ -242,34 +242,34 @@
         >
           <div class="home-dialog-form">
             <div class="app-dialog-head">
-              <h3 id="dashboard-incubation-dialog-title">Overnight incubation</h3>
+              <h3 id="dashboard-incubation-dialog-title" data-i18n="home.incubation.heading">Overnight incubation</h3>
               <button
                 type="button"
                 id="dashboard-incubation-dialog-close-btn"
                 class="app-dialog-close-btn"
                 aria-label="Close overnight incubation panel"
                 title="Close"
-              ><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+               data-i18n-aria-label="home.incubation.close" data-i18n-title="home.action.close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
             </div>
             <section class="home-dialog-section home-dialog-saved-section">
-              <h4>Reminders</h4>
+              <h4 data-i18n="home.incubation.reminders">Reminders</h4>
               <div id="dashboard-incubation-panel-list" class="dashboard-list home-dialog-list"></div>
             </section>
             <section class="home-dialog-section">
-              <h4>Manage locations</h4>
+              <h4 data-i18n="home.incubation.manage">Manage locations</h4>
               <div id="dashboard-incubation-location-list" class="home-incubation-location-list"></div>
               <form id="dashboard-incubation-location-form" class="home-incubation-add-row">
                 <label class="dashboard-field">
-                  New location
+                  <span data-i18n="home.incubation.new">New location</span>
                   <input
                     id="dashboard-incubation-location-input"
                     type="text"
                     maxlength="80"
                     placeholder="e.g. 37°C shaker"
                     required
-                  />
+                   data-i18n-placeholder="home.incubation.example"/>
                 </label>
-                <button type="submit" id="dashboard-incubation-location-submit-btn" class="primary-btn">Add location</button>
+                <button type="submit" id="dashboard-incubation-location-submit-btn" class="primary-btn" data-i18n="home.incubation.add">Add location</button>
               </form>
             </section>
           </div>
@@ -279,41 +279,41 @@
       <div id="home-agent-overlay" class="home-agent-overlay app-dialog-overlay" data-requires-agent hidden>
         <section class="home-agent-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="home-agent-title">
           <header class="app-dialog-head">
-            <h3 id="home-agent-title">Prepare notebook page</h3>
-            <button type="button" id="home-agent-close-btn" class="app-dialog-close-btn" aria-label="Close notebook conversation"><span class="agent-chat-icon agent-close-icon" data-agent-chat-icon="close" aria-hidden="true"></span></button>
+            <h3 id="home-agent-title" data-i18n="home.log.prepare">Prepare notebook page</h3>
+            <button type="button" id="home-agent-close-btn" class="app-dialog-close-btn" aria-label="Close notebook conversation" data-i18n-aria-label="home.agent.close"><span class="agent-chat-icon agent-close-icon" data-agent-chat-icon="close" aria-hidden="true"></span></button>
           </header>
         <div class="panel agent-chat-panel">
           <div class="agent-chat-stage">
             <div class="agent-conversation-shell is-empty-chat">
               <div class="agent-history-viewport">
                 <div id="home-agent-chat-history" class="agent-chat-history" aria-live="polite"></div>
-                <button type="button" id="home-agent-scroll-to-bottom-btn" class="ghost-btn agent-scroll-to-bottom-btn" hidden><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>Jump to Latest</button>
+                <button type="button" id="home-agent-scroll-to-bottom-btn" class="ghost-btn agent-scroll-to-bottom-btn" hidden><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M19 12l-7 7-7-7"/></svg><span data-i18n="home.agent.latest">Jump to Latest</span></button>
               </div>
               <div class="agent-composer-shell">
                 <div id="home-agent-question-dock" class="agent-question-dock" aria-live="polite" hidden></div>
                 <div class="stack-form agent-composer-card">
                   <input id="home-agent-attachment-input" type="file" multiple hidden />
                   <label class="agent-composer-label">
-                    <span class="sr-only">Message</span>
-                    <textarea id="home-agent-message-input" rows="3" placeholder="Add experiment details…"></textarea>
+                    <span class="sr-only" data-i18n="home.agent.message">Message</span>
+                    <textarea id="home-agent-message-input" rows="3" placeholder="Add experiment details…" data-i18n-placeholder="home.agent.placeholder"></textarea>
                   </label>
                   <div id="home-agent-attachment-list" class="agent-attachment-list" hidden></div>
                   <div class="agent-composer-toolbar">
                     <div class="agent-composer-toolbar-start">
-                      <button type="button" id="home-agent-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files"><span class="agent-chat-icon agent-attach-icon" data-agent-chat-icon="attach" aria-hidden="true"></span></button>
+                      <button type="button" id="home-agent-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files" data-i18n-aria-label="home.agent.attach" data-i18n-title="home.agent.attach"><span class="agent-chat-icon agent-attach-icon" data-agent-chat-icon="attach" aria-hidden="true"></span></button>
                       <label class="agent-composer-project agent-composer-project-inline">
-                        <span class="sr-only">Project Scope</span>
-                        <select id="home-agent-project-select" aria-label="Project Scope">
-                          <option value="">All projects</option>
+                        <span class="sr-only" data-i18n="home.agent.scope">Project Scope</span>
+                        <select id="home-agent-project-select" aria-label="Project Scope" data-i18n-aria-label="home.agent.scope">
+                          <option value="" data-i18n="home.agent.all">All projects</option>
                         </select>
                       </label>
                     </div>
                     <div class="form-actions agent-composer-actions">
-                      <button type="button" id="home-agent-send-btn" class="primary-btn agent-send-icon-btn" aria-label="Send message" title="Send message">
+                      <button type="button" id="home-agent-send-btn" class="primary-btn agent-send-icon-btn" aria-label="Send message" title="Send message" data-i18n-aria-label="home.agent.send" data-i18n-title="home.agent.send">
                         <span class="agent-chat-icon agent-send-icon" data-agent-chat-icon="send" aria-hidden="true"></span>
-                        <span class="sr-only">Send message</span>
+                        <span class="sr-only" data-i18n="home.agent.send">Send message</span>
                       </button>
-                      <button type="button" id="home-agent-stop-btn" class="danger-btn" hidden>Stop</button>
+                      <button type="button" id="home-agent-stop-btn" class="danger-btn" hidden><span data-i18n="home.full.4b7f7705">Stop</span></button>
                     </div>
                   </div>
                 </div>
@@ -323,15 +323,15 @@
               <section class="agent-review-dialog app-dialog-surface draft-review-dialog" role="dialog" aria-modal="true" aria-labelledby="home-agent-review-title">
                 <header class="agent-review-dialog-header app-dialog-head">
                   <div>
-                    <h3 id="home-agent-review-title">Review generated drafts</h3>
+                    <h3 id="home-agent-review-title"><span data-i18n="home.full.57546f08">Review generated drafts</span></h3>
                   </div>
-                  <button type="button" id="home-agent-review-close-btn" class="app-dialog-close-btn" aria-label="Close generated draft review dialog" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                  <button type="button" id="home-agent-review-close-btn" class="app-dialog-close-btn" aria-label="Close generated draft review dialog" title="Close" data-i18n-aria-label="home.agent.closeReview" data-i18n-title="home.action.close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
                 </header>
                 <div id="home-agent-review-track" class="agent-review-track" tabindex="0" aria-live="polite"></div>
                 <footer class="agent-review-footer">
-                  <button type="button" id="home-agent-review-prev-btn" class="row-action-icon-btn" aria-label="Previous generated draft"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m15 18-6-6 6-6"/></svg></button>
+                  <button type="button" id="home-agent-review-prev-btn" class="row-action-icon-btn" aria-label="Previous generated draft" data-i18n-aria-label="home.agent.previous"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m15 18-6-6 6-6"/></svg></button>
                   <span id="home-agent-review-page-label" class="small-note">1 / 1</span>
-                  <button type="button" id="home-agent-review-next-btn" class="row-action-icon-btn" aria-label="Next generated draft"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 18 6-6-6-6"/></svg></button>
+                  <button type="button" id="home-agent-review-next-btn" class="row-action-icon-btn" aria-label="Next generated draft" data-i18n-aria-label="home.agent.next"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 18 6-6-6-6"/></svg></button>
                 </footer>
               </section>
             </div>

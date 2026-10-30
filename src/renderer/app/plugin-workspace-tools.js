@@ -1,3 +1,6 @@
+import { createPresentation } from "../lib/i18n/presentation.js";
+import "../lib/i18n/shell.js";
+const i18nUi = createPresentation("shell");
 // Declarative plugin buttons share the host's existing tools/chat strip. The
 // frame retains the editor and receives only actions for its own active view.
 import { PROTOCOL_MARKER } from './plugin-bridge/helpers.js';
@@ -46,7 +49,7 @@ export function createPluginWorkspaceTools({ windowObject, getRegistration }) {
     renderedOwner = owner?.[0]; renderedTools = signature; slot.replaceChildren();
     if (owner) {
       const [frame, entry] = owner;
-      slot.setAttribute('aria-label', `${entry.registration.plugin.name || entry.registration.plugin.id} tools`);
+      i18nUi.setAttribute(slot, "aria-label", i18nUi.message("{p0} tools", { p0: entry.registration.plugin.name || entry.registration.plugin.id }));
       let group;
       for (const tool of entry.tools) {
         const node = doc.createElement(tool.kind === 'output' ? 'output' : 'button');
@@ -54,8 +57,8 @@ export function createPluginWorkspaceTools({ windowObject, getRegistration }) {
         node.className = 'plugin-workspace-tool';
         node.classList.toggle('is-group-start', group !== undefined && group !== tool.group);
         group = tool.group;
-        node.title = tool.label; node.setAttribute('aria-label', tool.label);
-        if (tool.kind === 'output') node.textContent = tool.label;
+        i18nUi.setAttribute(node, "title", tool.label); node.setAttribute('aria-label', tool.label);
+        if (tool.kind === 'output') i18nUi.setText(node, tool.label);
         else {
           node.type = 'button'; node.disabled = tool.disabled === true;
           for (const [key, attr] of [['pressed', 'aria-pressed'], ['expanded', 'aria-expanded']]) if (tool[key] !== undefined) node.setAttribute(attr, String(tool[key]));

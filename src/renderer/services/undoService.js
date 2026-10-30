@@ -1,3 +1,7 @@
+import { createPresentation } from "../lib/i18n/presentation.js";
+import "../lib/i18n/shell.js";
+const i18nUi = createPresentation("shell");
+import { setShellAttribute } from '../lib/i18n/shell.js';
 import { showTransientNotice } from '../lib/notify.js';
 import { applyHistoryChanges, canApplyHistoryChanges, captureHistoryState, diffHistoryState,
   historyChangesOverlap, mergeHistoryChanges, removesReferencedHistoryRecord } from './history-patches.js';
@@ -154,13 +158,13 @@ export function createUndoService({
   function syncButtons() {
     const history = getDelegateClaim() || getHistoryState();
     for (const [button, available, title] of [
-      [undoButton, history.canUndo, 'Undo (Command+Z / Ctrl+Z)'],
-      [redoButton, history.canRedo, 'Redo (Command+Shift+Z / Ctrl+Y)']
+      [undoButton, history.canUndo, 'history.undoTitle'],
+      [redoButton, history.canRedo, 'history.redoTitle']
     ]) {
       if (!button) continue;
       button.disabled = !available;
       button.setAttribute('aria-disabled', String(!available));
-      button.title = available ? title : button === undoButton ? 'Nothing to undo' : 'Nothing to redo';
+      setShellAttribute(button, 'title', available ? title : button === undoButton ? 'history.emptyUndo' : 'history.emptyRedo');
     }
   }
 
@@ -240,11 +244,11 @@ export function createUndoService({
     if (!canApplyHistoryChanges(state, entry.changes, direction)) {
       clear(history);
       syncButtons();
-      showTransientNotice('This history no longer matches the current records.', { type: 'error' });
+      showTransientNotice(i18nUi.message("This history no longer matches the current records."), { type: 'error' });
       return false;
     }
     if (removesReferencedHistoryRecord(state, entry.changes, direction)) {
-      showTransientNotice('Another record uses this item. Undo or remove that link first.', { type: 'error' });
+      showTransientNotice(i18nUi.message("Another record uses this item. Undo or remove that link first."), { type: 'error' });
       return false;
     }
     applying = true;
@@ -256,7 +260,7 @@ export function createUndoService({
       } catch (error) {
         applyHistoryChanges(state, entry.changes, reverse);
         baseline = captureHistoryState(state);
-        showTransientNotice(`Could not ${direction}: ${error.message}`, { type: 'error' });
+        showTransientNotice(i18nUi.message("Could not {p0}: {p1}", { p0: direction, p1: error.message }), { type: 'error' });
         return false;
       }
       from.pop();

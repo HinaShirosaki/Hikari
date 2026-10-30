@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("agent");
 export function renderAgentChat({
   runtime,
   shell,
@@ -17,6 +20,6 @@ export function renderAgentChat({
   attachmentsController.render();
   shell.renderHistoryView();
   if (!runtime.inFlight) {
-    shell.setStatus('Ready.');
+    shell.setStatus(i18nUi.text("Ready."));
   }
 }

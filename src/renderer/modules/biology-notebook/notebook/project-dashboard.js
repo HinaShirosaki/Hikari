@@ -1,3 +1,7 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
+import { setNotebookText } from '../localization.js';
 import {
   matchesNotebookType,
   resolveEntryProject,
@@ -35,7 +39,11 @@ function createNotebookProjectDashboard({
   function syncPageStarterProject() {
     const project = findSelectedProject();
     if (notebookPageStarterProject) {
-      notebookPageStarterProject.textContent = project?.name || 'Choose a project folder';
+      if (project?.name) {
+        notebookPageStarterProject.removeAttribute?.('data-i18n');
+        notebookPageStarterProject.removeAttribute?.('data-i18n-params');
+        i18nUi.setText(notebookPageStarterProject, project.name);
+      } else setNotebookText(notebookPageStarterProject, 'project.chooseFolder');
     }
     if (notebookPageStarter) {
       notebookPageStarter.dataset.projectId = project?.id || '';

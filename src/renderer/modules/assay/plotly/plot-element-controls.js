@@ -1,10 +1,13 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("plate");
 import { normalizePlotElements } from '../../../../shared/assay-plot.mjs';
 import { validatePlotElementAxes } from './plot-elements.js';
 
 export function mountPlotElementControls(root, { store, apply, notice }) {
   const element = (tag, text) => {
     const node = document.createElement(tag);
-    if (text !== undefined) node.textContent = text;
+    if (text !== undefined) i18nUi.setText(node, text);
     return node;
   };
   const fields = {};
@@ -65,8 +68,7 @@ export function mountPlotElementControls(root, { store, apply, notice }) {
     });
     remove.hidden = !item;
     fieldset.disabled = busy || store.getContext().method !== 'agent_plotly';
-    hint.textContent = fieldset.disabled ? 'Elements are available for the active agent plot.'
-      : 'Labels can be dragged on the plot. Lines and bands use data values; on category X axes, use the category index (0, 1, …).';
+    i18nUi.setOwnedText(hint, (fieldset.disabled ? i18nUi.message("Elements are available for the active agent plot.") : i18nUi.message("Labels can be dragged on the plot. Lines and bands use data values; on category X axes, use the category index (0, 1, …).")));
     add.disabled = items.length >= 32;
   }
   add.addEventListener('click', () => {

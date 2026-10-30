@@ -1,4 +1,6 @@
-import { escapeHtml } from '../../../lib/html.js';
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import {
   attachRailHoverCard,
   createFolderTreeState,
@@ -7,6 +9,7 @@ import {
 } from '../../../lib/folder-tree.js';
 import { cleanText } from '../shared.js';
 import { buildSequenceMapSvg } from '../vector-builder/sequence-map.js';
+import { dnaFolderDisclosure, dnaMessage, dnaText } from '../localization.js';
 
 // Draws the home page's library list (folders, saved and temporary entries) and
 // the inline SVG map preview for whichever entry is selected.
@@ -38,12 +41,12 @@ function createLibraryRendering({
       return;
     }
     if (!record?.sequence?.length) {
-      elements.previewHost.innerHTML = '';
+      i18nUi.setHtml(elements.previewHost, '');
       return;
     }
-    elements.previewHost.innerHTML = buildSequenceMapSvg(record, {
+    i18nUi.setHtml(elements.previewHost, buildSequenceMapSvg(record, {
       features: Array.isArray(record.features) ? record.features : []
-    });
+    }));
     // Redrawing replaces the SVG, so the current zoom has to be re-applied.
     previewZoom.apply();
   }
@@ -58,9 +61,9 @@ function createLibraryRendering({
     const entries = Array.isArray(state.libraryEntries) ? state.libraryEntries : [];
     const folders = Array.isArray(state.libraryFolders) ? state.libraryFolders : [];
     if (!entries.length && !folders.length) {
-      const noun = state.libraryFilter === libraryStatusSaved ? 'saved' : 'unsaved';
+      const emptyKey = state.libraryFilter === libraryStatusSaved ? 'library.emptySaved' : 'library.emptyUnsaved';
       libraryLists.forEach((libraryList) => {
-        libraryList.innerHTML = `<p class="small-note">No ${noun} sequence entries.</p>`;
+        i18nUi.setHtml(libraryList, `<p class="small-note">${dnaMessage(emptyKey)}</p>`);
       });
       return;
     }
@@ -82,7 +85,7 @@ function createLibraryRendering({
     });
     if (!unfiledEntries.length && !matchingFolders.length) {
       libraryLists.forEach((libraryList) => {
-        libraryList.innerHTML = `<p class="small-note">No sequences match "${escapeHtml(query)}".</p>`;
+        i18nUi.setHtml(libraryList, `<p class="small-note">${dnaMessage('library.noMatch', { query })}</p>`);
       });
       return;
     }
@@ -97,7 +100,7 @@ function createLibraryRendering({
           'data-sequence-entry-id': entry.id,
           draggable: 'true'
         },
-        contentHtml: `<span class="sequence-viewer-library-item-name folder-tree-template__leaf-label">${escapeHtml(entry.name || 'sequence')}</span>`
+        contentHtml: `<span class="sequence-viewer-library-item-name folder-tree-template__leaf-label">${i18nUi.render((entry.name || i18nUi.message("sequence")))}</span>`
       });
     };
     const html = [
@@ -113,11 +116,13 @@ function createLibraryRendering({
         return renderFolderTreeNode({
           key: folderId,
           expanded,
-          label: folder.name || 'Folder',
+          label: folder.name,
+          ...(folder.name ? {} : { labelHtml: dnaMessage('library.folder') }),
+          ...dnaFolderDisclosure(folder.name || dnaText('library.folder'), expanded),
           meta: String(folderEntries.length),
           childrenHtml: visibleFolderEntries.length
             ? visibleFolderEntries.map(entryHtml).join('')
-            : '<p class="sequence-viewer-library-folder-empty">No sequences.</p>',
+            : `<p class="sequence-viewer-library-folder-empty">${dnaMessage('library.folderEmpty')}</p>`,
           nodeClass: 'sequence-viewer-library-folder-group',
           rowClass: 'sequence-viewer-library-folder-row',
           disclosureClass: 'sequence-viewer-library-folder-toggle',
@@ -139,7 +144,7 @@ function createLibraryRendering({
       }).join('')
     ].join('');
     libraryLists.forEach((libraryList) => {
-      libraryList.innerHTML = html;
+      i18nUi.setHtml(libraryList, html);
     });
   }
 

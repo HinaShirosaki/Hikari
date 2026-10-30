@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "../../lib/i18n/shell.js";
+const i18nUi = createPresentation("shell");
 import { normalizeNotebookResultTable, normalizeNotebookResultTables } from '../../lib/notebook-result-tables.js';
 import { MAX_PLUGIN_STORAGE_CHARS, measurePluginStorageValue } from '../../lib/plugin-storage.js';
 import { LAYOUT_VERBS } from './layout-verbs.js';
@@ -101,7 +104,7 @@ const VERBS = {
         || text(plugin?.id, 200)
         || 'unknown'
       ).replace(/\s+/g, ' ');
-      notify(`Plugin ${pluginLabel}: ${message}`, { type, durationMs });
+      notify(i18nUi.text("Plugin {p0}: {p1}", { p0: pluginLabel, p1: message }), { type, durationMs });
       return { shown: true, type, durationMs };
     }
   },

@@ -1,3 +1,6 @@
+import { createPresentation } from "../lib/i18n/presentation.js";
+import "../lib/i18n/shell.js";
+const i18nUi = createPresentation("shell");
 import { applyAppearanceToDocument } from '../app/appearance.js';
 
 const DEFAULT_FONT_SIZE = 16;
@@ -45,10 +48,10 @@ function showBootFailure() {
   });
 
   const text = document.createElement('span');
-  text.textContent = 'Hikari did not finish loading. Parts of the app may be missing or unresponsive — reload to try again.';
+  i18nUi.setText(text, i18nUi.message("Hikari did not finish loading. Parts of the app may be missing or unresponsive — reload to try again."));
   const dismiss = document.createElement('button');
   dismiss.type = 'button';
-  dismiss.textContent = 'Dismiss';
+  i18nUi.setText(dismiss, i18nUi.message("Dismiss"));
   Object.assign(dismiss.style, {
     flex: '0 0 auto',
     padding: '4px 10px',
