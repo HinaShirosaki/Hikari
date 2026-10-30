@@ -17,6 +17,7 @@ The AI-native lab workspace, with an agent that runs experiments with you.<br/>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square" alt="Apache-2.0 license" /></a>
 </p>
 
+<a href="https://hikari-lab-agent.com/"><b>Website</b></a> ·
 <a href="#quick-start"><b>Install</b></a> ·
 <a href="docs/getting-started/first-experiment.md"><b>15-min Tutorial</b></a> ·
 <a href="docs/guide/README.md"><b>Full Guide</b></a> ·
