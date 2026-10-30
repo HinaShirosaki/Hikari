@@ -1,3 +1,7 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("settings");
+import { settingsText, settingsMessage, setSettingsText } from './localization.js';
 // Settings > Plugins panel: install from folders/GitHub, enable, and remove.
 // Entries live in state.settings.plugins and are booted by
 // src/renderer/app/plugin-loader.js on the next app reload.
@@ -17,7 +21,7 @@ export function createPluginsController({
   escapeHtml,
   windowObject = globalThis.window
 }) {
-  let statusMessage = '';
+  let statusMessage = null;
   let installing = false;
   const preferences = createPluginPreferencesController({ state, persist, windowObject, escapeHtml });
 
@@ -29,21 +33,23 @@ export function createPluginsController({
   }
 
   function setStatus(message) {
-    statusMessage = String(message || '');
+    statusMessage = message || null;
     render();
   }
 
   // A failed add leaves the panel list unchanged, so the inline line is the only
   // thing that moves — raise the app notice too.
   function setErrorStatus(message) {
-    showTransientNotice(String(message), { type: 'error' });
+    showTransientNotice(message?.key ? settingsText(message.key, message.params) : String(message), {
+      type: 'error', ...(message?.key ? { i18nKey: `settings.${message.key}`, i18nParams: message.params } : {})
+    });
     setStatus(message);
   }
 
   async function onAddPlugin() {
     if (installing) return;
     if (!api?.pickStorageDirectory || !api?.inspectPluginFolder) {
-      setErrorStatus('Plugin management is unavailable in this environment.');
+      setErrorStatus({ key: 'plugins.unavailable' });
       return;
     }
     const picked = await api.pickStorageDirectory('');
@@ -52,7 +58,7 @@ export function createPluginsController({
     }
     const inspected = await api.inspectPluginFolder(picked.path);
     if (!inspected?.ok) {
-      setErrorStatus(inspected?.error || 'Selected folder is not a valid plugin.');
+      setErrorStatus(inspected?.error || { key: 'plugins.invalid' });
       return;
     }
     registerPlugin(inspected);
@@ -61,7 +67,7 @@ export function createPluginsController({
   function registerPlugin(inspected) {
     const plugins = getPlugins();
     if (plugins.some((plugin) => plugin.id === inspected.id)) {
-      setErrorStatus(`A plugin named "${inspected.name}" is already installed.`);
+      setErrorStatus({ key: 'plugins.duplicate', params: { name: inspected.name } });
       return false;
     }
     plugins.push({
@@ -90,30 +96,30 @@ export function createPluginsController({
     if (installing) return;
     const url = githubUrlInput?.value.trim() || '';
     if (!url) {
-      setErrorStatus('Paste a GitHub repository URL to install a plugin.');
+      setErrorStatus({ key: 'plugins.urlRequired' });
       githubUrlInput?.focus();
       return;
     }
     if (!api?.installPluginFromGitHub) {
-      setErrorStatus('GitHub plugin installation is unavailable in this environment.');
+      setErrorStatus({ key: 'plugins.githubUnavailable' });
       return;
     }
     installing = true;
-    setStatus('Cloning and validating the plugin…');
+    setStatus({ key: 'plugins.cloning' });
     try {
       const inspected = await api.installPluginFromGitHub(url, getPlugins().map((plugin) => plugin.id));
       if (!inspected?.ok) {
-        setErrorStatus(inspected?.error || 'Could not install the plugin from GitHub.');
+        setErrorStatus(inspected?.error || { key: 'plugins.installError' });
         return;
       }
       if (registerPlugin(inspected)) {
         githubUrlInput.value = '';
         setStatus(inspected.permissions?.length
-          ? `Installed "${inspected.name}" turned off. Review its host access, turn it on, then Reload App.`
-          : `Installed "${inspected.name}". Reload App to activate it.`);
+          ? { key: 'plugins.installedOff', params: { name: inspected.name } }
+          : { key: 'plugins.installed', params: { name: inspected.name } });
       }
     } catch (error) {
-      setErrorStatus(error?.message || 'Could not install the plugin from GitHub.');
+      setErrorStatus(error?.message || { key: 'plugins.installError' });
     } finally {
       installing = false;
       render();
@@ -127,7 +133,7 @@ export function createPluginsController({
     }
     plugin.enabled = enabled === true;
     persist();
-    setStatus(`${plugin.enabled ? 'Enabled' : 'Disabled'} "${plugin.name}".`);
+    setStatus({ key: plugin.enabled ? 'plugins.enabled' : 'plugins.disabled', params: { name: plugin.name } });
   }
 
   function removePlugin(pluginId) {
@@ -137,19 +143,19 @@ export function createPluginsController({
       return;
     }
     if (plugins[index].bundled) {
-      setStatus(`"${plugins[index].name}" is bundled with Hikari. Turn it off to disable it.`);
+      setStatus({ key: 'plugins.bundledStatus', params: { name: plugins[index].name } });
       return;
     }
     const [removed] = plugins.splice(index, 1);
     persist();
-    setStatus(`Removed "${removed.name}". The plugin folder itself was not deleted.`);
+    setStatus({ key: 'plugins.removed', params: { name: removed.name } });
   }
 
   function render() {
     if (githubUrlInput) githubUrlInput.disabled = installing;
     if (githubInstallButton) {
       githubInstallButton.disabled = installing;
-      githubInstallButton.textContent = installing ? 'Installing…' : 'Install from GitHub';
+      setSettingsText(githubInstallButton, installing ? 'plugins.installing' : 'plugins.install');
     }
     if (addButton) addButton.disabled = installing;
     if (reloadButton) reloadButton.disabled = installing;
@@ -157,40 +163,42 @@ export function createPluginsController({
       return;
     }
     const plugins = getPlugins();
-    statusElement.textContent = statusMessage
-      || `${plugins.length} plugin${plugins.length === 1 ? '' : 's'} installed.`;
+    if (statusMessage?.key) setSettingsText(statusElement, statusMessage.key, statusMessage.params);
+    else if (statusMessage) {
+      statusElement.removeAttribute?.('data-i18n');
+      statusElement.removeAttribute?.('data-i18n-params');
+      i18nUi.setOwnedText(statusElement, statusMessage);
+    } else setSettingsText(statusElement, 'plugins.count', { count: plugins.length });
 
     if (!plugins.length) {
-      listElement.innerHTML = '<p class="small-note">No plugins installed. Install from GitHub or add a plugin folder.</p>';
+      i18nUi.setHtml(listElement, `<p class="small-note">${settingsMessage('plugins.empty')}</p>`);
       return;
     }
 
-    listElement.innerHTML = plugins.map((plugin) => `
+    i18nUi.setHtml(listElement, plugins.map((plugin) => `
       <div class="settings-skill-row">
         <div class="settings-skill-main">
           <div class="settings-skill-title">
             <span>${escapeHtml(plugin.name)}${plugin.version ? ` <span class="small-note">v${escapeHtml(plugin.version)}</span>` : ''}</span>
           </div>
-          <p class="small-note settings-skill-description">${escapeHtml(plugin.description || 'No description provided.')}</p>
+          <p class="small-note settings-skill-description">${plugin.description ? escapeHtml(plugin.description) : settingsMessage('plugins.noDescription')}</p>
           <p class="small-note settings-skill-permissions">${plugin.permissions?.length
-            ? `Host access: ${escapeHtml(plugin.permissions.join(', '))}`
-            : 'Host access: none (isolated page)'}</p>
+            ? settingsMessage('plugins.hostAccess', { permissions: plugin.permissions.join(', ') })
+            : settingsMessage('plugins.isolated')}</p>
           ${plugin.embedUrl
-            ? `<p class="small-note settings-skill-embed">Loads remote code from ${escapeHtml(plugin.embedUrl)} — needs internet, and anything you open in it leaves this machine.</p>`
+            ? `<p class="small-note settings-skill-embed">${settingsMessage('plugins.remote', { url: plugin.embedUrl })}</p>`
             : ''}
-          ${plugin.tool ? '<p class="small-note settings-skill-tool">Opens as a tool in Tools.</p>' : ''}
-          <p class="small-note settings-skill-path">${plugin.bundled ? 'Bundled with Hikari' : escapeHtml(plugin.path)}</p>
+          ${plugin.tool ? `<p class="small-note settings-skill-tool">${settingsMessage('plugins.tool')}</p>` : ''}
+          <p class="small-note settings-skill-path">${plugin.bundled ? settingsMessage('plugins.bundled') : escapeHtml(plugin.path)}</p>
         </div>
         <label class="settings-skill-toggle">
           <input type="checkbox" data-plugin-toggle data-plugin-id="${escapeHtml(plugin.id)}" ${plugin.enabled !== false ? 'checked' : ''} />
-          <span>${plugin.enabled !== false ? 'On' : 'Off'}</span>
+          <span>${settingsMessage(plugin.enabled !== false ? 'plugins.on' : 'plugins.off')}</span>
         </label>
-        ${plugin.bundled
-          ? ''
-          : `<button type="button" class="danger-btn" data-plugin-remove data-plugin-id="${escapeHtml(plugin.id)}">Remove</button>`}
+        ${plugin.bundled ? '' : `<button type="button" class="danger-btn" data-plugin-remove data-plugin-id="${escapeHtml(plugin.id)}">${settingsMessage('plugins.remove')}</button>`}
         ${preferences.markup(plugin)}
       </div>
-    `).join('');
+    `).join(''));
     preferences.bind(listElement);
 
     listElement.querySelectorAll('[data-plugin-toggle]').forEach((input) => {

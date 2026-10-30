@@ -1,4 +1,9 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("workflow");
 import { BLOCK_TYPES } from './constants.js';
+import { setWorkflowText, workflowText } from './localization.js';
+import { translateTree } from '../../lib/i18n/dom.js';
 import { createWorkflowTableMarkup } from './renderer/workflow-table-markup.js';
 import { createWorkflowOptionLists } from './renderer/option-lists.js';
 import {
@@ -44,6 +49,7 @@ export function createWorkflowRenderer(config = {}) {
 
   function protocolNameResolver(protocolId) {
     const protocol = (state.protocols || []).find((item) => item.id === protocolId);
+    // Artifact paths and saved notebook metadata consume titleForBlock too.
     return protocol?.name || `Missing protocol (${protocolId})`;
   }
 
@@ -52,6 +58,15 @@ export function createWorkflowRenderer(config = {}) {
       getBlockType,
       protocolNameById: protocolNameResolver
     });
+  }
+
+  function displayTitleForBlock(block) {
+    if (getBlockType(block) === BLOCK_TYPES.TEXT) {
+      return String(block?.text || '').trim() || workflowText('fallback.textBlock');
+    }
+    const protocolId = String(block?.protocolId || '').trim();
+    const protocol = (state.protocols || []).find(item => item.id === protocolId);
+    return protocol?.name || workflowText('missing.protocol', { id: protocolId });
   }
 
   function collectProtocolPlaceholderFields(protocol) {
@@ -100,7 +115,7 @@ export function createWorkflowRenderer(config = {}) {
     return [
       template?.name,
       template?.description,
-      ...(Array.isArray(template?.blocks) ? template.blocks.map((block) => titleForBlock(block)) : [])
+      ...(Array.isArray(template?.blocks) ? template.blocks.map((block) => displayTitleForBlock(block)) : [])
     ].join(' ').toLowerCase();
   }
 
@@ -158,7 +173,7 @@ export function createWorkflowRenderer(config = {}) {
   }
 
   function displayLabelForBlock(blockId) {
-    return blockDisplayLabel(blockId, runtime.draft?.blocks || [], titleForBlock);
+    return blockDisplayLabel(blockId, runtime.draft?.blocks || [], displayTitleForBlock);
   }
 
   function syncBlockComposerFields() {
@@ -192,7 +207,7 @@ export function createWorkflowRenderer(config = {}) {
       elements.workflowBlockTextInput.disabled = isProtocol;
     }
     if (elements.workflowBlockAddBtn) {
-      elements.workflowBlockAddBtn.textContent = isProtocol ? 'Add Protocol Block' : 'Add Text Block';
+      setWorkflowText(elements.workflowBlockAddBtn, isProtocol ? 'action.addProtocol' : 'action.addText');
     }
   }
 
@@ -216,7 +231,7 @@ export function createWorkflowRenderer(config = {}) {
     uniqueStrings,
     parseTimestamp,
     formatTimestamp,
-    titleForBlock: (...args) => titleForBlock(...args),
+    titleForBlock: (...args) => displayTitleForBlock(...args),
     labelForBlockType: (...args) => labelForBlockType(...args),
     displayLabelForBlock: (...args) => displayLabelForBlock(...args),
     getVisibleTemplates: (...args) => getVisibleTemplates(...args),
@@ -232,7 +247,7 @@ export function createWorkflowRenderer(config = {}) {
     runtime,
     safeText,
     getBlockType,
-    titleForBlock: (...args) => titleForBlock(...args),
+    titleForBlock: (...args) => displayTitleForBlock(...args),
     classifyWorkflowDot: (...args) => classifyWorkflowDot(...args),
     collectProtocolPlaceholderFields: (...args) => collectProtocolPlaceholderFields(...args),
     parseTimestamp,
@@ -273,18 +288,23 @@ export function createWorkflowRenderer(config = {}) {
     }
 
     if (!activeTemplate) {
-      elements.workflowExecutionTitle.textContent = 'Select a workflow template';
-      elements.workflowExecutionBoard.innerHTML = '';
+      setWorkflowText(elements.workflowExecutionTitle, 'empty.selectTemplate');
+      i18nUi.setHtml(elements.workflowExecutionBoard, '');
       return;
     }
 
-    elements.workflowExecutionTitle.textContent = activeTemplate.name || 'Untitled template';
-    elements.workflowExecutionBoard.innerHTML = buildTemplateWorkflowTableMarkup(activeTemplate, workflows, activeWorkflow);
+    // A template name is user content; remove the empty-state binding before
+    // showing it so a locale switch cannot replace the name with UI copy.
+    elements.workflowExecutionTitle.removeAttribute?.('data-i18n');
+    elements.workflowExecutionTitle.removeAttribute?.('data-i18n-params');
+    i18nUi.setText(elements.workflowExecutionTitle, (activeTemplate.name || workflowText('fallback.template')));
+    i18nUi.setHtml(elements.workflowExecutionBoard, buildTemplateWorkflowTableMarkup(activeTemplate, workflows, activeWorkflow));
+    translateTree(elements.workflowExecutionBoard);
   }
 
   function updateSubmitButtonLabel() {
     if (elements.workflowSubmitBtn) {
-      elements.workflowSubmitBtn.textContent = runtime.draft?.id ? 'Update Workflow' : 'Save Workflow';
+      setWorkflowText(elements.workflowSubmitBtn, runtime.draft?.id ? 'action.update' : 'action.save');
     }
   }
 
@@ -401,6 +421,7 @@ export function createWorkflowRenderer(config = {}) {
     setWorkflowEntryMode,
     syncBlockComposerFields,
     titleForBlock,
+    displayTitleForBlock,
     updateSubmitButtonLabel
   };
 }

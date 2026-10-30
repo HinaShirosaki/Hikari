@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("tools");
 import { calculateMolarityDilution } from '../../lib/bench-calculations.js';
 import {
   concentrationFromM,
@@ -8,6 +11,7 @@ import {
   volumeToL
 } from '../../lib/molarity.js';
 import { formatSigFig } from '../../lib/numbers.js';
+import { setToolText } from './localization.js';
 
 // mass(g) = concentration(M) x volume(L) x molecular weight(g/mol)
 const SOLVER_FIELDS = [
@@ -44,11 +48,16 @@ export function initMolarityTool(options = {}) {
     return;
   }
 
-  function renderMolarityResult(element, { resultText = '', status = '' } = {}) {
+  function renderMolarityResult(element, { resultText = '', status = '', messageKey = '', params = {} } = {}) {
     element.dataset.state = status === 'warning'
       ? 'warning'
-      : (status === 'hint' || !resultText ? 'empty' : 'calculated');
-    element.textContent = resultText;
+      : (status === 'hint' || (!resultText && !messageKey) ? 'empty' : 'calculated');
+    if (messageKey) setToolText(element, messageKey, params);
+    else {
+      element.removeAttribute?.('data-i18n');
+      element.removeAttribute?.('data-i18n-params');
+      i18nUi.setText(element, resultText);
+    }
   }
 
   function readSolverField(field) {
@@ -61,17 +70,17 @@ export function initMolarityTool(options = {}) {
     const entries = SOLVER_FIELDS.map(readSolverField);
     const blanks = entries.filter((entry) => !entry.raw);
     if (blanks.length > 1) {
-      renderMolarityResult(solverResult, { resultText: 'Enter any three values to calculate the fourth.', status: 'hint' });
+      renderMolarityResult(solverResult, { messageKey: 'molarity.enterThree', status: 'hint' });
       return;
     }
     if (!blanks.length) {
-      renderMolarityResult(solverResult, { resultText: 'Clear the value you want calculated.', status: 'hint' });
+      renderMolarityResult(solverResult, { messageKey: 'molarity.clearTarget', status: 'hint' });
       return;
     }
     const target = blanks[0];
     const known = entries.filter((entry) => entry !== target);
     if (known.some((entry) => !(entry.value > 0))) {
-      renderMolarityResult(solverResult, { resultText: 'Enter positive numbers for the three known values.', status: 'warning' });
+      renderMolarityResult(solverResult, { messageKey: 'molarity.positive', status: 'warning' });
       return;
     }
     const base = {};
@@ -80,11 +89,12 @@ export function initMolarityTool(options = {}) {
     });
     const solved = target.field.fromBase(solveBase(target.field.key, base), target.unit);
     if (!Number.isFinite(solved) || solved <= 0) {
-      renderMolarityResult(solverResult, { resultText: 'Those values do not give a usable result.', status: 'warning' });
+      renderMolarityResult(solverResult, { messageKey: 'molarity.unusable', status: 'warning' });
       return;
     }
     renderMolarityResult(solverResult, {
-      resultText: `${target.field.label}: ${formatSigFig(solved)} ${target.unit}`.trim()
+      messageKey: `molarity.${target.field.key}Result`,
+      params: { value: formatSigFig(solved), unit: target.unit }
     });
   }
 
@@ -97,7 +107,11 @@ export function initMolarityTool(options = {}) {
       finalVolumeValue: rootDocument.getElementById('dilution-target-volume')?.value,
       finalVolumeUnit: rootDocument.getElementById('dilution-target-volume-unit')?.value
     });
-    renderMolarityResult(dilutionCalcResult, result);
+    renderMolarityResult(dilutionCalcResult, {
+      ...result,
+      messageKey: result.displayMessage ? `bench.${result.displayMessage.id}` : '',
+      params: result.displayMessage?.params || {}
+    });
   }
 
   [[solverForm, renderSolver], [molarityDilutionForm, renderDilution]].forEach(([form, render]) => {

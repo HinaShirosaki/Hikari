@@ -1,3 +1,4 @@
+import { chemicalError } from './localization.js';
 export function installImportFileParsing(ctx) {
 
 function arrayBufferToBase64(buffer) {
@@ -73,13 +74,14 @@ async function parseChemicalImportFile(file) {
       dataBase64
     });
     if (!parsed?.ok) {
-      throw new Error(parsed?.error || 'Could not parse chemical import file.');
+      if (parsed?.error) throw new Error(parsed.error);
+      throw chemicalError('import.parseError');
     }
     return parsed;
   }
 
   if (!/\.csv$/i.test(file.name || '')) {
-    throw new Error('This build can only import Excel files through the desktop parser.');
+    throw chemicalError('import.desktopOnly');
   }
   return parseCsvRows(await file.text());
 }

@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("papers");
 import {
   buildFolderKey,
   getFolderPaperCount,
@@ -13,6 +16,7 @@ import {
   renderFolderTreeLeaf,
   renderFolderTreeNode
 } from '../../lib/folder-tree.js';
+import { paperAttributes, paperFolderDisclosure, paperMessage, relativePaperTimeMessage } from './localization.js';
 
 const PAPER_DRAG_MIME = 'application/x-hikari-paper-id';
 
@@ -164,7 +168,7 @@ export function createPapersLibraryController(context) {
 
     if (!selectedFolder) {
       if (elements.paperLinkTargetSelect) {
-        elements.paperLinkTargetSelect.innerHTML = '<option value="">No target available</option>';
+        i18nUi.setHtml(elements.paperLinkTargetSelect, `<option value="" data-i18n="papers.full.1103b6c0">${i18nUi.text("No target available")}</option>`);
       }
       return null;
     }
@@ -178,9 +182,9 @@ export function createPapersLibraryController(context) {
       : (state.projects || []).map((project) => ({ id: project.id, name: project.name }));
 
     if (elements.paperLinkTargetSelect) {
-      elements.paperLinkTargetSelect.innerHTML = options.length
+      i18nUi.setHtml(elements.paperLinkTargetSelect, options.length
         ? options.map((item) => `<option value="${item.id}">${safeText(item.name)}</option>`).join('')
-        : '<option value="">No target available</option>';
+        : `<option value="" data-i18n="papers.full.1103b6c0">${i18nUi.text("No target available")}</option>`);
       if (options.some((item) => item.id === selectedFolder.id)) {
         elements.paperLinkTargetSelect.value = selectedFolder.id;
       }
@@ -195,17 +199,18 @@ export function createPapersLibraryController(context) {
 
   function renderPaperLeafMetaHtml(paper) {
     if (paper?.ingestionStatus === 'running') {
-      return '<span class="papers-paper-processing folder-tree-template__leaf-meta" title="Reading the PDF and building its notes">Processing</span>';
+      return `<span class="papers-paper-processing folder-tree-template__leaf-meta" ${paperAttributes({ title: 'library.processingTitle' })}>${paperMessage('library.processing')}</span>`;
     }
-    return `<span class="papers-paper-time folder-tree-template__leaf-meta">${safeText(formatRelativePaperTime(paper.updatedAt))}</span>`;
+    const age = relativePaperTimeMessage(paper.updatedAt);
+    return `<span class="papers-paper-time folder-tree-template__leaf-meta">${age ? paperMessage(age.key, age.params) : safeText(formatRelativePaperTime(paper.updatedAt))}</span>`;
   }
 
   function buildPaperTreeListHtml(selectedFolder = getSelectedFolder()) {
     const visiblePapers = getVisiblePapersForFolder(state, selectedFolder);
     if (!visiblePapers.length) {
       return selectedFolder
-        ? `<p class="papers-library-empty">No papers in ${safeText(selectedFolder.name)} yet.</p>`
-        : '<p class="papers-library-empty">No papers uploaded yet.</p>';
+        ? `<p class="papers-library-empty">${paperMessage('library.emptyFolder', { folder: selectedFolder.name })}</p>`
+        : `<p class="papers-library-empty">${paperMessage('library.empty')}</p>`;
     }
 
     const activePaperId = paperViewer.getActivePaperId();
@@ -233,19 +238,17 @@ export function createPapersLibraryController(context) {
     const folders = getLibraryFolders(state);
     const paperTreeHtml = buildPaperTreeListHtml(selectedFolder);
     if (elements.paperList) {
-      elements.paperList.innerHTML = paperTreeHtml;
+      i18nUi.setHtml(elements.paperList, paperTreeHtml);
     }
     if (elements.paperFolderSelection) {
-      elements.paperFolderSelection.textContent = selectedFolder
-        ? `${selectedFolder.type === 'journal-club' ? 'Journal Club' : 'Project'} folder`
-        : 'No folder selected';
+      i18nUi.setText(elements.paperFolderSelection, (selectedFolder ? i18nUi.message("{p0} folder", { p0: selectedFolder.type === 'journal-club' ? 'Journal Club' : 'Project' }) : i18nUi.message("No folder selected")));
     }
     if (!folders.length) {
-      elements.journalClubList.innerHTML = '';
+      i18nUi.setHtml(elements.journalClubList, '');
       return;
     }
 
-    elements.journalClubList.innerHTML = folders.map((folder) => {
+    i18nUi.setHtml(elements.journalClubList, folders.map((folder) => {
       const expanded = isFolderExpanded(folder.key);
       const active = folder.key === selectedFolder?.key;
       return renderFolderTreeNode({
@@ -253,6 +256,7 @@ export function createPapersLibraryController(context) {
         expanded,
         active,
         label: folder.name,
+        ...paperFolderDisclosure(folder.name, expanded),
         meta: String(getFolderPaperCount(state, folder)),
         childrenHtml: buildPaperTreeListHtml(folder),
         nodeClass: 'papers-folder-group',
@@ -273,14 +277,12 @@ export function createPapersLibraryController(context) {
           'data-folder-drop': folder.key
         }
       });
-    }).join('');
+    }).join(''));
   }
 
   function renderUploadTargetSummary(selectedFolder = getSelectedFolder()) {
     if (elements.paperFolderSelection) {
-      elements.paperFolderSelection.textContent = selectedFolder
-        ? `${selectedFolder.type === 'journal-club' ? 'Journal club' : 'Project'}: ${selectedFolder.name}`
-        : 'No folder selected';
+      i18nUi.setText(elements.paperFolderSelection, (selectedFolder ? `${selectedFolder.type === 'journal-club' ? 'Journal club' : 'Project'}: ${selectedFolder.name}` : i18nUi.message("No folder selected")));
     }
     if (elements.paperUploadTrigger) {
       elements.paperUploadTrigger.disabled = !selectedFolder;

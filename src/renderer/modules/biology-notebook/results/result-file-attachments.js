@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
 import { joinStoragePath } from '../../../lib/storage-paths.js';
 import { escapeHtml } from '../../../lib/html.js';
 import { blobToDataUrl, extractBase64Payload } from '../storage/file-import.js';
@@ -158,15 +161,15 @@ function renderAttachmentItems(host, items = []) {
   }
   host.hidden = !items.length;
   if (!items.length) {
-    host.innerHTML = '';
+    i18nUi.setHtml(host, '');
     return;
   }
 
   const imageCount = items.filter((item) => item.imageMimeType).length;
-  host.innerHTML = `
+  i18nUi.setHtml(host, `
     <div class="biology-notebook-attachment-head">
-      <span>Attachments</span>
-      <span class="small-note">${items.length} file${items.length === 1 ? '' : 's'}${imageCount ? ` · ${imageCount} image${imageCount === 1 ? '' : 's'}` : ''}</span>
+      <span>${i18nUi.html("Attachments")}</span>
+      <span class="small-note">${items.length} ${i18nUi.html("file")}${items.length === 1 ? '' : 's'}${i18nUi.render((imageCount ? i18nUi.message((imageCount === 1 ? " · {p0} image" : " · {p0} images"), { p0: imageCount }) : ''))}</span>
     </div>
     <div class="biology-notebook-attachment-grid">
       ${items.map((item) => {
@@ -175,7 +178,7 @@ function renderAttachmentItems(host, items = []) {
         if (item.imageMimeType && item.dataUrl) {
           return `
             <figure class="biology-notebook-attachment biology-notebook-attachment-image">
-              <img src="${escapeHtml(item.dataUrl)}" alt="Attached image: ${name}" loading="lazy" />
+              <img src="${escapeHtml(item.dataUrl)}" ${i18nUi.attributeMessage("alt", i18nUi.message("Attached image: {p0}", { p0: name }))} loading="lazy" />
               <figcaption>
                 <span class="biology-notebook-attachment-name">${name}</span>
                 <span class="small-note">${status}</span>
@@ -187,12 +190,12 @@ function renderAttachmentItems(host, items = []) {
           <div class="biology-notebook-attachment biology-notebook-attachment-file${item.imageMimeType ? ' is-image-loading' : ''}">
             <span class="biology-notebook-attachment-file-icon" aria-hidden="true">${item.imageMimeType ? '▧' : '↳'}</span>
             <span class="biology-notebook-attachment-name">${name}</span>
-            <span class="small-note">${item.imageMimeType && !item.previewResolved ? 'Loading preview' : status}</span>
+            <span class="small-note">${i18nUi.render((item.imageMimeType && !item.previewResolved ? i18nUi.message("Loading preview") : status))}</span>
           </div>
         `;
       }).join('')}
     </div>
-  `;
+  `);
 }
 
 export function createResultFileAttachmentController({ host, loader } = {}) {

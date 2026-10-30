@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { buildSequenceEditDesignSource } from './sequence-edit-helpers.js';
 export function installSequenceMcpActions(ctx) {
   const { rootDocument, actions, controllers, state } = ctx;
@@ -33,7 +36,7 @@ export function installSequenceMcpActions(ctx) {
     event.preventDefault();
     button.disabled = true;
     void openAction({ action: button.dataset.sequenceMcpAction, entry_id: button.dataset.sequenceEntryId, construct_id: button.dataset.sequenceConstructId })
-      .catch(error => { actions.setStatus(error.message, true); button.textContent = error.message; })
+      .catch(error => { actions.setStatus(error.message, true); i18nUi.setText(button, error.message); })
       .finally(() => { button.disabled = false; });
   });
   rootDocument?.addEventListener?.('sequence-library-agent-changed', () => {

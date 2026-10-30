@@ -6,6 +6,7 @@ import {
   normalizeResults
 } from '../plate-model.js';
 import { oppositeAxis } from '../shared.js';
+import { plateUi, setPlateText } from '../localization.js';
 
 // The create/edit form and the saved-assay list: switching between create and
 // results mode, submitting a definition, and the list's edit/delete actions.
@@ -79,7 +80,7 @@ function createAssayFormAndList({
     const assayId = elements.assayResultsAssaySelect?.value || '';
     if (!assayId) {
       runtime.activeResultsAssayId = '';
-      setResultStatus('No assay plate selected.', true);
+      setResultStatus(plateUi('results.noneSelected'), true);
       notifyActiveAssayChanged();
       return;
     }
@@ -90,12 +91,12 @@ function createAssayFormAndList({
     ensureState();
     const assayId = runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '';
     if (!assayId) {
-      setResultStatus('Select an assay plate first.', true);
+      setResultStatus(plateUi('results.selectFirst'), true);
       return null;
     }
     const assay = getAssayById(assayId);
     if (!assay) {
-      setResultStatus('Selected assay plate was not found.', true);
+      setResultStatus(plateUi('results.notFound'), true);
       return null;
     }
     const def = getPlateDefinition(assay.plateType || elements.assayPlateTypeInput?.value || '96');
@@ -111,7 +112,7 @@ function createAssayFormAndList({
     if (typeof onAssaysChanged === 'function') {
       onAssaysChanged();
     }
-    setResultStatus(`Saved ${Object.keys(assay.resultValues || {}).length} result value(s) for ${assay.assayNumber || assay.id}.`);
+    setResultStatus(plateUi('results.saved', { count: Object.keys(assay.resultValues || {}).length, assay: assay.assayNumber || assay.id }));
     void artifactStorage.persistAssayArtifacts(assay.id);
     markResultsDraftSaved();
     notifyActiveAssayChanged();
@@ -312,13 +313,13 @@ function createAssayFormAndList({
     if (assay.notebookEntryId && !Array.from(elements.assayNotebookEntryInput.options).some((option) => option.value === assay.notebookEntryId)) {
       const option = document.createElement('option');
       option.value = assay.notebookEntryId;
-      option.textContent = `${assay.notebookEntryId} (missing notebook page)`;
+      setPlateText(option, 'form.missingNotebook', { id: assay.notebookEntryId });
       elements.assayNotebookEntryInput.append(option);
       elements.assayNotebookEntryInput.value = assay.notebookEntryId;
     }
     setCsvStatus('');
     if (!quiet) {
-      setResultStatus(`Loaded ${Object.keys(runtime.currentResults).length} result value(s) from saved assay.`);
+      setResultStatus(plateUi('results.loaded', { count: Object.keys(runtime.currentResults).length }));
     }
     setLayoutStatus('');
     analysisView.clearOutput();

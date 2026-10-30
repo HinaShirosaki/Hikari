@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 // Feature context menu, the feature editor, the primer-design overlay, the
 // sequence-edit dialog, and the document-level dismiss/keyboard handlers.
 import { cleanText } from '../shared.js';
@@ -115,9 +118,7 @@ function bindDetailDialogEvents(context = {}, { closeToolbarMenus = () => {} } =
       }
       const label = result.kind === 'sequence' ? 'primer sequence' : 'primer name';
       setStatus(
-        result.copied
-          ? `Copied ${label}.`
-          : `Clipboard access is unavailable. Copy the ${label} directly from the table.`,
+        (((((result.copied ? i18nUi.text("Copied {p0}.", { p0: label }) : i18nUi.text("Clipboard access is unavailable. Copy the {p0} directly from the table.", { p0: label })))))),
         !result.copied
       );
     })();

@@ -1,8 +1,12 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("samples");
 import { deleteContainer } from './container-delete-events.js';
 import { renameContainer } from './container-rename-events.js';
 import { deleteInventoryFolder, renameInventoryFolder } from './folder-actions.js';
 import { getSampleInventoryLocationNames, normalizeSampleInventoryLocations } from '../../lib/inventory-settings.js';
 import { startInlineRename } from '../../lib/folder-tree.js';
+import { sampleAttributes, sampleMessage, sampleText, setSampleAttribute } from './localization.js';
 
 export function installContainerContextMenu(ctx) {
   const { containerContextMenu } = ctx.elements;
@@ -26,40 +30,40 @@ export function installContainerContextMenu(ctx) {
     }
     const isLocation = Boolean(uiState.contextLocation);
     const isFolder = Boolean(uiState.contextFolder);
-    containerContextMenu.innerHTML = isLocation ? `
+    i18nUi.setHtml(containerContextMenu, isLocation ? `
       <button type="button" class="personal-inventory-context-item" data-location-context-add-container>
-        Add Container Here
+        ${sampleMessage('menu.addContainer')}
       </button>
       <button type="button" class="personal-inventory-context-item" data-location-context-add-folder>
-        New Folder Inside
+        ${sampleMessage('menu.folderInside')}
       </button>
       <button type="button" class="personal-inventory-context-item" data-location-context-rename>
-        Rename Folder
+        ${sampleMessage('menu.renameFolder')}
       </button>
-      <button type="button" class="personal-inventory-context-item personal-inventory-context-item-danger" data-location-context-delete${canDeleteLocation(uiState.contextLocation.section) ? '' : ' disabled'} title="${canDeleteLocation(uiState.contextLocation.section) ? 'Delete location' : 'Move or remove its folders and containers before deleting this location.'}">
-        Delete Folder
+      <button type="button" class="personal-inventory-context-item personal-inventory-context-item-danger" data-location-context-delete${canDeleteLocation(uiState.contextLocation.section) ? '' : ' disabled'} ${sampleAttributes({ title: canDeleteLocation(uiState.contextLocation.section) ? 'menu.deleteLocation' : 'menu.locationNotEmpty' })}>
+        ${sampleMessage('menu.deleteFolder')}
       </button>
     ` : isFolder ? `
       <button type="button" class="personal-inventory-context-item" data-folder-context-add-container>
-        Add Container Here
+        ${sampleMessage('menu.addContainer')}
       </button>
       <button type="button" class="personal-inventory-context-item" data-folder-context-add-folder>
-        New Folder Inside
+        ${sampleMessage('menu.folderInside')}
       </button>
       <button type="button" class="personal-inventory-context-item" data-folder-context-rename>
-        Rename Folder
+        ${sampleMessage('menu.renameFolder')}
       </button>
       <button type="button" class="personal-inventory-context-item personal-inventory-context-item-danger" data-folder-context-delete>
-        Delete Folder
+        ${sampleMessage('menu.deleteFolder')}
       </button>
     ` : `
       <button type="button" class="personal-inventory-context-item" data-container-context-rename>
-        Rename Container
+        ${sampleMessage('menu.renameContainer')}
       </button>
       <button type="button" class="personal-inventory-context-item personal-inventory-context-item-danger" data-container-context-delete>
-        Delete Container
+        ${sampleMessage('menu.deleteContainer')}
       </button>
-    `;
+    `);
 
     containerContextMenu.querySelector('[data-folder-context-add-container]')?.addEventListener('click', () => {
       const target = uiState.contextFolder;
@@ -155,10 +159,10 @@ export function installContainerContextMenu(ctx) {
         : ctx.helpers?.getContainer?.(target.section, target.containerId);
     const row = findRenameRow(target, targetType);
     hideContainerContextMenu();
-    startInlineRename(row, {
+    const input = startInlineRename(row, {
       value: item?.name || '',
       maxLength: 120,
-      label: `Rename ${targetType}`,
+      label: sampleText(`rename.${targetType}`),
       onCommit: (nextName) => {
         if (String(nextName || '') === String(item?.name || '')) {
           return;
@@ -172,6 +176,7 @@ export function installContainerContextMenu(ctx) {
         }
       }
     });
+    setSampleAttribute(input, 'aria-label', `rename.${targetType}`);
   }
 
   function getLocationNames() {

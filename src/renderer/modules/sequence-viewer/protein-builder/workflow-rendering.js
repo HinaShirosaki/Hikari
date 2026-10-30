@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { mapProteinHighlightParts } from './highlight-parts.js';
 import { escapeHtml } from '../../../lib/html.js';
 import { sanitizeProteinAssemblySequence } from './assembly-model.js';
@@ -34,7 +37,7 @@ export function installProteinBuilderWorkflowRendering(ctx) {
     const sourceNote = cleanText(activeDnaSource.note, 240) || 'No usable coding sequence was found in the active DNA record.';
 
     if (!state.rows.length) {
-      elements.proteinBuilderWorkflow.innerHTML = '<p class="small-note">Add a block to start the chain.</p>';
+      i18nUi.setHtml(elements.proteinBuilderWorkflow, `<p class="small-note">${i18nUi.html("Add a block to start the chain.")}</p>`);
       return;
     }
 
@@ -60,8 +63,8 @@ export function installProteinBuilderWorkflowRendering(ctx) {
           type="button"
           class="sequence-viewer-protein-builder-icon-btn"
           data-protein-builder-row-${direction === 'left' ? 'up' : 'down'}="${escapeAttribute(row.id)}"
-          aria-label="Move ${escapeAttribute(label || 'block')} ${direction}"
-          title="Move ${direction}"
+          ${i18nUi.attributeMessage("aria-label", i18nUi.message("Move {p0} {p1}", { p0: escapeAttribute(label || 'block'), p1: direction }))}
+          ${i18nUi.attributeMessage("title", i18nUi.message("Move {p0}", { p0: direction }))}
         >
           ${direction === 'left' ? '<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>' : '<svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M12 5l7 7-7 7"/></svg>'}
         </button>
@@ -75,7 +78,7 @@ export function installProteinBuilderWorkflowRendering(ctx) {
         >
           <div class="sequence-viewer-protein-builder-block-shape" title="${escapeAttribute(blockTitle)}">
             <span class="sequence-viewer-protein-builder-block-type">${escapeHtml(getBlockTypeLabel(row.type))}</span>
-            <span class="sequence-viewer-protein-builder-block-label">${escapeHtml(label || `Block ${index + 1}`)}</span>
+            <span class="sequence-viewer-protein-builder-block-label">${i18nUi.render((label || i18nUi.message("Block {p0}", { p0: index + 1 })))}</span>
             <span class="sequence-viewer-protein-builder-block-size">${escapeHtml(`${sequence.length} aa`)}</span>
           </div>
           <div class="sequence-viewer-protein-builder-block-actions">
@@ -86,16 +89,16 @@ export function installProteinBuilderWorkflowRendering(ctx) {
               type="button"
               class="sequence-viewer-protein-builder-icon-btn"
               data-protein-builder-row-edit="${escapeAttribute(row.id)}"
-              aria-label="Edit ${escapeAttribute(label || 'block')}"
+              ${i18nUi.attributeMessage("aria-label", i18nUi.message("Edit {p0}", { p0: escapeAttribute(label || 'block') }))}
               title="Edit sequence"
-            >
+             data-i18n-title="dna.full.194b2e52">
               <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
             </button>` : ''}
             <button
               type="button"
               class="sequence-viewer-protein-builder-icon-btn sequence-viewer-protein-builder-icon-btn-remove"
               data-protein-builder-row-remove="${escapeAttribute(row.id)}"
-              aria-label="Remove ${escapeAttribute(label || 'block')}"
+              ${i18nUi.attributeMessage("aria-label", i18nUi.message("Remove {p0}", { p0: escapeAttribute(label || 'block') }))}
               title="Remove block"
             >
               <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg>
@@ -107,7 +110,7 @@ export function installProteinBuilderWorkflowRendering(ctx) {
 
     // The chain reads N to C, and the termini say so: without them a row of
     // arrows is just a row of arrows.
-    elements.proteinBuilderWorkflow.innerHTML = `
+    i18nUi.setHtml(elements.proteinBuilderWorkflow, `
       <div class="sequence-viewer-protein-builder-chain-scroll">
       <div class="sequence-viewer-protein-builder-chain-rail">
         <span class="sequence-viewer-protein-builder-terminus">N</span>
@@ -115,7 +118,7 @@ export function installProteinBuilderWorkflowRendering(ctx) {
         <span class="sequence-viewer-protein-builder-terminus">C</span>
       </div>
       </div>
-    `;
+    `);
   };
 
   ctx.renderSummary = function renderSummary() {
@@ -127,8 +130,7 @@ export function installProteinBuilderWorkflowRendering(ctx) {
       const productNote = construct.productCount > 1
         ? ` | ${construct.productCount} products (2A skip)`
         : '';
-      elements.proteinBuilderMeta.textContent =
-        `${construct.length} aa | ${construct.parts.length} blocks${productNote}`;
+      i18nUi.setText(elements.proteinBuilderMeta, i18nUi.message("{p0} aa | {p1} blocks{p2}", { p0: construct.length, p1: construct.parts.length, p2: productNote }));
     }
 
     if (elements.proteinBuilderSequence) {
@@ -139,9 +141,9 @@ export function installProteinBuilderWorkflowRendering(ctx) {
       }
     }
     if (elements.proteinBuilderProteinSequenceHighlight) {
-      elements.proteinBuilderProteinSequenceHighlight.innerHTML = construct.sequence
+      i18nUi.setHtml(elements.proteinBuilderProteinSequenceHighlight, construct.sequence
         ? `<span class="sequence-viewer-protein-builder-sequence-text">${renderHighlightedProtein(construct.sequence, mapProteinHighlightParts(construct.sequence, construct.parts))}</span>`
-        : '<p class="small-note">Add a block to start the chain.</p>';
+        : `<p class="small-note">${i18nUi.html("Add a block to start the chain.")}</p>`);
     }
     if (elements.proteinBuilderSequenceEdited) {
       elements.proteinBuilderSequenceEdited.hidden = !construct.isEdited;

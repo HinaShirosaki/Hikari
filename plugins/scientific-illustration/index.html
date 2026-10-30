@@ -4,172 +4,182 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
-  <title>Figura</title>
+  <title><span data-i18n="figura.full.abba5575">Figura</span></title>
   <link rel="stylesheet" href="vendor/palette.css">
   <link rel="stylesheet" href="vendor/cropperjs/cropper.min.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main class="illustration-workspace left-rail-template">
-    <aside id="illustrations-rail" class="illustrations-rail left-rail-template__rail app-left-rail" data-sync-left-rail aria-label="Illustrations">
-      <div class="rail-heading"><h1>Illustrations</h1><button id="new-illustration" class="icon-button" type="button" title="New illustration" aria-label="New illustration"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>
-      <input id="illustration-search" type="search" placeholder="Search illustrations" aria-label="Search illustrations">
-      <div id="illustrations" class="illustration-list" aria-label="Saved illustrations"></div>
-      <p id="illustration-count" class="rail-note"></p>
+    <aside id="illustrations-rail" class="illustrations-rail left-rail-template__rail left-rail-template__rail--pinned app-left-rail" data-sync-left-rail aria-label="Library" data-i18n-aria-label="figura.full.a8532270">
+      <div class="illustrations-pinned left-rail-template__pinned">
+        <div class="rail-heading"><div class="library-switch" role="group" aria-label="Show in library" data-i18n-aria-label="figura.full.2db3a0dc">
+          <button id="illustrations-view-tab" type="button" aria-pressed="true" aria-controls="illustrations"><span data-i18n="figura.full.10222030">Illustrations</span></button>
+          <button id="assets-view-tab" type="button" aria-pressed="false" aria-controls="assets-panel"><span data-i18n="figura.full.e869c758">Assets</span></button>
+        </div><button id="new-illustration" data-library-view="illustrations" class="icon-button" type="button" title="New illustration" aria-label="New illustration" data-i18n-title="figura.full.c4701ca9" data-i18n-aria-label="figura.full.c4701ca9"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>
+        <input id="illustration-search" data-library-view="illustrations" type="search" placeholder="Search illustrations" aria-label="Search illustrations" data-i18n-placeholder="figura.full.e644ddc6" data-i18n-aria-label="figura.full.e644ddc6">
+        <div class="asset-actions" data-library-view="assets" hidden><button id="generate-asset" type="button" class="secondary-button" title="Ask Codex to make a reusable asset" data-i18n-title="figura.full.b6c21168"><span data-i18n="figura.full.3fca9dcc">Generate asset…</span></button><button id="import-asset" type="button" class="secondary-button"><span data-i18n="figura.full.2b969a36">Import asset…</span></button></div>
+        <input id="asset-search" data-library-view="assets" hidden type="search" placeholder="Search assets" aria-label="Search reusable assets" data-i18n-placeholder="figura.full.6f4dd5da" data-i18n-aria-label="figura.full.ca117097">
+      </div>
+      <div id="illustrations" data-library-view="illustrations" class="illustration-list left-rail-template__scroll" aria-label="Saved illustrations" data-i18n-aria-label="figura.full.f766526b"></div>
+      <section id="assets-panel" data-library-view="assets" class="illustration-list left-rail-template__scroll" aria-label="Reusable assets" data-i18n-aria-label="figura.full.dcfa72dd" hidden>
+        <p id="assets-hint" class="selection-hint"><span data-i18n="figura.full.9fcdb3f4">Import artwork, or right-click components and choose Save as an asset.</span></p>
+        <div id="saved-assets" role="list" aria-label="Reusable components" data-i18n-aria-label="figura.full.547e04c0"></div>
+        <p id="assets-empty" class="layers-empty"><span data-i18n="figura.full.fc1b4a14">Your reusable components will appear here.</span></p>
+      </section>
     </aside>
-    <section class="workspace left-rail-template__main" aria-label="Illustration editor">
+    <section class="workspace left-rail-template__main" aria-label="Illustration editor" data-i18n-aria-label="figura.full.15b5b70c">
       <header class="toolbar">
-        <button id="toggle-illustrations" class="icon-button" data-icon="rail" type="button" title="Hide illustrations" aria-label="Hide illustrations" aria-expanded="true" aria-controls="illustrations-rail" hidden></button>
-        <input id="figure-title" aria-label="Figure title" value="Untitled figure" maxlength="200">
-        <div class="canvas-heading canvas-controls" role="group" aria-label="Canvas size">
-          <select hidden id="selection-tool" aria-label="Selection tool" title="Drag empty space to select; drag components to move; use handles to resize. Shift adds; Alt selects individual group members.">
-            <option value="pointer">Select &amp; move · V</option>
-            <option value="freehand">Freehand select · L</option>
+        <button id="toggle-illustrations" class="icon-button" data-icon="rail" type="button" title="Hide illustrations" aria-label="Hide illustrations" aria-expanded="true" aria-controls="illustrations-rail" hidden data-i18n-title="figura.full.6ab892d2" data-i18n-aria-label="figura.full.6ab892d2"></button>
+        <input id="figure-title" aria-label="Figure title" value="Untitled figure" maxlength="200" data-i18n-aria-label="figura.full.ba6db36b">
+        <div class="canvas-heading canvas-controls" role="group" aria-label="Canvas size" data-i18n-aria-label="figura.full.1eed6722">
+          <select hidden id="selection-tool" aria-label="Selection tool" title="Drag empty space to select; drag components to move; use handles to resize. Shift adds; Alt selects individual group members." data-i18n-title="figura.full.82e591d4" data-i18n-aria-label="figura.full.200aee29">
+            <option value="pointer" data-i18n="figura.full.c4bf4bb3">Select &amp; move · V</option>
+            <option value="freehand" data-i18n="figura.full.4ccaceb">Freehand select · L</option>
           </select>
           <span class="canvas-label" data-icon="canvas" aria-hidden="true"></span>
-          <select id="canvas-size" aria-label="Main canvas size" title="Main canvas size">
-            <option value="1200x800">Landscape · 1200 × 800</option>
-            <option value="800x1200">Portrait · 800 × 1200</option>
-            <option value="1000x1000">Square · 1000 × 1000</option>
-            <option value="1600x900">Widescreen · 1600 × 900</option>
-            <option value="500x350">Small · 500 × 350</option>
-            <option value="custom">Custom…</option>
+          <select id="canvas-size" aria-label="Main canvas size" title="Main canvas size" data-i18n-title="figura.full.278fff5" data-i18n-aria-label="figura.full.278fff5">
+            <option value="1200x800" data-i18n="figura.full.f66bc48f">Landscape · 1200 × 800</option>
+            <option value="800x1200" data-i18n="figura.full.b1192775">Portrait · 800 × 1200</option>
+            <option value="1000x1000" data-i18n="figura.full.1f6eebaa">Square · 1000 × 1000</option>
+            <option value="1600x900" data-i18n="figura.full.6d7b935c">Widescreen · 1600 × 900</option>
+            <option value="500x350" data-i18n="figura.full.c458c7fb">Small · 500 × 350</option>
+            <option value="custom" data-i18n="figura.full.722dbd78">Custom…</option>
           </select>
-          <details class="popover canvas-options"><summary id="canvas-settings" class="icon-button" data-icon="ruler" title="Custom canvas size" aria-label="Custom canvas size"></summary><div class="popover-panel">
-            <form id="canvas-properties"><p id="canvas-settings-title">Main canvas</p><div class="field-grid"><label>Width<input name="width" type="number" min="64" max="8000" required></label><label>Height<input name="height" type="number" min="64" max="8000" required></label></div></form>
+          <details class="popover canvas-options"><summary id="canvas-settings" class="icon-button" data-icon="ruler" title="Custom canvas size" aria-label="Custom canvas size" data-i18n-title="figura.full.bff00a73" data-i18n-aria-label="figura.full.bff00a73"></summary><div class="popover-panel">
+            <form id="canvas-properties"><p id="canvas-settings-title"><span data-i18n="figura.full.fe77b954">Main canvas</span></p><div class="field-grid"><label><span data-i18n="figura.full.3b42dfbf">Width</span><input name="width" type="number" min="64" max="8000" required></label><label><span data-i18n="figura.full.1bd13562">Height</span><input name="height" type="number" min="64" max="8000" required></label></div></form>
           </div></details>
 
         </div>
         <div class="toolbar-actions">
-          <div class="generation-controls" role="group" aria-label="Illustration generation">
-          <label class="complexity-control" for="complexity"><span class="control-caption">Detail</span><select id="complexity" aria-label="Illustration complexity"><option value="simple">Simple</option><option value="standard" selected>Standard</option><option value="detailed">Detailed</option></select></label>
-          <details class="popover" id="figure-menu"><summary class="icon-button" data-icon="settings" aria-label="Image generation settings" title="Image generation settings"></summary><div class="popover-panel">
-            <section class="image-generation-control" aria-label="Image generation">
+          <div class="generation-controls" role="group" aria-label="Illustration generation" data-i18n-aria-label="figura.full.e3a76803">
+          <label class="complexity-control" for="complexity"><span class="control-caption"><span data-i18n="figura.full.344473b4">Detail</span></span><select id="complexity" aria-label="Illustration complexity" data-i18n-aria-label="figura.full.6d91e3e5"><option value="simple" data-i18n="figura.full.8b33749f">Simple</option><option value="standard" selected data-i18n="figura.full.16ab68">Standard</option><option value="detailed" data-i18n="figura.full.60e7b825">Detailed</option></select></label>
+          <details class="popover" id="figure-menu"><summary class="icon-button" data-icon="settings" aria-label="Image generation settings" title="Image generation settings" data-i18n-title="figura.full.e4d915bd" data-i18n-aria-label="figura.full.e4d915bd"></summary><div class="popover-panel">
+            <section class="image-generation-control" aria-label="Image generation" data-i18n-aria-label="figura.full.6fbada50">
               <div class="image-generation-toggle">
-                <label for="image-generation-enabled">Image generation</label>
+                <label for="image-generation-enabled"><span data-i18n="figura.full.6fbada50">Image generation</span></label>
                 <span class="image-generation-info">
-                  <button id="image-generation-info" class="image-generation-info-button" type="button" data-icon="info" aria-label="About image generation" aria-describedby="image-generation-help"></button>
-                  <span id="image-generation-help" role="tooltip"><span id="image-generation-summary">Automatic · SVG first</span>. Boxes and arrows stay SVG; labels stay editable text.</span>
+                  <button id="image-generation-info" class="image-generation-info-button" type="button" data-icon="info" aria-label="About image generation" aria-describedby="image-generation-help" data-i18n-aria-label="figura.full.9d8d54af"></button>
+                  <span id="image-generation-help" role="tooltip"><span id="image-generation-summary"><span data-i18n="figura.full.c8f10d29">Automatic · SVG first</span></span><span data-i18n="figura.full.21700f18">. Boxes and arrows stay SVG; labels stay editable text.</span></span>
                 </span>
-                <input id="image-generation-enabled" type="checkbox" role="switch" aria-label="Set image generation percentage" aria-describedby="image-generation-help">
+                <input id="image-generation-enabled" type="checkbox" role="switch" aria-label="Set image generation percentage" aria-describedby="image-generation-help" data-i18n-aria-label="figura.full.149d1fc">
               </div>
-              <div class="image-generation-range"><label class="sr-only" for="image-generation-percent">Image-generated content percentage</label><input id="image-generation-percent" type="range" min="0" max="100" step="25" value="50" disabled list="image-generation-steps" aria-describedby="image-generation-help"><output id="image-generation-value" for="image-generation-percent">Auto</output><datalist id="image-generation-steps"><option value="0"></option><option value="25"></option><option value="50"></option><option value="75"></option><option value="100"></option></datalist></div>
-              <label class="image-style-field" for="image-generation-style">Image style<select id="image-generation-style" aria-describedby="image-style-help"></select></label>
-              <label class="image-style-field" for="image-generation-style-prompt"><span>Style notes <span class="image-style-optional">(optional)</span></span><textarea id="image-generation-style-prompt" rows="2" maxlength="1000" placeholder="Palette, lighting, materials…" aria-describedby="image-style-help"></textarea></label>
-              <p id="image-style-help">Applies to newly generated artwork.</p>
+              <div class="image-generation-range"><label class="sr-only" for="image-generation-percent"><span data-i18n="figura.full.3b719f25">Image-generated content percentage</span></label><input id="image-generation-percent" type="range" min="0" max="100" step="25" value="50" disabled list="image-generation-steps" aria-describedby="image-generation-help"><output id="image-generation-value" for="image-generation-percent"><span data-i18n="figura.full.126befb6">Auto</span></output><datalist id="image-generation-steps"><option value="0"></option><option value="25"></option><option value="50"></option><option value="75"></option><option value="100"></option></datalist></div>
+              <label class="image-style-field" for="image-generation-style"><span data-i18n="figura.full.b1146843">Image style</span><select id="image-generation-style" aria-describedby="image-style-help"></select></label>
+              <label class="image-style-field" for="image-generation-style-prompt"><span><span data-i18n="figura.full.44b23367">Style notes</span> <span class="image-style-optional"><span data-i18n="figura.full.182d8232">(optional)</span></span></span><textarea id="image-generation-style-prompt" rows="2" maxlength="1000" placeholder="Palette, lighting, materials…" aria-describedby="image-style-help"></textarea></label>
+              <p id="image-style-help"><span data-i18n="figura.full.31eb302e">Applies to newly generated artwork.</span></p>
             </section>
           </div></details>
           </div>
-          <details class="popover" id="export-menu"><summary class="export-button" aria-label="Export" title="Export"><span class="export-mark" data-icon="download"></span><span class="export-label">Export</span><span class="export-chevron" data-icon="down"></span></summary><div class="popover-panel">
-            <button id="export-svg" type="button">SVG <small>Editable figure</small></button>
-            <button id="export-png" type="button">PNG <small>Image</small></button>
-            <button id="export-pptx" type="button">PowerPoint <small>Adjustable components</small></button>
+          <details class="popover" id="export-menu"><summary class="export-button" aria-label="Export" title="Export" data-i18n-title="figura.full.e86349d3" data-i18n-aria-label="figura.full.e86349d3"><span class="export-mark" data-icon="download"></span><span class="export-label"><span data-i18n="figura.full.e86349d3">Export</span></span><span class="export-chevron" data-icon="down"></span></summary><div class="popover-panel">
+            <button id="export-svg" type="button">SVG <small><span data-i18n="figura.full.a5bd0733">Editable figure</span></small></button>
+            <button id="export-png" type="button">PNG <small><span data-i18n="figura.full.590ca79a">Image</span></small></button>
+            <button id="export-pptx" type="button"><span data-i18n="figura.full.10bab578">PowerPoint</span> <small><span data-i18n="figura.full.b0b43b02">Adjustable components</span></small></button>
           </div></details>
         </div>
       </header>
       <div class="work-area">
-        <section class="canvas-column" aria-label="Illustration canvases">
+        <section class="canvas-column" aria-label="Illustration canvases" data-i18n-aria-label="figura.full.8e4d6439">
           <div class="canvases">
             <div class="main-stage-wrap">
               <div id="main-canvas" class="canvas-stage" data-canvas="main"></div>
-              <div id="canvas-empty" class="canvas-empty" hidden><strong>Start with an idea</strong><span id="canvas-empty-hint">Describe your figure below, or add a layer.</span></div>
+              <div id="canvas-empty" class="canvas-empty" hidden><strong><span data-i18n="figura.full.25761803">Start with an idea</span></strong><span id="canvas-empty-hint"><span data-i18n="figura.full.dcde2e72">Describe your figure below, or add a layer.</span></span></div>
             </div>
           </div>
           <form id="prompt-form" class="prompt" hidden>
             <textarea id="prompt" aria-label="Describe the scientific figure" placeholder="Describe your figure…" rows="1" maxlength="2300" required></textarea>
-            <button id="generate" class="icon-button" data-icon="arrow" type="submit" title="Draw with Codex (⌘Enter / Ctrl+Enter)" aria-label="Draw with Codex"></button>
+            <button id="generate" class="icon-button" data-icon="arrow" type="submit" title="Draw with Codex (⌘Enter / Ctrl+Enter)" aria-label="Draw with Codex" data-i18n-title="figura.full.138e2d6" data-i18n-aria-label="figura.full.4a52bd9a"></button>
           </form>
         </section>
-        <aside id="layer-inspector" class="inspector" aria-label="Layers and properties" hidden inert>
-          <div class="inspector-heading"><h2 id="component-panel-title">Layers</h2><span id="layer-count"></span><button id="close-layers" class="icon-button" data-icon="close" type="button" title="Close component panel" aria-label="Close component panel"></button></div>
-          <section id="layers-panel" role="region" aria-labelledby="layers-tab" hidden inert>
-          <div id="layers" role="list" aria-label="Figure layers"></div>
+        <aside id="layer-inspector" class="inspector" aria-label="Layers and properties" hidden inert data-i18n-aria-label="figura.full.520f74d7">
+          <div class="inspector-heading"><h2><span data-i18n="figura.full.bc7fe97f">Layers</span></h2><span id="layer-count"></span><button id="close-layers" class="icon-button" data-icon="close" type="button" title="Close layers" aria-label="Close layers" data-i18n-title="figura.full.3c8aa2a3" data-i18n-aria-label="figura.full.3c8aa2a3"></button></div>
+          <section id="layers-panel" role="region" aria-labelledby="layers-tab">
+          <div id="layers" role="list" aria-label="Figure layers" data-i18n-aria-label="figura.full.bf66c9d5"></div>
           <form id="properties" hidden>
-            <div class="property-heading"><input name="name" aria-label="Layer name" maxlength="200"><span id="selection-type"></span></div>
-            <fieldset id="text-properties" hidden><legend class="sr-only">Text</legend>
-              <label class="sr-only" for="label-content">Label text</label><textarea id="label-content" name="text" rows="2" maxlength="3000" placeholder="Label text"></textarea>
-              <div class="font-row"><label class="sr-only" for="text-font">Font</label><input id="text-font" name="fontFamily" list="fonts" maxlength="100" title="Font"><datalist id="fonts"><option>Inter</option><option>Arial</option><option>Helvetica</option><option>Times New Roman</option><option>Georgia</option><option>Verdana</option><option>Courier New</option></datalist><label class="size-field"><span class="sr-only">Font size</span><input name="fontSize" type="number" min="4" max="300" step="any" required title="Font size in pixels"><span>px</span></label><input name="color" type="color" aria-label="Text color" title="Text color"></div>
-              <div class="text-toolbar"><div class="format-group" role="group" aria-label="Text formatting"><button type="button" data-text-style="bold" aria-label="Bold" title="Bold" aria-pressed="false"><b>B</b></button><button type="button" data-text-style="italic" aria-label="Italic" title="Italic" aria-pressed="false"><i>I</i></button><button type="button" data-text-style="underline" aria-label="Underline" title="Underline" aria-pressed="false"><u>U</u></button></div><div class="format-group" role="group" aria-label="Text alignment"><button type="button" data-align="start" data-icon="alignLeft" aria-label="Align left" title="Align left" aria-pressed="false"></button><button type="button" data-align="middle" data-icon="alignCenter" aria-label="Align center" title="Align center" aria-pressed="false"></button><button type="button" data-align="end" data-icon="alignRight" aria-label="Align right" title="Align right" aria-pressed="false"></button></div></div>
-              <div class="field-grid"><label>Weight<select name="fontWeight"><option value="100">Thin</option><option value="200">Extra light</option><option value="300">Light</option><option value="400">Regular</option><option value="500">Medium</option><option value="600">Semibold</option><option value="700">Bold</option><option value="800">Extra bold</option><option value="900">Black</option></select></label><label>Anchor<select name="anchor"><option value="top">Top</option><option value="middle">Middle</option><option value="bottom">Bottom</option></select></label></div>
+            <div class="property-heading"><input name="name" aria-label="Layer name" maxlength="200" data-i18n-aria-label="figura.full.8dc04c49"><span id="selection-type"></span></div>
+            <fieldset id="text-properties" hidden><legend class="sr-only"><span data-i18n="figura.full.3e142d5e">Text</span></legend>
+              <label class="sr-only" for="label-content"><span data-i18n="figura.full.d7c5b640">Label text</span></label><textarea id="label-content" name="text" rows="2" maxlength="3000" placeholder="Label text"></textarea>
+              <div class="font-row"><label class="sr-only" for="text-font"><span data-i18n="figura.full.a77a5eb0">Font</span></label><input id="text-font" name="fontFamily" list="fonts" maxlength="100" title="Font" data-i18n-title="figura.full.a77a5eb0"><datalist id="fonts"><option>Inter</option><option>Arial</option><option>Helvetica</option><option>Times New Roman</option><option>Georgia</option><option>Verdana</option><option>Courier New</option></datalist><label class="size-field"><span class="sr-only"><span data-i18n="figura.full.3248ef01">Font size</span></span><input name="fontSize" type="number" min="4" max="300" step="any" required title="Font size in pixels" data-i18n-title="figura.full.81cb7ce1"><span>px</span></label><input name="color" type="color" aria-label="Text color" title="Text color" data-i18n-title="figura.full.8a59eaad" data-i18n-aria-label="figura.full.8a59eaad"></div>
+              <div class="text-toolbar"><div class="format-group" role="group" aria-label="Text formatting" data-i18n-aria-label="figura.full.d9585801"><button type="button" data-text-style="bold" aria-label="Bold" title="Bold" aria-pressed="false" data-i18n-title="figura.full.45768d96" data-i18n-aria-label="figura.full.45768d96"><b>B</b></button><button type="button" data-text-style="italic" aria-label="Italic" title="Italic" aria-pressed="false" data-i18n-title="figura.full.8db0c08d" data-i18n-aria-label="figura.full.8db0c08d"><i>I</i></button><button type="button" data-text-style="underline" aria-label="Underline" title="Underline" aria-pressed="false" data-i18n-title="figura.full.9a85011f" data-i18n-aria-label="figura.full.9a85011f"><u>U</u></button></div><div class="format-group" role="group" aria-label="Text alignment" data-i18n-aria-label="figura.full.d40ac0af"><button type="button" data-align="start" data-icon="alignLeft" aria-label="Align left" title="Align left" aria-pressed="false" data-i18n-title="figura.full.bdd22217" data-i18n-aria-label="figura.full.bdd22217"></button><button type="button" data-align="middle" data-icon="alignCenter" aria-label="Align center" title="Align center" aria-pressed="false" data-i18n-title="figura.full.76127b0f" data-i18n-aria-label="figura.full.76127b0f"></button><button type="button" data-align="end" data-icon="alignRight" aria-label="Align right" title="Align right" aria-pressed="false" data-i18n-title="figura.full.1a76ce88" data-i18n-aria-label="figura.full.1a76ce88"></button></div></div>
+              <div class="field-grid"><label><span data-i18n="figura.full.993014d9">Weight</span><select name="fontWeight"><option value="100" data-i18n="figura.full.45599092">Thin</option><option value="200" data-i18n="figura.full.187bbd95">Extra light</option><option value="300" data-i18n="figura.full.8ad2f8cf">Light</option><option value="400" data-i18n="figura.full.e750f2b7">Regular</option><option value="500" data-i18n="figura.full.9be5f96">Medium</option><option value="600" data-i18n="figura.full.7afc6564">Semibold</option><option value="700" data-i18n="figura.full.45768d96">Bold</option><option value="800" data-i18n="figura.full.31066fac">Extra bold</option><option value="900" data-i18n="figura.full.2b043744">Black</option></select></label><label><span data-i18n="figura.full.b54055d4">Anchor</span><select name="anchor"><option value="top" data-i18n="figura.full.99b73dc">Top</option><option value="middle" data-i18n="figura.full.9d92c238">Middle</option><option value="bottom" data-i18n="figura.full.22b5f34a">Bottom</option></select></label></div>
             </fieldset>
-            <fieldset id="vector-properties" hidden><legend class="sr-only">Vector</legend>
-              <div class="field-grid"><label>Fill<input name="fill" placeholder="Original" title="Hex color or none. Clear to restore the original."></label><label>Stroke<input name="stroke" placeholder="Original" title="Hex color or none. Clear to restore the original."></label></div>
-              <label class="inline-field">Stroke width<input name="strokeWidth" type="number" min="0" max="50" step="any" placeholder="Original"></label>
-              <button type="button" id="edit-artwork" class="secondary-button">Edit SVG source</button>
+            <fieldset id="vector-properties" hidden><legend class="sr-only"><span data-i18n="figura.full.bc50ad22">Vector</span></legend>
+              <div class="field-grid"><label><span data-i18n="figura.full.32184168">Fill</span><input name="fill" placeholder="Original" title="Hex color or none. Clear to restore the original." data-i18n-title="figura.full.d5421ee6" data-i18n-placeholder="figura.full.a2fe7692"></label><label><span data-i18n="figura.full.ffb57955">Stroke</span><input name="stroke" placeholder="Original" title="Hex color or none. Clear to restore the original." data-i18n-title="figura.full.d5421ee6" data-i18n-placeholder="figura.full.a2fe7692"></label></div>
+              <label class="inline-field"><span data-i18n="figura.full.870ad3a1">Stroke width</span><input name="strokeWidth" type="number" min="0" max="50" step="any" placeholder="Original" data-i18n-placeholder="figura.full.a2fe7692"></label>
+              <button type="button" id="edit-artwork" class="secondary-button"><span data-i18n="figura.full.a65c56a0">Edit SVG source</span></button>
             </fieldset>
-            <button type="button" id="replace-raster" class="secondary-button" hidden>Replace artwork…</button>
-            <div class="field-grid object-basics"><label>Rotation<span class="unit-field"><input name="rotation" type="number" min="-360" max="360" step="any" required><span>°</span></span></label><label>Opacity<input name="opacity" type="number" min="0" max="1" step="0.05" required></label></div>
-            <details class="geometry-options"><summary>Position &amp; size</summary><div class="field-grid"><label>X<input name="x" type="number" step="any" required></label><label>Y<input name="y" type="number" step="any" required></label><label>Width<input name="width" type="number" min="1" max="8000" step="any" required></label><label>Height<input name="height" type="number" min="1" max="8000" step="any" required></label></div></details>
-            <div class="object-actions"><button type="button" id="duplicate" class="icon-button" data-icon="copy" title="Duplicate layer" aria-label="Duplicate layer"></button><button type="button" id="raise" class="icon-button" data-icon="up" title="Bring forward" aria-label="Bring forward"></button><button type="button" id="lower" class="icon-button" data-icon="lower" title="Send backward" aria-label="Send backward"></button><span></span><button type="button" id="delete" class="icon-button danger-button" data-icon="trash" title="Delete layer" aria-label="Delete layer"></button></div>
+            <button type="button" id="replace-raster" class="secondary-button" hidden><span data-i18n="figura.full.6b1b72cf">Replace artwork…</span></button>
+            <div class="field-grid object-basics"><label><span data-i18n="figura.full.232777f">Rotation</span><span class="unit-field"><input name="rotation" type="number" min="-360" max="360" step="any" required><span>°</span></span></label><label><span data-i18n="figura.full.de1f0406">Opacity</span><input name="opacity" type="number" min="0" max="1" step="0.05" required></label></div>
+            <details class="geometry-options"><summary><span data-i18n="figura.full.d3294249">Position &amp; size</span></summary><div class="field-grid"><label>X<input name="x" type="number" step="any" required></label><label>Y<input name="y" type="number" step="any" required></label><label><span data-i18n="figura.full.3b42dfbf">Width</span><input name="width" type="number" min="1" max="8000" step="any" required></label><label><span data-i18n="figura.full.1bd13562">Height</span><input name="height" type="number" min="1" max="8000" step="any" required></label></div></details>
+            <div class="object-actions"><button type="button" id="duplicate" class="icon-button" data-icon="copy" title="Duplicate layer" aria-label="Duplicate layer" data-i18n-title="figura.full.b5c2ccaf" data-i18n-aria-label="figura.full.b5c2ccaf"></button><button type="button" id="raise" class="icon-button" data-icon="up" title="Bring forward" aria-label="Bring forward" data-i18n-title="figura.full.80e5c21e" data-i18n-aria-label="figura.full.80e5c21e"></button><button type="button" id="lower" class="icon-button" data-icon="lower" title="Send backward" aria-label="Send backward" data-i18n-title="figura.full.358d7f8c" data-i18n-aria-label="figura.full.358d7f8c"></button><span></span><button type="button" id="delete" class="icon-button danger-button" data-icon="trash" title="Delete layer" aria-label="Delete layer" data-i18n-title="figura.full.21c1db53" data-i18n-aria-label="figura.full.21c1db53"></button></div>
           </form>
           </section>
-          <section id="assets-panel" role="region" aria-labelledby="assets-tab" hidden inert>
-            <button id="import-asset" type="button" class="secondary-button">Import asset…</button>
-            <input id="asset-search" type="search" placeholder="Search assets" aria-label="Search reusable assets">
-            <p id="assets-hint" class="selection-hint">Right-click components or a group, then choose Save as an asset.</p>
-            <div id="saved-assets" role="list" aria-label="Reusable components"></div>
-            <p id="assets-empty" class="layers-empty">Your reusable components will appear here.</p>
-          </section>
         </aside>
-        <aside id="workspace-tools" class="workspace-tools" role="toolbar" aria-label="Illustration tools" aria-orientation="vertical">
-          <button id="pointer-tool" class="icon-button" data-icon="pointer" type="button" title="Select and move (V)" aria-label="Select and move" aria-pressed="true"></button>
-          <button id="freehand-tool" class="icon-button" data-icon="lasso" type="button" title="Freehand selection (L)" aria-label="Freehand selection" aria-pressed="false"></button>
-          <div class="toolbar-group-actions" role="group" aria-label="Grouping">
-            <button id="group-selection" class="icon-button" data-icon="group" type="button" title="Group selection (⌘G / Ctrl+G)" aria-label="Group selection" disabled></button>
-            <button id="ungroup-selection" class="icon-button" data-icon="ungroup" type="button" title="Ungroup (⌘⇧G / Ctrl+Shift+G)" aria-label="Ungroup" disabled></button>
+        <aside id="workspace-tools" class="workspace-tools" role="toolbar" aria-label="Illustration tools" aria-orientation="vertical" data-i18n-aria-label="figura.full.febdba08">
+          <button id="pointer-tool" class="icon-button" data-icon="pointer" type="button" title="Select and move (V)" aria-label="Select and move" aria-pressed="true" data-i18n-title="figura.full.bb114198" data-i18n-aria-label="figura.full.6f874f4d"></button>
+          <button id="freehand-tool" class="icon-button" data-icon="lasso" type="button" title="Freehand selection (L)" aria-label="Freehand selection" aria-pressed="false" data-i18n-title="figura.full.d07e103f" data-i18n-aria-label="figura.full.76153270"></button>
+          <div class="toolbar-group-actions" role="group" aria-label="Grouping" data-i18n-aria-label="figura.full.3bcf234c">
+            <button id="group-selection" class="icon-button" data-icon="group" type="button" title="Group selection (⌘G / Ctrl+G)" aria-label="Group selection" disabled data-i18n-title="figura.full.2e0a8670" data-i18n-aria-label="figura.full.2df3bdea"></button>
+            <button id="ungroup-selection" class="icon-button" data-icon="ungroup" type="button" title="Ungroup (⌘⇧G / Ctrl+Shift+G)" aria-label="Ungroup" disabled data-i18n-title="figura.full.8fc6a9b3" data-i18n-aria-label="figura.full.460af6ed"></button>
           </div>
-          <details class="popover" id="align-menu"><summary class="icon-button" data-icon="align" title="Align and distribute" aria-label="Align and distribute" aria-expanded="false"><span class="sr-only">Align</span></summary><div class="popover-panel alignment-panel" role="group" aria-label="Align selected items">
-            <button type="button" data-layout-action="left" data-icon="objectLeft" disabled>Align left</button>
-            <button type="button" data-layout-action="horizontal-center" data-icon="objectHorizontal" disabled>Horizontal center</button>
-            <button type="button" data-layout-action="right" data-icon="objectRight" disabled>Align right</button>
-            <button type="button" data-layout-action="top" data-icon="objectTop" disabled>Align top</button>
-            <button type="button" data-layout-action="vertical-center" data-icon="objectVertical" disabled>Vertical center</button>
-            <button type="button" data-layout-action="bottom" data-icon="objectBottom" disabled>Align bottom</button>
+          <details class="popover" id="align-menu"><summary class="icon-button" data-icon="align" title="Align and distribute" aria-label="Align and distribute" aria-expanded="false" data-i18n-title="figura.full.d67ce352" data-i18n-aria-label="figura.full.d67ce352"><span class="sr-only"><span data-i18n="figura.full.5e7d57e">Align</span></span></summary><div class="popover-panel alignment-panel" role="group" aria-label="Align selected items" data-i18n-aria-label="figura.full.486b6923">
+            <button type="button" data-layout-action="left" data-icon="objectLeft" disabled><span data-i18n="figura.full.bdd22217">Align left</span></button>
+            <button type="button" data-layout-action="horizontal-center" data-icon="objectHorizontal" disabled><span data-i18n="figura.full.de43d4fe">Horizontal center</span></button>
+            <button type="button" data-layout-action="right" data-icon="objectRight" disabled><span data-i18n="figura.full.1a76ce88">Align right</span></button>
+            <button type="button" data-layout-action="top" data-icon="objectTop" disabled><span data-i18n="figura.full.79c7c9d">Align top</span></button>
+            <button type="button" data-layout-action="vertical-center" data-icon="objectVertical" disabled><span data-i18n="figura.full.8a746290">Vertical center</span></button>
+            <button type="button" data-layout-action="bottom" data-icon="objectBottom" disabled><span data-i18n="figura.full.695e85d9">Align bottom</span></button>
             <hr>
-            <button type="button" data-layout-action="distribute-horizontal" data-icon="distributeHorizontal" title="Equal horizontal gaps; keep the outermost items fixed" disabled>Distribute horizontally</button>
-            <button type="button" data-layout-action="distribute-vertical" data-icon="distributeVertical" title="Equal vertical gaps; keep the outermost items fixed" disabled>Distribute vertically</button>
+            <button type="button" data-layout-action="distribute-horizontal" data-icon="distributeHorizontal" title="Equal horizontal gaps; keep the outermost items fixed" disabled data-i18n-title="figura.full.55f47d1d"><span data-i18n="figura.full.6c16d5">Distribute horizontally</span></button>
+            <button type="button" data-layout-action="distribute-vertical" data-icon="distributeVertical" title="Equal vertical gaps; keep the outermost items fixed" disabled data-i18n-title="figura.full.58f6cf7b"><span data-i18n="figura.full.9eb0ffc7">Distribute vertically</span></button>
           </div></details>
-          <details class="popover" id="add-menu"><summary class="icon-button" data-icon="plus" title="Add layer" aria-label="Add layer"></summary><div class="popover-panel">
-            <button type="button" id="add-text">Text label</button><button type="button" id="add-vector">Vector component</button><button type="button" id="import">Import artwork…</button>
+          <details class="popover" id="add-menu"><summary class="icon-button" data-icon="plus" title="Add layer" aria-label="Add layer" data-i18n-title="figura.full.5b118919" data-i18n-aria-label="figura.full.5b118919"></summary><div class="popover-panel">
+            <button type="button" id="add-text"><span data-i18n="figura.full.13a8df60">Text label</span></button><button type="button" id="add-vector"><span data-i18n="figura.full.d27bcff5">Vector component</span></button><button type="button" id="import"><span data-i18n="figura.full.2cb5b20e">Import artwork…</span></button>
           </div></details>
-          <button id="crop-raster" class="icon-button" data-icon="crop" type="button" title="Crop selected image" aria-label="Crop selected image" aria-pressed="false" disabled></button>
-          <div id="component-panel-switch" class="component-panel-switch" role="group" aria-label="Component panels">
-            <button id="layers-tab" class="icon-button" data-icon="layers" type="button" aria-label="Layers and properties" aria-pressed="false" aria-expanded="false" aria-controls="layers-panel" title="Show layers and properties"><span class="sr-only">Layers</span></button>
-            <button id="assets-tab" class="icon-button" data-icon="assets" type="button" aria-label="Reusable assets" aria-pressed="false" aria-expanded="false" aria-controls="assets-panel" title="Show reusable assets"><span class="sr-only">Assets</span></button>
-          </div>
-            <div id="canvas-zoom" class="canvas-zoom" role="group" aria-label="Main canvas zoom">
-              <button id="zoom-out" class="icon-button" data-icon="minus" type="button" title="Zoom out" aria-label="Zoom out"></button>
-              <output id="zoom-level" aria-label="Zoom level">100%</output>
-              <button id="zoom-in" class="icon-button" data-icon="plus" type="button" title="Zoom in" aria-label="Zoom in"></button>
-              <button id="zoom-fit" class="icon-button" data-icon="fit" type="button" title="Fit canvas in view" aria-label="Fit canvas in view" aria-pressed="true"><span class="sr-only">Fit</span></button>
+          <button id="crop-raster" class="icon-button" data-icon="crop" type="button" title="Crop selected image" aria-label="Crop selected image" aria-pressed="false" disabled data-i18n-title="figura.full.52423e69" data-i18n-aria-label="figura.full.52423e69"></button>
+          <button id="layers-tab" class="icon-button" data-icon="layers" type="button" aria-label="Layers and properties" aria-pressed="false" aria-expanded="false" aria-controls="layers-panel" title="Show layers and properties" data-i18n-title="figura.full.faad6c0" data-i18n-aria-label="figura.full.520f74d7"><span class="sr-only"><span data-i18n="figura.full.bc7fe97f">Layers</span></span></button>
+            <div id="canvas-zoom" class="canvas-zoom" role="group" aria-label="Main canvas zoom" data-i18n-aria-label="figura.full.36372c0f">
+              <button id="zoom-out" class="icon-button" data-icon="minus" type="button" title="Zoom out" aria-label="Zoom out" data-i18n-title="figura.full.8570fe3a" data-i18n-aria-label="figura.full.8570fe3a"></button>
+              <output id="zoom-level" aria-label="Zoom level" data-i18n-aria-label="figura.full.51f01284">100%</output>
+              <button id="zoom-in" class="icon-button" data-icon="plus" type="button" title="Zoom in" aria-label="Zoom in" data-i18n-title="figura.full.a3583899" data-i18n-aria-label="figura.full.a3583899"></button>
+              <button id="zoom-fit" class="icon-button" data-icon="fit" type="button" title="Fit canvas in view" aria-label="Fit canvas in view" aria-pressed="true" data-i18n-title="figura.full.4f8b5260" data-i18n-aria-label="figura.full.4f8b5260"><span class="sr-only"><span data-i18n="figura.full.116f13cc">Fit</span></span></button>
             </div>
         </aside>
       </div>
-      <footer id="status" role="status" aria-live="polite">Opening illustration…</footer>
+      <footer id="status" role="status" aria-live="polite"><span data-i18n="figura.full.8e86406f">Opening illustration…</span></footer>
     </section>
   </main>
-  <div id="canvas-context-menu" class="canvas-context-menu" role="menu" aria-label="Component actions" hidden>
-    <button type="button" role="menuitem" data-context-action="copy" data-icon="copy" tabindex="-1">Copy</button>
-    <button type="button" role="menuitem" data-context-action="paste" data-icon="paste" tabindex="-1">Paste</button>
+  <div id="canvas-context-menu" class="canvas-context-menu" role="menu" aria-label="Component actions" hidden data-i18n-aria-label="figura.full.a209decb">
+    <button type="button" role="menuitem" data-context-action="copy" data-icon="copy" tabindex="-1"><span data-i18n="figura.full.658f3664">Copy</span></button>
+    <button type="button" role="menuitem" data-context-action="paste" data-icon="paste" tabindex="-1"><span data-i18n="figura.full.b34a0288">Paste</span></button>
     <hr role="separator">
-    <button type="button" role="menuitem" data-context-action="group" data-icon="group" tabindex="-1">Group</button>
-    <button type="button" role="menuitem" data-context-action="ungroup" data-icon="ungroup" tabindex="-1">Ungroup</button>
+    <button type="button" role="menuitem" data-context-action="group" data-icon="group" tabindex="-1"><span data-i18n="figura.full.574902c">Group</span></button>
+    <button type="button" role="menuitem" data-context-action="ungroup" data-icon="ungroup" tabindex="-1"><span data-i18n="figura.full.460af6ed">Ungroup</span></button>
     <hr role="separator">
-    <button type="button" role="menuitem" data-context-action="save-asset" data-icon="assets" tabindex="-1">Save as an asset…</button>
+    <button type="button" role="menuitem" data-context-action="save-asset" data-icon="assets" tabindex="-1"><span data-i18n="figura.full.6466a9af">Save as an asset…</span></button>
   </div>
-  <dialog id="source-dialog"><form id="source-form"><h2>Text-free SVG artwork</h2><textarea id="svg-source" aria-label="SVG source" spellcheck="false" required></textarea><p id="source-error" role="alert"></p><div class="actions"><button type="button" id="cancel-source">Cancel</button><button type="submit">Apply artwork</button></div></form></dialog>
+  <dialog id="source-dialog"><form id="source-form"><h2><span data-i18n="figura.full.db646e85">Text-free SVG artwork</span></h2><textarea id="svg-source" aria-label="SVG source" spellcheck="false" required></textarea><p id="source-error" role="alert"></p><div class="actions"><button type="button" id="cancel-source"><span data-i18n="figura.full.35afca3b">Cancel</span></button><button type="submit"><span data-i18n="figura.full.d839544b">Apply artwork</span></button></div></form></dialog>
   <input id="asset-input" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp" hidden>
   <dialog id="raster-dialog" aria-labelledby="raster-title"><form id="raster-form">
-    <h2 id="raster-title">Import artwork</h2>
-    <label id="import-asset-name-field" hidden>Name<input id="import-asset-name" maxlength="200"></label>
-    <div id="raster-preview-shell"><img id="raster-preview" alt="Artwork preview"></div>
+    <h2 id="raster-title"><span data-i18n="figura.full.bbd6a65c">Import artwork</span></h2>
+    <label id="import-asset-name-field" hidden><span data-i18n="figura.full.fe07306">Name</span><input id="import-asset-name" maxlength="200"></label>
+    <div id="raster-preview-shell"><img id="raster-preview" alt="Artwork preview" data-i18n-alt="figura.full.ed80f90f"></div>
     <p id="raster-dimensions" role="status"></p>
-    <label id="text-free-review" class="check"><input id="text-free" type="checkbox" required>I inspected this image and it contains no text. Labels belong in separate text layers.</label>
-    <p id="raster-error" role="alert"></p><div class="actions"><button type="button" id="cancel-raster">Cancel</button><button id="confirm-raster" type="submit">Add artwork</button></div>
+    <label id="text-free-review" class="check"><input id="text-free" type="checkbox" required><span data-i18n="figura.full.4e019848">I inspected this image and it contains no text. Labels belong in separate text layers.</span></label>
+    <p id="raster-error" role="alert"></p><div class="actions"><button type="button" id="cancel-raster"><span data-i18n="figura.full.35afca3b">Cancel</span></button><button id="confirm-raster" type="submit"><span data-i18n="figura.full.91b7bafc">Add artwork</span></button></div>
   </form></dialog>
-  <dialog id="save-asset-dialog" aria-labelledby="save-asset-title"><form id="save-asset-form"><h2 id="save-asset-title">Save reusable component</h2><label>Name<input id="asset-name" maxlength="200" required></label><p id="asset-save-error" role="alert"></p><div class="actions"><button id="cancel-save-asset" type="button">Cancel</button><button id="confirm-save-asset" type="submit">Save asset</button></div></form></dialog>
+  <dialog id="save-asset-dialog" aria-labelledby="save-asset-title"><form id="save-asset-form"><h2 id="save-asset-title"><span data-i18n="figura.full.25246562">Save reusable component</span></h2><label><span data-i18n="figura.full.fe07306">Name</span><input id="asset-name" maxlength="200" required></label><p id="asset-save-error" role="alert"></p><div class="actions"><button id="cancel-save-asset" type="button"><span data-i18n="figura.full.35afca3b">Cancel</span></button><button id="confirm-save-asset" type="submit"><span data-i18n="figura.full.62cf0158">Save asset</span></button></div></form></dialog>
+  <dialog id="generate-asset-dialog" aria-labelledby="generate-asset-title"><form id="generate-asset-form">
+    <h2 id="generate-asset-title"><span data-i18n="figura.full.d5e79aa2">Generate asset</span></h2>
+    <label><span data-i18n="figura.full.b2a4f44">Describe the component</span><textarea id="generate-asset-description" rows="4" maxlength="2000" required placeholder="A mitochondrion cut open to show its cristae" data-i18n-placeholder="figura.full.e78fea14"></textarea></label>
+    <p id="generate-asset-error" role="alert"></p>
+    <div class="actions"><button id="cancel-generate-asset" type="button"><span data-i18n="figura.full.35afca3b">Cancel</span></button><button id="confirm-generate-asset" type="submit"><span data-i18n="figura.full.663b5409">Generate with Codex</span></button></div>
+  </form></dialog>
   <script src="hikari.js"></script>
   <script src="vendor/cropperjs/cropper.min.js"></script>
-  <script type="module" src="main.mjs"></script>
+  <script src="./locales/en.js"></script>
+<script src="./locales/es.js"></script>
+<script src="./i18n.js"></script>
+<script type="module" src="main.mjs"></script>
 </body>
 </html>

@@ -1,7 +1,10 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
+import { notebookMessage } from '../localization.js';
 import {
   matchesNotebookType,
   normalizeNotebookState,
-  notebookStateLabel,
   resolveEntryCollectionName,
   resolveEntryExperimentName
 } from './entry-helpers.js';
@@ -34,7 +37,7 @@ export function createEntryListRenderer({
 
   function buildEntryButtonHtml(entry) {
     const isActive = entry.id === getEditingEntryId();
-    const stateLabel = notebookStateLabel(entry);
+    const stateKey = `state.${normalizeNotebookState(entry?.notebookState)}`;
     const stateClass = ` is-${normalizeNotebookState(entry?.notebookState)}`;
     const reason = normalizeNotebookState(entry?.notebookState) === 'suggested'
       ? String(entry.agentDraftMeta?.rationale || '').trim() : '';
@@ -45,7 +48,7 @@ export function createEntryListRenderer({
       controlAttributes: { 'data-notebook-entry-id': entry.id, ...(reason ? { 'data-suggestion-reason': reason, 'aria-description': reason } : {}) },
       contentHtml: `
         <span class="biology-notebook-page-name folder-tree-template__leaf-label">${safeText(resolveEntryExperimentName(entry))}</span>
-        <span class="biology-notebook-page-badge folder-tree-template__leaf-meta">${safeText(stateLabel)}</span>
+        <span class="biology-notebook-page-badge folder-tree-template__leaf-meta">${notebookMessage(stateKey)}</span>
       `
     });
   }
@@ -152,17 +155,17 @@ export function createEntryListRenderer({
       });
 
     if (!entries.length && !projects.length) {
-      listEl.innerHTML = '';
+      i18nUi.setHtml(listEl, '');
       return;
     }
 
     const groups = groupEntries(entries);
     const activeProjectDashboardId = String(getActiveProjectDashboardId() || '');
-    listEl.innerHTML = Array.from(groups.values()).map((group) => {
+    i18nUi.setHtml(listEl, Array.from(groups.values()).map((group) => {
       const entryButtons = group.entries.length
         ? group.entries.map((entry) => buildEntryButtonHtml(entry)).join('')
         : (!group.processes.size
-          ? '<p class="biology-notebook-page-list-empty biology-notebook-page-list-empty--folder">No pages yet.</p>'
+          ? `<p class="biology-notebook-page-list-empty biology-notebook-page-list-empty--folder">${notebookMessage('list.noPages')}</p>`
           : '');
       const processFolders = [...group.processes.values()].map((process) => {
         const expanded = folderTree.isExpanded(process.key, true);
@@ -172,7 +175,7 @@ export function createEntryListRenderer({
           label: process.name,
           childrenHtml: process.entries.length
             ? process.entries.map((entry) => buildEntryButtonHtml(entry)).join('')
-            : '<p class="biology-notebook-page-list-empty biology-notebook-page-list-empty--folder">No pages yet.</p>',
+            : `<p class="biology-notebook-page-list-empty biology-notebook-page-list-empty--folder">${notebookMessage('list.noPages')}</p>`,
           nodeClass: `biology-notebook-folder biology-notebook-folder--process${expanded ? '' : ' is-collapsed'}`,
           rowClass: 'biology-notebook-folder-item biology-notebook-folder-item--process',
           disclosureClass: 'biology-notebook-folder-toggle',
@@ -218,7 +221,7 @@ export function createEntryListRenderer({
         } : {},
         mainHtml
       });
-    }).join('');
+    }).join(''));
   }
 
   function toggleFolder(folderKey) {

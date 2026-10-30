@@ -32,7 +32,6 @@ test('[EDGE] sequence-viewer alignment button opens the workspace, auto-loads th
     'sequence-viewer-file-choose',
     'sequence-viewer-file-name',
     'sequence-viewer-load-btn',
-    'sequence-viewer-recognize-backbone-btn',
     'sequence-viewer-alignment-open-btn',
     'sequence-viewer-alignment-toggle',
     'sequence-viewer-alignment-session-select',

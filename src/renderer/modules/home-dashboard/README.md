@@ -20,7 +20,7 @@ widgets and fans `render()` out to them. Each widget owns one tile:
 - `passage.js`: **Cell passage** reminders (overdue and upcoming).
 - `incubation.js`: **Overnight incubation** — named incubators with an optional
   reminder date, and the location list dialog.
-- `paper-finding.js`: **Paper finder** — lists the scheduled literature sweeps
+- `paper-finding.js`: **Suggested papers** — lists the scheduled literature sweeps
   (`hikariApi.listPaperFindingTasks`), runs one now (`runPaperFindingTask`),
   and downloads a found paper into the library (`downloadFoundPaper`).
   Schedules are created from a Notebook project
@@ -31,3 +31,9 @@ widgets and fans `render()` out to them. Each widget owns one tile:
 Dashboard state lives in `state.settings.dashboard`; the activity heatmap
 reads notebook entries, workflows, and assays directly. The manifest is
 `src/renderer/module-manifests/home-dashboard.js`.
+
+`localization.js` registers `locales/en.js` under `home`. Static controls and
+dynamic timer, experiment-log, passage, incubation, and recent notebook-note copy use bound text and
+attributes, so locale changes preserve drafts and active control nodes. The
+activity heatmap, paper-finding results, and shared agent
+runtime are later migration batches. See [incremental i18n](../../../../docs/renderer/architecture/i18n.md).

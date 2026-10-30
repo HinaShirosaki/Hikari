@@ -1,3 +1,5 @@
+import { createPresentation } from "../../i18n.mjs";
+const i18nUi = createPresentation("gel");
 import { buildLanesFromManualSegmentation } from '../analysis/analysis-core.js';
 import { buildQuantificationSignal } from '../analysis/image-processing.js';
 import {
@@ -112,12 +114,12 @@ function renderLaneProfilePlaceholder(svg) {
     plotBottom
   } = LANE_PROFILE_VIEWBOX;
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-  svg.innerHTML = `
+  i18nUi.setHtml(svg, `
     <line class="lane-profile-grid" x1="${plotLeft}" y1="${plotTop}" x2="${plotLeft}" y2="${plotBottom}" />
     <line class="lane-profile-grid" x1="${plotLeft}" y1="${plotBottom}" x2="${plotRight}" y2="${plotBottom}" />
-    <text class="lane-profile-axis-label" x="${plotLeft}" y="${height - 8}">Top</text>
-    <text class="lane-profile-axis-label" x="${plotRight}" y="${height - 8}" text-anchor="end">Bottom</text>
-  `;
+    <text class="lane-profile-axis-label" x="${plotLeft}" y="${height - 8}">${i18nUi.svg("Top")}</text>
+    <text class="lane-profile-axis-label" x="${plotRight}" y="${height - 8}" text-anchor="end">${i18nUi.svg("Bottom")}</text>
+  `);
 }
 
 function renderLaneProfileSvg(svg, profile, bandTop = null, bandBottom = null) {
@@ -151,7 +153,7 @@ function renderLaneProfileSvg(svg, profile, bandTop = null, bandBottom = null) {
   }
 
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-  svg.innerHTML = `
+  i18nUi.setHtml(svg, `
     ${highlightedBand}
     <line class="lane-profile-grid" x1="${plotLeft}" y1="${plotTop}" x2="${plotLeft}" y2="${plotBottom}" />
     <line class="lane-profile-grid" x1="${plotLeft}" y1="${plotBottom}" x2="${plotRight}" y2="${plotBottom}" />
@@ -159,14 +161,14 @@ function renderLaneProfileSvg(svg, profile, bandTop = null, bandBottom = null) {
     <line class="lane-profile-grid" x1="${plotLeft}" y1="${plotTop + (plotHeight / 2)}" x2="${plotRight}" y2="${plotTop + (plotHeight / 2)}" />
     <line class="lane-profile-grid" x1="${plotLeft}" y1="${plotTop + ((plotHeight * 3) / 4)}" x2="${plotRight}" y2="${plotTop + ((plotHeight * 3) / 4)}" />
     <path class="lane-profile-path" d="${path}" />
-    <text class="lane-profile-axis-label" x="${plotLeft}" y="${height - 8}">Top</text>
-    <text class="lane-profile-axis-label" x="${plotRight}" y="${height - 8}" text-anchor="end">Bottom</text>
+    <text class="lane-profile-axis-label" x="${plotLeft}" y="${height - 8}">${i18nUi.svg("Top")}</text>
+    <text class="lane-profile-axis-label" x="${plotRight}" y="${height - 8}" text-anchor="end">${i18nUi.svg("Bottom")}</text>
     <g class="lane-profile-hover" data-role="hover" style="display: none;">
       <line class="lane-profile-hover-line" x1="0" y1="${plotTop}" x2="0" y2="${plotBottom}" />
       <circle class="lane-profile-hover-dot" cx="0" cy="0" r="4" />
       <text class="lane-profile-hover-label" x="0" y="${plotTop - 4}" text-anchor="middle"></text>
     </g>
-  `;
+  `);
 }
 
 function setLaneProfileHover(svg, profile, rowIndex) {
@@ -196,7 +198,7 @@ function setLaneProfileHover(svg, profile, rowIndex) {
   const label = group.querySelector('text');
   if (label) {
     label.setAttribute('x', String(x));
-    label.textContent = `y=${safeRow}`;
+    i18nUi.setText(label, `y=${safeRow}`);
   }
 }
 
@@ -210,9 +212,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     if (elements.gelLaneProfileChartShell) elements.gelLaneProfileChartShell.hidden = !available;
     if (elements.gelLaneProfileEmpty) {
       elements.gelLaneProfileEmpty.hidden = available;
-      elements.gelLaneProfileEmpty.textContent = runtime.currentImage
-        ? 'Finish lane dividers to view the profile.'
-        : 'Add a gel image to view lane profiles.';
+      i18nUi.setText(elements.gelLaneProfileEmpty, (runtime.currentImage ? i18nUi.message("Finish lane dividers to view the profile.") : i18nUi.message("Add a gel image to view lane profiles.")));
     }
   }
 
@@ -229,7 +229,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       setLaneProfileAvailable(false);
       runtime.selectedLaneProfileLane = null;
       elements.gelLaneProfileSelect.disabled = true;
-      elements.gelLaneProfileSelect.innerHTML = '<option value="">Select lane</option>';
+      i18nUi.setHtml(elements.gelLaneProfileSelect, `<option value="" data-i18n="gel.full.b7ad7d1d">${i18nUi.text("Select lane")}</option>`);
       renderLaneProfilePlaceholder(elements.gelLaneProfileChart);
       return;
     }
@@ -241,7 +241,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       setLaneProfileAvailable(false);
       runtime.selectedLaneProfileLane = null;
       elements.gelLaneProfileSelect.disabled = true;
-      elements.gelLaneProfileSelect.innerHTML = '<option value="">Select lane</option>';
+      i18nUi.setHtml(elements.gelLaneProfileSelect, `<option value="" data-i18n="gel.full.b7ad7d1d">${i18nUi.text("Select lane")}</option>`);
       renderLaneProfilePlaceholder(elements.gelLaneProfileChart);
       return;
     }
@@ -255,9 +255,9 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     runtime.selectedLaneProfileLane = selectedLane.laneIndex;
 
     elements.gelLaneProfileSelect.disabled = false;
-    elements.gelLaneProfileSelect.innerHTML = lanes
+    i18nUi.setHtml(elements.gelLaneProfileSelect, lanes
       .map((lane) => `<option value="${lane.laneIndex}">Lane ${lane.laneIndex}</option>`)
-      .join('');
+      .join(''));
     elements.gelLaneProfileSelect.value = String(selectedLane.laneIndex);
 
     const { signal } = buildQuantificationSignal(runtime.currentImage.gray);

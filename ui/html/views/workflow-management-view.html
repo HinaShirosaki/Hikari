@@ -3,42 +3,42 @@
         <aside class="workflow-editor-sidebar app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div class="workflow-editor-sidebar-pinned left-rail-template__pinned">
             <div id="workflow-entry-panel" class="workflow-entry-panel app-left-rail-section">
-              <h3 class="workflow-navigation-title">Workflow Templates</h3>
-              <button type="button" id="workflow-entry-template-btn" class="ghost-btn workflow-entry-template-icon-btn" aria-label="Template editor" data-hover-caption="Template editor">
+              <h3 class="workflow-navigation-title" data-i18n="workflow.nav.templates">Workflow Templates</h3>
+              <button type="button" id="workflow-entry-template-btn" class="ghost-btn workflow-entry-template-icon-btn" aria-label="Template editor" data-hover-caption="Template editor" data-i18n-aria-label="workflow.nav.editor" data-i18n-hover-caption="workflow.nav.editor">
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                   <path d="M6 3.75h8l4 4v12.5H6Z"></path>
                   <path d="M14 3.75v4h4"></path>
                   <path d="M9 12h6M9 15.5h6"></path>
                 </svg>
-                <span class="sr-only">Template editor</span>
+                <span class="sr-only" data-i18n="workflow.nav.editor">Template editor</span>
               </button>
-              <button type="button" id="workflow-entry-back-btn" class="workflow-entry-back-icon-btn" aria-label="Back to Home" data-hover-caption="Back to Home" hidden>
+              <button type="button" id="workflow-entry-back-btn" class="workflow-entry-back-icon-btn" aria-label="Back to Home" data-hover-caption="Back to Home" hidden data-i18n-aria-label="workflow.nav.back" data-i18n-hover-caption="workflow.nav.back">
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                   <path d="M19 12H5M11 6l-6 6 6 6"></path>
                 </svg>
-                <span class="sr-only">Back to Home</span>
+                <span class="sr-only" data-i18n="workflow.nav.back">Back to Home</span>
               </button>
-              <span class="workflow-editor-title">Template</span>
+              <span class="workflow-editor-title" data-i18n="workflow.field.template">Template</span>
               <div class="form-actions workflow-template-actions">
-                <button type="button" id="workflow-save-template-btn" class="primary-btn workflow-template-action-icon-btn" aria-label="Save Current Graph" data-hover-caption="Save current graph">
+                <button type="button" id="workflow-save-template-btn" class="primary-btn workflow-template-action-icon-btn" aria-label="Save Current Graph" data-hover-caption="Save current graph" data-i18n-aria-label="workflow.action.saveGraph" data-i18n-hover-caption="workflow.action.saveGraphCaption">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M5 4h12l2 2v14H5Z"></path>
                     <path d="M8 4v6h8V4M8 16h8"></path>
                   </svg>
-                  <span class="sr-only">Save Current Graph</span>
+                  <span class="sr-only" data-i18n="workflow.action.saveGraph">Save Current Graph</span>
                 </button>
-                <button type="button" id="workflow-template-cancel-btn" class="ghost-btn workflow-template-action-icon-btn" aria-label="Cancel" data-hover-caption="Cancel">
+                <button type="button" id="workflow-template-cancel-btn" class="ghost-btn workflow-template-action-icon-btn" aria-label="Cancel" data-hover-caption="Cancel" data-i18n-aria-label="workflow.action.cancel" data-i18n-hover-caption="workflow.action.cancel">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M6 6l12 12M18 6 6 18"></path>
                   </svg>
-                  <span class="sr-only">Cancel</span>
+                  <span class="sr-only" data-i18n="workflow.action.cancel">Cancel</span>
                 </button>
               </div>
             </div>
             <div class="workflow-list-panel workflow-navigation-search" hidden>
               <label>
-                <span class="sr-only">Search workflow templates</span>
-                <input id="workflow-search" type="search" placeholder="Search templates..." aria-controls="workflow-list" />
+                <span class="sr-only" data-i18n="workflow.nav.search">Search workflow templates</span>
+                <input id="workflow-search" type="search" placeholder="Search templates..." aria-controls="workflow-list" data-i18n-placeholder="workflow.hint.search" />
               </label>
             </div>
           </div>
@@ -46,58 +46,58 @@
           <div class="workflow-editor-sidebar-scroll left-rail-template__scroll">
           <div class="workflow-list-panel app-left-rail-section" hidden>
             <div id="workflow-list" class="workflow-list app-left-rail-list"></div>
-            <div id="workflow-template-context-menu" class="workflow-context-menu" role="menu" aria-label="Template actions" hidden>
-              <button type="button" id="workflow-template-delete-btn" class="workflow-context-item" role="menuitem">Delete Template</button>
+            <div id="workflow-template-context-menu" class="workflow-context-menu" role="menu" aria-label="Template actions" hidden data-i18n-aria-label="workflow.nav.actions">
+              <button type="button" id="workflow-template-delete-btn" class="workflow-context-item" role="menuitem" data-i18n="workflow.action.deleteTemplate">Delete Template</button>
             </div>
           </div>
 
           <div class="workflow-template-editor-panel app-left-rail-section" hidden>
             <label>
-              Template name
-              <input id="workflow-template-name" placeholder="Name your template" />
+              <span data-i18n="workflow.field.templateName">Template name</span>
+              <input id="workflow-template-name" placeholder="Name your template" data-i18n-placeholder="workflow.hint.templateName" />
             </label>
             <label>
-              Description
-              <textarea id="workflow-template-description" rows="2" placeholder="Optional notes"></textarea>
+              <span data-i18n="workflow.field.description">Description</span>
+              <textarea id="workflow-template-description" rows="2" placeholder="Optional notes" data-i18n-placeholder="workflow.hint.notes"></textarea>
             </label>
           </div>
 
           <div class="workflow-template-list-panel app-left-rail-section" hidden>
-            <h3>Saved Templates</h3>
+            <h3 data-i18n="workflow.nav.saved">Saved Templates</h3>
             <div id="workflow-template-list" class="workflow-list app-left-rail-list"></div>
           </div>
 
           <div class="workflow-block-composer-panel app-left-rail-section" hidden>
             <div class="form-grid workflow-grid workflow-block-grid">
               <fieldset id="workflow-block-type" class="workflow-block-type-switch">
-                <legend class="sr-only">Block Type</legend>
+                <legend class="sr-only" data-i18n="workflow.field.blockType">Block Type</legend>
                 <div class="workflow-block-type-options">
                   <label class="workflow-block-type-option">
                     <input type="radio" name="workflow-block-type-option" value="protocol" checked />
-                    <span>Protocol</span>
+                    <span data-i18n="workflow.type.protocol">Protocol</span>
                   </label>
                   <label class="workflow-block-type-option">
                     <input type="radio" name="workflow-block-type-option" value="text" />
-                    <span>Plain Text</span>
+                    <span data-i18n="workflow.type.text">Plain Text</span>
                   </label>
                 </div>
               </fieldset>
               <div id="workflow-block-protocol-field" class="workflow-block-protocol-picker">
                 <label id="workflow-block-protocol-search-field">
-                  <span class="sr-only">Search &amp; Select Protocol</span>
-                  <input id="workflow-block-protocol-search" type="search" placeholder="Search protocols..." autocomplete="off" aria-controls="workflow-block-protocol-search-results" />
+                  <span class="sr-only" data-i18n="workflow.field.searchProtocol">Search &amp; Select Protocol</span>
+                  <input id="workflow-block-protocol-search" type="search" placeholder="Search protocols..." autocomplete="off" aria-controls="workflow-block-protocol-search-results" data-i18n-placeholder="workflow.hint.protocolSearch" />
                 </label>
-                <div id="workflow-block-protocol-search-results" class="workflow-block-protocol-search-results" role="listbox" aria-label="Matching protocols"></div>
+                <div id="workflow-block-protocol-search-results" class="workflow-block-protocol-search-results" role="listbox" aria-label="Matching protocols" data-i18n-aria-label="workflow.field.matches"></div>
                 <select id="workflow-block-protocol" hidden aria-hidden="true" tabindex="-1">
-                  <option value="">Select protocol</option>
+                  <option value="" data-i18n="workflow.option.protocol">Select protocol</option>
                 </select>
               </div>
               <label id="workflow-block-text-field" hidden>
-                Plain Text
-                <input id="workflow-block-text" placeholder="e.g. Incubate at room temperature for 10 minutes" />
+                <span data-i18n="workflow.type.text">Plain Text</span>
+                <input id="workflow-block-text" placeholder="e.g. Incubate at room temperature for 10 minutes" data-i18n-placeholder="workflow.hint.text" />
               </label>
               <div class="form-actions workflow-inline-actions">
-                <button type="button" id="workflow-block-add-btn" class="primary-btn">Add Protocol Block</button>
+                <button type="button" id="workflow-block-add-btn" class="primary-btn" data-i18n="workflow.action.addProtocol">Add Protocol Block</button>
               </div>
             </div>
           </div>
@@ -106,26 +106,26 @@
             <form id="workflow-form" class="stack-form">
               <input type="hidden" id="workflow-id" />
               <label>
-                Workflow Name
-                <input id="workflow-name" required placeholder="e.g. Antibody purification pipeline" />
+                <span data-i18n="workflow.field.name">Workflow Name</span>
+                <input id="workflow-name" required placeholder="e.g. Antibody purification pipeline" data-i18n-placeholder="workflow.hint.name" />
               </label>
               <label>
-                Description
-                <textarea id="workflow-description" rows="3" placeholder="Optional notes about this workflow"></textarea>
+                <span data-i18n="workflow.field.description">Description</span>
+                <textarea id="workflow-description" rows="3" placeholder="Optional notes about this workflow" data-i18n-placeholder="workflow.hint.description"></textarea>
               </label>
               <label id="workflow-project-field">
-                Linked Project
+                <span data-i18n="workflow.field.project">Linked Project</span>
                 <select id="workflow-project">
-                  <option value="">Select project</option>
+                  <option value="" data-i18n="workflow.option.project">Select project</option>
                 </select>
               </label>
               <label id="workflow-notebook-pages-field">
-                Linked Notebook Pages (optional)
+                <span data-i18n="workflow.field.notebooks">Linked Notebook Pages (optional)</span>
                 <select id="workflow-notebook-pages" multiple size="6"></select>
               </label>
               <div class="form-actions">
-                <button type="submit" class="primary-btn">Save Workflow</button>
-                <button type="button" id="workflow-cancel-btn" class="ghost-btn">Cancel Edit</button>
+                <button type="submit" class="primary-btn" data-i18n="workflow.action.save">Save Workflow</button>
+                <button type="button" id="workflow-cancel-btn" class="ghost-btn" data-i18n="workflow.action.cancelEdit">Cancel Edit</button>
               </div>
             </form>
           </div>
@@ -136,27 +136,27 @@
           <div class="panel workflow-list-panel" hidden>
             <div class="workflow-execution-header">
               <div class="workflow-execution-copy">
-                <h3 id="workflow-execution-title">Select a workflow template</h3>
+                <h3 id="workflow-execution-title" data-i18n="workflow.empty.selectTemplate">Select a workflow template</h3>
               </div>
               <div class="workflow-execution-actions">
-                <button type="button" id="workflow-add-run-btn" class="primary-btn workflow-execution-icon-btn" aria-label="New process" data-hover-caption="New process">
+                <button type="button" id="workflow-add-run-btn" class="primary-btn workflow-execution-icon-btn" aria-label="New process" data-hover-caption="New process" data-i18n-aria-label="workflow.action.newProcess" data-i18n-hover-caption="workflow.action.newProcess">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M12 5v14M5 12h14"></path>
                   </svg>
-                  <span class="sr-only">New process</span>
+                  <span class="sr-only" data-i18n="workflow.action.newProcess">New process</span>
                 </button>
-                <button type="button" id="workflow-delete-run-btn" class="danger-btn workflow-execution-icon-btn" aria-label="Delete process" data-hover-caption="Delete process">
+                <button type="button" id="workflow-delete-run-btn" class="danger-btn workflow-execution-icon-btn" aria-label="Delete process" data-hover-caption="Delete process" data-i18n-aria-label="workflow.action.deleteProcess" data-i18n-hover-caption="workflow.action.deleteProcess">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M4.5 7h15M9 3.5h6l1 3.5H8zM7 7l.75 13.5h8.5L17 7M10 10.5v6M14 10.5v6"></path>
                   </svg>
-                  <span class="sr-only">Delete process</span>
+                  <span class="sr-only" data-i18n="workflow.action.deleteProcess">Delete process</span>
                 </button>
               </div>
             </div>
             <div id="workflow-execution-board" class="workflow-execution-board"></div>
           </div>
           <div class="panel workflow-editor-panel workflow-main-editor-panel" hidden>
-            <h3>Graph Editor</h3>
+            <h3 data-i18n="workflow.graph.title">Graph Editor</h3>
             <div id="workflow-graph-canvas" class="workflow-graph-canvas">
               <div id="workflow-graph-board" class="workflow-graph-board">
                 <svg id="workflow-graph-svg" class="workflow-graph-svg" aria-hidden="true"></svg>
@@ -172,14 +172,14 @@
 
 <dialog id="workflow-process-dialog" class="workflow-process-dialog" aria-labelledby="workflow-process-heading">
   <form id="workflow-process-form" class="stack-form">
-    <h3 id="workflow-process-heading">New process</h3>
-    <label id="workflow-process-template-field">Workflow template<select id="workflow-process-template" required></select></label>
-    <label>Project<select id="workflow-process-project"></select></label>
-    <label>Process name<input id="workflow-process-name" placeholder="Optional — named from the template" /></label>
+    <h3 id="workflow-process-heading" data-i18n="workflow.action.newProcess">New process</h3>
+    <label id="workflow-process-template-field"><span data-i18n="workflow.process.template">Workflow template</span><select id="workflow-process-template" required></select></label>
+    <label><span data-i18n="workflow.process.project">Project</span><select id="workflow-process-project"></select></label>
+    <label><span data-i18n="workflow.process.name">Process name</span><input id="workflow-process-name" placeholder="Optional — named from the template" data-i18n-placeholder="workflow.hint.processName" /></label>
     <p id="workflow-process-status" class="small-note" role="status"></p>
     <div class="form-actions">
-      <button type="button" id="workflow-process-cancel" class="ghost-btn">Cancel</button>
-      <button type="submit" class="primary-btn">Create process</button>
+      <button type="button" id="workflow-process-cancel" class="ghost-btn" data-i18n="workflow.action.cancel">Cancel</button>
+      <button type="submit" class="primary-btn" data-i18n="workflow.action.createProcess">Create process</button>
     </div>
   </form>
 </dialog>

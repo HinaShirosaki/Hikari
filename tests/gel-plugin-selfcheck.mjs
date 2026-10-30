@@ -6,6 +6,8 @@
 // are checked against this source-owned plugin, the only implementation.
 
 import assert from 'node:assert/strict';
+import markup from './support/i18n-markup.cjs';
+const { stripI18nMarkup } = markup;
 import fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -268,20 +270,20 @@ async function checkAdapterContract() {
     ['gel-reset-overrides-btn', 'Reset lanes and bands']
   ].forEach(([id, caption]) => {
     assert.match(
-      viewSource,
+      stripI18nMarkup(viewSource),
       new RegExp(`id="${id}"[^>]*aria-label="${caption}"[^>]*title="${caption}"`),
       `${caption} must have an accessible hover caption`
     );
   });
   assert.match(
-    viewSource,
+    stripI18nMarkup(viewSource),
     /class="gel-viewer-toolbar"[\s\S]*id="gel-reset-overrides-btn"[^>]*class="gel-card-row"[\s\S]*<svg[\s\S]*class="gel-card-label">Reset<\/span>/,
     'lane/band reset is an icon action in the viewer toolbar'
   );
   assert.doesNotMatch(viewSource, /id="gel-cancel-btn"/, 'New gel is removed from the record menu');
   assert.doesNotMatch(viewSource.match(/<div id="gel-record-menu"[\s\S]*?<\/div>/)?.[0] || '', /gel-reset-overrides-btn/, 'reset is no longer in the record menu');
   assert.match(
-    viewSource,
+    stripI18nMarkup(viewSource),
     /id="gel-export-menu"[^>]*popover[\s\S]*id="gel-export-image-btn"[\s\S]*id="gel-export-pptx-btn"[\s\S]*id="gel-export-csv-btn"/,
     'every export sits in the one Export menu'
   );

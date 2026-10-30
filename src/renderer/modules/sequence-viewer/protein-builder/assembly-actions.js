@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { cleanText } from '../shared.js';
 import {
   buildAssembledPlasmidPayload,
@@ -10,7 +13,7 @@ export function installProteinBuilderAssemblyActions(ctx) {
 
   ctx.openAssemblyDialog = async function openAssemblyDialog() {
     if (!ctx.hasStoragePath()) {
-      ctx.setBuilderStatus('Set Storage Folder Path in Settings before assembling a plasmid.', true);
+      ctx.setBuilderStatus(i18nUi.text("Set Storage Folder Path in Settings before assembling a plasmid."), true);
       return;
     }
 
@@ -30,12 +33,12 @@ export function installProteinBuilderAssemblyActions(ctx) {
       state.selectedBackboneId = cleanText(state.storedBackbones[0]?.id, 400);
       ctx.renderAssemblyDialog();
       if (!state.storedBackbones.length) {
-        ctx.setBuilderStatus('No stored backbones found. Use Recognize Backbone/Insert on a vector and Apply Selection first.');
+        ctx.setBuilderStatus(i18nUi.text("No stored backbones found. Use Recognize Backbone/Insert on a vector and Apply Selection first."));
       }
     } catch (error) {
       state.storedBackbones = [];
       state.selectedBackboneId = '';
-      ctx.setBuilderStatus(error?.message || 'Failed to load stored backbones.', true);
+      ctx.setBuilderStatus((((((error?.message || i18nUi.text("Failed to load stored backbones.")))))), true);
     } finally {
       state.isLoadingAssemblyBackbones = false;
       ctx.renderAssemblyDialog();
@@ -46,7 +49,7 @@ export function installProteinBuilderAssemblyActions(ctx) {
   ctx.assembleWithStoredBackbone = async function assembleWithStoredBackbone() {
     const selectedBackbone = ctx.getSelectedStoredBackbone();
     if (!selectedBackbone) {
-      ctx.setBuilderStatus('Choose a stored backbone before assembling the plasmid.', true);
+      ctx.setBuilderStatus(i18nUi.text("Choose a stored backbone before assembling the plasmid."), true);
       return;
     }
     if (!state.dnaConstruct?.ok || !state.dnaConstruct?.sequence) {
@@ -60,12 +63,12 @@ export function installProteinBuilderAssemblyActions(ctx) {
       state.isPreparingAssembly = true;
       ctx.renderAssemblyDialog();
       ctx.syncFeatureSearchControls();
-      ctx.setBuilderStatus(`Loading ${buildStoredBackboneDisplayName(selectedBackbone)}...`);
+      ctx.setBuilderStatus(i18nUi.text("Loading {p0}...", { p0: buildStoredBackboneDisplayName(selectedBackbone) }));
       const hydratedBackbone = await ctx.hydrateStoredBackbone(selectedBackbone);
       const constructName = ctx.resolveConstructName();
       const payload = buildAssembledPlasmidPayload(hydratedBackbone, state.dnaConstruct, { constructName });
       if (!payload?.sequence) {
-        ctx.setBuilderStatus('Unable to assemble the plasmid from the selected backbone.', true);
+        ctx.setBuilderStatus(i18nUi.text("Unable to assemble the plasmid from the selected backbone."), true);
         return;
       }
 
@@ -79,8 +82,8 @@ export function installProteinBuilderAssemblyActions(ctx) {
       ctx.closeAssemblyDialog();
       ctx.loadExternalRecord(payload, { proteinBuilderConfirmation: reviewConfirmation });
     } catch (error) {
-      ctx.setBuilderStatus(error?.message || 'Unable to assemble the plasmid from the selected backbone.', true);
-      ctx.setStatus(error?.message || 'Unable to assemble the plasmid from the selected backbone.', true);
+      ctx.setBuilderStatus((((((error?.message || i18nUi.text("Unable to assemble the plasmid from the selected backbone.")))))), true);
+      ctx.setStatus((((((error?.message || i18nUi.text("Unable to assemble the plasmid from the selected backbone.")))))), true);
     } finally {
       state.isPreparingAssembly = false;
       ctx.renderAssemblyDialog();

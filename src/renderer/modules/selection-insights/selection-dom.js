@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "../../lib/i18n/shell.js";
+const i18nUi = createPresentation("shell");
 import { TEXT_NODE } from './constants.js';
 import { cleanText, clamp } from './text-utils.js';
 
@@ -119,7 +122,7 @@ export function wrapInsightOccurrence(segmentElement, insight) {
   wrapper.dataset.selectionInsightAnchorId = insight.id;
   wrapper.setAttribute('tabindex', '0');
   wrapper.setAttribute('role', 'button');
-  wrapper.setAttribute('aria-label', `Open saved answer for ${cleanText(insight.selectedText, 200) || 'selected text'}`);
+  i18nUi.setAttribute(wrapper, "aria-label", i18nUi.message("Open saved answer for {p0}", { p0: cleanText(insight.selectedText, 200) || 'selected text' }));
 
   const fragment = range.extractContents();
   wrapper.appendChild(fragment);

@@ -1,3 +1,7 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("protocol");
+import { protocolMessage, protocolAttributes } from './localization.js';
 import { getEditableSampleTypeEntries } from '../../lib/inventory-settings.js';
 import { escapeHtml } from '../../lib/html.js';
 
@@ -34,10 +38,10 @@ export function renderProtocolPlaceholderPresetButtons(container, settings = {},
   const entries = getProtocolPlaceholderPresetEntries(settings);
   const renderButton = ({ name, kind }) => {
     const safeName = escapePresetText(name, safeText);
-    return `<button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="${safeName}" data-protocol-placeholder-kind="${kind}">${safeName}</button>`;
+    return `<button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="${safeName}" data-protocol-placeholder-kind="${kind}">${kind === 'parameter' ? protocolMessage(`presets.${name}`) : safeName}</button>`;
   };
-  container.innerHTML = [['sample', 'Samples'], ['parameter', 'Parameters']].map(([kind, label]) =>
-    `<div class="protocol-placeholder-group" role="group" aria-label="${label}"><span class="protocol-steps-toolbar-label">${label}</span><div class="protocol-placeholder-buttons">${entries.filter((entry) => entry.kind === kind).map(renderButton).join('')}</div></div>`
-  ).join('');
+  i18nUi.setHtml(container, [['sample', 'presets.samples'], ['parameter', 'presets.parameters']].map(([kind, key]) =>
+    `<div class="protocol-placeholder-group" role="group" ${protocolAttributes({ 'aria-label': key })}><span class="protocol-steps-toolbar-label">${protocolMessage(key)}</span><div class="protocol-placeholder-buttons">${entries.filter((entry) => entry.kind === kind).map(renderButton).join('')}</div></div>`
+  ).join(''));
   return entries;
 }

@@ -1,3 +1,8 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("protocol");
+import { messageAttributes } from '../../lib/i18n/markup.js';
+import { protocolUi, protocolMessage, protocolDisplayText, protocolDisplayMarkup } from './localization.js';
 import { PLACEHOLDER_TOKEN_REGEX } from './constants.js';
 
 export function createProtocolPreviewHelpers({
@@ -33,7 +38,7 @@ export function createProtocolPreviewHelpers({
       const placeholderId = String(match[1] || '');
       const placeholder = placeholders.find((item) => String(item.id) === placeholderId);
       html += safeText(source.slice(cursor, index));
-      html += `<span class="placeholder-chip placeholder-chip-static">${safeText(placeholder?.name || 'value')}</span>`;
+      html += `<span class="placeholder-chip placeholder-chip-static">${i18nUi.render((placeholder?.name || i18nUi.message("value")))}</span>`;
       cursor = index + match[0].length;
     });
 
@@ -72,60 +77,60 @@ export function createProtocolPreviewHelpers({
     if (options.reviewDocument === true) {
       sections.push(`
         <header class="draft-review-heading">
-          <span class="draft-review-kind">Protocol · Draft</span>
-          <h4 data-selection-segment-id="protocol:name" data-selection-segment-label="Protocol Name">${safeText(name || 'Untitled protocol')}</h4>
+          <span class="draft-review-kind">${protocolMessage('preview.kind')}</span>
+          <h4 data-selection-segment-id="protocol:name" data-selection-segment-label="Protocol Name">${name ? safeText(name) : protocolMessage('preview.untitled')}</h4>
         </header>
       `);
     } else if (includeNameSection) {
       sections.push(`
         <section class="protocol-view-section">
-          <h4>Protocol Name</h4>
+          <h4>${protocolMessage('field.name')}</h4>
           ${name
             ? `<p data-selection-segment-id="protocol:name" data-selection-segment-label="Protocol Name">${safeText(name)}</p>`
-            : '<p class="small-note">No protocol name provided.</p>'}
+            : `<p class="small-note">${protocolMessage('preview.noName')}</p>`}
         </section>
       `);
     }
 
     sections.push(`
       <section class="protocol-view-section">
-        <h4>Purpose</h4>
+        <h4>${protocolMessage('field.purpose')}</h4>
         ${purpose
           ? `<p data-selection-segment-id="protocol:purpose" data-selection-segment-label="Purpose">${safeText(purpose)}</p>`
-          : '<p class="small-note">No purpose provided.</p>'}
+          : `<p class="small-note">${protocolMessage('preview.noPurpose')}</p>`}
       </section>
     `);
 
     sections.push(`
       <section class="protocol-view-section">
-        <h4>Materials</h4>
+        <h4>${protocolMessage('field.materials')}</h4>
         ${materials.length
           ? `<ul>${materials.map((item, index) => `
               <li data-selection-segment-id="protocol:material:${index + 1}" data-selection-segment-label="Material ${index + 1}">${safeText(item)}</li>
             `).join('')}</ul>`
-          : '<p class="small-note">No materials provided.</p>'}
+          : `<p class="small-note">${protocolMessage('preview.noMaterials')}</p>`}
       </section>
     `);
 
     sections.push(`
       <section class="protocol-view-section">
-        <h4>Steps</h4>
+        <h4>${protocolMessage('field.steps')}</h4>
         ${steps.length
           ? `<ol class="protocol-view-steps">${steps.map((step, index) => `
               <li data-selection-segment-id="protocol:step:${index + 1}" data-selection-segment-label="Protocol Step">
                 ${renderReadonlyStepSentence(step)}
               </li>
             `).join('')}</ol>`
-          : '<p class="small-note">No steps provided.</p>'}
+          : `<p class="small-note">${protocolMessage('preview.noSteps')}</p>`}
       </section>
     `);
 
     sections.push(`
       <section class="protocol-view-section">
-        <h4>Troubleshooting</h4>
+        <h4>${protocolMessage('field.troubleshooting')}</h4>
         ${troubleshooting
           ? `<p data-selection-segment-id="protocol:troubleshooting" data-selection-segment-label="Troubleshooting">${safeText(troubleshooting)}</p>`
-          : '<p class="small-note">No troubleshooting notes.</p>'}
+          : `<p class="small-note">${protocolMessage('preview.noTroubleshooting')}</p>`}
       </section>
     `);
 
@@ -136,7 +141,7 @@ export function createProtocolPreviewHelpers({
     if (!node) {
       return;
     }
-    node.innerHTML = buildProtocolPreviewMarkup(protocol, options);
+    i18nUi.setHtml(node, buildProtocolPreviewMarkup(protocol, options));
   }
 
   function renderProtocolPolishEmptyState(node, message, options = {}) {
@@ -145,11 +150,11 @@ export function createProtocolPreviewHelpers({
     }
     const stateLabel = String(options.state || '').trim();
     const stateAttr = stateLabel ? ` data-state="${safeText(stateLabel)}"` : '';
-    node.innerHTML = `
+    i18nUi.setHtml(node, `
       <div class="protocol-polish-preview-empty"${stateAttr}>
-        <p>${safeText(message || 'Nothing to preview yet.')}</p>
+        <p>${protocolDisplayMarkup(message || protocolUi('preview.empty'))}</p>
       </div>
-    `;
+    `);
   }
 
   function renderProtocolPolishLoadingState(node, options = {}) {
@@ -159,18 +164,18 @@ export function createProtocolPreviewHelpers({
     const source = options && typeof options === 'object'
       ? options
       : { message: String(options || '') };
-    const ariaLabel = String(source.ariaLabel || '').trim() || 'Loading polished protocol';
-    const message = String(source.message || '').trim() || 'Polishing the current protocol draft while preserving its structure.';
-    node.innerHTML = `
+    const ariaLabel = protocolDisplayText(source.ariaLabel).trim() ? source.ariaLabel : protocolUi('preview.loadingPolish');
+    const message = protocolDisplayText(source.message).trim() ? source.message : protocolUi('preview.polishing');
+    i18nUi.setHtml(node, `
       <div class="protocol-polish-loading">
-        <div class="protocol-polish-loading-dots" aria-label="${safeText(ariaLabel)}">
+        <div class="protocol-polish-loading-dots" ${ariaLabel.i18nKey ? messageAttributes({ 'aria-label': ariaLabel.i18nKey }, ariaLabel.i18nParams) : `aria-label="${safeText(protocolDisplayText(ariaLabel))}"`}>
           <span>.</span>
           <span>.</span>
           <span>.</span>
         </div>
-        <p>${safeText(message)}</p>
+        <p>${protocolDisplayMarkup(message)}</p>
       </div>
-    `;
+    `);
   }
 
   return {

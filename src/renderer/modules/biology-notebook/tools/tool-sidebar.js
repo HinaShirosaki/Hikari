@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
 import {
   buildNotebookToolCalculationsHtml,
   normalizeNotebookToolCalculations
@@ -123,12 +126,12 @@ export function createNotebookToolSidebarController({
   function renderSavedCalculations() {
     if (calculationsHost) {
       const openId = String((activeTool && boundCalculationIds.get(activeTool)) || '');
-      calculationsHost.innerHTML = buildNotebookToolCalculationsHtml({
+      i18nUi.setHtml(calculationsHost, buildNotebookToolCalculationsHtml({
         calculations: openId
           ? toolCalculations.filter((calculation) => String(calculation?.id || '') !== openId)
           : toolCalculations,
         safeText
-      });
+      }));
     }
   }
 

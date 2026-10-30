@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
 export function createNotebookToolRowManagers({
   addListener,
   bufferRows,
@@ -51,7 +54,7 @@ export function createNotebookToolRowManagers({
       row.querySelectorAll?.('[id]').forEach((element) => {
         element.id = `${element.id.replace(/-\d+$/, '')}-${index}`;
         element.value = '';
-        element.textContent = '';
+        i18nUi.setText(element, '');
         const label = element.getAttribute?.('aria-label');
         if (label) {
           element.setAttribute('aria-label', label.replace(/\d+/, String(index)));
@@ -140,7 +143,7 @@ export function createNotebookToolRowManagers({
       row.querySelectorAll?.('[id]').forEach((element) => {
         element.id = `${element.id.replace(/-\d+$/, '')}-${index}`;
         element.value = '';
-        element.textContent = '';
+        i18nUi.setText(element, '');
         const label = element.getAttribute?.('aria-label');
         if (label) {
           element.setAttribute('aria-label', label.replace(/\d+/, String(index)));
@@ -156,7 +159,7 @@ export function createNotebookToolRowManagers({
       const menu = row.querySelector?.('.biology-notebook-buffer-suggestions');
       if (menu) {
         menu.hidden = true;
-        menu.innerHTML = '';
+        i18nUi.setHtml(menu, '');
       }
       if (!insertBufferRowBeforeAddRow(row)) {
         return;

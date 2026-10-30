@@ -1,4 +1,4 @@
-import { showTransientNotice } from '../../lib/notify.js';
+import { setToolText, toolNotice, toolUi } from './localization.js';
 
 export function initToolBoxViewManager(options = {}) {
   const rootDocument = options?.document || globalThis?.document || null;
@@ -26,8 +26,8 @@ export function initToolBoxViewManager(options = {}) {
         console.error('Failed to initialize colony counter tool:', error);
         const colonyStatus = rootDocument.getElementById('colony-status');
         if (colonyStatus) {
-          colonyStatus.textContent = 'Failed to load colony counter tool.';
-          showTransientNotice(colonyStatus.textContent, { type: 'error' });
+          setToolText(colonyStatus, 'colony.toolFailed');
+          toolNotice(toolUi('colony.toolFailed'), { type: 'error' });
           colonyStatus.classList.add('is-error');
         }
       });

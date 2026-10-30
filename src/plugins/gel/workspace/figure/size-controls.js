@@ -1,3 +1,5 @@
+import { createPresentation } from "../../i18n.mjs";
+const i18nUi = createPresentation("gel");
 import { blotSizePercent, resizeBlotPlacement } from './model.js';
 
 export function createGelSizeControls({ documentObject, getRows, onResize, onError }) {
@@ -18,7 +20,7 @@ export function createGelSizeControls({ documentObject, getRows, onResize, onErr
     if (key !== optionsKey) {
       picker.replaceChildren();
       for (const row of rows) {
-        const option = documentObject.createElement('option'); option.value = row.id; option.textContent = row.label;
+        const option = documentObject.createElement('option'); option.value = row.id; i18nUi.setText(option, row.label);
         picker.append(option);
       }
       optionsKey = key;

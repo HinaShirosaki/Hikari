@@ -1,5 +1,8 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("papers");
 import { clamp } from './pdf-viewer-anchors.js';
-import { showTransientNotice } from '../../../lib/notify.js';
+import { bindPaperMessage, paperNotice } from '../localization.js';
 
 export const installPdfViewerDomController = (ctx) => {
   const { elements, state } = ctx;
@@ -36,14 +39,15 @@ export const installPdfViewerDomController = (ctx) => {
     return Number(element.offsetWidth) || 0;
   }
 
+  // Errors surface as notices; messages are paperUi() descriptors or verbatim text.
   function setStatus(message, isError = false) {
     if (isError && message) {
-      showTransientNotice(message, { type: 'error' });
+      paperNotice(message, { type: 'error' });
     }
     if (!status) {
       return;
     }
-    status.textContent = String(message || '').trim();
+    bindPaperMessage(status, typeof message === 'string' ? message.trim() : message);
     status.classList.toggle('is-error', Boolean(isError));
   }
 
@@ -93,13 +97,13 @@ export const installPdfViewerDomController = (ctx) => {
 
   function setTitle(text) {
     if (title) {
-      title.textContent = text || 'No paper selected';
+      i18nUi.setText(title, (text || i18nUi.message("No paper selected")));
     }
   }
 
   function setMeta(text) {
     if (meta) {
-      meta.textContent = text || '';
+      i18nUi.setText(meta, (text || ''));
     }
   }
 

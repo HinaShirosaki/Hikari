@@ -3,14 +3,14 @@
         <aside id="papers-library-rail" class="papers-library-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div class="papers-library-pinned left-rail-template__pinned">
             <div class="papers-library-upload-section">
-              <button type="button" id="paper-upload-trigger" class="ghost-btn papers-library-upload-btn" aria-label="Upload PDF" title="Upload PDF">
+              <button type="button" id="paper-upload-trigger" class="ghost-btn papers-library-upload-btn" aria-label="Upload PDF" title="Upload PDF" data-i18n-aria-label="papers.library.upload" data-i18n-title="papers.library.upload">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                   <path d="M12 15V4m-4 4 4-4 4 4M5 15v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"></path>
                 </svg>
-                <span>Upload PDF</span>
+                <span data-i18n="papers.library.upload">Upload PDF</span>
               </button>
             </div>
-            <p id="paper-folder-selection" class="papers-library-status" hidden>No folder selected</p>
+            <p id="paper-folder-selection" class="papers-library-status" hidden><span data-i18n="papers.full.7ece2f33">No folder selected</span></p>
           </div>
           <div class="papers-library-scroll left-rail-template__scroll">
             <div id="journal-club-list" class="papers-thread-list folder-tree-template"></div>
@@ -21,26 +21,26 @@
               <input id="paper-pdf" type="file" accept="application/pdf,.pdf" required hidden />
               <div class="papers-hidden-link-controls" hidden>
                 <label>
-                  Link Type
+                  <span data-i18n="papers.full.8ad576b3">Link Type</span>
                   <select id="paper-link-type">
-                    <option value="project">Project</option>
-                    <option value="journal-club">Journal Club</option>
+                    <option value="project" data-i18n="papers.full.7b5fea5e">Project</option>
+                    <option value="journal-club" data-i18n="papers.full.f74f401c">Journal Club</option>
                   </select>
                 </label>
                 <label>
-                  Link To
+                  <span data-i18n="papers.full.e6d723c6">Link To</span>
                   <select id="paper-link-target">
-                    <option value="">Select target</option>
+                    <option value="" data-i18n="papers.full.e952965a">Select target</option>
                   </select>
                 </label>
               </div>
-              <button type="submit" class="primary-btn">Upload Paper</button>
+              <button type="submit" class="primary-btn"><span data-i18n="papers.full.2a035e76">Upload Paper</span></button>
             </form>
 
             <div id="papers-library-context-menu" class="papers-context-menu" hidden>
-              <button type="button" id="papers-context-new-folder" class="papers-context-item">New Folder</button>
-              <button type="button" id="papers-context-rename-folder" class="papers-context-item" hidden>Rename Folder</button>
-              <button type="button" id="papers-context-delete-folder" class="papers-context-item papers-context-item-danger" hidden>Delete Folder</button>
+              <button type="button" id="papers-context-new-folder" class="papers-context-item" data-i18n="papers.menu.newFolder">New Folder</button>
+              <button type="button" id="papers-context-rename-folder" class="papers-context-item" hidden data-i18n="papers.menu.renameFolder">Rename Folder</button>
+              <button type="button" id="papers-context-delete-folder" class="papers-context-item papers-context-item-danger" hidden data-i18n="papers.menu.deleteFolder">Delete Folder</button>
             </div>
           </div>
         </aside>
@@ -51,82 +51,82 @@
               <div class="panel papers-viewer-panel">
                 <div class="papers-viewer-head">
                   <div class="papers-viewer-summary" hidden>
-                    <p id="paper-viewer-title" class="papers-viewer-title">No paper selected</p>
+                    <p id="paper-viewer-title" class="papers-viewer-title"><span data-i18n="papers.full.60799429">No paper selected</span></p>
                     <p id="paper-viewer-meta" class="small-note"></p>
                     <p id="paper-viewer-status" class="small-note"></p>
                   </div>
                 </div>
                 <div id="paper-viewer-shell" class="papers-viewer-shell is-empty">
                   <div id="paper-viewer-empty" class="papers-viewer-empty">
-                    <p>Scientific PDFs open here with page navigation and zoom.</p>
+                    <p data-i18n="papers.viewer.empty">Scientific PDFs open here with page navigation and zoom.</p>
                   </div>
                   <div id="paper-viewer-workspace" class="papers-viewer-workspace" hidden>
                     <div id="paper-viewer-stage" class="papers-viewer-stage" hidden>
                       <div id="paper-viewer-page-layer" class="papers-viewer-page-layer">
                         <canvas id="paper-viewer-canvas" class="papers-viewer-canvas"></canvas>
-                        <div id="paper-viewer-overlay" class="papers-viewer-overlay" aria-label="Paper comment pins"></div>
+                        <div id="paper-viewer-overlay" class="papers-viewer-overlay" aria-label="Paper comment pins" data-i18n-aria-label="papers.viewer.commentPins"></div>
                       </div>
                     </div>
                   </div>
-                  <div id="paper-selection-menu" class="papers-selection-menu" role="toolbar" aria-label="Selected text actions" hidden>
-                    <button type="button" id="paper-selection-comment-btn" class="ghost-btn papers-selection-action-btn" aria-label="Add comment" data-hover-caption="Add comment">
+                  <div id="paper-selection-menu" class="papers-selection-menu" role="toolbar" aria-label="Selected text actions" data-i18n-aria-label="papers.selection.label" hidden>
+                    <button type="button" id="paper-selection-comment-btn" class="ghost-btn papers-selection-action-btn" aria-label="Add comment" data-hover-caption="Add comment" data-i18n-aria-label="papers.selection.comment" data-i18n-hover-caption="papers.selection.comment">
                       <svg class="papers-selection-action-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                         <path d="M6.25 5.75h11.5a2 2 0 0 1 2 2v6.5a2 2 0 0 1-2 2H11l-4.75 3v-3h-.25a2 2 0 0 1-2-2v-6.5a2 2 0 0 1 2-2Z"></path>
                         <path d="M8 9.4h8"></path>
                         <path d="M8 12.4h5.5"></path>
                       </svg>
-                      <span class="sr-only">Add comment</span>
+                      <span class="sr-only" data-i18n="papers.selection.comment">Add comment</span>
                     </button>
-                    <button type="button" id="paper-selection-highlight-btn" class="ghost-btn papers-selection-action-btn" aria-label="Highlight" data-hover-caption="Highlight">
+                    <button type="button" id="paper-selection-highlight-btn" class="ghost-btn papers-selection-action-btn" aria-label="Highlight" data-hover-caption="Highlight" data-i18n-aria-label="papers.selection.highlight" data-i18n-hover-caption="papers.selection.highlight">
                       <svg class="papers-selection-action-icon papers-selection-action-icon--highlight" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                         <path d="M14.75 4.25 19.75 9.25 11.25 17.75H6.25v-5L14.75 4.25Z"></path>
                         <path d="M13.25 5.75 18.25 10.75"></path>
                         <path d="M6.75 17.25 4.25 19.75"></path>
                         <path class="papers-selection-action-accent" d="M4.25 20.25h15.5"></path>
                       </svg>
-                      <span class="sr-only">Highlight</span>
+                      <span class="sr-only" data-i18n="papers.selection.highlight">Highlight</span>
                     </button>
-                    <button type="button" id="paper-selection-underline-btn" class="ghost-btn papers-selection-action-btn" aria-label="Underline" data-hover-caption="Underline">
+                    <button type="button" id="paper-selection-underline-btn" class="ghost-btn papers-selection-action-btn" aria-label="Underline" data-hover-caption="Underline" data-i18n-aria-label="papers.selection.underline" data-i18n-hover-caption="papers.selection.underline">
                       <svg class="papers-selection-action-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                         <path d="M7 5.75v5.75a5 5 0 0 0 10 0V5.75"></path>
                         <path d="M5.5 20h13"></path>
                       </svg>
-                      <span class="sr-only">Underline</span>
+                      <span class="sr-only" data-i18n="papers.selection.underline">Underline</span>
                     </button>
-                    <button type="button" id="paper-selection-search-btn" class="ghost-btn papers-selection-action-btn" aria-label="Search selected text" data-hover-caption="Search">
+                    <button type="button" id="paper-selection-search-btn" class="ghost-btn papers-selection-action-btn" aria-label="Search selected text" data-hover-caption="Search" data-i18n-aria-label="papers.selection.searchLabel" data-i18n-hover-caption="papers.selection.search">
                       <svg class="papers-selection-action-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                         <path d="M10.75 5.25a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"></path>
                         <path d="M15 15 19.25 19.25"></path>
                       </svg>
-                      <span class="sr-only">Search selected text</span>
+                      <span class="sr-only" data-i18n="papers.selection.searchLabel">Search selected text</span>
                     </button>
-                    <button type="button" id="paper-selection-ask-btn" class="ghost-btn papers-selection-action-btn" aria-label="Ask Hikari about selected text" data-hover-caption="Ask Hikari" data-requires-agent>
+                    <button type="button" id="paper-selection-ask-btn" class="ghost-btn papers-selection-action-btn" aria-label="Ask Hikari about selected text" data-hover-caption="Ask Hikari" data-i18n-aria-label="papers.selection.askLabel" data-i18n-hover-caption="papers.selection.ask" data-requires-agent>
                       <svg class="papers-selection-action-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                         <path d="M9.25 8.5a3 3 0 0 1 5.85.95c0 2.8-3.3 2.55-3.3 5.05"></path>
                         <path d="M12 18.25h.01"></path>
                       </svg>
-                      <span class="sr-only">Ask Hikari about selected text</span>
+                      <span class="sr-only" data-i18n="papers.selection.askLabel">Ask Hikari about selected text</span>
                     </button>
-                    <button type="button" id="paper-selection-copy-btn" class="ghost-btn papers-selection-action-btn" aria-label="Copy selected text" data-hover-caption="Copy">
+                    <button type="button" id="paper-selection-copy-btn" class="ghost-btn papers-selection-action-btn" aria-label="Copy selected text" data-hover-caption="Copy" data-i18n-aria-label="papers.selection.copyLabel" data-i18n-hover-caption="papers.selection.copy">
                       <svg class="papers-selection-action-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                         <rect x="8" y="8" width="11" height="11" rx="1.75"></rect>
                         <path d="M5 16V6.75A1.75 1.75 0 0 1 6.75 5H16"></path>
                       </svg>
-                      <span class="sr-only">Copy selected text</span>
+                      <span class="sr-only" data-i18n="papers.selection.copyLabel">Copy selected text</span>
                     </button>
                   </div>
                   <div id="paper-selection-search-popover" class="papers-selection-search-popover" hidden>
                     <div class="papers-selection-search-top">
                       <div class="papers-selection-search-actions">
-                        <button type="button" id="paper-selection-search-pdf-btn" class="ghost-btn">This PDF</button>
-                        <button type="button" id="paper-selection-search-library-btn" class="ghost-btn">Paper database</button>
+                        <button type="button" id="paper-selection-search-pdf-btn" class="ghost-btn" data-i18n="papers.search.pdf">This PDF</button>
+                        <button type="button" id="paper-selection-search-library-btn" class="ghost-btn" data-i18n="papers.search.library">Paper database</button>
                       </div>
-                      <div id="paper-selection-search-nav" class="papers-selection-search-nav" aria-label="Search match navigation" hidden>
-                        <button type="button" id="paper-selection-search-prev-btn" class="ghost-btn" aria-label="Previous matched word" title="Previous matched word">
+                      <div id="paper-selection-search-nav" class="papers-selection-search-nav" aria-label="Search match navigation" data-i18n-aria-label="papers.search.nav" hidden>
+                        <button type="button" id="paper-selection-search-prev-btn" class="ghost-btn" aria-label="Previous matched word" title="Previous matched word" data-i18n-aria-label="papers.search.prev" data-i18n-title="papers.search.prev">
                           <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m15 18-6-6 6-6"/></svg>
                         </button>
                         <span id="paper-selection-search-count" class="papers-selection-search-count">0 / 0</span>
-                        <button type="button" id="paper-selection-search-next-btn" class="ghost-btn" aria-label="Next matched word" title="Next matched word">
+                        <button type="button" id="paper-selection-search-next-btn" class="ghost-btn" aria-label="Next matched word" title="Next matched word" data-i18n-aria-label="papers.search.next" data-i18n-title="papers.search.next">
                           <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 18 6-6-6-6"/></svg>
                         </button>
                       </div>
@@ -135,12 +135,12 @@
                   </div>
                   <div id="paper-selection-comment-popover" class="papers-selection-comment-popover" hidden>
                     <label>
-                      Comment
-                      <textarea id="paper-selection-comment-text" rows="3" placeholder="Add a note for the selected text"></textarea>
+                      <span data-i18n="papers.comment.label">Comment</span>
+                      <textarea id="paper-selection-comment-text" rows="3" placeholder="Add a note for the selected text" data-i18n-placeholder="papers.comment.placeholder"></textarea>
                     </label>
                     <div class="papers-selection-comment-actions">
-                      <button type="button" id="paper-selection-comment-save-btn" class="primary-btn">Save</button>
-                      <button type="button" id="paper-selection-comment-cancel-btn" class="ghost-btn">Cancel</button>
+                      <button type="button" id="paper-selection-comment-save-btn" class="primary-btn" data-i18n="papers.comment.save">Save</button>
+                      <button type="button" id="paper-selection-comment-cancel-btn" class="ghost-btn" data-i18n="papers.comment.cancel">Cancel</button>
                     </div>
                   </div>
                   <div id="paper-highlight-comment-popover" class="papers-highlight-comment-popover" hidden></div>
@@ -150,18 +150,18 @@
 
             <div id="papers-right-column" class="papers-right-column">
               <div id="paper-comment-panel" class="papers-comment-panel">
-                <aside id="paper-comment-sidebar" class="panel papers-comment-sidebar" aria-label="Outline &amp; bookmarks" hidden>
+                <aside id="paper-comment-sidebar" class="panel papers-comment-sidebar" aria-label="Outline &amp; bookmarks" data-i18n-aria-label="papers.panel.outline" hidden>
                   <section id="paper-bookmark-section" class="papers-bookmark-section">
-                    <header class="papers-brief-header"><h2>Outline &amp; bookmarks</h2></header>
+                    <header class="papers-brief-header"><h2 data-i18n="papers.panel.outline">Outline &amp; bookmarks</h2></header>
                     <div id="paper-bookmark-list" class="papers-bookmark-list"></div>
                   </section>
                 </aside>
-                <aside id="paper-details-sidebar" class="panel papers-comment-sidebar papers-details-sidebar" aria-label="Paper details" hidden>
-                  <header class="papers-brief-header"><h2>Paper details</h2></header>
+                <aside id="paper-details-sidebar" class="panel papers-comment-sidebar papers-details-sidebar" aria-label="Paper details" data-i18n-aria-label="papers.panel.details" hidden>
+                  <header class="papers-brief-header"><h2 data-i18n="papers.panel.details">Paper details</h2></header>
                   <dl id="paper-summary-list" class="papers-summary-list" aria-live="polite"></dl>
                 </aside>
-                <aside id="paper-research-brief" class="panel papers-comment-sidebar papers-research-brief" aria-label="Research brief" hidden>
-                  <header class="papers-brief-header"><h2>Research brief</h2><span>From saved analysis</span></header>
+                <aside id="paper-research-brief" class="panel papers-comment-sidebar papers-research-brief" aria-label="Research brief" data-i18n-aria-label="papers.panel.brief" hidden>
+                  <header class="papers-brief-header"><h2 data-i18n="papers.panel.brief">Research brief</h2><span data-i18n="papers.panel.briefSource">From saved analysis</span></header>
                   <div id="paper-brief-content" class="papers-brief-content" aria-live="polite"></div>
                 </aside>
               </div>

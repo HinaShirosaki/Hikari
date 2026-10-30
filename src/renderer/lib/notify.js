@@ -1,3 +1,5 @@
+import { t } from './i18n/index.js';
+
 // App-wide transient notice: a small flag in the top-right corner that fades
 // out after a few seconds. Non-blocking, and the app's single reporting path
 // for confirmations and recoverable errors — modules should not call
@@ -58,12 +60,26 @@ function ensureToastElement() {
 
 // ponytail: one shared toast element, newest message replaces the previous one.
 // Stack them only if a real workflow needs two notices on screen at once.
-export function showTransientNotice(message, { type = 'success', durationMs = 5000 } = {}) {
+export function showTransientNotice(message, { type = 'success', durationMs = 5000, i18nKey = '', i18nParams = {} } = {}) {
+  if (message && typeof message === 'object' && typeof message.i18nKey === 'string') {
+    i18nKey = message.i18nKey;
+    i18nParams = message.i18nParams || {};
+    message = message.fallback || i18nKey;
+  }
   const toast = ensureToastElement();
   if (!toast) {
     return;
   }
-  const text = String(message || '').trim();
+  const text = i18nKey ? t(i18nKey, i18nParams, String(message || '')).trim() : String(message || '').trim();
+  if (i18nKey) {
+    toast.setAttribute('data-i18n', i18nKey);
+    toast.setAttribute('data-i18n-params', JSON.stringify(i18nParams));
+  } else {
+    // The next notice may come from any module. Never let an old localized
+    // binding replace a later plain-text message when the locale changes.
+    toast.removeAttribute?.('data-i18n');
+    toast.removeAttribute?.('data-i18n-params');
+  }
   // Status panels re-assert the same message on every render, so an unchanged
   // message that is already on screen must not restart the timer — otherwise a
   // re-rendering panel would pin the notice open indefinitely.

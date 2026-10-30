@@ -1,3 +1,6 @@
+import "./localization.js";
+import { createPresentation } from "../../lib/i18n/presentation.js";
+const i18nUi = createPresentation("settings");
 export const HIKARI_MCP_TOOL_CATALOG = Object.freeze([
   ['inventory_lookup', 'Inventory lookup', 'Search local personal containers and samples.'],
   ['chemical_lookup', 'Chemical lookup', 'Search local chemical stock records.'],
@@ -103,10 +106,10 @@ export function createMcpToolsController({
       return;
     }
     const disabled = new Set(getAgentSettings().disabledMcpToolNames);
-    listElement.innerHTML = HIKARI_MCP_TOOL_CATALOG.map((tool) => {
+    i18nUi.setHtml(listElement, HIKARI_MCP_TOOL_CATALOG.map((tool) => {
       const enabled = !disabled.has(tool.name);
       const relatedSkillNote = tool.relatedSkillName
-        ? `<p class="small-note">Also controls official skill: ${escapeHtml(tool.relatedSkillName)}.</p>`
+        ? `<p class="small-note">${i18nUi.html("Also controls official skill:")} ${escapeHtml(tool.relatedSkillName)}.</p>`
         : '';
       return `
         <div class="settings-skill-row settings-mcp-tool-row">
@@ -119,12 +122,12 @@ export function createMcpToolsController({
             ${relatedSkillNote}
           </div>
           <label class="settings-skill-toggle">
-            <input type="checkbox" data-mcp-tool-toggle data-tool-name="${escapeHtml(tool.name)}" aria-label="${escapeHtml(`${tool.label} enabled`)}" ${enabled ? 'checked' : ''} />
-            <span>${enabled ? 'On' : 'Off'}</span>
+            <input type="checkbox" data-mcp-tool-toggle data-tool-name="${escapeHtml(tool.name)}" ${i18nUi.attributeMessage("aria-label", i18nUi.message("{p0} enabled", { p0: tool.label }))} ${enabled ? 'checked' : ''} />
+            <span>${i18nUi.render((enabled ? 'On' : i18nUi.message("Off")))}</span>
           </label>
         </div>
       `;
-    }).join('');
+    }).join(''));
 
     listElement.querySelectorAll('[data-mcp-tool-toggle]').forEach((input) => {
       input.addEventListener('change', () => {

@@ -104,44 +104,35 @@ export function buildSerialDilutionGroups({
 // The last well prepares the same way and discards its surplus so all wells
 // match. Well 0 is made from stock with C_0 / C_stock of its prep volume.
 export function calculateSerialDilutionPlan({ group, volumePerWellUl, stockConcentrationText, concentrationUnit = '' }) {
+  // English notes/errors stay canonical (saved summaries, PDF, Markdown); the
+  // parallel { id, params } descriptors are UI-only plate catalog keys.
   const notes = [];
+  const noteMessages = [];
+  const fail = (error, id, params = {}) => ({ rows: [], notes, noteMessages, error, errorMessage: { id, params } });
   const trailingOtherEntries = group.trailingEntries.filter((entry) => entry.magnitude !== 0);
 
   if (group.hasConflict) {
     notes.push('Multiple mapped wells for one concentration position had different concentration labels. Using the first one.');
+    noteMessages.push({ id: 'dilution.conflict', params: {} });
   }
   if (trailingOtherEntries.length) {
-    notes.push(`Ignored trailing wells without a positive concentration: ${trailingOtherEntries.map((entry) => entry.wellLabel).join('; ')}.`);
+    const wells = trailingOtherEntries.map((entry) => entry.wellLabel).join('; ');
+    notes.push(`Ignored trailing wells without a positive concentration: ${wells}.`);
+    noteMessages.push({ id: 'dilution.trailing', params: { wells } });
   }
   if (!(Number.isFinite(volumePerWellUl) && volumePerWellUl > 0)) {
-    return {
-      rows: [],
-      notes,
-      error: 'Enter a positive volume per well to calculate the dilution recipe.'
-    };
+    return fail('Enter a positive volume per well to calculate the dilution recipe.', 'dilution.needsVolume');
   }
   if (!group.chainEntries.length) {
-    return {
-      rows: [],
-      notes,
-      error: 'Add at least one mapped well with a positive concentration for this sample.'
-    };
+    return fail('Add at least one mapped well with a positive concentration for this sample.', 'dilution.needsWell');
   }
   if (group.chainEntries.some((entry) => !(Number.isFinite(entry.magnitude) && entry.magnitude > 0))) {
-    return {
-      rows: [],
-      notes,
-      error: 'Concentrations must stay positive until the last active dilution well.'
-    };
+    return fail('Concentrations must stay positive until the last active dilution well.', 'dilution.needsPositive');
   }
 
   const stockMagnitude = parseConcentrationMagnitude(stockConcentrationText, concentrationUnit);
   if (!(Number.isFinite(stockMagnitude) && stockMagnitude > 0)) {
-    return {
-      rows: [],
-      notes,
-      error: 'Enter a valid stock concentration for this sample.'
-    };
+    return fail('Enter a valid stock concentration for this sample.', 'dilution.needsStock');
   }
 
   const rows = group.chainEntries.map((entry) => ({
@@ -157,11 +148,7 @@ export function calculateSerialDilutionPlan({ group, volumePerWellUl, stockConce
   }));
 
   if (!(stockMagnitude > rows[0].magnitude)) {
-    return {
-      rows: [],
-      notes,
-      error: 'Stock concentration must be higher than the first target concentration.'
-    };
+    return fail('Stock concentration must be higher than the first target concentration.', 'dilution.stockTooLow');
   }
 
   if (rows.length > 1) {
@@ -170,11 +157,8 @@ export function calculateSerialDilutionPlan({ group, volumePerWellUl, stockConce
       const previous = rows[index - 1];
       const ratio = current.magnitude / previous.magnitude;
       if (!(ratio > 0 && ratio < 1)) {
-        return {
-          rows: [],
-          notes,
-          error: `Concentrations must decrease in dilution order (${previous.wellLabel} -> ${current.wellLabel}).`
-        };
+        return fail(`Concentrations must decrease in dilution order (${previous.wellLabel} -> ${current.wellLabel}).`,
+          'dilution.mustDecrease', { from: previous.wellLabel, to: current.wellLabel });
       }
 
       const outputVolume = index === rows.length - 1
@@ -182,22 +166,14 @@ export function calculateSerialDilutionPlan({ group, volumePerWellUl, stockConce
         : rows[index + 1].inputVolume;
 
       if (!(Number.isFinite(outputVolume) && outputVolume > 0)) {
-        return {
-          rows: [],
-          notes,
-          error: `Could not calculate the carryover volume for ${current.wellLabel}.`
-        };
+        return fail(`Could not calculate the carryover volume for ${current.wellLabel}.`, 'dilution.carryoverFailed', { well: current.wellLabel });
       }
 
       const prepVolume = volumePerWellUl + outputVolume;
       const inputVolume = ratio * prepVolume;
       const bufferVolume = prepVolume - inputVolume;
       if (!(Number.isFinite(inputVolume) && inputVolume > 0 && inputVolume < prepVolume)) {
-        return {
-          rows: [],
-          notes,
-          error: `Could not calculate a valid transfer volume into ${current.wellLabel}.`
-        };
+        return fail(`Could not calculate a valid transfer volume into ${current.wellLabel}.`, 'dilution.transferFailed', { well: current.wellLabel });
       }
 
       current.inputLabel = `From ${previous.wellLabel}`;
@@ -215,11 +191,7 @@ export function calculateSerialDilutionPlan({ group, volumePerWellUl, stockConce
   const stockVolume = (rows[0].magnitude / stockMagnitude) * firstPrepVolume;
   const firstBufferVolume = firstPrepVolume - stockVolume;
   if (!(Number.isFinite(stockVolume) && stockVolume > 0 && stockVolume < firstPrepVolume)) {
-    return {
-      rows: [],
-      notes,
-      error: `Could not calculate a valid stock dilution volume for ${rows[0].wellLabel}.`
-    };
+    return fail(`Could not calculate a valid stock dilution volume for ${rows[0].wellLabel}.`, 'dilution.stockVolumeFailed', { well: rows[0].wellLabel });
   }
 
   rows[0].inputLabel = 'From stock';
@@ -230,7 +202,7 @@ export function calculateSerialDilutionPlan({ group, volumePerWellUl, stockConce
   rows[0].outputVolume = firstOutputVolume;
   rows[0].discardVolume = 0;
 
-  return { rows, notes, error: '' };
+  return { rows, notes, noteMessages, error: '' };
 }
 
 function dilutionRowsMatch(rows, referenceRows) {
@@ -276,15 +248,19 @@ export function buildSerialDilutionSummaryModel({
     if (plan.error) {
       messages.push({
         type: 'error',
-        text: `${group.sampleId}: ${plan.error}`
+        text: `${group.sampleId}: ${plan.error}`,
+        sampleId: group.sampleId,
+        message: plan.errorMessage
       });
     }
-    for (const note of plan.notes) {
+    plan.notes.forEach((note, index) => {
       messages.push({
         type: 'note',
-        text: `${group.sampleId}: ${note}`
+        text: `${group.sampleId}: ${note}`,
+        sampleId: group.sampleId,
+        message: plan.noteMessages?.[index]
       });
-    }
+    });
     return messages;
   });
 
@@ -305,12 +281,17 @@ export function buildSerialDilutionSummaryModel({
 
   const followingDilutionRows = referenceFollowingRows.map((row, index) => ({
     step: `Step ${index + 1}`,
+    stepMessage: { id: 'dilution.stepNumber', params: { index: index + 1 } },
     targetConcentration: row.concentrationDisplay || row.concentrationLabel,
     fromPreviousWell: formatVolumeText(row.inputVolume),
     bufferVolume: formatVolumeText(row.bufferVolume),
     transferOrDiscard: row.outputLabel === 'Discard'
       ? `Discard ${formatVolumeText(row.outputVolume)}`
       : `Transfer ${formatVolumeText(row.outputVolume)}`,
+    transferMessage: {
+      id: row.outputLabel === 'Discard' ? 'dilution.discardVolume' : 'dilution.transferVolume',
+      params: { volume: formatVolumeText(row.outputVolume) }
+    },
     finalVolume: formatVolumeText(row.finalVolume)
   }));
 

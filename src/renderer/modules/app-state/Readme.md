@@ -13,3 +13,7 @@
 - `growth-events.js`: bounded growth-event tracking.
 
 Feature modules still receive one shared mutable state object. The split only separates ownership of defaults and normalization logic.
+
+`settings.locale` defaults to English and is normalized against the bundled
+locale allowlist in `renderer/lib/i18n/locale.js`, including when older
+workspaces have no language preference.

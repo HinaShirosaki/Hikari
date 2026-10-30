@@ -1,3 +1,7 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("chemicals");
+import { chemicalText, chemicalMessage, setChemicalText } from './localization.js';
 export function installChemicalListRendering(ctx) {
   const { safeText, state } = ctx;
   const { chemicalLocation, chemicalFilterLocation, chemicalSort, chemicalSearch, chemicalResultsSummary, chemicalList } = ctx.elements;
@@ -8,16 +12,16 @@ function renderLocationOptions() {
   const locations = state.settings.inventoryLocations || [];
   const selected = chemicalLocation.value;
   const selectedFilter = chemicalFilterLocation.value;
-  const options = ['<option value="">Select location</option>'];
-  const filterOptions = ['<option value="">All locations</option>'];
+  const options = [`<option value="" data-i18n="chemicals.form.selectLocation">${chemicalText('form.selectLocation')}</option>`];
+  const filterOptions = [`<option value="" data-i18n="chemicals.filter.all">${chemicalText('filter.all')}</option>`];
   locations.forEach((location) => {
     const isSelected = selected === location ? ' selected' : '';
     options.push(`<option value="${safeText(location)}"${isSelected}>${safeText(location)}</option>`);
     const isFilterSelected = selectedFilter === location ? ' selected' : '';
     filterOptions.push(`<option value="${safeText(location)}"${isFilterSelected}>${safeText(location)}</option>`);
   });
-  chemicalLocation.innerHTML = options.join('');
-  chemicalFilterLocation.innerHTML = filterOptions.join('');
+  i18nUi.setHtml(chemicalLocation, options.join(''));
+  i18nUi.setHtml(chemicalFilterLocation, filterOptions.join(''));
   if (selected && locations.includes(selected)) {
     chemicalLocation.value = selected;
   }
@@ -102,20 +106,20 @@ function renderChemicalList() {
   if (!allChemicals.length) {
     ctx.selectedChemicalId = '';
     if (chemicalResultsSummary) {
-      chemicalResultsSummary.textContent = '';
+      setChemicalText(chemicalResultsSummary, 'empty');
     }
-    chemicalList.innerHTML = '';
+    i18nUi.setHtml(chemicalList, '');
     renderChemicalDetail();
     return;
   }
 
   const chemicals = getVisibleChemicals();
   if (chemicalResultsSummary) {
-    chemicalResultsSummary.textContent = `Showing ${chemicals.length} of ${allChemicals.length} chemicals.`;
+    setChemicalText(chemicalResultsSummary, 'list.summary', { visible: chemicals.length, total: allChemicals.length });
   }
   if (!chemicals.length) {
     ctx.selectedChemicalId = '';
-    chemicalList.innerHTML = '<p class="small-note">No chemicals match current search/filter.</p>';
+    i18nUi.setHtml(chemicalList, `<p class="small-note">${chemicalMessage('list.emptySearch')}</p>`);
     renderChemicalDetail();
     return;
   }
@@ -134,14 +138,14 @@ function renderChemicalList() {
     </article>
   `).join('');
 
-  chemicalList.innerHTML = `
+  i18nUi.setHtml(chemicalList, `
     <article class="list-row list-row-header">
-      <strong>Name</strong>
-      <strong>Code</strong>
-      <strong>CAS Number</strong>
+      <strong>${chemicalMessage('field.name')}</strong>
+      <strong>${chemicalMessage('list.code')}</strong>
+      <strong>${chemicalMessage('field.casNumber')}</strong>
     </article>
     ${rows}
-  `;
+  `);
 
   renderChemicalDetail();
 }

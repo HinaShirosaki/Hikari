@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("agent");
 function normalizeSource(text) {
   return String(text || '').replace(/\r\n?/g, '\n');
 }
@@ -56,7 +59,7 @@ function createInlineRenderer(safeText) {
       }
       if (!allowedImageUrls.has(imageUrl.href)) {
         return pushToken(
-          `<button type="button" class="agent-chat-image-placeholder" data-agent-load-image="${safeText(imageUrl.href)}" data-agent-image-alt="${safeText(alt)}" title="${safeText(imageUrl.href)}">Load image${alt ? `: ${safeText(alt)}` : ''} <span>(${safeText(imageUrl.host)})</span></button>`
+          `<button type="button" class="agent-chat-image-placeholder" data-agent-load-image="${safeText(imageUrl.href)}" data-agent-image-alt="${safeText(alt)}" title="${safeText(imageUrl.href)}">${i18nUi.html("Load image")}${alt ? `: ${safeText(alt)}` : ''} <span>(${safeText(imageUrl.host)})</span></button>`
         );
       }
       return pushToken(

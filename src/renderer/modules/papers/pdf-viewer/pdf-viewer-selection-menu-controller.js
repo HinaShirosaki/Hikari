@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("papers");
 import { getSelectionInfo } from './pdf-viewer-selection.js';
 
 export const installPdfViewerSelectionMenuController = (ctx) => {
@@ -42,7 +45,7 @@ export const installPdfViewerSelectionMenuController = (ctx) => {
       button.setAttribute('aria-label', action.label);
       if (action.requiresAgent) button.setAttribute('data-requires-agent', '');
       // Host-owned icon: plugin actions supply labels and IDs, never SVG/HTML.
-      button.innerHTML = '<svg class="papers-selection-action-icon papers-selection-action-icon--context" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1.5"/><path d="m4 17 5-5 4 4 3-3 5 5"/></svg>';
+      i18nUi.setHtml(button, '<svg class="papers-selection-action-icon papers-selection-action-icon--context" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1.5"/><path d="m4 17 5-5 4 4 3-3 5 5"/></svg>');
       button.addEventListener('pointerdown', event => event.preventDefault());
       button.addEventListener('click', async () => {
         const selection = state.pendingSelection;
@@ -51,7 +54,7 @@ export const installPdfViewerSelectionMenuController = (ctx) => {
         button.disabled = true;
         try {
           const result = await state.onContextAction(action.key, { paperId, text: selection.text, pageNumber: selection.pageNumber });
-          if (result?.ok === false) { ctx.setStatus(result.error || 'Could not open the plugin action.'); return; }
+          if (result?.ok === false) { ctx.setStatus((((((result.error || i18nUi.text("Could not open the plugin action."))))))); return; }
           if (state.paperId === paperId && state.pendingSelection === selection) {
             clearSelection(); state.pendingSelection = null; ctx.refreshToolbar();
           }

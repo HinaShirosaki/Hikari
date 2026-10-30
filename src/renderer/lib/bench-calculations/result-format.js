@@ -40,7 +40,8 @@ function buildResult({
   formulaText = '',
   details = [],
   missing = [],
-  status = ''
+  status = '',
+  displayMessage = null
 } = {}) {
   const cleanMissing = Array.from(new Set((Array.isArray(missing) ? missing : [])
     .map((item) => String(item || '').trim())
@@ -57,7 +58,10 @@ function buildResult({
     details: Array.isArray(details) ? details : [],
     missing: cleanMissing,
     status: status || (cleanMissing.length ? 'formula' : 'calculated'),
-    summaryText: cleanResult || cleanFormula
+    summaryText: cleanResult || cleanFormula,
+    // Additive presentation metadata; legacy text/formulas and numeric fields
+    // remain unchanged for saved records, agents, and non-UI callers.
+    ...(displayMessage ? { displayMessage } : {})
   };
 }
 

@@ -1,5 +1,6 @@
 'use strict';
 
+const { nativeText } = require('../lib/i18n.js');
 const { createWorkspaceFileService } = require('../agent/file-access/service.js');
 const { registerAgentFileIpc } = require('../ipc/register-agent-file-ipc.js');
 const { FILE_ACCESS, LLM } = require('../../shared/ipc/channels');
@@ -285,10 +286,10 @@ function createMainServices(context = {}) {
     // can only ever enter the library through a dialog the user drove themselves.
     pickGenomeFile: async () => {
       const result = await dialog.showOpenDialog({
-        title: 'Select Genome FASTA File',
+        title: nativeText("Select Genome FASTA File"),
         properties: ['openFile'],
         filters: [
-          { name: 'Genome FASTA', extensions: ['fa', 'fasta', 'fna', 'fas', 'ffn', 'seq'] }
+          { name: nativeText("Genome FASTA"), extensions: ['fa', 'fasta', 'fna', 'fas', 'ffn', 'seq'] }
         ]
       });
       if (result.canceled || !result.filePaths.length) {

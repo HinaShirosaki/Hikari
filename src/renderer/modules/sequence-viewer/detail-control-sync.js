@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("dna");
 import * as detailAlignment from './detail-alignment.js';
 import { escapeHtml } from '../../lib/html.js';
 import { cleanText } from './shared.js';
@@ -26,9 +29,6 @@ function createDetailControlSync({
     }
     if (elements.annotateBtn) {
       elements.annotateBtn.disabled = !hasRecord || !hasStoragePath() || Boolean(state.isAnnotating);
-    }
-    if (elements.recognizeBackboneBtn) {
-      elements.recognizeBackboneBtn.disabled = !hasRecord || !hasStoragePath() || Boolean(state.isRecognizingBackbone);
     }
     if (elements.alignmentOpenBtn) {
       elements.alignmentOpenBtn.disabled = !hasRecord;
@@ -139,41 +139,41 @@ function createDetailControlSync({
       return;
     }
     if (!isVisible) {
-      elements.proteinBuilderConfirmationSummary.innerHTML = '<p class="small-note">Protein Builder review details will appear here.</p>';
+      i18nUi.setHtml(elements.proteinBuilderConfirmationSummary, `<p class="small-note">${i18nUi.html("Protein Builder review details will appear here.")}</p>`);
       return;
     }
 
     const summaryParts = [
       cleanText(confirmation?.recordName, 160)
-        ? `<p><strong>Reviewing:</strong> ${escapeHtml(cleanText(confirmation.recordName, 160))}</p>`
+        ? `<p><strong>${i18nUi.html("Reviewing:")}</strong> ${escapeHtml(cleanText(confirmation.recordName, 160))}</p>`
         : '',
       cleanText(confirmation?.constructName, 160)
-        ? `<p><strong>Insert:</strong> ${escapeHtml(cleanText(confirmation.constructName, 160))}</p>`
+        ? `<p><strong>${i18nUi.html("Insert:")}</strong> ${escapeHtml(cleanText(confirmation.constructName, 160))}</p>`
         : '',
       cleanText(confirmation?.backboneName, 160)
-        ? `<p><strong>Backbone:</strong> ${escapeHtml(cleanText(confirmation.backboneName, 160))}</p>`
+        ? `<p><strong>${i18nUi.html("Backbone:")}</strong> ${escapeHtml(cleanText(confirmation.backboneName, 160))}</p>`
         : '',
       Number.isFinite(Number(confirmation?.plasmidLength))
-        ? `<p><strong>Total Length:</strong> ${Math.max(0, Number(confirmation.plasmidLength)).toLocaleString()} bp</p>`
+        ? `<p><strong>${i18nUi.html("Total Length:")}</strong> ${Math.max(0, Number(confirmation.plasmidLength)).toLocaleString()} bp</p>`
         : '',
       Number.isFinite(Number(confirmation?.insertLength))
-        ? `<p><strong>Insert DNA:</strong> ${Math.max(0, Number(confirmation.insertLength)).toLocaleString()} bp</p>`
+        ? `<p><strong>${i18nUi.html("Insert DNA:")}</strong> ${Math.max(0, Number(confirmation.insertLength)).toLocaleString()} bp</p>`
         : '',
       cleanText(confirmation?.sourceLabel, 160)
-        ? `<p><strong>Backbone Source:</strong> ${escapeHtml(cleanText(confirmation.sourceLabel, 160))}</p>`
+        ? `<p><strong>${i18nUi.html("Backbone Source:")}</strong> ${escapeHtml(cleanText(confirmation.sourceLabel, 160))}</p>`
         : '',
       cleanText(confirmation?.assemblyStrategy, 120)
-        ? `<p><strong>Assembly Route:</strong> ${escapeHtml(cleanText(confirmation.assemblyStrategy, 120).replace(/[-_]+/g, ' '))}</p>`
+        ? `<p><strong>${i18nUi.html("Assembly Route:")}</strong> ${escapeHtml(cleanText(confirmation.assemblyStrategy, 120).replace(/[-_]+/g, ' '))}</p>`
         : '',
       Number.isFinite(Number(confirmation?.primerCount)) && Number(confirmation.primerCount) > 0
-        ? `<p><strong>Primer Plan:</strong> ${Math.max(0, Number(confirmation.primerCount)).toLocaleString()} primer${Number(confirmation.primerCount) === 1 ? '' : 's'} designed.</p>`
+        ? `<p><strong>${i18nUi.html("Primer Plan:")}</strong> ${Math.max(0, Number(confirmation.primerCount)).toLocaleString()} ${i18nUi.html("primer")}${Number(confirmation.primerCount) === 1 ? '' : 's'} ${i18nUi.html("designed.")}</p>`
         : '',
       cleanText(confirmation?.notebookTitle, 220)
-        ? `<p><strong>Notebook Page:</strong> ${escapeHtml(cleanText(confirmation.notebookTitle, 220))}</p>`
+        ? `<p><strong>${i18nUi.html("Notebook Page:")}</strong> ${escapeHtml(cleanText(confirmation.notebookTitle, 220))}</p>`
         : '',
-      '<p class="small-note">Review the sequence and annotations before confirming this Protein Builder construct.</p>'
+      `<p class="small-note">${i18nUi.html("Review the sequence and annotations before confirming this Protein Builder construct.")}</p>`
     ].filter(Boolean);
-    elements.proteinBuilderConfirmationSummary.innerHTML = summaryParts.join('');
+    i18nUi.setHtml(elements.proteinBuilderConfirmationSummary, summaryParts.join(''));
   }
 
   return {

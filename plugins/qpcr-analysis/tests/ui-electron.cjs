@@ -86,7 +86,7 @@ async function run() {
   await app.whenReady();
   toolServer = await listen(async (request, response) => {
     const pathname = new URL(request.url, 'http://localhost').pathname;
-    const files = new Set(['index.html', 'style.css', 'analysis.js', 'hikari.js', 'main.js', 'icon.svg']);
+    const files = new Set(['index.html', 'style.css', 'analysis.js', 'hikari.js', 'main.js', 'icon.svg', 'i18n.js', 'locales/en.js', 'locales/es.js']);
     const name = pathname.slice(1);
     if (!files.has(name)) { response.writeHead(404); response.end(); return; }
     try {

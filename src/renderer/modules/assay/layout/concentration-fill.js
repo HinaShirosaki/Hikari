@@ -1,5 +1,6 @@
 import { oppositeAxis } from '../shared.js';
 import { buildDilutionSeries, buildInterpolatedSeries } from '../concentration-utils.js';
+import { plateUi } from '../localization.js';
 
 // Auto-fill of the concentration axis: serial-dilution (factor) and
 // interpolated (linear/log) range modes.
@@ -53,18 +54,18 @@ export function createConcentrationFill({
   function autoFillConcentrationSeries() {
     const factor = Number(assayDilutionFactorInput?.value);
     if (!(Number.isFinite(factor) && factor > 0)) {
-      setLayoutStatus('Enter a positive dilution factor to auto-fill concentrations.');
+      setLayoutStatus(plateUi('status.fillFactor'));
       return;
     }
     const values = getAxisTemplateValues();
     const concentrationValues = values.concentrationValues.slice();
     if (concentrationValues.length < 2) {
-      setLayoutStatus('The concentration axis needs at least two positions to fill a dilution series.');
+      setLayoutStatus(plateUi('status.fillNeedsTwo'));
       return;
     }
     const series = buildDilutionSeries(concentrationValues[0], factor, concentrationValues.length);
     if (!series) {
-      setLayoutStatus('Enter a starting concentration in the first concentration cell before auto-filling.');
+      setLayoutStatus(plateUi('status.fillNeedsStart'));
       return;
     }
     for (let index = 1; index < concentrationValues.length; index += 1) {
@@ -74,7 +75,7 @@ export function createConcentrationFill({
     commitConcentrationValues(
       values.sampleValues,
       concentrationValues,
-      `Auto-filled ${steps} concentration step${steps === 1 ? '' : 's'} at a 1:${factor} dilution.`
+      plateUi('status.filledSeries', { count: steps, factor })
     );
   }
 
@@ -93,7 +94,7 @@ export function createConcentrationFill({
     }
     if (firstIndex < 0 || lastIndex - firstIndex < 1) {
       if (!silent) {
-        setLayoutStatus('Type a start and end concentration into two plate cells to fill the range.');
+        setLayoutStatus(plateUi('status.fillNeedsRange'));
       }
       return;
     }
@@ -106,9 +107,7 @@ export function createConcentrationFill({
     });
     if (!series) {
       if (!silent) {
-        setLayoutStatus(mode === 'log'
-          ? 'Use positive start and end concentrations (log spacing cannot include 0).'
-          : 'Enter a start and end concentration to fill the range.');
+        setLayoutStatus(plateUi(mode === 'log' ? 'status.fillLogPositive' : 'status.fillNeedsEndpoints'));
       }
       return;
     }
@@ -120,7 +119,9 @@ export function createConcentrationFill({
     commitConcentrationValues(
       values.sampleValues,
       concentrationValues,
-      `Auto-filled ${series.length} concentrations from ${series[0]} to ${series[series.length - 1]} (${mode}).`
+      plateUi(mode === 'log' ? 'status.filledRangeLog' : 'status.filledRangeLinear', {
+        count: series.length, start: series[0], end: series[series.length - 1]
+      })
     );
   }
 

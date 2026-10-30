@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../../lib/html.js';
 import { cleanText } from '../shared.js';
 import { buildStoredBackboneDisplayName } from './assembly-payload.js';
@@ -16,13 +19,13 @@ export function installProteinBuilderAssemblyDialog(ctx) {
     const constructName = ctx.resolveConstructName();
     if (elements.proteinBuilderAssemblyList) {
       if (state.isLoadingAssemblyBackbones) {
-        elements.proteinBuilderAssemblyList.innerHTML = '<p class="small-note">Loading stored backbones...</p>';
+        i18nUi.setHtml(elements.proteinBuilderAssemblyList, `<p class="small-note">${i18nUi.html("Loading stored backbones...")}</p>`);
       } else if (!ctx.hasStoragePath()) {
-        elements.proteinBuilderAssemblyList.innerHTML = '<p class="small-note">Set Storage Folder Path in Settings to browse stored backbones.</p>';
+        i18nUi.setHtml(elements.proteinBuilderAssemblyList, `<p class="small-note">${i18nUi.html("Set Storage Folder Path in Settings to browse stored backbones.")}</p>`);
       } else if (!state.storedBackbones.length) {
-        elements.proteinBuilderAssemblyList.innerHTML = '<p class="small-note">No stored backbones yet. Use Recognize Backbone/Insert on a vector to create one.</p>';
+        i18nUi.setHtml(elements.proteinBuilderAssemblyList, `<p class="small-note">${i18nUi.html("No stored backbones yet. Use Recognize Backbone/Insert on a vector to create one.")}</p>`);
       } else {
-        elements.proteinBuilderAssemblyList.innerHTML = state.storedBackbones.map((backbone) => {
+        i18nUi.setHtml(elements.proteinBuilderAssemblyList, state.storedBackbones.map((backbone) => {
           const isActive = cleanText(backbone?.id, 400) === cleanText(state.selectedBackboneId, 400);
           const name = buildStoredBackboneDisplayName(backbone);
           const source = cleanText(backbone?.sourceRecordName, 160);
@@ -42,30 +45,30 @@ export function installProteinBuilderAssemblyDialog(ctx) {
               <span class="sequence-viewer-backbone-dialog-candidate-meta">${escapeHtml(meta)}</span>
             </button>
           `;
-        }).join('');
+        }).join(''));
       }
     }
 
     if (elements.proteinBuilderAssemblySummary) {
       if (!state.dnaConstruct?.ok || !state.dnaConstruct?.sequence) {
-        elements.proteinBuilderAssemblySummary.innerHTML = '<p class="small-note">Build the current DNA sequence before assembling a plasmid.</p>';
+        i18nUi.setHtml(elements.proteinBuilderAssemblySummary, `<p class="small-note">${i18nUi.html("Build the current DNA sequence before assembling a plasmid.")}</p>`);
       } else if (!selectedBackbone) {
-        elements.proteinBuilderAssemblySummary.innerHTML = '<p class="small-note">Choose a stored backbone to preview the assembled plasmid length.</p>';
+        i18nUi.setHtml(elements.proteinBuilderAssemblySummary, `<p class="small-note">${i18nUi.html("Choose a stored backbone to preview the assembled plasmid length.")}</p>`);
       } else {
         const totalLength = Math.max(0, Number(selectedBackbone?.backboneLength) || 0) + Math.max(0, Number(state.dnaConstruct.length) || 0);
-        elements.proteinBuilderAssemblySummary.innerHTML = [
-          `<p><strong>Construct:</strong> ${escapeHtml(constructName)}</p>`,
-          `<p><strong>Stored Backbone:</strong> ${escapeHtml(buildStoredBackboneDisplayName(selectedBackbone))}</p>`,
-          `<p><strong>Backbone DNA:</strong> ${Math.max(0, Number(selectedBackbone?.backboneLength) || 0).toLocaleString()} bp</p>`,
-          `<p><strong>Current Insert DNA:</strong> ${Math.max(0, Number(state.dnaConstruct.length) || 0).toLocaleString()} bp</p>`,
-          `<p><strong>Estimated Circular Plasmid:</strong> ${totalLength.toLocaleString()} bp</p>`,
+        i18nUi.setHtml(elements.proteinBuilderAssemblySummary, [
+          `<p><strong>${i18nUi.html("Construct:")}</strong> ${escapeHtml(constructName)}</p>`,
+          `<p><strong>${i18nUi.html("Stored Backbone:")}</strong> ${escapeHtml(buildStoredBackboneDisplayName(selectedBackbone))}</p>`,
+          `<p><strong>${i18nUi.html("Backbone DNA:")}</strong> ${Math.max(0, Number(selectedBackbone?.backboneLength) || 0).toLocaleString()} bp</p>`,
+          `<p><strong>${i18nUi.html("Current Insert DNA:")}</strong> ${Math.max(0, Number(state.dnaConstruct.length) || 0).toLocaleString()} bp</p>`,
+          `<p><strong>${i18nUi.html("Estimated Circular Plasmid:")}</strong> ${totalLength.toLocaleString()} bp</p>`,
           cleanText(selectedBackbone?.sourceRecordName, 160)
-            ? `<p><strong>Stored From:</strong> ${escapeHtml(cleanText(selectedBackbone.sourceRecordName, 160))}</p>`
+            ? `<p><strong>${i18nUi.html("Stored From:")}</strong> ${escapeHtml(cleanText(selectedBackbone.sourceRecordName, 160))}</p>`
             : '',
           cleanText(selectedBackbone?.promoterName, 160)
-            ? `<p><strong>Promoter:</strong> ${escapeHtml(cleanText(selectedBackbone.promoterName, 160))}</p>`
+            ? `<p><strong>${i18nUi.html("Promoter:")}</strong> ${escapeHtml(cleanText(selectedBackbone.promoterName, 160))}</p>`
             : ''
-        ].filter(Boolean).join('');
+        ].filter(Boolean).join(''));
       }
     }
 

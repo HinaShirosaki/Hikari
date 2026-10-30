@@ -1,6 +1,6 @@
 import { buildFolderKey } from './model.js';
 import { bindFileDropTarget } from '../../lib/file-drop.js';
-import { showTransientNotice } from '../../lib/notify.js';
+import { paperFailure, paperNotice, paperUi } from './localization.js';
 
 // DOM wiring for the papers library rail: uploads, folder clicks and renames,
 // paper drag-and-drop, and the view-activation observer.
@@ -38,7 +38,7 @@ function createLibraryEvents({
   function onUploadTriggerClick() {
     const selectedFolder = getSelectedFolder();
     if (!selectedFolder) {
-      showTransientNotice('Create or select a folder before uploading a paper.', { type: 'error' });
+      paperNotice(paperUi('notice.needsFolder'), { type: 'error' });
       return;
     }
     if (elements.paperTitleInput) {
@@ -241,16 +241,16 @@ function createLibraryEvents({
       onFiles: async (files) => {
         const selectedFolder = getSelectedFolder();
         if (!selectedFolder) {
-          showTransientNotice('Create or select a folder before uploading a paper.', { type: 'error' });
+          paperNotice(paperUi('notice.needsFolder'), { type: 'error' });
           return;
         }
         await context.actions?.uploadPaperFiles?.(files);
       },
       onRejected: () => {
-        showTransientNotice('Drop PDF files to add them to the selected paper folder.', { type: 'error' });
+        paperNotice(paperUi('notice.dropPdfs'), { type: 'error' });
       },
       onError: (error) => {
-        showTransientNotice(String(error?.message || error || 'Failed to upload dropped PDF files.'), { type: 'error' });
+        paperNotice(paperFailure(error, 'notice.dropFailed'), { type: 'error' });
       }
     });
     if (typeof windowRef?.addEventListener === 'function') {

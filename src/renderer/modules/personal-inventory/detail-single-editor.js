@@ -1,3 +1,4 @@
+import { sampleAttributes, sampleMessage, sampleStatusMarkup } from './localization.js';
 import { renderTypeFieldsMarkup } from './type-fields.js';
 
 export function createSingleContainerEditorRenderer({
@@ -14,12 +15,12 @@ export function createSingleContainerEditorRenderer({
   function renderSingleContainerEditor(section, container) {
     const linkedSamples = getLinkedSamples(section, container.id, null);
     const activeSample = linkedSamples.find((item) => item.id === uiState.editingSampleId) || linkedSamples[0] || null;
-    const editorTitle = `${safeText(container.name)} (Single position)`;
-    const statusMarkup = uiState.wellEditorStatus ? `<p class="small-note well-editor-status">${safeText(uiState.wellEditorStatus)}</p>` : '';
+    const editorTitle = sampleMessage('editor.single', { name: container.name });
+    const statusMarkup = uiState.wellEditorStatus ? `<p class="small-note well-editor-status">${sampleStatusMarkup(uiState.wellEditorStatus)}</p>` : '';
     const sampleSelector = linkedSamples.length > 1
       ? `
         <label>
-          Linked Sample
+          ${sampleMessage('editor.linked')}
           <select data-single-sample-select="true">
             ${linkedSamples.map((item) => `
               <option value="${safeText(item.id)}"${activeSample && item.id === activeSample.id ? ' selected' : ''}>
@@ -35,18 +36,18 @@ export function createSingleContainerEditorRenderer({
         <div class="well-editor-head">
           <div class="well-editor-title-group">
             <strong>${editorTitle}</strong>
-            <strong>Set Samples</strong>
+            <strong>${sampleMessage('editor.title')}</strong>
           </div>
           <div class="well-editor-actions">
-            <button type="button" class="primary-btn inventory-sample-editor-icon-btn" data-single-sample-save="${safeText(activeSample.id)}" aria-label="Save Sample" data-hover-caption="Save sample">
+            <button type="button" class="primary-btn inventory-sample-editor-icon-btn" data-single-sample-save="${safeText(activeSample.id)}" ${sampleAttributes({ 'aria-label': 'editor.save', 'data-hover-caption': 'editor.saveCaption' })}>
               <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                 <path d="M5 3h12l3 3v15H4V3Z"></path>
                 <path d="M8 3v6h8V3"></path>
                 <path d="M8 21v-7h8v7"></path>
               </svg>
-              <span class="sr-only">Save Sample</span>
+              <span class="sr-only">${sampleMessage('editor.save')}</span>
             </button>
-            <button type="button" class="ghost-btn inventory-sample-editor-icon-btn" data-single-sample-delete="${safeText(activeSample.id)}" aria-label="Delete Sample" data-hover-caption="Delete sample">
+            <button type="button" class="ghost-btn inventory-sample-editor-icon-btn" data-single-sample-delete="${safeText(activeSample.id)}" ${sampleAttributes({ 'aria-label': 'editor.delete', 'data-hover-caption': 'editor.deleteCaption' })}>
               <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                 <path d="M3 6h18"></path>
                 <path d="M8 6V4h8v2"></path>
@@ -54,35 +55,35 @@ export function createSingleContainerEditorRenderer({
                 <path d="M10 11v5"></path>
                 <path d="M14 11v5"></path>
               </svg>
-              <span class="sr-only">Delete Sample</span>
+              <span class="sr-only">${sampleMessage('editor.delete')}</span>
             </button>
           </div>
         </div>
         ${sampleSelector}
         <label>
-          Sample Code
-          <input data-single-sample-code value="${safeText(activeSample.code || '')}" placeholder="e.g. S-001" />
+          ${sampleMessage('editor.code')}
+          <input data-single-sample-code value="${safeText(activeSample.code || '')}" ${sampleAttributes({ placeholder: 'editor.codePlaceholder' })} />
         </label>
         <label>
-          Sample Name
+          ${sampleMessage('editor.name')}
           <input data-single-sample-name value="${safeText(activeSample.name || '')}" required />
         </label>
         <label>
-          Type
+          ${sampleMessage('editor.type')}
           <select data-single-sample-type>${renderSampleTypeOptions(activeSample.type || 'plasmid')}</select>
         </label>
         <div data-sample-type-fields>${renderTypeFieldsMarkup(activeSample.type, activeSample.details)}</div>
         ${renderStructureAction({ mode: 'single-existing', sample: activeSample })}
         <label>
-          Lot / Batch
+          ${sampleMessage('editor.lot')}
           <input data-single-sample-lot value="${safeText(activeSample.lot || '')}" />
         </label>
         <label>
-          Concentration
-          <input data-single-sample-concentration value="${safeText(activeSample.concentration || '')}" placeholder="e.g. 2 mg/mL" />
+          ${sampleMessage('editor.concentration')}
+          <input data-single-sample-concentration value="${safeText(activeSample.concentration || '')}" ${sampleAttributes({ placeholder: 'editor.concentrationPlaceholder' })} />
         </label>
         <label>
-          Notes
+          ${sampleMessage('editor.notes')}
           <textarea data-single-sample-notes rows="3">${safeText(activeSample.notes || '')}</textarea>
         </label>
       `
@@ -90,41 +91,41 @@ export function createSingleContainerEditorRenderer({
         <div class="well-editor-head">
           <div class="well-editor-title-group">
             <strong>${editorTitle}</strong>
-            <strong>Set Samples</strong>
+            <strong>${sampleMessage('editor.title')}</strong>
           </div>
           <div class="well-editor-actions">
-            <button type="button" class="lab-add-icon-btn inventory-add-sample-icon-btn" data-single-sample-create="true" aria-label="Add Sample" data-hover-caption="Add sample">
+            <button type="button" class="lab-add-icon-btn inventory-add-sample-icon-btn" data-single-sample-create="true" ${sampleAttributes({ 'aria-label': 'editor.add', 'data-hover-caption': 'editor.addCaption' })}>
               <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                 <path d="M12 5v14M5 12h14"></path>
               </svg>
-              <span class="sr-only">Add Sample</span>
+              <span class="sr-only">${sampleMessage('editor.add')}</span>
             </button>
           </div>
         </div>
         <label>
-          Sample Code
-          <input data-single-sample-new-code placeholder="e.g. S-001" />
+          ${sampleMessage('editor.code')}
+          <input data-single-sample-new-code ${sampleAttributes({ placeholder: 'editor.codePlaceholder' })} />
         </label>
         <label>
-          Sample Name
-          <input data-single-sample-new-name placeholder="Required" />
+          ${sampleMessage('editor.name')}
+          <input data-single-sample-new-name ${sampleAttributes({ placeholder: 'editor.required' })} />
         </label>
         <label>
-          Type
+          ${sampleMessage('editor.type')}
           <select data-single-sample-new-type>${renderSampleTypeOptions('plasmid')}</select>
         </label>
         <div data-sample-type-fields>${renderTypeFieldsMarkup('plasmid')}</div>
         ${renderStructureAction({ mode: 'single-new' })}
         <label>
-          Lot / Batch
+          ${sampleMessage('editor.lot')}
           <input data-single-sample-new-lot />
         </label>
         <label>
-          Concentration
-          <input data-single-sample-new-concentration placeholder="e.g. 2 mg/mL" />
+          ${sampleMessage('editor.concentration')}
+          <input data-single-sample-new-concentration ${sampleAttributes({ placeholder: 'editor.concentrationPlaceholder' })} />
         </label>
         <label>
-          Notes
+          ${sampleMessage('editor.notes')}
           <textarea data-single-sample-new-notes rows="3"></textarea>
         </label>
       `;

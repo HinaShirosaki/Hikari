@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { parseInputRecords, normalizeExternalPayload } from '../parsing.js';
 import {
   DEFAULT_MAX_RECORDS
@@ -6,6 +9,7 @@ import {
   LIBRARY_STATUS_TEMPORARY
 } from './config.js';
 import { showTransientNotice } from '../../../lib/notify.js';
+import { dnaNotice, dnaUi, setDnaText } from '../localization.js';
 
 export function createRecordWorkflowActions(ctx) {
   const { state, elements, actions, controllers, dialogs } = ctx;
@@ -28,7 +32,8 @@ export function createRecordWorkflowActions(ctx) {
     controllers.detail?.renderActiveRecord();
     controllers.proteinBuilder?.render();
     controllers.home?.syncHomeControlsState();
-    actions.setStatus(state.records.length ? `${statusPrefix}: ${state.records.length} record(s).` : (state.errors[0] || 'No records loaded.'), !state.records.length);
+    const statusKey = { Loaded: 'status.loaded', Imported: 'status.imported', Cleared: 'status.cleared', Idle: 'status.idle' }[statusPrefix];
+    actions.setStatus((((((state.records.length ? (statusKey ? dnaUi(statusKey, { count: state.records.length }) : i18nUi.text("{p0}: {p1} record(s).", { p0: statusPrefix, p1: state.records.length })) : (state.errors[0] || dnaUi('status.noRecords'))))))), !state.records.length);
     // A partial parse reports success in the status line, so the parser errors
     // would otherwise only exist in the message box.
     if (state.records.length && state.errors.length) {
@@ -39,7 +44,7 @@ export function createRecordWorkflowActions(ctx) {
   async function loadCurrentInput() {
     if (state.proteinBuilderConfirmation) {
       actions.setInputComposerVisible(false);
-      actions.setStatus('Use the sequence edit dialog to edit this Protein Builder construct.');
+      actions.setStatus(dnaUi('status.proteinBuilderEdit'));
       return;
     }
     const raw = state.mode === 'file' ? state.fileText : (elements.inputTextarea?.value || '');
@@ -74,10 +79,8 @@ export function createRecordWorkflowActions(ctx) {
       return entry;
     } catch (error) {
       console.warn('Failed to persist imported GenBank record to the library:', error);
-      showTransientNotice(
-        `Imported record was not saved to the library: ${String(error?.message || error || 'unknown error')}`,
-        { type: 'error' }
-      );
+      const detail = String(error?.message || error || '');
+      dnaNotice(detail ? dnaUi('notice.importNotSaved', { error: detail }) : dnaUi('notice.importNotSavedUnknown'), { type: 'error' });
       return null;
     }
   }
@@ -90,7 +93,7 @@ export function createRecordWorkflowActions(ctx) {
       elements.fileInput.value = '';
     }
     if (elements.fileNameLabel) {
-      elements.fileNameLabel.textContent = 'No file selected';
+      setDnaText(elements.fileNameLabel, 'file.none');
     }
     state.fileName = '';
     state.fileText = '';
@@ -129,7 +132,7 @@ export function createRecordWorkflowActions(ctx) {
       } else {
         controllers.home?.navigateToDetail();
         controllers.detail?.renderActiveRecord?.();
-        actions.setStatus(`Imported ${record.name} from ${record.sourceFormat || 'external'}.`);
+        actions.setStatus(i18nUi.text("Imported {p0} from {p1}.", { p0: record.name, p1: record.sourceFormat || 'external' }));
       }
     }
   }

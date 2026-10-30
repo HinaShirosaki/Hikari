@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
 import { showTransientNotice } from '../../../lib/notify.js';
 import { isAgentAvailable } from '../../../lib/agent-availability.js';
 import { mergeNotebookValues, pruneNotebookValuesForProtocol } from '../entry/entry-helpers.js';
@@ -48,7 +51,7 @@ function createNotebookPageNaming({
     }
     const fallbackName = String(protocol?.name || '').trim() || 'Notebook Page';
     const experimentName = String(notebookExperimentName?.value || '').trim();
-    notebookProtocolTitle.textContent = experimentName || fallbackName;
+    i18nUi.setText(notebookProtocolTitle, (experimentName || fallbackName));
   }
 
   function resetNotebookNameGenerationState(entry = null, protocol = null) {
@@ -162,7 +165,7 @@ function createNotebookPageNaming({
         return generated;
       } catch (error) {
         console.warn('Failed to generate notebook page name:', error);
-        showTransientNotice('Could not generate a page name automatically.', { type: 'error' });
+        showTransientNotice(i18nUi.message("Could not generate a page name automatically."), { type: 'error' });
         return null;
       } finally {
         if (getPageNameGenerationPendingRevision() === revision) {

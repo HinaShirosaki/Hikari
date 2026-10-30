@@ -21,7 +21,6 @@ function bindDetailToolbarEvents(context = {}) {
     setShowPrimers,
     onRequestSave,
     onRequestAnnotate,
-    onRequestRecognizeBackbone,
     onRequestAlignment,
     onRequestCloningDesign,
     onSelectAlignmentSession,
@@ -38,11 +37,6 @@ function bindDetailToolbarEvents(context = {}) {
   elements.annotateBtn?.addEventListener('click', (event) => {
     event.preventDefault();
     void onRequestAnnotate();
-  });
-
-  elements.recognizeBackboneBtn?.addEventListener('click', (event) => {
-    event.preventDefault();
-    void onRequestRecognizeBackbone();
   });
 
   elements.orfToggle?.addEventListener('change', () => {

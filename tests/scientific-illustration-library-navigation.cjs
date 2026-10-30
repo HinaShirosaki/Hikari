@@ -6,6 +6,20 @@ async function verifyLibraryNavigation({ tool, evaluate, check, win, pause, wait
   })()`);
   check(created, 'Create a scrollable library in temporary storage');
   win.setSize(1300, 650); await pause(80);
+  const railLayout = () => evaluate(`(() => {
+    const rail=document.getElementById('illustrations-rail'),list=document.getElementById('illustrations'),pinned=rail.querySelector('.left-rail-template__pinned');
+    const box=node=>{const b=node.getBoundingClientRect();return {left:b.left,right:b.right,top:b.top,bottom:b.bottom}};
+    return {rail:box(rail),list:box(list),pinned:box(pinned),borderRight:parseFloat(getComputedStyle(rail).borderRightWidth),borderBottom:parseFloat(getComputedStyle(rail).borderBottomWidth),
+      scrolling:list.scrollHeight>list.clientHeight,listScroll:list.scrollTop,railScroll:rail.scrollTop,gutter:getComputedStyle(list).scrollbarGutter};
+  })()`);
+  check(await evaluate('!document.getElementById("illustration-count")'), 'The rail has no illustration-count footer');
+  const initialLayout = await railLayout();
+  check(initialLayout.scrolling && Math.abs(initialLayout.list.right+initialLayout.borderRight-initialLayout.rail.right)<1
+    && Math.abs(initialLayout.list.bottom-initialLayout.rail.bottom)<1 && initialLayout.gutter==='stable', 'The list fills the rail to its border and reserves its scrollbar at the outer edge');
+  await evaluate('document.getElementById("illustrations").scrollTop=200');
+  const scrolledLayout = await railLayout();
+  check(scrolledLayout.listScroll>0 && scrolledLayout.railScroll===0 && scrolledLayout.pinned.top===initialLayout.pinned.top
+    && scrolledLayout.pinned.bottom===initialLayout.pinned.bottom, 'Scrolling illustrations keeps the heading and search pinned');
   const clickVisibleRow = async () => {
     const target = await evaluate(`(() => {
       const list=document.getElementById('illustrations');
@@ -40,6 +54,14 @@ async function verifyLibraryNavigation({ tool, evaluate, check, win, pause, wait
   const filtered = await clickVisibleRow();
   check(await evaluate('document.getElementById("illustration-search").value==="navigation figure"'), 'Opening a filtered illustration preserves the search');
   check(Math.abs(await evaluate('document.getElementById("illustrations").scrollTop') - filtered.before) < 1, 'Selection preserves scroll within filtered results');
+  for (const width of [480, 320]) {
+    win.setSize(width, 800); await pause(80);
+    const layout = await railLayout();
+    check(layout.scrolling && Math.abs(layout.list.right-layout.rail.right)<1
+      && Math.abs(layout.list.bottom+layout.borderBottom-layout.rail.bottom)<1
+      && layout.list.top>=layout.pinned.bottom && await evaluate('document.documentElement.scrollWidth<=innerWidth'),
+    `${width}px keeps the list scrollbar at the rail edge beneath pinned controls`);
+  }
 }
 
 module.exports = { verifyLibraryNavigation };

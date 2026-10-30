@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("plate");
 import { pixelsToPoints } from './chart-style-model.js';
 import { resolveAxisStyle, resolveSeriesStyle } from './chart-style-targets.js';
 
@@ -41,7 +44,7 @@ export function createChartControlsForm({ q, store, selection, pickers, textCont
     field.replaceChildren(...entries.map(([value, label]) => {
       const option = document.createElement('option');
       option.value = value;
-      option.textContent = label;
+      i18nUi.setText(option, label);
       return option;
     }));
     field.dataset.options = signature;
@@ -63,10 +66,8 @@ export function createChartControlsForm({ q, store, selection, pickers, textCont
     set(`${axis}TickPreset`, customTick ? 'custom' : tick === null ? 'auto' : tick);
     set(`${axis}Tick`, tick);
     q(`${axis}Tick`).closest('label').hidden = !customTick;
-    q(`${axis}Tick`).title = scale !== 'linear'
-      ? 'Interval in powers of the selected base; 1 labels each power.' : 'Interval in data units.';
-    q(`${axis}TickHint`).textContent = scale === 'linear' ? ''
-      : `Steps in powers of ${scale === 'log10' ? '10' : scale === 'log2' ? '2' : 'e'}; 1 labels each power.`;
+    i18nUi.setAttribute(q(`${axis}Tick`), "title", (scale !== 'linear' ? i18nUi.message("Interval in powers of the selected base; 1 labels each power.") : i18nUi.message("Interval in data units.")));
+    i18nUi.setOwnedText(q(`${axis}TickHint`), (scale === 'linear' ? '' : i18nUi.message("Steps in powers of {p0}; 1 labels each power.", { p0: scale === 'log10' ? '10' : scale === 'log2' ? '2' : 'e' })));
     q(`${axis}TickHint`).hidden = !customTick || scale === 'linear';
     AXIS_STYLE_SUFFIXES.forEach((suffix) => {
       const field = axisStyleKey(suffix);
@@ -104,7 +105,7 @@ export function createChartControlsForm({ q, store, selection, pickers, textCont
     q('symbolFields').hidden = context.chartType === 'bar' && !context.hasReplicates;
     q('errorFields').hidden = !context.hasErrorBars;
     q('columnFields').hidden = context.hasFittedCurve;
-    q('columnNote').textContent = context.hasFittedCurve ? 'The fitted analysis determines its plotted columns.' : '';
+    i18nUi.setText(q('columnNote'), (context.hasFittedCurve ? i18nUi.message("The fitted analysis determines its plotted columns.") : ''));
     q('columnNote').hidden = !context.hasFittedCurve;
     ['xColumn', 'yColumn', 'seriesColumn'].forEach((key) => {
       const headers = key === 'yColumn' ? context.numericHeaders : context.headers;
@@ -119,7 +120,7 @@ export function createChartControlsForm({ q, store, selection, pickers, textCont
     const target = selection.text;
     q('titleFields').hidden = !['title', 'xTitle', 'yTitle'].includes(target);
     set('titleText', style[target]);
-    q('titleText').placeholder = target === 'title' ? '(none)' : '(from analysis)';
+    i18nUi.setAttribute(q('titleText'), "placeholder", (target === 'title' ? i18nUi.message("(none)") : i18nUi.message("(from analysis)")));
     const prefix = target === 'title' ? 'title' : target;
     set('titlePos', style[`${prefix}Pos`]);
     const offset = style[`${prefix}Offset`];

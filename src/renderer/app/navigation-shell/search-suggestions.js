@@ -1,4 +1,7 @@
-import { escapeHtml as escapeHtmlText } from '../../lib/html.js';
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "../../lib/i18n/shell.js";
+const i18nUi = createPresentation("shell");
+import { searchCandidateMarkup } from '../topbar-search/localization.js';
 
 // Dropdown state for the topbar search box: render the list, move focus with
 // the arrow keys, and apply the chosen suggestion.
@@ -40,20 +43,21 @@ function createSearchSuggestions({
       li.classList.toggle('is-active', index === activeIndex);
       li.setAttribute('aria-selected', index === activeIndex ? 'true' : 'false');
 
+      const display = searchCandidateMarkup(item);
       const kindHtml = item.kind
-        ? `<span class="topbar-search-suggestion-kind">${escapeHtmlText(item.kind)}</span>`
+        ? `<span class="topbar-search-suggestion-kind">${display.kind}</span>`
         : '';
       const sublabelHtml = item.sublabel
-        ? `<span class="topbar-search-suggestion-sublabel">${escapeHtmlText(item.sublabel)}</span>`
+        ? `<span class="topbar-search-suggestion-sublabel">${display.sublabel}</span>`
         : '';
 
-      li.innerHTML = `
+      i18nUi.setHtml(li, `
         <span class="topbar-search-suggestion-body">
-          <span class="topbar-search-suggestion-label">${escapeHtmlText(item.label)}</span>
+          <span class="topbar-search-suggestion-label">${display.label}</span>
           ${sublabelHtml}
         </span>
         ${kindHtml}
-      `;
+      `);
       fragment.appendChild(li);
     });
     topbarSearchSuggestions.replaceChildren(fragment);
@@ -122,7 +126,7 @@ function createSearchSuggestions({
     closeSearchSuggestions();
     if (topbarSearchInput) {
       topbarSearchInput.value = '';
-      topbarSearchInput.title = `Opened ${item.kind || item.target?.label || 'view'}: ${item.label}`;
+      i18nUi.setAttribute(topbarSearchInput, "title", i18nUi.message("Opened {p0}: {p1}", { p0: item.kind || item.target?.label || 'view', p1: item.label }));
     }
     return applySearchSuggestion(item);
   }

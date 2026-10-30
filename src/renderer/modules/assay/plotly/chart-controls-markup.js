@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("plate");
 // Assay-owned formatting controls. All dimensions are displayed in pt except plot size.
 const TABS = [
   { id: 'frame', label: 'Frame' }, { id: 'axis', label: 'Axis' },
@@ -16,13 +19,13 @@ const TAB_KEYS = {
   text: ['title', 'xTitle', 'yTitle', 'text', 'textStyles', 'titlePos', 'titleOffset',
     'xTitlePos', 'yTitlePos', 'xTitleOffset', 'yTitleOffset']
 };
-const select = (key, label, values) => `<label>${label}<select data-cc="${key}" aria-label="${label}">${values
-  .map(([value, name]) => `<option value="${value}">${name}</option>`).join('')}</select></label>`;
-const number = (key, label, min, max, step = 'any', placeholder = '') => `<label class="assay-chart-style-number">${label}<input data-cc="${key}"
-  aria-label="${label}" type="number" ${min !== null ? `min="${min}"` : ''} ${max !== null ? `max="${max}"` : ''}
-  step="${step}" placeholder="${placeholder}" /></label>`;
-const check = (key, label) => `<label class="assay-chart-style-checkbox"><input type="checkbox" data-cc="${key}" />${label}</label>`;
-const color = (key, label) => `<label>${label}<input type="color" data-cc="${key}" aria-label="${label}" /></label>`;
+const select = (key, label, values) => `<label>${i18nUi.renderOwned(label)}<select data-cc="${key}" ${i18nUi.attributeMessage("aria-label", i18nUi.owned(label))}>${values
+  .map(([value, name]) => i18nUi.option(value, i18nUi.owned(name))).join('')}</select></label>`;
+const number = (key, label, min, max, step = 'any', placeholder = '') => `<label class="assay-chart-style-number">${i18nUi.renderOwned(label)}<input data-cc="${key}"
+  ${i18nUi.attributeMessage("aria-label", i18nUi.owned(label))} type="number" ${min !== null ? `min="${min}"` : ''} ${max !== null ? `max="${max}"` : ''}
+  step="${step}" ${i18nUi.attributeMessage("placeholder", i18nUi.owned(placeholder))} /></label>`;
+const check = (key, label) => `<label class="assay-chart-style-checkbox"><input type="checkbox" data-cc="${key}" />${i18nUi.renderOwned(label)}</label>`;
+const color = (key, label) => `<label>${i18nUi.renderOwned(label)}<input type="color" data-cc="${key}" ${i18nUi.attributeMessage("aria-label", i18nUi.owned(label))} /></label>`;
 // Preset and reset actions share one icon strip; aria-label supplies the hover caption.
 const ICON_PATHS = {
   presetSaveBtn: '<path d="M5 3h11l4 4v14H5Z" /><path d="M8 3v6h7V3" /><path d="M8 21v-7h8v7" />',
@@ -31,18 +34,18 @@ const ICON_PATHS = {
   resetBtn: '<path d="M21 12a9 9 0 0 0-9-9 9 9 0 0 0-6.4 2.6L3 8" /><path d="M3 3v5h5" /><path d="M3 12a9 9 0 0 0 9 9 9 9 0 0 0 6.4-2.6L21 16" /><path d="M16 16h5v5" />'
 };
 const iconButton = (key, label, danger = false) => `<button type="button" data-cc="${key}"
-  class="row-action-icon-btn${danger ? ' row-action-icon-btn-danger' : ''}" aria-label="${label}">
+  class="row-action-icon-btn${danger ? ' row-action-icon-btn-danger' : ''}" ${i18nUi.attributeMessage("aria-label", i18nUi.owned(label))}>
   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">${ICON_PATHS[key]}</svg></button>`;
-const picker = (key, label) => `<label>${label}<div data-cc="${key}" class="assay-chart-picker-mount"></div></label>`;
+const picker = (key, label) => `<label>${i18nUi.renderOwned(label)}<div data-cc="${key}" class="assay-chart-picker-mount"></div></label>`;
 const section = (title, content, attributes = '') => `<div class="assay-chart-style-subsection" ${attributes}>
-  <span class="assay-chart-style-subhead">${title}</span>${content}</div>`;
+  <span class="assay-chart-style-subhead">${i18nUi.renderOwned(title)}</span>${content}</div>`;
 const row = (content, className = '') => `<div class="assay-chart-style-row ${className}">${content}</div>`;
 const panel = (id, content) => `<div class="assay-chart-style-panel" role="tabpanel" id="assay-cc-panel-${id}"
   aria-labelledby="assay-cc-tab-${id}" data-cc-panel="${id}" ${id === 'frame' ? '' : 'hidden'}>${content}</div>`;
 const stack = (content, attributes = '') => `<div class="assay-chart-style-axis-column" ${attributes}>${content}</div>`;
 const axisGrid = (content) => `<div class="assay-chart-style-axis-grid">${content}</div>`;
 // The X and Y columns carry identical fields so their rows line up across the grid.
-const axisColumn = (axis) => stack(`<span class="assay-chart-style-subhead">${axis.toUpperCase()} axis</span>`
+const axisColumn = (axis) => stack(`<span class="assay-chart-style-subhead">${axis.toUpperCase()} ${i18nUi.html("axis")}</span>`
   + stack(select(`${axis}Scale`, 'Scale', [['linear', 'Linear'], ['log10', 'Log10'], ['log2', 'Log2'], ['ln', 'Natural log']])
     + check(`${axis}RangeAuto`, 'Auto range')
     + number(`${axis}Min`, 'Minimum', null, null) + number(`${axis}Max`, 'Maximum', null, null)
@@ -66,10 +69,10 @@ const PANEL_HTML = `<div class="assay-chart-style">
       ${iconButton('resetBtn', 'Reset all formatting')}
     </div>
   </div>
-  <div class="assay-chart-style-tabs" role="tablist" aria-label="Chart format sections">
+  <div class="assay-chart-style-tabs" role="tablist" ${i18nUi.attribute("aria-label", "Chart format sections")}>
     ${TABS.map((tab, i) => `<button type="button" role="tab" id="assay-cc-tab-${tab.id}"
       aria-controls="assay-cc-panel-${tab.id}" aria-selected="${i === 0}" tabindex="${i === 0 ? 0 : -1}"
-      data-cc-tab="${tab.id}">${tab.label}</button>`).join('')}
+      data-cc-tab="${tab.id}">${i18nUi.renderOwned(tab.label)}</button>`).join('')}
   </div>
   ${panel('frame', `
     ${picker('frameStyle', 'Frame')}
@@ -89,7 +92,7 @@ const PANEL_HTML = `<div class="assay-chart-style">
   ${panel('series', `
     ${select('seriesTarget', 'Data series', [['', 'All series']])}
     ${row(color('color', 'Series color') + number('opacity', 'Opacity', 0.1, 1, 0.1))}
-    <div class="form-actions"><button type="button" data-cc="seriesDefaults" class="ghost-btn">Use defaults</button></div>
+    <div class="form-actions"><button type="button" data-cc="seriesDefaults" class="ghost-btn">${i18nUi.html("Use defaults")}</button></div>
     ${section('Symbols', row(picker('pointShape', 'Shape') + number('pointSize', 'Size (pt)', 0.75, 15, 0.25))
       + select('markerFill', 'Fill', [['filled', 'Filled'], ['open', 'Open']]), 'data-cc="symbolFields"')}
     ${section('Lines', select('mode', 'Display', [['lines+markers', 'Line + points'], ['lines', 'Line only'], ['markers', 'Points only']])
@@ -103,7 +106,7 @@ const PANEL_HTML = `<div class="assay-chart-style">
         + number('errorThickness', 'Thickness (pt)', 0.375, 4.5, 0.125)), 'data-cc="errorFields"')}
     ${select('legendPosition', 'Legend position', [['top', 'Top'], ['bottom', 'Bottom'], ['right', 'Right'], ['none', 'Hidden']])}
     <details class="assay-chart-style-subsection" data-cc="columnFields">
-      <summary class="assay-chart-style-subhead">Data mapping</summary>
+      <summary class="assay-chart-style-subhead">${i18nUi.html("Data mapping")}</summary>
       ${select('xColumn', 'X column', [])}${select('yColumn', 'Y column', [])}${select('seriesColumn', 'Series column', [])}
     </details>
     <p class="assay-chart-style-note" data-cc="columnNote"></p>
@@ -112,7 +115,7 @@ const PANEL_HTML = `<div class="assay-chart-style">
     ${select('textTarget', 'Text element', [['title', 'Chart title'], ['xTitle', 'X axis title'], ['yTitle', 'Y axis title'],
       ['xTicks', 'X tick labels'], ['yTicks', 'Y tick labels'], ['legend', 'Legend'], ['barLabels', 'Bar-value labels']])}
     <div data-cc="titleFields" class="assay-chart-style-subsection">
-      <label>Text<input type="text" data-cc="titleText" maxlength="200" /></label>
+      <label>${i18nUi.html("Text")}<input type="text" data-cc="titleText" maxlength="200" /></label>
       ${row(number('titlePos', 'Position (0–1)', 0, 1, 0.05, 'Center') + number('titleOffset', 'Distance (pt)', 0, 150, 0.25, 'Auto'))}
     </div>
     ${section('Font', '<div data-cc="textBar"></div>')}

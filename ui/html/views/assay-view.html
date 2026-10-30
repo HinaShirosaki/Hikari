@@ -2,106 +2,106 @@
       <div class="assay-create-layout left-rail-template">
         <div class="assay-mode-create-panel assay-create-sidebar app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div id="assay-mode-switch" class="assay-rail-mode-switch">
-            <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Assay mode">
-              <button type="button" id="assay-mode-create-btn" class="ghost-btn calendar-view-active">Setup</button>
-              <button type="button" id="assay-mode-results-btn" class="ghost-btn">Analyze</button>
+            <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Assay mode" data-i18n-aria-label="plate.mode.label">
+              <button type="button" id="assay-mode-create-btn" class="ghost-btn calendar-view-active" data-i18n="plate.mode.setup">Setup</button>
+              <button type="button" id="assay-mode-results-btn" class="ghost-btn" data-i18n="plate.mode.analyze">Analyze</button>
             </div>
           </div>
           <form id="assay-form" class="form-grid assay-form-grid assay-create-sidebar-pinned left-rail-template__pinned">
             <input type="hidden" id="assay-id" />
-            <div class="form-actions assay-form-actions" aria-label="Assay actions">
-              <button type="button" id="assay-new-btn" class="ghost-btn assay-form-icon-btn" aria-label="Create new assay" data-hover-caption="Create new assay">
+            <div class="form-actions assay-form-actions" aria-label="Assay actions" data-i18n-aria-label="plate.actions.label">
+              <button type="button" id="assay-new-btn" class="ghost-btn assay-form-icon-btn" aria-label="Create new assay" data-hover-caption="Create new assay" data-i18n-aria-label="plate.action.new" data-i18n-hover-caption="plate.action.new">
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                   <path d="M12 5v14"></path>
                   <path d="M5 12h14"></path>
                 </svg>
-                <span class="sr-only">Create new assay</span>
+                <span class="sr-only" data-i18n="plate.action.new">Create new assay</span>
               </button>
-              <button type="button" id="assay-export-template-btn" class="ghost-btn assay-form-icon-btn" aria-label="Export CSV template" data-hover-caption="Export CSV template">
+              <button type="button" id="assay-export-template-btn" class="ghost-btn assay-form-icon-btn" aria-label="Export CSV template" data-hover-caption="Export CSV template" data-i18n-aria-label="plate.action.exportTemplate" data-i18n-hover-caption="plate.action.exportTemplate">
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                   <path d="M12 4v12"></path>
                   <path d="m7 11 5 5 5-5"></path>
                   <path d="M5 20h14"></path>
                 </svg>
-                <span class="sr-only">Export CSV template</span>
+                <span class="sr-only" data-i18n="plate.action.exportTemplate">Export CSV template</span>
               </button>
-              <button type="button" id="assay-import-template-btn" class="ghost-btn assay-form-icon-btn" aria-label="Import CSV" data-hover-caption="Import CSV">
+              <button type="button" id="assay-import-template-btn" class="ghost-btn assay-form-icon-btn" aria-label="Import CSV" data-hover-caption="Import CSV" data-i18n-aria-label="plate.action.importCsv" data-i18n-hover-caption="plate.action.importCsv">
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                   <path d="M12 16V4"></path>
                   <path d="m7 9 5-5 5 5"></path>
                   <path d="M5 20h14"></path>
                 </svg>
-                <span class="sr-only">Import CSV</span>
+                <span class="sr-only" data-i18n="plate.action.importCsv">Import CSV</span>
               </button>
               <input id="assay-import-file" type="file" accept=".csv,text/csv" hidden />
-              <button id="assay-save-btn" type="submit" class="primary-btn assay-form-icon-btn assay-form-save-icon-btn" aria-label="Save assay" title="Save assay">
+              <button id="assay-save-btn" type="submit" class="primary-btn assay-form-icon-btn assay-form-save-icon-btn" aria-label="Save assay" title="Save assay" data-i18n-aria-label="plate.action.saveAssay" data-i18n-title="plate.action.saveAssay">
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                   <path d="M5 3h12l3 3v15H4V3Z"></path>
                   <path d="M8 3v6h8V3"></path>
                   <path d="M8 21v-7h8v7"></path>
                 </svg>
-                <span class="assay-form-button-caption">Save</span>
+                <span class="assay-form-button-caption" data-i18n="plate.action.save">Save</span>
               </button>
-              <button type="button" id="assay-cancel-btn" class="ghost-btn assay-form-icon-btn" aria-label="Cancel edit" data-hover-caption="Cancel edit">
+              <button type="button" id="assay-cancel-btn" class="ghost-btn assay-form-icon-btn" aria-label="Cancel edit" data-hover-caption="Cancel edit" data-i18n-aria-label="plate.action.cancelEdit" data-i18n-hover-caption="plate.action.cancelEdit">
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                   <path d="M6 6l12 12"></path>
                   <path d="M18 6 6 18"></path>
                 </svg>
-                <span class="sr-only">Cancel edit</span>
+                <span class="sr-only" data-i18n="plate.action.cancelEdit">Cancel edit</span>
               </button>
               <label class="assay-plate-type-field">
-                <span class="sr-only">Plate Type</span>
-                <select id="assay-plate-type" aria-label="Plate Type">
-                  <option value="6">6 well</option>
-                  <option value="12">12 well</option>
-                  <option value="24">24 well</option>
-                  <option value="48">48 well</option>
-                  <option value="96" selected>96 well</option>
-                  <option value="384">384 well</option>
-                  <option value="1536">1536 well</option>
+                <span class="sr-only" data-i18n="plate.form.plateType">Plate Type</span>
+                <select id="assay-plate-type" aria-label="Plate Type" data-i18n-aria-label="plate.form.plateType">
+                  <option value="6" data-i18n="plate.form.wellCount" data-i18n-params='{"count":6}'>6 well</option>
+                  <option value="12" data-i18n="plate.form.wellCount" data-i18n-params='{"count":12}'>12 well</option>
+                  <option value="24" data-i18n="plate.form.wellCount" data-i18n-params='{"count":24}'>24 well</option>
+                  <option value="48" data-i18n="plate.form.wellCount" data-i18n-params='{"count":48}'>48 well</option>
+                  <option value="96" selected data-i18n="plate.form.wellCount" data-i18n-params='{"count":96}'>96 well</option>
+                  <option value="384" data-i18n="plate.form.wellCount" data-i18n-params='{"count":384}'>384 well</option>
+                  <option value="1536" data-i18n="plate.form.wellCount" data-i18n-params='{"count":1536}'>1536 well</option>
                 </select>
               </label>
             </div>
             <div class="assay-display-field">
-              <span class="assay-display-label">Assay Number</span>
+              <span class="assay-display-label" data-i18n="plate.form.number">Assay Number</span>
               <div id="assay-number-display" class="assay-display-value" aria-live="polite"></div>
             </div>
             <label>
-              Assay Name
-              <input id="assay-name" required placeholder="e.g. Cell viability run 2026-02-19" />
+              <span data-i18n="plate.form.name">Assay Name</span>
+              <input id="assay-name" required placeholder="e.g. Cell viability run 2026-02-19" data-i18n-placeholder="plate.form.namePlaceholder" />
             </label>
             <label>
-              Project
+              <span data-i18n="plate.form.project">Project</span>
               <select id="assay-project">
-                <option value="">Select project</option>
+                <option value="" data-i18n="plate.form.selectProject">Select project</option>
               </select>
             </label>
             <div class="assay-axis-config-grid">
               <div class="assay-axis-switch">
-                <span class="assay-display-label">Sample ID Axis</span>
-                <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Sample ID axis switch">
-                  <button type="button" id="assay-sample-axis-row-btn" class="ghost-btn calendar-view-active">Row</button>
-                  <button type="button" id="assay-sample-axis-column-btn" class="ghost-btn">Column</button>
+                <span class="assay-display-label" data-i18n="plate.form.sampleAxis">Sample ID Axis</span>
+                <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Sample ID axis switch" data-i18n-aria-label="plate.form.sampleAxisSwitch">
+                  <button type="button" id="assay-sample-axis-row-btn" class="ghost-btn calendar-view-active" data-i18n="plate.axis.row">Row</button>
+                  <button type="button" id="assay-sample-axis-column-btn" class="ghost-btn" data-i18n="plate.axis.column">Column</button>
                 </div>
                 <select id="assay-sample-axis" hidden>
-                  <option value="row" selected>Row</option>
-                  <option value="column">Column</option>
+                  <option value="row" selected data-i18n="plate.axis.row">Row</option>
+                  <option value="column" data-i18n="plate.axis.column">Column</option>
                 </select>
               </div>
               <div class="assay-axis-switch">
-                <span class="assay-display-label">Conc. Axis</span>
-                <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Concentration axis switch">
-                  <button type="button" id="assay-concentration-axis-row-btn" class="ghost-btn">Row</button>
-                  <button type="button" id="assay-concentration-axis-column-btn" class="ghost-btn calendar-view-active">Column</button>
+                <span class="assay-display-label" data-i18n="plate.form.concentrationAxis">Conc. Axis</span>
+                <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Concentration axis switch" data-i18n-aria-label="plate.form.concentrationAxisSwitch">
+                  <button type="button" id="assay-concentration-axis-row-btn" class="ghost-btn" data-i18n="plate.axis.row">Row</button>
+                  <button type="button" id="assay-concentration-axis-column-btn" class="ghost-btn calendar-view-active" data-i18n="plate.axis.column">Column</button>
                 </div>
                 <select id="assay-concentration-axis" hidden>
-                  <option value="row">Row</option>
-                  <option value="column" selected>Column</option>
+                  <option value="row" data-i18n="plate.axis.row">Row</option>
+                  <option value="column" selected data-i18n="plate.axis.column">Column</option>
                 </select>
               </div>
             </div>
             <select id="assay-notebook-entry" hidden>
-              <option value="">Not linked</option>
+              <option value="" data-i18n="plate.form.notLinked">Not linked</option>
             </select>
             <div id="assay-plate-definition" class="small-note assay-form-note" hidden></div>
             <div id="assay-csv-status" class="small-note assay-form-note"></div>
@@ -109,13 +109,13 @@
           <div class="assay-create-sidebar-scroll left-rail-template__scroll">
             <details id="assay-browser-panel" class="assay-browser-panel">
               <summary class="assay-browser-summary">
-                <span>Existing Assays</span>
+                <span data-i18n="plate.browser.title">Existing Assays</span>
                 <span id="assay-browser-count" class="small-note">0</span>
               </summary>
               <div class="assay-browser-body">
                 <label>
-                  <span class="sr-only">Search Assays</span>
-                  <input id="assay-search" type="search" placeholder="Search assay plates, projects, or notes" />
+                  <span class="sr-only" data-i18n="plate.browser.search">Search Assays</span>
+                  <input id="assay-search" type="search" placeholder="Search assay plates, projects, or notes" data-i18n-placeholder="plate.browser.searchPlaceholder" />
                 </label>
                 <div id="assay-list" class="assay-browser-list"></div>
               </div>
@@ -125,17 +125,17 @@
 
         <div class="panel assay-mode-create-panel assay-create-preview-panel left-rail-template__main">
           <div class="form-actions assay-plate-toolbar">
-            <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Plate edit field">
-              <button type="button" id="assay-plate-field-sample-btn" class="ghost-btn calendar-view-active" aria-label="Edit Sample ID">Sample ID</button>
-              <button type="button" id="assay-plate-field-concentration-btn" class="ghost-btn" aria-label="Edit Concentration">Concentration</button>
+            <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Plate edit field" data-i18n-aria-label="plate.toolbar.editField">
+              <button type="button" id="assay-plate-field-sample-btn" class="ghost-btn calendar-view-active" aria-label="Edit Sample ID" data-i18n-aria-label="plate.toolbar.editSample" data-i18n="plate.field.sampleId">Sample ID</button>
+              <button type="button" id="assay-plate-field-concentration-btn" class="ghost-btn" aria-label="Edit Concentration" data-i18n-aria-label="plate.toolbar.editConcentration" data-i18n="plate.field.concentration">Concentration</button>
             </div>
-            <div class="assay-plate-fill-controls" role="group" aria-label="Fill concentrations">
+            <div class="assay-plate-fill-controls" role="group" aria-label="Fill concentrations" data-i18n-aria-label="plate.toolbar.fill">
               <label class="assay-conc-unit-field">
-                <span class="sr-only">Concentration fill method</span>
+                <span class="sr-only" data-i18n="plate.toolbar.fillMethod">Concentration fill method</span>
                 <select id="assay-fill-mode" class="assay-fill-mode-select">
-                  <option value="factor">Dilution &divide;</option>
-                  <option value="linear">Linear</option>
-                  <option value="log">Log</option>
+                  <option value="factor" data-i18n="plate.fill.factor">Dilution &divide;</option>
+                  <option value="linear" data-i18n="plate.fill.linear">Linear</option>
+                  <option value="log" data-i18n="plate.fill.log">Log</option>
                 </select>
               </label>
               <input
@@ -146,11 +146,13 @@
                 step="any"
                 placeholder="Factor"
                 aria-label="Dilution factor"
+                data-i18n-placeholder="plate.fill.factorPlaceholder"
+                data-i18n-aria-label="plate.fill.factorLabel"
               />
-              <button type="button" id="assay-dilution-fill-btn" class="ghost-btn">Fill</button>
+              <button type="button" id="assay-dilution-fill-btn" class="ghost-btn" data-i18n="plate.fill.action">Fill</button>
             </div>
-            <button type="button" id="assay-serial-dilution-btn" class="ghost-btn">Serial Dilution</button>
-            <button type="button" id="assay-clear-mappings-btn" class="ghost-btn assay-plate-clear-btn" aria-label="Clear all well mappings">Clear mappings</button>
+            <button type="button" id="assay-serial-dilution-btn" class="ghost-btn" data-i18n="plate.toolbar.serialDilution">Serial Dilution</button>
+            <button type="button" id="assay-clear-mappings-btn" class="ghost-btn assay-plate-clear-btn" aria-label="Clear all well mappings" data-i18n-aria-label="plate.toolbar.clearMappingsLabel" data-i18n="plate.toolbar.clearMappings">Clear mappings</button>
           </div>
           <div id="assay-layout-status" class="small-note"></div>
           <div id="assay-plate-preview" class="assay-plate-preview"></div>
@@ -162,13 +164,13 @@
           <div class="assay-results-rail-scroll left-rail-template__scroll">
             <details id="assay-results-browser-panel" class="foldable-section" open>
               <summary class="foldable-section__summary">
-                <span>Existing Assays</span>
+                <span data-i18n="plate.browser.title">Existing Assays</span>
                 <span id="assay-results-browser-count" class="small-note">0</span>
               </summary>
               <div class="foldable-section__body">
                 <label>
-                  <span class="sr-only">Search Assays</span>
-                  <input id="assay-results-search" type="search" placeholder="Search assay plates, projects, or notes" />
+                  <span class="sr-only" data-i18n="plate.browser.search">Search Assays</span>
+                  <input id="assay-results-search" type="search" placeholder="Search assay plates, projects, or notes" data-i18n-placeholder="plate.browser.searchPlaceholder" />
                 </label>
                 <div id="assay-results-list" class="assay-browser-list assay-results-browser-list"></div>
               </div>
@@ -176,33 +178,33 @@
 
             <details id="assay-analysis-panel" class="foldable-section" open>
               <summary class="foldable-section__summary">
-                <span>Data Analysis</span>
+                <span data-i18n="plate.analysis.title">Data Analysis</span>
               </summary>
               <div class="foldable-section__body">
                 <details id="assay-result-data-panel" class="foldable-section foldable-section--subsection" open>
                   <summary class="foldable-section__summary">
-                    <span>Result data</span>
+                    <span data-i18n="plate.analysis.resultData">Result data</span>
                   </summary>
                   <div class="foldable-section__body">
                     <select id="assay-results-assay-select" hidden>
-                      <option value="">Select assay plate</option>
+                      <option value="" data-i18n="plate.analysis.selectAssay">Select assay plate</option>
                     </select>
                     <div class="form-actions assay-results-actions assay-analysis-action-row">
-                      <button type="button" id="assay-attach-result-file-btn" class="ghost-btn assay-results-icon-btn assay-analysis-action-btn assay-analysis-import-btn" aria-label="Import result file" title="Import CSV or Excel results">
+                      <button type="button" id="assay-attach-result-file-btn" class="ghost-btn assay-results-icon-btn assay-analysis-action-btn assay-analysis-import-btn" aria-label="Import result file" title="Import CSV or Excel results" data-i18n-aria-label="plate.result.importLabel" data-i18n-title="plate.result.importTitle">
                         <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                           <path d="m21.4 11.6-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 1 1-2.8-2.8l8.5-8.5"></path>
-                        </svg><span>Import</span>
+                        </svg><span data-i18n="plate.result.import">Import</span>
                       </button>
                       <input id="assay-result-file-input" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
-                      <button type="button" id="assay-transform-open-btn" class="ghost-btn assay-results-icon-btn assay-analysis-action-btn" aria-label="Transform plate" title="Create a transformed plate">
+                      <button type="button" id="assay-transform-open-btn" class="ghost-btn assay-results-icon-btn assay-analysis-action-btn" aria-label="Transform plate" title="Create a transformed plate" data-i18n-aria-label="plate.result.transformLabel" data-i18n-title="plate.result.transformTitle">
                         <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                           <path d="M4 7h11"></path>
                           <path d="m12 4 3 3-3 3"></path>
                           <path d="M20 17H9"></path>
                           <path d="m12 14-3 3 3 3"></path>
-                        </svg><span>Transform</span>
+                        </svg><span data-i18n="plate.result.transform">Transform</span>
                       </button>
-                      <button type="button" id="assay-clear-results-btn" class="ghost-btn assay-results-icon-btn row-action-icon-btn-danger" aria-label="Clear results" data-hover-caption="Clear results">
+                      <button type="button" id="assay-clear-results-btn" class="ghost-btn assay-results-icon-btn row-action-icon-btn-danger" aria-label="Clear results" data-hover-caption="Clear results" data-i18n-aria-label="plate.result.clear" data-i18n-hover-caption="plate.result.clear">
                         <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                           <path d="M3 6h18"></path>
                           <path d="M8 6V4h8v2"></path>
@@ -217,31 +219,31 @@
 
                 <details id="assay-groups-panel" class="foldable-section foldable-section--subsection" open>
                   <summary class="foldable-section__summary">
-                    <span>Groups <span class="assay-analysis-optional">Optional</span></span>
+                    <span><span data-i18n="plate.groups.title">Groups</span> <span class="assay-analysis-optional" data-i18n="plate.groups.optional">Optional</span></span>
                   </summary>
                   <div class="foldable-section__body assay-analysis-controls">
                     <input id="assay-analysis-row-groups" type="hidden" />
                     <input id="assay-analysis-column-groups" type="hidden" />
-                    <div class="form-actions assay-analysis-group-actions assay-analysis-action-row" role="group" aria-label="Grouping actions">
-                      <button type="button" id="assay-analysis-add-row-group-btn" class="ghost-btn assay-analysis-group-icon-btn assay-analysis-action-btn" aria-label="Add selected rows as group" title="Add selected rows as a group">
+                    <div class="form-actions assay-analysis-group-actions assay-analysis-action-row" role="group" aria-label="Grouping actions" data-i18n-aria-label="plate.groups.actions">
+                      <button type="button" id="assay-analysis-add-row-group-btn" class="ghost-btn assay-analysis-group-icon-btn assay-analysis-action-btn" aria-label="Add selected rows as group" title="Add selected rows as a group" data-i18n-aria-label="plate.groups.addRowsLabel" data-i18n-title="plate.groups.addRowsTitle">
                         <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                           <path d="M3 4h12v16H3Z"></path>
                           <path d="M3 9h12"></path>
                           <path d="M3 15h12"></path>
                           <path d="M19 9v6"></path>
                           <path d="M16 12h6"></path>
-                        </svg><span>Rows</span>
+                        </svg><span data-i18n="plate.groups.rows">Rows</span>
                       </button>
-                      <button type="button" id="assay-analysis-add-column-group-btn" class="ghost-btn assay-analysis-group-icon-btn assay-analysis-action-btn" aria-label="Add selected columns as group" title="Add selected columns as a group">
+                      <button type="button" id="assay-analysis-add-column-group-btn" class="ghost-btn assay-analysis-group-icon-btn assay-analysis-action-btn" aria-label="Add selected columns as group" title="Add selected columns as a group" data-i18n-aria-label="plate.groups.addColumnsLabel" data-i18n-title="plate.groups.addColumnsTitle">
                         <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                           <path d="M4 3h16v12H4Z"></path>
                           <path d="M9 3v12"></path>
                           <path d="M15 3v12"></path>
                           <path d="M9 19h6"></path>
                           <path d="M12 16v6"></path>
-                        </svg><span>Columns</span>
+                        </svg><span data-i18n="plate.groups.columns">Columns</span>
                       </button>
-                      <button type="button" id="assay-analysis-clear-groups-btn" class="ghost-btn assay-analysis-group-icon-btn row-action-icon-btn-danger" aria-label="Clear groups" data-hover-caption="Clear groups">
+                      <button type="button" id="assay-analysis-clear-groups-btn" class="ghost-btn assay-analysis-group-icon-btn row-action-icon-btn-danger" aria-label="Clear groups" data-hover-caption="Clear groups" data-i18n-aria-label="plate.groups.clear" data-i18n-hover-caption="plate.groups.clear">
                         <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                           <path d="M3 6h18"></path>
                           <path d="M8 6V4h8v2"></path>
@@ -256,14 +258,14 @@
 
                 <details id="assay-analysis-source-panel" class="foldable-section foldable-section--subsection" open>
                   <summary class="foldable-section__summary">
-                    <span>Data source</span>
+                    <span data-i18n="plate.source.title">Data source</span>
                   </summary>
                   <div class="foldable-section__body">
                     <label>
-                      <span class="sr-only">Analysis data source</span>
+                      <span class="sr-only" data-i18n="plate.source.label">Analysis data source</span>
                       <select id="assay-analysis-data-source">
-                        <option value="raw" selected>Plate results · Table1</option>
-                        <option value="transformed" disabled>Transformed plate · Table2</option>
+                        <option value="raw" selected data-i18n="plate.source.raw">Plate results · Table1</option>
+                        <option value="transformed" disabled data-i18n="plate.source.transformed">Transformed plate · Table2</option>
                       </select>
                     </label>
                   </div>
@@ -271,81 +273,81 @@
 
                 <details id="assay-analysis-settings-panel" class="foldable-section foldable-section--subsection" open>
                   <summary class="foldable-section__summary">
-                    <span>Fit &amp; summary</span>
+                    <span data-i18n="plate.settings.title">Fit &amp; summary</span>
                   </summary>
                   <div class="foldable-section__body">
                     <label>
-                      Group by
+                      <span data-i18n="plate.settings.groupBy">Group by</span>
                       <select id="assay-analysis-group-by">
-                        <option value="auto" selected>Auto (from plate mapping)</option>
-                        <option value="sample">Sample ID</option>
-                        <option value="concentration">Concentration</option>
-                        <option value="sample_concentration">Sample ID &times; Concentration</option>
-                        <option value="row">Plate row</option>
-                        <option value="column">Plate column</option>
-                        <option value="custom">Custom groups</option>
+                        <option value="auto" selected data-i18n="plate.groupBy.auto">Auto (from plate mapping)</option>
+                        <option value="sample" data-i18n="plate.field.sampleId">Sample ID</option>
+                        <option value="concentration" data-i18n="plate.field.concentration">Concentration</option>
+                        <option value="sample_concentration" data-i18n="plate.groupBy.sampleConcentration">Sample ID &times; Concentration</option>
+                        <option value="row" data-i18n="plate.groupBy.row">Plate row</option>
+                        <option value="column" data-i18n="plate.groupBy.column">Plate column</option>
+                        <option value="custom" data-i18n="plate.groupBy.custom">Custom groups</option>
                       </select>
                     </label>
                     <label>
-                      Method
+                      <span data-i18n="plate.settings.method">Method</span>
                       <select id="assay-analysis-kind">
-                        <optgroup label="Statistics">
-                          <option value="summary" selected>Summary statistics</option>
-                          <option value="plate_qc">Plate QC (Z&#39;-factor, SSMD, CV%)</option>
-                          <option value="zscore">Well Z-score / hit list</option>
-                          <option value="ttest">Compare groups to control (t-test)</option>
+                        <optgroup label="Statistics" data-i18n-label="plate.method.statistics">
+                          <option value="summary" selected data-i18n="plate.method.summary">Summary statistics</option>
+                          <option value="plate_qc" data-i18n="plate.method.plateQc">Plate QC (Z&#39;-factor, SSMD, CV%)</option>
+                          <option value="zscore" data-i18n="plate.method.zscore">Well Z-score / hit list</option>
+                          <option value="ttest" data-i18n="plate.method.ttest">Compare groups to control (t-test)</option>
                         </optgroup>
-                        <optgroup label="Curve fitting">
-                          <option value="linear">Linear fit</option>
-                          <option value="sigmoidal">Sigmoidal fit (4PL / 5PL)</option>
-                          <option value="hyperbola">Hyperbola</option>
-                          <option value="polynomial">Polynomial</option>
-                          <option value="pade11">Pade (1,1)</option>
-                          <option value="exponential">One-phase exponential (decay / association)</option>
+                        <optgroup label="Curve fitting" data-i18n-label="plate.method.curveFitting">
+                          <option value="linear" data-i18n="plate.method.linear">Linear fit</option>
+                          <option value="sigmoidal" data-i18n="plate.method.sigmoidal">Sigmoidal fit (4PL / 5PL)</option>
+                          <option value="hyperbola" data-i18n="plate.method.hyperbola">Hyperbola</option>
+                          <option value="polynomial" data-i18n="plate.method.polynomial">Polynomial</option>
+                          <option value="pade11" data-i18n="plate.method.pade">Pade (1,1)</option>
+                          <option value="exponential" data-i18n="plate.method.exponential">One-phase exponential (decay / association)</option>
                         </optgroup>
-                        <optgroup label="Normalization">
-                          <option value="normalize">Normalize to baseline</option>
-                          <option value="percent_control">Percent of control / inhibition</option>
+                        <optgroup label="Normalization" data-i18n-label="plate.method.normalization">
+                          <option value="normalize" data-i18n="plate.method.normalize">Normalize to baseline</option>
+                          <option value="percent_control" data-i18n="plate.method.percentControl">Percent of control / inhibition</option>
                         </optgroup>
                       </select>
                     </label>
                     <div id="assay-analysis-controls-field" class="assay-analysis-modifiers" hidden>
                       <label>
-                        High control (100%)
-                        <input id="assay-analysis-high-control" type="text" placeholder="e.g. POS, DMSO, Untreated" />
+                        <span data-i18n="plate.settings.highControl">High control (100%)</span>
+                        <input id="assay-analysis-high-control" type="text" placeholder="e.g. POS, DMSO, Untreated" data-i18n-placeholder="plate.settings.highControlPlaceholder" />
                       </label>
                       <label>
-                        Low control (0%)
-                        <input id="assay-analysis-low-control" type="text" placeholder="e.g. NEG, Blank" />
+                        <span data-i18n="plate.settings.lowControl">Low control (0%)</span>
+                        <input id="assay-analysis-low-control" type="text" placeholder="e.g. NEG, Blank" data-i18n-placeholder="plate.settings.lowControlPlaceholder" />
                       </label>
-                      <span class="small-note">Matches a group label or sample ID. Blank auto-detects the usual names.</span>
+                      <span class="small-note" data-i18n="plate.settings.controlsHint">Matches a group label or sample ID. Blank auto-detects the usual names.</span>
                     </div>
                     <label id="assay-analysis-x-axis-field" hidden>
-                      X Axis
+                      <span data-i18n="plate.settings.xAxis">X Axis</span>
                       <select id="assay-analysis-x-axis">
-                        <option value="auto" selected>Auto</option>
-                        <option value="concentration">Concentration</option>
-                        <option value="sample">Sample ID</option>
-                        <option value="column">Column number</option>
+                        <option value="auto" selected data-i18n="plate.xAxis.auto">Auto</option>
+                        <option value="concentration" data-i18n="plate.field.concentration">Concentration</option>
+                        <option value="sample" data-i18n="plate.field.sampleId">Sample ID</option>
+                        <option value="column" data-i18n="plate.xAxis.column">Column number</option>
                       </select>
                     </label>
                     <div class="assay-analysis-modifiers">
                       <label class="assay-analysis-checkbox" hidden>
                         <input id="assay-analysis-asymmetric" type="checkbox" />
-                        Asymmetric (5PL)
+                        <span data-i18n="plate.settings.asymmetric">Asymmetric (5PL)</span>
                       </label>
                       <label id="assay-analysis-poly-order-field" hidden>
-                        Polynomial Order
+                        <span data-i18n="plate.settings.polyOrder">Polynomial Order</span>
                         <input id="assay-analysis-poly-order" type="number" min="2" max="4" step="1" value="2" />
                       </label>
                       <label id="assay-analysis-subtotals-field" class="assay-analysis-checkbox">
                         <input id="assay-analysis-subtotals" type="checkbox" />
-                        Add subtotal rows per first group
+                        <span data-i18n="plate.settings.subtotals">Add subtotal rows per first group</span>
                       </label>
                     </div>
                     <label id="assay-analysis-error-bars-field" class="assay-analysis-checkbox">
                       <input id="assay-analysis-error-bars" type="checkbox" checked />
-                      Show SD error bars
+                      <span data-i18n="plate.settings.errorBars">Show SD error bars</span>
                     </label>
 
                   </div>
@@ -355,7 +357,7 @@
 
             <details id="assay-chart-format-panel" class="foldable-section">
               <summary class="foldable-section__summary">
-                <span>Chart Format</span>
+                <span data-i18n="plate.chart.formatTitle">Chart Format</span>
               </summary>
               <div class="foldable-section__body">
                 <div id="assay-chart-style-panel" data-assay-chart-style-mount></div>
@@ -367,53 +369,53 @@
 
         <div id="assay-analyze-workspace" class="panel assay-results-analysis-panel assay-results-workspace left-rail-template__main" data-data-tab="raw">
           <header class="assay-workspace-header">
-            <div><h2 id="assay-workspace-title">Assay analysis</h2><p id="assay-workspace-meta" class="small-note"></p></div>
-                      <button type="button" id="assay-save-results-btn" class="ghost-btn assay-workspace-save-btn" aria-label="Save results" data-hover-caption="Save results">
+            <div><h2 id="assay-workspace-title" data-i18n="plate.workspace.title">Assay analysis</h2><p id="assay-workspace-meta" class="small-note"></p></div>
+                      <button type="button" id="assay-save-results-btn" class="ghost-btn assay-workspace-save-btn" aria-label="Save results" data-hover-caption="Save results" data-i18n-aria-label="plate.workspace.saveResults" data-i18n-hover-caption="plate.workspace.saveResults">
                         <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                           <path d="M5 3h12l3 3v15H4V3Z"></path>
                           <path d="M8 3v6h8V3"></path>
                           <path d="M8 21v-7h8v7"></path>
-                        </svg><span>Save</span>
+                        </svg><span data-i18n="plate.action.save">Save</span>
                       </button>
           </header>
-          <section class="assay-workspace-chart" aria-label="Analysis chart">
+          <section class="assay-workspace-chart" aria-label="Analysis chart" data-i18n-aria-label="plate.workspace.chart">
             <header class="assay-workspace-chart-header">
-              <div><h3 id="assay-workspace-chart-title">Summary statistics</h3><p id="assay-workspace-chart-source" class="small-note"></p></div>
+              <div><h3 id="assay-workspace-chart-title" data-i18n="plate.method.summary">Summary statistics</h3><p id="assay-workspace-chart-source" class="small-note"></p></div>
               <div class="assay-workspace-chart-actions">
-                <button type="button" id="assay-workspace-format-btn" class="row-action-icon-btn" aria-label="Format chart"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></svg></button>
+                <button type="button" id="assay-workspace-format-btn" class="row-action-icon-btn" aria-label="Format chart" data-i18n-aria-label="plate.workspace.formatChart"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></svg></button>
                     <div class="form-actions assay-chart-export-actions">
-                      <span class="sr-only">Export chart</span><svg class="btn-icon assay-chart-export-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3M7 10l5 5 5-5M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
+                      <span class="sr-only" data-i18n="plate.workspace.exportChart">Export chart</span><svg class="btn-icon assay-chart-export-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3M7 10l5 5 5-5M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
                       <button type="button" id="assay-chart-export-png-btn" class="ghost-btn">PNG</button>
                       <button type="button" id="assay-chart-export-svg-btn" class="ghost-btn">SVG</button>
                     </div>
-                <button type="button" id="assay-chart-focus-btn" class="row-action-icon-btn" aria-pressed="false" aria-label="Focus chart"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
+                <button type="button" id="assay-chart-focus-btn" class="row-action-icon-btn" aria-pressed="false" aria-label="Focus chart" data-i18n-aria-label="plate.workspace.focusChart"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
               </div>
             </header>
             <div id="assay-analysis-table" class="list-table"></div>
           </section>
-          <section class="assay-workspace-data" aria-label="Analysis data">
+          <section class="assay-workspace-data" aria-label="Analysis data" data-i18n-aria-label="plate.workspace.data">
             <div class="assay-workspace-data-header">
-              <div id="assay-data-tabs" class="assay-workspace-tabs" role="tablist" aria-label="Assay data">
-                <button type="button" id="assay-data-tab-raw" role="tab" aria-controls="assay-result-table-panel" aria-selected="true" data-assay-data-tab="raw">Plate results</button>
-                <button type="button" id="assay-data-tab-transformed" role="tab" aria-controls="assay-transformed-data-panel" aria-selected="false" tabindex="-1" data-assay-data-tab="transformed" hidden>Transformed <span id="assay-transform-error-count" class="assay-workspace-error-count" hidden></span></button>
-                <button type="button" id="assay-data-tab-summary" role="tab" aria-controls="assay-summary-panel" aria-selected="false" tabindex="-1" data-assay-data-tab="summary">Summary</button>
+              <div id="assay-data-tabs" class="assay-workspace-tabs" role="tablist" aria-label="Assay data" data-i18n-aria-label="plate.workspace.tabs">
+                <button type="button" id="assay-data-tab-raw" role="tab" aria-controls="assay-result-table-panel" aria-selected="true" data-assay-data-tab="raw" data-i18n="plate.workspace.tabRaw">Plate results</button>
+                <button type="button" id="assay-data-tab-transformed" role="tab" aria-controls="assay-transformed-data-panel" aria-selected="false" tabindex="-1" data-assay-data-tab="transformed" hidden><span data-i18n="plate.workspace.tabTransformed">Transformed</span> <span id="assay-transform-error-count" class="assay-workspace-error-count" hidden></span></button>
+                <button type="button" id="assay-data-tab-summary" role="tab" aria-controls="assay-summary-panel" aria-selected="false" tabindex="-1" data-assay-data-tab="summary" data-i18n="plate.workspace.tabSummary">Summary</button>
               </div>
-              <button type="button" id="assay-data-order-btn" class="ghost-btn" aria-pressed="false">Data first</button>
+              <button type="button" id="assay-data-order-btn" class="ghost-btn" aria-pressed="false" data-i18n="plate.workspace.dataFirst">Data first</button>
             </div>
             <div class="assay-workspace-data-options">
-              <span id="assay-workspace-table-label" class="small-note">Table1</span>
-              <label id="assay-show-empty-rows-field" class="assay-workspace-check"><input id="assay-show-empty-rows" type="checkbox" />Show empty rows</label>
+              <span id="assay-workspace-table-label" class="small-note"><span data-i18n="plate.full.d7566bca">Table1</span></span>
+              <label id="assay-show-empty-rows-field" class="assay-workspace-check"><input id="assay-show-empty-rows" type="checkbox" /><span data-i18n="plate.workspace.showEmptyRows">Show empty rows</span></label>
             </div>
             <section id="assay-result-table-panel" class="assay-workspace-table-panel" role="tabpanel" aria-labelledby="assay-data-tab-raw">
-              <h4 class="assay-workspace-compare-label">Plate results · Table1</h4>
+              <h4 class="assay-workspace-compare-label" data-i18n="plate.source.raw">Plate results · Table1</h4>
               <div id="assay-result-table" class="assay-plate-preview"></div>
             </section>
             <section id="assay-transformed-data-panel" class="assay-workspace-table-panel" role="tabpanel" aria-labelledby="assay-data-tab-transformed" hidden>
               <div id="assay-derived-plate-panel" hidden>
                 <div class="assay-workspace-transform-header">
-                  <h4 class="assay-workspace-compare-label">Transformed · Table2</h4>
+                  <h4 class="assay-workspace-compare-label" data-i18n="plate.workspace.transformedHeading">Transformed · Table2</h4>
                   <p id="assay-transform-error-notice" class="small-note" role="status" hidden></p>
-                  <button type="button" id="assay-transform-clear-btn" class="row-action-icon-btn row-action-icon-btn-danger" aria-label="Remove transform"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg></button>
+                  <button type="button" id="assay-transform-clear-btn" class="row-action-icon-btn row-action-icon-btn-danger" aria-label="Remove transform" data-i18n-aria-label="plate.workspace.removeTransform"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg></button>
                 </div>
                 <div id="assay-derived-plate-table" class="assay-plate-preview"></div>
               </div>
@@ -429,12 +431,12 @@
       <div id="assay-serial-dilution-overlay" class="assay-serial-dilution-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
         <div class="assay-serial-dilution-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="assay-serial-dilution-title">
           <div class="assay-header-row assay-serial-dilution-head app-dialog-head">
-            <h3 id="assay-serial-dilution-title">Serial Dilution</h3>
-            <button type="button" id="assay-serial-dilution-close-btn" class="app-dialog-close-btn" aria-label="Close serial dilution dialog" data-hover-caption="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            <h3 id="assay-serial-dilution-title" data-i18n="plate.dilution.title">Serial Dilution</h3>
+            <button type="button" id="assay-serial-dilution-close-btn" class="app-dialog-close-btn" aria-label="Close serial dilution dialog" data-hover-caption="Close" data-i18n-aria-label="plate.dilution.close" data-i18n-hover-caption="plate.action.close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           </div>
           <div class="assay-serial-dilution-controls">
             <label>
-              Volume per well (uL)
+              <span data-i18n="plate.dilution.volume">Volume per well (uL)</span>
               <input id="assay-serial-dilution-volume" type="number" min="0" step="0.1" value="100" />
             </label>
           </div>
@@ -447,18 +449,18 @@
         <div class="assay-result-import-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="assay-result-import-title">
           <div class="assay-header-row assay-result-import-head app-dialog-head">
             <div>
-              <h3 id="assay-result-import-title">Select Result Matrix</h3>
+              <h3 id="assay-result-import-title" data-i18n="plate.import.title">Select Result Matrix</h3>
               <p id="assay-result-import-status" class="small-note"></p>
             </div>
-            <button type="button" id="assay-result-import-close-btn" class="app-dialog-close-btn" aria-label="Close result import dialog" data-hover-caption="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            <button type="button" id="assay-result-import-close-btn" class="app-dialog-close-btn" aria-label="Close result import dialog" data-hover-caption="Close" data-i18n-aria-label="plate.import.close" data-i18n-hover-caption="plate.action.close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           </div>
           <div class="assay-result-import-body">
-            <div id="assay-result-import-candidates" class="assay-result-import-candidates" role="listbox" aria-label="Detected result matrices"></div>
+            <div id="assay-result-import-candidates" class="assay-result-import-candidates" role="listbox" aria-label="Detected result matrices" data-i18n-aria-label="plate.import.candidates"></div>
             <div id="assay-result-import-preview" class="assay-result-import-preview"></div>
           </div>
           <div class="form-actions assay-result-import-actions">
-            <button type="button" id="assay-result-import-cancel-btn" class="ghost-btn">Cancel</button>
-            <button type="button" id="assay-result-import-apply-btn" class="primary-btn">Use This Matrix</button>
+            <button type="button" id="assay-result-import-cancel-btn" class="ghost-btn" data-i18n="plate.action.cancel">Cancel</button>
+            <button type="button" id="assay-result-import-apply-btn" class="primary-btn" data-i18n="plate.import.apply">Use This Matrix</button>
           </div>
         </div>
       </div>

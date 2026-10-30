@@ -1,3 +1,5 @@
+import { createPresentation, i18n } from "./i18n.mjs";
+const i18nUi = createPresentation("gel");
 // Gel's host adapter. The workspace owns its UI and analysis code under
 // ./workspace; this file supplies the narrow Hikari services it needs.
 
@@ -88,7 +90,7 @@ function showBanner(message, { kind = 'warning', retry = null, busy = false } = 
     bootPanel.hidden = workspaceReady || (!loading && !retryAction);
     bootPanel.classList.toggle('plugin-gel__boot--loading', loading);
     bootMessage.hidden = !loading;
-    bootMessage.textContent = loading ? message : '';
+    i18nUi.setOwnedText(bootMessage, (loading ? message : ''));
     const indicator = bootPanel.querySelector('.plugin-gel__boot-indicator');
     if (indicator) indicator.hidden = !loading;
     bootRetryButton.hidden = loading || !retryAction;
@@ -168,6 +170,7 @@ async function persist() {
 }
 
 function applyHostContext(context = {}, { snapshot = false } = {}) {
+  if (context.locale) i18n.setLocale(context.locale);
   const storageWasConfigured = Boolean(state.settings.storagePath);
   const mode = context.appearance?.mode === 'night' ? 'night' : 'day';
   const fontSize = Math.max(10, Math.min(32, Number(context.appearance?.fontSize) || 16));
@@ -429,7 +432,7 @@ async function start() {
     loadWarnings = { artifactWarnings: loaded.artifactWarnings, migrationError: loaded.migrationError };
     gelController?.destroy?.();
     leftRailController?.destroy?.();
-    host.innerHTML = markup;
+    i18nUi.setHtml(host, markup);
     document.getElementById('gel-view')?.classList.add('is-active');
 
     leftRailController = initPluginLeftRailResizer({
@@ -589,5 +592,5 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
-installSearchFieldLens();
+installSearchFieldLens({ bindLabel: lens => i18nUi.setAttribute(lens, "aria-label", i18nUi.message("Search")) });
 void start();

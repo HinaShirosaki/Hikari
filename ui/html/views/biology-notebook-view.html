@@ -4,26 +4,26 @@
           <div class="left-rail-template__pinned">
             <button id="biology-notebook-new-experiment-btn" class="primary-btn biology-notebook-new-experiment-btn" type="button" aria-haspopup="dialog" aria-controls="biology-notebook-experiment-dialog-overlay">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"></path></svg>
-              <span>New experiment</span>
+              <span data-i18n="notebook.action.newExperiment">New experiment</span>
             </button>
             <div class="biology-notebook-project-list-head">
-              <h2>Projects</h2>
-              <button id="biology-notebook-header-add-project-btn" class="ghost-btn biology-notebook-add-project-btn" type="button" aria-label="New project" aria-haspopup="dialog" aria-controls="biology-notebook-project-dialog-overlay" data-hover-caption="New project">
+              <h2 data-i18n="notebook.rail.projects">Projects</h2>
+              <button id="biology-notebook-header-add-project-btn" class="ghost-btn biology-notebook-add-project-btn" type="button" aria-label="New project" aria-haspopup="dialog" aria-controls="biology-notebook-project-dialog-overlay" data-hover-caption="New project" data-i18n-aria-label="notebook.action.newProject" data-i18n-hover-caption="notebook.action.newProject">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v10H3Z"></path><path d="M12 10v6M9 13h6"></path></svg>
-                <span>New</span>
+                <span data-i18n="notebook.action.new">New</span>
               </button>
             </div>
           </div>
           <div id="biology-notebook-entry-list" class="biology-notebook-page-list left-rail-template__scroll folder-tree-template"></div>
           <div id="biology-notebook-project-context-menu" class="biology-notebook-context-menu" hidden>
-            <button id="biology-notebook-add-project-btn" class="biology-notebook-context-item" type="button">New project</button>
+            <button id="biology-notebook-add-project-btn" class="biology-notebook-context-item" type="button" data-i18n="notebook.action.newProject">New project</button>
           </div>
         </aside>
 
-        <div id="biology-notebook-table-context-menu" class="biology-notebook-context-menu" role="menu" aria-label="Table actions" hidden>
-          <button id="biology-notebook-add-table-row-btn" class="biology-notebook-context-item" type="button" role="menuitem">Add Row</button>
-          <button id="biology-notebook-add-table-column-btn" class="biology-notebook-context-item" type="button" role="menuitem">Add Column</button>
-          <button id="biology-notebook-remove-table-btn" class="biology-notebook-context-item" type="button" role="menuitem">Remove Table</button>
+        <div id="biology-notebook-table-context-menu" class="biology-notebook-context-menu" role="menu" aria-label="Table actions" hidden data-i18n-aria-label="notebook.table.actions">
+          <button id="biology-notebook-add-table-row-btn" class="biology-notebook-context-item" type="button" role="menuitem" data-i18n="notebook.table.addRow">Add Row</button>
+          <button id="biology-notebook-add-table-column-btn" class="biology-notebook-context-item" type="button" role="menuitem" data-i18n="notebook.table.addColumn">Add Column</button>
+          <button id="biology-notebook-remove-table-btn" class="biology-notebook-context-item" type="button" role="menuitem" data-i18n="notebook.table.remove">Remove Table</button>
         </div>
 
         <div id="biology-notebook-viewer-column" class="biology-notebook-viewer-column left-rail-template__main">
@@ -32,8 +32,8 @@
           </div>
 
           <div id="biology-notebook-empty-state" class="panel biology-notebook-empty-state">
-            <h3>Protocol / Result Viewer</h3>
-            <p>Choose an existing notebook page from the left panel.</p>
+            <h3 data-i18n="notebook.viewer.emptyTitle">Protocol / Result Viewer</h3>
+            <p data-i18n="notebook.viewer.emptyDescription">Choose an existing notebook page from the left panel.</p>
           </div>
 
           <div id="biology-notebook-project-dashboard" class="biology-notebook-project-dashboard project-dashboard" hidden></div>
@@ -41,71 +41,71 @@
           <div id="biology-notebook-protocol-area" class="panel biology-notebook-viewer" hidden>
             <div class="biology-notebook-viewer-head">
               <div class="biology-notebook-viewer-copy">
-                <textarea id="biology-notebook-experiment-name" class="biology-notebook-title-editor" rows="1" spellcheck="false" placeholder="Name this specific experiment" aria-label="Experiment Name" hidden></textarea>
-                <h3 id="biology-notebook-protocol-title" class="biology-notebook-title-display" title="Double-click to rename"></h3>
-                <p id="biology-notebook-protocol-meta" class="small-note">Select a notebook page or start a new one.</p>
+                <textarea id="biology-notebook-experiment-name" class="biology-notebook-title-editor" rows="1" spellcheck="false" placeholder="Name this specific experiment" aria-label="Experiment Name" hidden data-i18n-aria-label="notebook.viewer.nameLabel" data-i18n-placeholder="notebook.viewer.namePlaceholder"></textarea>
+                <h3 id="biology-notebook-protocol-title" class="biology-notebook-title-display" title="Double-click to rename" data-i18n-title="notebook.viewer.rename"></h3>
+                <p id="biology-notebook-protocol-meta" class="small-note"><span data-i18n="notebook.full.a8e5da10">Select a notebook page or start a new one.</span></p>
               </div>
-              <div class="biology-notebook-viewer-actions" aria-label="Notebook page actions">
-                <button id="biology-notebook-edit-protocol-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Edit page copy" data-hover-caption="Edit page copy" hidden>
+              <div class="biology-notebook-viewer-actions" aria-label="Notebook page actions" data-i18n-aria-label="notebook.viewer.actions">
+                <button id="biology-notebook-edit-protocol-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Edit page copy" data-hover-caption="Edit page copy" hidden data-i18n-aria-label="notebook.action.editCopy" data-i18n-hover-caption="notebook.action.editCopy">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M4.5 19.5 8 18.75 18.5 8.25a2.12 2.12 0 0 0-3-3L5 15.75l-.5 3.75Z"></path>
                     <path d="m13.75 7 3.25 3.25"></path>
                   </svg>
-                  <span class="sr-only">Edit page copy</span>
+                  <span class="sr-only" data-i18n="notebook.action.editCopy">Edit page copy</span>
                 </button>
-                <button id="biology-notebook-apply-protocol-edit-btn" class="primary-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Apply page edit" data-hover-caption="Apply page edit" hidden>
+                <button id="biology-notebook-apply-protocol-edit-btn" class="primary-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Apply page edit" data-hover-caption="Apply page edit" hidden data-i18n-aria-label="notebook.action.applyCopy" data-i18n-hover-caption="notebook.action.applyCopy">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="m5 12.5 4.5 4.5L19 7.5"></path>
                   </svg>
-                  <span class="sr-only">Apply page edit</span>
+                  <span class="sr-only" data-i18n="notebook.action.applyCopy">Apply page edit</span>
                 </button>
-                <button id="biology-notebook-cancel-protocol-edit-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Cancel page edit" data-hover-caption="Cancel page edit" hidden>
+                <button id="biology-notebook-cancel-protocol-edit-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Cancel page edit" data-hover-caption="Cancel page edit" hidden data-i18n-aria-label="notebook.action.cancelCopy" data-i18n-hover-caption="notebook.action.cancelCopy">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="m6.5 6.5 11 11"></path>
                     <path d="m17.5 6.5-11 11"></path>
                   </svg>
-                  <span class="sr-only">Cancel page edit</span>
+                  <span class="sr-only" data-i18n="notebook.action.cancelCopy">Cancel page edit</span>
                 </button>
-                <button id="biology-notebook-take-into-plan-btn" class="primary-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Take Into Plan" data-hover-caption="Take Into Plan" hidden>
+                <button id="biology-notebook-take-into-plan-btn" class="primary-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Take Into Plan" data-hover-caption="Take Into Plan" hidden data-i18n-aria-label="notebook.action.plan" data-i18n-hover-caption="notebook.action.plan">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <rect x="4" y="5.5" width="16" height="15" rx="2"></rect>
                     <path d="M8 3.5v4M16 3.5v4M4 10h16"></path>
                     <path d="m8.5 15 2.5 2.5 4.5-4.5"></path>
                   </svg>
-                  <span class="sr-only">Take Into Plan</span>
+                  <span class="sr-only" data-i18n="notebook.action.plan">Take Into Plan</span>
                 </button>
-                <button id="biology-notebook-mark-executed-btn" class="primary-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Executed" data-hover-caption="Executed" hidden>
+                <button id="biology-notebook-mark-executed-btn" class="primary-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Executed" data-hover-caption="Executed" hidden data-i18n-aria-label="notebook.meta.executed" data-i18n-hover-caption="notebook.meta.executed">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <circle cx="12" cy="12" r="8.25"></circle>
                     <path d="m8.25 12.25 2.4 2.4 5.1-5.1"></path>
                   </svg>
-                  <span class="sr-only">Executed</span>
+                  <span class="sr-only" data-i18n="notebook.meta.executed">Executed</span>
                 </button>
-                <button id="biology-notebook-export-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Export PDF" data-hover-caption="Export PDF" hidden>
+                <button id="biology-notebook-export-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Export PDF" data-hover-caption="Export PDF" hidden data-i18n-aria-label="notebook.action.export" data-i18n-hover-caption="notebook.action.export">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M6 3.75h8l4 4v12.5H6V3.75Z"></path>
                     <path d="M14 3.75v4h4"></path>
                     <path d="M12 10v6"></path>
                     <path d="m9.5 13.5 2.5 2.5 2.5-2.5"></path>
                   </svg>
-                  <span class="sr-only">Export PDF</span>
+                  <span class="sr-only" data-i18n="notebook.action.export">Export PDF</span>
                 </button>
-                <button id="biology-notebook-print-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Print" data-hover-caption="Print" hidden>
+                <button id="biology-notebook-print-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Print" data-hover-caption="Print" hidden data-i18n-aria-label="notebook.action.print" data-i18n-hover-caption="notebook.action.print">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M7 8V4.75h10V8"></path>
                     <rect x="6" y="14" width="12" height="5.25" rx="1"></rect>
                     <path d="M6.5 17H5.25A2.25 2.25 0 0 1 3 14.75v-4A2.25 2.25 0 0 1 5.25 8.5h13.5A2.25 2.25 0 0 1 21 10.75v4A2.25 2.25 0 0 1 18.75 17H17.5"></path>
                     <path d="M8.25 16.5h7.5"></path>
                   </svg>
-                  <span class="sr-only">Print</span>
+                  <span class="sr-only" data-i18n="notebook.action.print">Print</span>
                 </button>
-                <button id="save-biology-notebook-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Save notebook page" data-hover-caption="Save notebook page">
+                <button id="save-biology-notebook-btn" class="ghost-btn biology-notebook-viewer-icon-btn" type="button" aria-label="Save notebook page" data-hover-caption="Save notebook page" data-i18n-aria-label="notebook.action.save" data-i18n-hover-caption="notebook.action.save">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M5 3.75h12.25L20 6.5v13.75H5V3.75Z"></path>
                     <path d="M8 3.75v6h8v-6"></path>
                     <rect x="8" y="13" width="8" height="7.25" rx="1"></rect>
                   </svg>
-                  <span class="sr-only">Save notebook page</span>
+                  <span class="sr-only" data-i18n="notebook.action.save">Save notebook page</span>
                 </button>
               </div>
             </div>
@@ -113,21 +113,21 @@
             <div class="biology-notebook-viewer-scroll">
               <details class="biology-notebook-viewer-section" open>
                 <summary class="biology-notebook-viewer-section-summary">
-                  <span>Protocol</span>
+                  <span data-i18n="notebook.viewer.protocol">Protocol</span>
                   <span class="biology-notebook-viewer-section-chevron" aria-hidden="true"></span>
                 </summary>
                 <div class="biology-notebook-viewer-section-body">
                   <div id="biology-notebook-protocol-editor" class="biology-notebook-protocol-editor" hidden>
-                    <p class="small-note biology-notebook-protocol-editor-note">Edits here only change this notebook page copy. The original protocol stays unchanged.</p>
+                    <p class="small-note biology-notebook-protocol-editor-note" data-i18n="notebook.viewer.copyNote">Edits here only change this notebook page copy. The original protocol stays unchanged.</p>
                     <label>
-                      Page Protocol Name
-                      <input id="biology-notebook-page-protocol-name" type="text" placeholder="Rename this page copy" />
+                      <span data-i18n="notebook.viewer.copyName">Page Protocol Name</span>
+                      <input id="biology-notebook-page-protocol-name" type="text" placeholder="Rename this page copy"  data-i18n-placeholder="notebook.viewer.copyNamePlaceholder"/>
                     </label>
                     <label>
-                      Page Protocol Steps
+                      <span data-i18n="notebook.viewer.copySteps">Page Protocol Steps</span>
                       <textarea id="biology-notebook-page-protocol-steps" rows="8" placeholder="• Add buffer [Volume]&#10;• Incubate for [Time]"></textarea>
                     </label>
-                    <p class="small-note biology-notebook-protocol-editor-note">Use one step per line. Keep fillable values as `[Volume]`, `[Buffer]`, `[Time]`, and so on.</p>
+                    <p class="small-note biology-notebook-protocol-editor-note" data-i18n="notebook.viewer.copyHint">Use one step per line. Keep fillable values as `[Volume]`, `[Buffer]`, `[Time]`, and so on.</p>
                   </div>
                   <div id="biology-notebook-steps" class="notebook-steps"></div>
                 </div>
@@ -137,22 +137,22 @@
                 <div class="biology-notebook-viewer-section-body">
                   <div id="biology-notebook-linked-results" class="biology-notebook-linked-results"></div>
                   <div id="biology-notebook-tool-calculations" class="biology-notebook-tool-calculations"></div>
-                  <section id="biology-notebook-tool-workspace" class="biology-notebook-tool-workspace" hidden aria-label="Bench tool workspace"></section>
+                  <section id="biology-notebook-tool-workspace" class="biology-notebook-tool-workspace" hidden aria-label="Bench tool workspace" data-i18n-aria-label="notebook.full.ca1d0254"></section>
                   <div id="biology-notebook-result-table-wrap" class="biology-notebook-result-table-wrap" hidden>
                     <div class="biology-notebook-result-table-head">
-                      <p id="biology-notebook-result-table-status" class="small-note">Add a table to capture structured notebook results.</p>
+                      <p id="biology-notebook-result-table-status" class="small-note"><span data-i18n="notebook.full.8f433c2e">Add a table to capture structured notebook results.</span></p>
                     </div>
-                    <div id="biology-notebook-result-table" class="biology-notebook-result-table-list" aria-label="Notebook result tables"></div>
+                    <div id="biology-notebook-result-table" class="biology-notebook-result-table-list" aria-label="Notebook result tables" data-i18n-aria-label="notebook.viewer.tables"></div>
                   </div>
                   <div class="biology-notebook-notes-field">
-                    <label for="biology-notebook-result">Notes</label>
+                    <label for="biology-notebook-result" data-i18n="notebook.viewer.notes">Notes</label>
                     <div class="biology-notebook-notes-composer">
-                      <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
-                      <button id="clarify-save-biology-notebook-btn" class="ghost-btn biology-notebook-notes-clarify-btn hikari-agent-action" type="button">Clarify and Save</button>
+                      <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes" data-i18n-placeholder="notebook.viewer.notesPlaceholder"></textarea>
+                      <button id="clarify-save-biology-notebook-btn" class="ghost-btn biology-notebook-notes-clarify-btn hikari-agent-action" type="button" data-i18n="notebook.action.clarify">Clarify and Save</button>
                     </div>
                   </div>
                   <label>
-                    Experiment Result Files
+                    <span data-i18n="notebook.viewer.files">Experiment Result Files</span>
                     <input id="biology-notebook-result-file" type="file" multiple />
                   </label>
                   <div id="biology-notebook-result-attachments" class="biology-notebook-result-attachments" aria-live="polite" hidden></div>
@@ -162,66 +162,66 @@
           </div>
         </div>
 
-        <aside id="biology-notebook-tool-sidebar" class="biology-notebook-tool-sidebar" data-notebook-tool-sidebar aria-label="Biology notebook bench tools">
-          <button id="biology-notebook-tool-fold-toggle" class="ghost-btn biology-notebook-tool-fold-toggle" type="button" aria-label="Open bench toolbox" data-hover-caption="Bench toolbox" aria-expanded="false" aria-controls="biology-notebook-tool-content">
+        <aside id="biology-notebook-tool-sidebar" class="biology-notebook-tool-sidebar" data-notebook-tool-sidebar aria-label="Biology notebook bench tools" data-i18n-aria-label="notebook.full.fc7add60">
+          <button id="biology-notebook-tool-fold-toggle" class="ghost-btn biology-notebook-tool-fold-toggle" type="button" aria-label="Open bench toolbox" data-hover-caption="Bench toolbox" aria-expanded="false" aria-controls="biology-notebook-tool-content" data-i18n-aria-label="notebook.full.43f029f0" data-i18n-hover-caption="notebook.full.9b0f0a02">
             <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
               <path d="M8.5 7V5.75A1.75 1.75 0 0 1 10.25 4h3.5a1.75 1.75 0 0 1 1.75 1.75V7"></path>
               <rect x="3.5" y="7" width="17" height="12.5" rx="2"></rect>
               <path d="M3.5 12h17M10 12v2h4v-2"></path>
             </svg>
-            <span class="sr-only">Open bench toolbox</span>
+            <span class="sr-only"><span data-i18n="notebook.full.43f029f0">Open bench toolbox</span></span>
           </button>
           <div id="biology-notebook-tool-content" class="biology-notebook-tool-content">
             <div class="biology-notebook-tool-toolbar">
-              <div class="biology-notebook-tool-tabs" role="tablist" aria-label="Notebook bench tools">
-                <button id="biology-notebook-tool-tab-buffer" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="buffer" role="tab" aria-selected="false" aria-label="Open buffer preparer" data-hover-caption="Buffer preparer">
+              <div class="biology-notebook-tool-tabs" role="tablist" aria-label="Notebook bench tools" data-i18n-aria-label="notebook.full.82bbf1e5">
+                <button id="biology-notebook-tool-tab-buffer" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="buffer" role="tab" aria-selected="false" aria-label="Open buffer preparer" data-hover-caption="Buffer preparer" data-i18n-aria-label="notebook.full.ae651b2c" data-i18n-hover-caption="notebook.full.e5f3fcc6">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false"><path d="M9 3.5h6M10 3.5v6L5.7 17a2.3 2.3 0 0 0 2 3.5h8.6a2.3 2.3 0 0 0 2-3.5L14 9.5v-6"/><path d="M8 15h8M11 11.5h2"/></svg>
                 </button>
-                <button id="biology-notebook-tool-tab-reaction" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="reaction" role="tab" aria-selected="false" aria-label="Open fixed volume reaction" data-hover-caption="Fixed volume reaction">
+                <button id="biology-notebook-tool-tab-reaction" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="reaction" role="tab" aria-selected="false" aria-label="Open fixed volume reaction" data-hover-caption="Fixed volume reaction" data-i18n-aria-label="notebook.full.8f2b61b2" data-i18n-hover-caption="notebook.full.f242331c">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false"><path d="M5 3.5h7M6.5 3.5v13a3 3 0 0 0 6 0v-13M6.5 12h6M9.5 7h3M10 9.5h2.5"/><path d="M18 5.5v9m-2.5-2.5 2.5 2.5 2.5-2.5"/></svg>
                 </button>
               </div>
-              <div class="biology-notebook-tool-icon-actions" aria-label="Notebook insert tools">
-                <button id="biology-notebook-add-gel-btn" class="ghost-btn biology-notebook-tool-icon-action" type="button" aria-label="Add gel" data-hover-caption="Add gel">
+              <div class="biology-notebook-tool-icon-actions" aria-label="Notebook insert tools" data-i18n-aria-label="notebook.full.c075ad1e">
+                <button id="biology-notebook-add-gel-btn" class="ghost-btn biology-notebook-tool-icon-action" type="button" aria-label="Add gel" data-hover-caption="Add gel" data-i18n-aria-label="notebook.full.b2d3f60" data-i18n-hover-caption="notebook.full.b2d3f60">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M7 8h2m-2 4h2m-2 4h2m3-7h2m-2 5h2m3-6h1m-1 4h1m-1 4h1"/></svg>
-                  <span class="sr-only">Add gel</span>
+                  <span class="sr-only"><span data-i18n="notebook.full.b2d3f60">Add gel</span></span>
                 </button>
-                <button id="biology-notebook-add-assay-btn" class="ghost-btn biology-notebook-tool-icon-action" type="button" aria-label="Add assay" data-hover-caption="Add assay">
+                <button id="biology-notebook-add-assay-btn" class="ghost-btn biology-notebook-tool-icon-action" type="button" aria-label="Add assay" data-hover-caption="Add assay" data-i18n-aria-label="notebook.full.5c7a98d7" data-i18n-hover-caption="notebook.full.5c7a98d7">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><g fill="currentColor" stroke="none"><circle cx="7.5" cy="9" r="1.15"/><circle cx="12" cy="9" r="1.15"/><circle cx="16.5" cy="9" r="1.15"/><circle cx="7.5" cy="15" r="1.15"/><circle cx="12" cy="15" r="1.15"/><circle cx="16.5" cy="15" r="1.15"/></g></svg>
-                  <span class="sr-only">Add assay</span>
+                  <span class="sr-only"><span data-i18n="notebook.full.5c7a98d7">Add assay</span></span>
                 </button>
-                <button id="biology-notebook-add-samples-btn" class="ghost-btn biology-notebook-tool-icon-action" type="button" aria-label="Add samples" data-hover-caption="Add samples">
+                <button id="biology-notebook-add-samples-btn" class="ghost-btn biology-notebook-tool-icon-action" type="button" aria-label="Add samples" data-hover-caption="Add samples" data-i18n-aria-label="notebook.full.d9010e6f" data-i18n-hover-caption="notebook.full.d9010e6f">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false"><path d="M4 4h6M5 4v13.5a2 2 0 0 0 4 0V4M5 12h4M14 6h6M15 6v11.5a2 2 0 0 0 4 0V6M15 14h4"/></svg>
-                  <span class="sr-only">Add samples</span>
+                  <span class="sr-only"><span data-i18n="notebook.full.d9010e6f">Add samples</span></span>
                 </button>
-                <button id="biology-notebook-add-molarity-btn" class="ghost-btn biology-notebook-tool-icon-action" type="button" aria-label="Add molarity table" data-hover-caption="Molarity calculator">
+                <button id="biology-notebook-add-molarity-btn" class="ghost-btn biology-notebook-tool-icon-action" type="button" aria-label="Add molarity table" data-hover-caption="Molarity calculator" data-i18n-aria-label="notebook.full.a28787d9" data-i18n-hover-caption="notebook.full.67a85d0">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false"><rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M8 7h8M8 11h2m-1-1v2m5-1h2M8 16h2M14 15h2m-2 3h2"/></svg>
-                  <span class="sr-only">Add molarity table</span>
+                  <span class="sr-only"><span data-i18n="notebook.full.a28787d9">Add molarity table</span></span>
                 </button>
-                <button id="biology-notebook-add-table-btn" class="ghost-btn biology-notebook-tool-icon-action" type="button" aria-label="Add table" data-hover-caption="Add table">
+                <button id="biology-notebook-add-table-btn" class="ghost-btn biology-notebook-tool-icon-action" type="button" aria-label="Add table" data-hover-caption="Add table" data-i18n-aria-label="notebook.full.3e07b230" data-i18n-hover-caption="notebook.full.3e07b230">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 9.5h17M9.5 9.5v10M3.5 14.5h17"/></svg>
-                  <span class="sr-only">Add table</span>
+                  <span class="sr-only"><span data-i18n="notebook.full.3e07b230">Add table</span></span>
                 </button>
               </div>
-              <button id="biology-notebook-tool-collapse-btn" class="ghost-btn biology-notebook-tool-collapse-btn" type="button" aria-label="Fold bench toolbox" data-hover-caption="Fold toolbox" aria-expanded="false" aria-controls="biology-notebook-tool-content">
+              <button id="biology-notebook-tool-collapse-btn" class="ghost-btn biology-notebook-tool-collapse-btn" type="button" aria-label="Fold bench toolbox" data-hover-caption="Fold toolbox" aria-expanded="false" aria-controls="biology-notebook-tool-content" data-i18n-aria-label="notebook.full.8ff2c0cb" data-i18n-hover-caption="notebook.full.b78bd0f1">
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                   <path d="m10 7 5 5-5 5"></path>
                 </svg>
-                <span class="sr-only">Fold bench toolbox</span>
+                <span class="sr-only"><span data-i18n="notebook.full.8ff2c0cb">Fold bench toolbox</span></span>
               </button>
             </div>
 
             <div class="biology-notebook-tool-body">
             <section id="biology-notebook-tool-panel-buffer" class="biology-notebook-tool-panel" data-notebook-tool-panel="buffer" hidden>
               <div class="biology-notebook-buffer-sheet-wrap">
-                <table class="biology-notebook-buffer-sheet" aria-label="Buffer preparer table">
+                <table class="biology-notebook-buffer-sheet" aria-label="Buffer preparer table" data-i18n-aria-label="notebook.full.b9d8f9e6">
                   <tbody id="biology-notebook-tool-buffer-rows">
                     <tr class="biology-notebook-buffer-meta-row">
-                      <th scope="row">Volume</th>
+                      <th scope="row"><span data-i18n="notebook.full.74f576af">Volume</span></th>
                       <td>
                         <div class="biology-notebook-buffer-volume-control">
-                          <input id="biology-notebook-tool-buffer-volume" type="number" min="0" step="0.001" aria-label="Buffer volume" />
-                          <select id="biology-notebook-tool-buffer-volume-unit" aria-label="Buffer volume unit">
+                          <input id="biology-notebook-tool-buffer-volume" type="number" min="0" step="0.001" aria-label="Buffer volume"  data-i18n-aria-label="notebook.full.d9ccb20b"/>
+                          <select id="biology-notebook-tool-buffer-volume-unit" aria-label="Buffer volume unit" data-i18n-aria-label="notebook.full.def1d72b">
                             <option value="nL">nL</option>
                             <option value="uL">uL</option>
                             <option value="mL" selected>mL</option>
@@ -230,100 +230,100 @@
                         </div>
                       </td>
                       <th scope="row">pH</th>
-                      <td><input id="biology-notebook-tool-buffer-ph" type="number" min="0" max="14" step="0.01" aria-label="Target pH" /></td>
+                      <td><input id="biology-notebook-tool-buffer-ph" type="number" min="0" max="14" step="0.01" aria-label="Target pH"  data-i18n-aria-label="notebook.full.5361a310"/></td>
                       <td colspan="2"></td>
                     </tr>
                     <tr class="biology-notebook-buffer-header-row">
-                      <th scope="col">Chemical</th>
+                      <th scope="col"><span data-i18n="notebook.full.eea529a1">Chemical</span></th>
                       <th scope="col">MW</th>
-                      <th scope="col">Stock Conc.</th>
-                      <th scope="col">Final Conc.</th>
-                      <th scope="col">Mass/Volume</th>
-                      <th scope="col">Note</th>
+                      <th scope="col"><span data-i18n="notebook.full.fdbd1fac">Stock Conc.</span></th>
+                      <th scope="col"><span data-i18n="notebook.full.ec8da32">Final Conc.</span></th>
+                      <th scope="col"><span data-i18n="notebook.full.651cfb4c">Mass/Volume</span></th>
+                      <th scope="col"><span data-i18n="notebook.full.1440c15d">Note</span></th>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-1">
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-1" data-buffer-chemical-index="1" autocomplete="off" aria-label="Ingredient 1 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-1" aria-expanded="false" />
+                          <input id="biology-notebook-tool-buffer-name-1" data-buffer-chemical-index="1" autocomplete="off" aria-label="Ingredient 1 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-1" aria-expanded="false"  data-i18n-aria-label="notebook.full.9ea7db3f"/>
                           <div id="biology-notebook-tool-buffer-suggestions-1" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-1" type="number" min="0" step="0.001" aria-label="Ingredient 1 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-1" aria-label="Ingredient 1 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-1" aria-label="Ingredient 1 final concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-amount-1" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 1" /></td>
-                      <td><input id="biology-notebook-tool-buffer-note-1" type="text" placeholder="lot, source" aria-label="Note for ingredient 1" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-1" type="number" min="0" step="0.001" aria-label="Ingredient 1 molecular weight"  data-i18n-aria-label="notebook.full.9268e949"/></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-1" aria-label="Ingredient 1 stock concentration"  data-i18n-aria-label="notebook.full.6f3dd1e"/></td>
+                      <td><input id="biology-notebook-tool-buffer-final-1" aria-label="Ingredient 1 final concentration"  data-i18n-aria-label="notebook.full.efd05458"/></td>
+                      <td><input id="biology-notebook-tool-buffer-amount-1" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 1"  data-i18n-placeholder="notebook.full.923fa396" data-i18n-aria-label="notebook.full.17e6e591"/></td>
+                      <td><input id="biology-notebook-tool-buffer-note-1" type="text" placeholder="lot, source" aria-label="Note for ingredient 1"  data-i18n-placeholder="notebook.full.600392e1" data-i18n-aria-label="notebook.full.1cb9f54a"/></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-2">
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-2" data-buffer-chemical-index="2" autocomplete="off" aria-label="Ingredient 2 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-2" aria-expanded="false" />
+                          <input id="biology-notebook-tool-buffer-name-2" data-buffer-chemical-index="2" autocomplete="off" aria-label="Ingredient 2 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-2" aria-expanded="false"  data-i18n-aria-label="notebook.full.328cc880"/>
                           <div id="biology-notebook-tool-buffer-suggestions-2" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-2" type="number" min="0" step="0.001" aria-label="Ingredient 2 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-2" aria-label="Ingredient 2 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-2" aria-label="Ingredient 2 final concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-amount-2" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 2" /></td>
-                      <td><input id="biology-notebook-tool-buffer-note-2" type="text" placeholder="lot, source" aria-label="Note for ingredient 2" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-2" type="number" min="0" step="0.001" aria-label="Ingredient 2 molecular weight"  data-i18n-aria-label="notebook.full.e6564822"/></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-2" aria-label="Ingredient 2 stock concentration"  data-i18n-aria-label="notebook.full.d98b3f93"/></td>
+                      <td><input id="biology-notebook-tool-buffer-final-2" aria-label="Ingredient 2 final concentration"  data-i18n-aria-label="notebook.full.cca524e5"/></td>
+                      <td><input id="biology-notebook-tool-buffer-amount-2" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 2"  data-i18n-placeholder="notebook.full.923fa396" data-i18n-aria-label="notebook.full.14e6e0d8"/></td>
+                      <td><input id="biology-notebook-tool-buffer-note-2" type="text" placeholder="lot, source" aria-label="Note for ingredient 2"  data-i18n-placeholder="notebook.full.600392e1" data-i18n-aria-label="notebook.full.1bb9f3b7"/></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-3" hidden>
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-3" data-buffer-chemical-index="3" autocomplete="off" aria-label="Ingredient 3 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-3" aria-expanded="false" />
+                          <input id="biology-notebook-tool-buffer-name-3" data-buffer-chemical-index="3" autocomplete="off" aria-label="Ingredient 3 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-3" aria-expanded="false"  data-i18n-aria-label="notebook.full.a16339a5"/>
                           <div id="biology-notebook-tool-buffer-suggestions-3" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-3" type="number" min="0" step="0.001" aria-label="Ingredient 3 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-3" aria-label="Ingredient 3 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-3" aria-label="Ingredient 3 final concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-amount-3" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 3" /></td>
-                      <td><input id="biology-notebook-tool-buffer-note-3" type="text" placeholder="lot, source" aria-label="Note for ingredient 3" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-3" type="number" min="0" step="0.001" aria-label="Ingredient 3 molecular weight"  data-i18n-aria-label="notebook.full.b6b265fb"/></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-3" aria-label="Ingredient 3 stock concentration"  data-i18n-aria-label="notebook.full.8171b848"/></td>
+                      <td><input id="biology-notebook-tool-buffer-final-3" aria-label="Ingredient 3 final concentration"  data-i18n-aria-label="notebook.full.52e4e9b2"/></td>
+                      <td><input id="biology-notebook-tool-buffer-amount-3" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 3"  data-i18n-placeholder="notebook.full.923fa396" data-i18n-aria-label="notebook.full.15e6e26b"/></td>
+                      <td><input id="biology-notebook-tool-buffer-note-3" type="text" placeholder="lot, source" aria-label="Note for ingredient 3"  data-i18n-placeholder="notebook.full.600392e1" data-i18n-aria-label="notebook.full.1ab9f224"/></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-4" hidden>
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-4" data-buffer-chemical-index="4" autocomplete="off" aria-label="Ingredient 4 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-4" aria-expanded="false" />
+                          <input id="biology-notebook-tool-buffer-name-4" data-buffer-chemical-index="4" autocomplete="off" aria-label="Ingredient 4 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-4" aria-expanded="false"  data-i18n-aria-label="notebook.full.342e5f9e"/>
                           <div id="biology-notebook-tool-buffer-suggestions-4" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-4" type="number" min="0" step="0.001" aria-label="Ingredient 4 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-4" aria-label="Ingredient 4 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-4" aria-label="Ingredient 4 final concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-amount-4" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 4" /></td>
-                      <td><input id="biology-notebook-tool-buffer-note-4" type="text" placeholder="lot, source" aria-label="Note for ingredient 4" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-4" type="number" min="0" step="0.001" aria-label="Ingredient 4 molecular weight"  data-i18n-aria-label="notebook.full.673eca04"/></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-4" aria-label="Ingredient 4 stock concentration"  data-i18n-aria-label="notebook.full.d18d68dd"/></td>
+                      <td><input id="biology-notebook-tool-buffer-final-4" aria-label="Ingredient 4 final concentration"  data-i18n-aria-label="notebook.full.85225397"/></td>
+                      <td><input id="biology-notebook-tool-buffer-amount-4" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 4"  data-i18n-placeholder="notebook.full.923fa396" data-i18n-aria-label="notebook.full.1ae6ea4a"/></td>
+                      <td><input id="biology-notebook-tool-buffer-note-4" type="text" placeholder="lot, source" aria-label="Note for ingredient 4"  data-i18n-placeholder="notebook.full.600392e1" data-i18n-aria-label="notebook.full.19b9f091"/></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-5" hidden>
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-5" data-buffer-chemical-index="5" autocomplete="off" aria-label="Ingredient 5 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-5" aria-expanded="false" />
+                          <input id="biology-notebook-tool-buffer-name-5" data-buffer-chemical-index="5" autocomplete="off" aria-label="Ingredient 5 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-5" aria-expanded="false"  data-i18n-aria-label="notebook.full.c4f6afbb"/>
                           <div id="biology-notebook-tool-buffer-suggestions-5" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-5" type="number" min="0" step="0.001" aria-label="Ingredient 5 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-5" aria-label="Ingredient 5 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-5" aria-label="Ingredient 5 final concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-amount-5" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 5" /></td>
-                      <td><input id="biology-notebook-tool-buffer-note-5" type="text" placeholder="lot, source" aria-label="Note for ingredient 5" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-5" type="number" min="0" step="0.001" aria-label="Ingredient 5 molecular weight"  data-i18n-aria-label="notebook.full.f0ef9ded"/></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-5" aria-label="Ingredient 5 stock concentration"  data-i18n-aria-label="notebook.full.426836da"/></td>
+                      <td><input id="biology-notebook-tool-buffer-final-5" aria-label="Ingredient 5 final concentration"  data-i18n-aria-label="notebook.full.343e8bbc"/></td>
+                      <td><input id="biology-notebook-tool-buffer-amount-5" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 5"  data-i18n-placeholder="notebook.full.923fa396" data-i18n-aria-label="notebook.full.1be6ebdd"/></td>
+                      <td><input id="biology-notebook-tool-buffer-note-5" type="text" placeholder="lot, source" aria-label="Note for ingredient 5"  data-i18n-placeholder="notebook.full.600392e1" data-i18n-aria-label="notebook.full.18b9eefe"/></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-6" hidden>
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-6" data-buffer-chemical-index="6" autocomplete="off" aria-label="Ingredient 6 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-6" aria-expanded="false" />
+                          <input id="biology-notebook-tool-buffer-name-6" data-buffer-chemical-index="6" autocomplete="off" aria-label="Ingredient 6 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-6" aria-expanded="false"  data-i18n-aria-label="notebook.full.d634e7dc"/>
                           <div id="biology-notebook-tool-buffer-suggestions-6" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-6" type="number" min="0" step="0.001" aria-label="Ingredient 6 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-6" aria-label="Ingredient 6 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-6" aria-label="Ingredient 6 final concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-amount-6" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 6" /></td>
-                      <td><input id="biology-notebook-tool-buffer-note-6" type="text" placeholder="lot, source" aria-label="Note for ingredient 6" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-6" type="number" min="0" step="0.001" aria-label="Ingredient 6 molecular weight"  data-i18n-aria-label="notebook.full.270a54c6"/></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-6" aria-label="Ingredient 6 stock concentration"  data-i18n-aria-label="notebook.full.1815b98f"/></td>
+                      <td><input id="biology-notebook-tool-buffer-final-6" aria-label="Ingredient 6 final concentration"  data-i18n-aria-label="notebook.full.1f373a79"/></td>
+                      <td><input id="biology-notebook-tool-buffer-amount-6" type="text" placeholder="auto" aria-label="Mass or volume for ingredient 6"  data-i18n-placeholder="notebook.full.923fa396" data-i18n-aria-label="notebook.full.18e6e724"/></td>
+                      <td><input id="biology-notebook-tool-buffer-note-6" type="text" placeholder="lot, source" aria-label="Note for ingredient 6"  data-i18n-placeholder="notebook.full.600392e1" data-i18n-aria-label="notebook.full.17b9ed6b"/></td>
                     </tr>
                     <tr id="biology-notebook-tool-buffer-add-row-anchor" class="biology-notebook-sheet-add-row">
-                      <td colspan="6"><button id="biology-notebook-tool-buffer-add-row" class="biology-notebook-sheet-add-row-button" type="button" aria-label="Add ingredient" title="Add ingredient"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button></td>
+                      <td colspan="6"><button id="biology-notebook-tool-buffer-add-row" class="biology-notebook-sheet-add-row-button" type="button" aria-label="Add ingredient" title="Add ingredient" data-i18n-title="notebook.full.63924d83" data-i18n-aria-label="notebook.full.63924d83"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button></td>
                     </tr>
                     <tr id="biology-notebook-tool-buffer-adjustment-row" class="biology-notebook-buffer-adjustment-row">
-                      <th scope="row">Solvent to add <output id="biology-notebook-tool-buffer-solvent-output" aria-live="polite"></output></th>
+                      <th scope="row"><span data-i18n="notebook.full.ccb42dc0">Solvent to add</span> <output id="biology-notebook-tool-buffer-solvent-output" aria-live="polite"></output></th>
                       <td colspan="5"></td>
                     </tr>
                   </tbody>
@@ -333,7 +333,7 @@
 
             <section id="biology-notebook-tool-panel-reaction" class="biology-notebook-tool-panel" data-notebook-tool-panel="reaction" hidden>
               <div class="biology-notebook-reaction-sheet-wrap">
-                <table class="biology-notebook-reaction-sheet" aria-label="Fixed volume reaction preparer">
+                <table class="biology-notebook-reaction-sheet" aria-label="Fixed volume reaction preparer" data-i18n-aria-label="notebook.full.b439f437">
                   <colgroup>
                     <col class="biology-notebook-reaction-item-col" />
                     <col class="biology-notebook-reaction-stock-col" />
@@ -343,63 +343,63 @@
                   </colgroup>
                   <tbody>
                     <tr class="biology-notebook-reaction-meta-row">
-                      <th scope="row">Total volume:</th>
-                      <td colspan="4"><input id="biology-notebook-tool-reaction-total-volume" type="text" value="100 uL" placeholder="100 uL" aria-label="Total reaction volume" /></td>
+                      <th scope="row"><span data-i18n="notebook.full.efc3b91">Total volume:</span></th>
+                      <td colspan="4"><input id="biology-notebook-tool-reaction-total-volume" type="text" value="100 uL" placeholder="100 uL" aria-label="Total reaction volume"  data-i18n-aria-label="notebook.full.40dc075e"/></td>
                     </tr>
                     <tr class="biology-notebook-reaction-header-row">
-                      <th scope="col">Item</th>
-                      <th scope="col">Stock Conc.</th>
-                      <th scope="col">Final Conc</th>
-                      <th scope="col">Volume</th>
-                      <th scope="col">Note</th>
+                      <th scope="col"><span data-i18n="notebook.full.1f648006">Item</span></th>
+                      <th scope="col"><span data-i18n="notebook.full.fdbd1fac">Stock Conc.</span></th>
+                      <th scope="col"><span data-i18n="notebook.full.9e096468">Final Conc</span></th>
+                      <th scope="col"><span data-i18n="notebook.full.74f576af">Volume</span></th>
+                      <th scope="col"><span data-i18n="notebook.full.1440c15d">Note</span></th>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-1">
-                      <td><input id="biology-notebook-tool-reaction-name-1" placeholder="Reagent" aria-label="Reaction item 1" /></td>
-                      <td><input id="biology-notebook-tool-reaction-stock-1" type="text" placeholder="10 mM" aria-label="Stock concentration for reaction item 1" /></td>
-                      <td><input id="biology-notebook-tool-reaction-final-1" type="text" placeholder="1 uM" aria-label="Final concentration for reaction item 1" /></td>
-                      <td><input id="biology-notebook-tool-reaction-volume-1" type="text" placeholder="auto" aria-label="Manual volume for reaction item 1" /></td>
-                      <td><input id="biology-notebook-tool-reaction-note-1" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 1" /></td>
+                      <td><input id="biology-notebook-tool-reaction-name-1" placeholder="Reagent" aria-label="Reaction item 1"  data-i18n-placeholder="notebook.full.559ae1b1" data-i18n-aria-label="notebook.full.b493ba02"/></td>
+                      <td><input id="biology-notebook-tool-reaction-stock-1" type="text" placeholder="10 mM" aria-label="Stock concentration for reaction item 1"  data-i18n-aria-label="notebook.full.87a6dd16"/></td>
+                      <td><input id="biology-notebook-tool-reaction-final-1" type="text" placeholder="1 uM" aria-label="Final concentration for reaction item 1"  data-i18n-aria-label="notebook.full.344ddd54"/></td>
+                      <td><input id="biology-notebook-tool-reaction-volume-1" type="text" placeholder="auto" aria-label="Manual volume for reaction item 1"  data-i18n-placeholder="notebook.full.923fa396" data-i18n-aria-label="notebook.full.7fcb00c1"/></td>
+                      <td><input id="biology-notebook-tool-reaction-note-1" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 1"  data-i18n-placeholder="notebook.full.94e44ace" data-i18n-aria-label="notebook.full.5586ceaf"/></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-2" hidden>
-                      <td><input id="biology-notebook-tool-reaction-name-2" placeholder="Reagent" aria-label="Reaction item 2" /></td>
-                      <td><input id="biology-notebook-tool-reaction-stock-2" type="text" placeholder="2000x" aria-label="Stock concentration for reaction item 2" /></td>
-                      <td><input id="biology-notebook-tool-reaction-final-2" type="text" placeholder="1x" aria-label="Final concentration for reaction item 2" /></td>
-                      <td><input id="biology-notebook-tool-reaction-volume-2" type="text" placeholder="auto" aria-label="Manual volume for reaction item 2" /></td>
-                      <td><input id="biology-notebook-tool-reaction-note-2" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 2" /></td>
+                      <td><input id="biology-notebook-tool-reaction-name-2" placeholder="Reagent" aria-label="Reaction item 2"  data-i18n-placeholder="notebook.full.559ae1b1" data-i18n-aria-label="notebook.full.b393b86f"/></td>
+                      <td><input id="biology-notebook-tool-reaction-stock-2" type="text" placeholder="2000x" aria-label="Stock concentration for reaction item 2"  data-i18n-aria-label="notebook.full.86a6db83"/></td>
+                      <td><input id="biology-notebook-tool-reaction-final-2" type="text" placeholder="1x" aria-label="Final concentration for reaction item 2"  data-i18n-aria-label="notebook.full.374de20d"/></td>
+                      <td><input id="biology-notebook-tool-reaction-volume-2" type="text" placeholder="auto" aria-label="Manual volume for reaction item 2"  data-i18n-placeholder="notebook.full.923fa396" data-i18n-aria-label="notebook.full.7ccafc08"/></td>
+                      <td><input id="biology-notebook-tool-reaction-note-2" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 2"  data-i18n-placeholder="notebook.full.94e44ace" data-i18n-aria-label="notebook.full.5686d042"/></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-3" hidden>
-                      <td><input id="biology-notebook-tool-reaction-name-3" placeholder="Reagent" aria-label="Reaction item 3" /></td>
-                      <td><input id="biology-notebook-tool-reaction-stock-3" type="text" placeholder="2%" aria-label="Stock concentration for reaction item 3" /></td>
-                      <td><input id="biology-notebook-tool-reaction-final-3" type="text" placeholder="0.1% v/v" aria-label="Final concentration for reaction item 3" /></td>
-                      <td><input id="biology-notebook-tool-reaction-volume-3" type="text" placeholder="auto" aria-label="Manual volume for reaction item 3" /></td>
-                      <td><input id="biology-notebook-tool-reaction-note-3" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 3" /></td>
+                      <td><input id="biology-notebook-tool-reaction-name-3" placeholder="Reagent" aria-label="Reaction item 3"  data-i18n-placeholder="notebook.full.559ae1b1" data-i18n-aria-label="notebook.full.b293b6dc"/></td>
+                      <td><input id="biology-notebook-tool-reaction-stock-3" type="text" placeholder="2%" aria-label="Stock concentration for reaction item 3"  data-i18n-aria-label="notebook.full.85a6d9f0"/></td>
+                      <td><input id="biology-notebook-tool-reaction-final-3" type="text" placeholder="0.1% v/v" aria-label="Final concentration for reaction item 3"  data-i18n-aria-label="notebook.full.364de07a"/></td>
+                      <td><input id="biology-notebook-tool-reaction-volume-3" type="text" placeholder="auto" aria-label="Manual volume for reaction item 3"  data-i18n-placeholder="notebook.full.923fa396" data-i18n-aria-label="notebook.full.7dcafd9b"/></td>
+                      <td><input id="biology-notebook-tool-reaction-note-3" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 3"  data-i18n-placeholder="notebook.full.94e44ace" data-i18n-aria-label="notebook.full.5786d1d5"/></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-4" hidden>
-                      <td><input id="biology-notebook-tool-reaction-name-4" placeholder="Reagent" aria-label="Reaction item 4" /></td>
-                      <td><input id="biology-notebook-tool-reaction-stock-4" type="text" placeholder="1 mg/mL" aria-label="Stock concentration for reaction item 4" /></td>
-                      <td><input id="biology-notebook-tool-reaction-final-4" type="text" placeholder="100 ng/uL" aria-label="Final concentration for reaction item 4" /></td>
-                      <td><input id="biology-notebook-tool-reaction-volume-4" type="text" placeholder="auto" aria-label="Manual volume for reaction item 4" /></td>
-                      <td><input id="biology-notebook-tool-reaction-note-4" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 4" /></td>
+                      <td><input id="biology-notebook-tool-reaction-name-4" placeholder="Reagent" aria-label="Reaction item 4"  data-i18n-placeholder="notebook.full.559ae1b1" data-i18n-aria-label="notebook.full.b193b549"/></td>
+                      <td><input id="biology-notebook-tool-reaction-stock-4" type="text" placeholder="1 mg/mL" aria-label="Stock concentration for reaction item 4"  data-i18n-aria-label="notebook.full.8ca6e4f5"/></td>
+                      <td><input id="biology-notebook-tool-reaction-final-4" type="text" placeholder="100 ng/uL" aria-label="Final concentration for reaction item 4"  data-i18n-aria-label="notebook.full.314dd89b"/></td>
+                      <td><input id="biology-notebook-tool-reaction-volume-4" type="text" placeholder="auto" aria-label="Manual volume for reaction item 4"  data-i18n-placeholder="notebook.full.923fa396" data-i18n-aria-label="notebook.full.82cb057a"/></td>
+                      <td><input id="biology-notebook-tool-reaction-note-4" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 4"  data-i18n-placeholder="notebook.full.94e44ace" data-i18n-aria-label="notebook.full.5086c6d0"/></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-5" hidden>
-                      <td><input id="biology-notebook-tool-reaction-name-5" placeholder="Reagent" aria-label="Reaction item 5" /></td>
-                      <td><input id="biology-notebook-tool-reaction-stock-5" type="text" placeholder="Stock" aria-label="Stock concentration for reaction item 5" /></td>
-                      <td><input id="biology-notebook-tool-reaction-final-5" type="text" placeholder="Final" aria-label="Final concentration for reaction item 5" /></td>
-                      <td><input id="biology-notebook-tool-reaction-volume-5" type="text" placeholder="auto" aria-label="Manual volume for reaction item 5" /></td>
-                      <td><input id="biology-notebook-tool-reaction-note-5" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 5" /></td>
+                      <td><input id="biology-notebook-tool-reaction-name-5" placeholder="Reagent" aria-label="Reaction item 5"  data-i18n-placeholder="notebook.full.559ae1b1" data-i18n-aria-label="notebook.full.b093b3b6"/></td>
+                      <td><input id="biology-notebook-tool-reaction-stock-5" type="text" placeholder="Stock" aria-label="Stock concentration for reaction item 5"  data-i18n-placeholder="notebook.full.67c7f535" data-i18n-aria-label="notebook.full.8ba6e362"/></td>
+                      <td><input id="biology-notebook-tool-reaction-final-5" type="text" placeholder="Final" aria-label="Final concentration for reaction item 5"  data-i18n-placeholder="notebook.full.bb563457" data-i18n-aria-label="notebook.full.304dd708"/></td>
+                      <td><input id="biology-notebook-tool-reaction-volume-5" type="text" placeholder="auto" aria-label="Manual volume for reaction item 5"  data-i18n-placeholder="notebook.full.923fa396" data-i18n-aria-label="notebook.full.83cb070d"/></td>
+                      <td><input id="biology-notebook-tool-reaction-note-5" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 5"  data-i18n-placeholder="notebook.full.94e44ace" data-i18n-aria-label="notebook.full.5186c863"/></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-6" hidden>
-                      <td><input id="biology-notebook-tool-reaction-name-6" placeholder="Reagent" aria-label="Reaction item 6" /></td>
-                      <td><input id="biology-notebook-tool-reaction-stock-6" type="text" placeholder="Stock" aria-label="Stock concentration for reaction item 6" /></td>
-                      <td><input id="biology-notebook-tool-reaction-final-6" type="text" placeholder="Final" aria-label="Final concentration for reaction item 6" /></td>
-                      <td><input id="biology-notebook-tool-reaction-volume-6" type="text" placeholder="auto" aria-label="Manual volume for reaction item 6" /></td>
-                      <td><input id="biology-notebook-tool-reaction-note-6" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 6" /></td>
+                      <td><input id="biology-notebook-tool-reaction-name-6" placeholder="Reagent" aria-label="Reaction item 6"  data-i18n-placeholder="notebook.full.559ae1b1" data-i18n-aria-label="notebook.full.af93b223"/></td>
+                      <td><input id="biology-notebook-tool-reaction-stock-6" type="text" placeholder="Stock" aria-label="Stock concentration for reaction item 6"  data-i18n-placeholder="notebook.full.67c7f535" data-i18n-aria-label="notebook.full.8aa6e1cf"/></td>
+                      <td><input id="biology-notebook-tool-reaction-final-6" type="text" placeholder="Final" aria-label="Final concentration for reaction item 6"  data-i18n-placeholder="notebook.full.bb563457" data-i18n-aria-label="notebook.full.334ddbc1"/></td>
+                      <td><input id="biology-notebook-tool-reaction-volume-6" type="text" placeholder="auto" aria-label="Manual volume for reaction item 6"  data-i18n-placeholder="notebook.full.923fa396" data-i18n-aria-label="notebook.full.80cb0254"/></td>
+                      <td><input id="biology-notebook-tool-reaction-note-6" type="text" placeholder="ng used, lot" aria-label="Note for reaction item 6"  data-i18n-placeholder="notebook.full.94e44ace" data-i18n-aria-label="notebook.full.5286c9f6"/></td>
                     </tr>
                     <tr id="biology-notebook-tool-reaction-add-row-anchor" class="biology-notebook-sheet-add-row">
-                      <td colspan="5"><button id="biology-notebook-tool-reaction-add-row" class="biology-notebook-sheet-add-row-button" type="button" aria-label="Add reagent" title="Add reagent"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button></td>
+                      <td colspan="5"><button id="biology-notebook-tool-reaction-add-row" class="biology-notebook-sheet-add-row-button" type="button" aria-label="Add reagent" title="Add reagent" data-i18n-title="notebook.full.f1879ebe" data-i18n-aria-label="notebook.full.f1879ebe"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button></td>
                     </tr>
                     <tr class="biology-notebook-reaction-solvent-row">
-                      <th scope="row"><input id="biology-notebook-tool-reaction-fill-name" value="Solvent" aria-label="Reaction solvent name" /></th>
+                      <th scope="row"><input id="biology-notebook-tool-reaction-fill-name" value="Solvent" aria-label="Reaction solvent name"  data-i18n-aria-label="notebook.full.6ac34cfa"/></th>
                       <td></td>
                       <td></td>
                       <td><output id="biology-notebook-tool-reaction-solvent-output" aria-live="polite"></output></td>
@@ -415,64 +415,64 @@
         </aside>
       </div>
 
-      <div id="biology-notebook-table-size-overlay" class="biology-notebook-table-size-popover" role="dialog" aria-label="Add table" hidden>
+      <div id="biology-notebook-table-size-overlay" class="biology-notebook-table-size-popover" role="dialog" aria-label="Add table" hidden data-i18n-aria-label="notebook.table.add">
         <form id="biology-notebook-table-size-form" class="biology-notebook-table-size-form">
           <div class="biology-notebook-table-size-fields">
             <label>
-              Columns
+              <span data-i18n="notebook.table.columns">Columns</span>
               <input id="biology-notebook-table-size-columns" type="number" min="1" max="50" step="1" value="3" />
             </label>
             <label>
-              Rows
+              <span data-i18n="notebook.table.rows">Rows</span>
               <input id="biology-notebook-table-size-rows" type="number" min="1" max="500" step="1" value="3" />
             </label>
           </div>
-          <button id="biology-notebook-table-size-create-btn" class="primary-btn" type="submit">Add Table</button>
+          <button id="biology-notebook-table-size-create-btn" class="primary-btn" type="submit" data-i18n="notebook.table.create">Add Table</button>
         </form>
       </div>
       <div id="biology-notebook-experiment-dialog-overlay" class="app-dialog-overlay app-dialog-overlay--center" hidden>
         <div class="biology-notebook-experiment-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="biology-notebook-experiment-dialog-title">
           <div class="app-dialog-head">
             <div>
-              <h3 id="biology-notebook-experiment-dialog-title">New experiment</h3>
-              <p class="small-note">Choose a project and protocol to create a notebook experiment.</p>
+              <h3 id="biology-notebook-experiment-dialog-title" data-i18n="notebook.action.newExperiment">New experiment</h3>
+              <p class="small-note" data-i18n="notebook.experiment.description">Choose a project and protocol to create a notebook experiment.</p>
             </div>
-            <button id="biology-notebook-experiment-dialog-close-btn" class="app-dialog-close-btn" type="button" aria-label="Close new experiment dialog" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            <button id="biology-notebook-experiment-dialog-close-btn" class="app-dialog-close-btn" type="button" aria-label="Close new experiment dialog" title="Close" data-i18n-title="notebook.action.close" data-i18n-aria-label="notebook.experiment.close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           </div>
           <form id="biology-notebook-experiment-form" class="stack-form biology-notebook-experiment-form">
             <div class="biology-notebook-experiment-project-field">
               <div class="biology-notebook-experiment-project-head">
-                <label for="biology-notebook-project-select">Project</label>
+                <label for="biology-notebook-project-select" data-i18n="notebook.experiment.project">Project</label>
                 <button id="biology-notebook-experiment-add-project-btn" class="ghost-btn biology-notebook-add-project-btn" type="button" aria-haspopup="dialog" aria-controls="biology-notebook-project-dialog-overlay">
                   <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"></path></svg>
-                  <span>New project</span>
+                  <span data-i18n="notebook.action.newProject">New project</span>
                 </button>
               </div>
               <select id="biology-notebook-project-select" required>
-                <option value="">Select project</option>
+                <option value="" data-i18n="notebook.experiment.selectProject">Select project</option>
               </select>
             </div>
-            <label>Start from
-              <select id="biology-notebook-experiment-kind"><option value="protocol">Single protocol</option><option value="workflow">Workflow</option></select>
+            <label><span data-i18n="notebook.experiment.startFrom">Start from</span>
+              <select id="biology-notebook-experiment-kind"><option value="protocol" data-i18n="notebook.experiment.single">Single protocol</option><option value="workflow" data-i18n="notebook.experiment.workflow">Workflow</option></select>
             </label>
             <div id="biology-notebook-experiment-protocol-fields">
             <label>
-              Search &amp; Select Protocol
-              <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." autocomplete="off" aria-controls="biology-notebook-protocol-search-results" />
+              <span data-i18n="notebook.experiment.searchLabel">Search &amp; Select Protocol</span>
+              <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." autocomplete="off" aria-controls="biology-notebook-protocol-search-results"  data-i18n-placeholder="notebook.experiment.searchPlaceholder"/>
             </label>
-            <div id="biology-notebook-protocol-search-results" class="biology-notebook-protocol-search-results" role="listbox" aria-label="Matching protocols"></div>
+            <div id="biology-notebook-protocol-search-results" class="biology-notebook-protocol-search-results" role="listbox" aria-label="Matching protocols" data-i18n-aria-label="notebook.experiment.matching"></div>
             <select id="biology-notebook-protocol-select" hidden aria-hidden="true" tabindex="-1">
-              <option value="">Select protocol</option>
+              <option value="" data-i18n="notebook.experiment.selectProtocol">Select protocol</option>
             </select>
             </div>
             <div id="biology-notebook-experiment-workflow-fields" hidden>
-              <label>Workflow template<select id="biology-notebook-experiment-workflow"></select></label>
-              <label>Process name<input id="biology-notebook-experiment-process-name" placeholder="Optional — named from the template" /></label>
+              <label><span data-i18n="notebook.experiment.template">Workflow template</span><select id="biology-notebook-experiment-workflow"></select></label>
+              <label><span data-i18n="notebook.experiment.processName">Process name</span><input id="biology-notebook-experiment-process-name" placeholder="Optional — named from the template"  data-i18n-placeholder="notebook.experiment.processPlaceholder"/></label>
             </div>
             <p id="biology-notebook-experiment-dialog-status" class="small-note" aria-live="polite"></p>
             <div class="form-actions">
-              <button id="biology-notebook-experiment-cancel-btn" class="ghost-btn" type="button">Cancel</button>
-              <button id="biology-notebook-experiment-start-btn" class="primary-btn" type="submit">Start Experiment</button>
+              <button id="biology-notebook-experiment-cancel-btn" class="ghost-btn" type="button" data-i18n="notebook.action.cancel">Cancel</button>
+              <button id="biology-notebook-experiment-start-btn" class="primary-btn" type="submit" data-i18n="notebook.experiment.start">Start Experiment</button>
             </div>
           </form>
         </div>
@@ -482,54 +482,54 @@
         <div class="biology-notebook-quick-sample-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="biology-notebook-quick-sample-title">
           <div class="app-dialog-head">
             <div>
-              <h3 id="biology-notebook-quick-sample-title">Quick Add Sample</h3>
-              <p class="small-note">Place and record a sample without leaving the notebook.</p>
+              <h3 id="biology-notebook-quick-sample-title"><span data-i18n="notebook.full.31bfa03f">Quick Add Sample</span></h3>
+              <p class="small-note"><span data-i18n="notebook.full.9b647a63">Place and record a sample without leaving the notebook.</span></p>
             </div>
-            <button id="biology-notebook-quick-sample-close-btn" class="app-dialog-close-btn" type="button" aria-label="Close quick add sample" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            <button id="biology-notebook-quick-sample-close-btn" class="app-dialog-close-btn" type="button" aria-label="Close quick add sample" title="Close" data-i18n-title="notebook.full.cd86acc3" data-i18n-aria-label="notebook.full.7b5187d3"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           </div>
           <form id="biology-notebook-quick-sample-form" class="biology-notebook-quick-sample-form">
             <div class="biology-notebook-quick-sample-layout">
-              <section class="biology-notebook-quick-sample-storage" aria-label="Sample storage and position">
+              <section class="biology-notebook-quick-sample-storage" aria-label="Sample storage and position" data-i18n-aria-label="notebook.full.3e59c0de">
                 <div class="biology-notebook-quick-sample-location-panel">
-                  <span class="biology-notebook-quick-sample-location-label">Location</span>
-                  <div id="biology-notebook-quick-sample-location-list" class="biology-notebook-quick-sample-location-list" role="listbox" aria-label="Storage locations"></div>
+                  <span class="biology-notebook-quick-sample-location-label"><span data-i18n="notebook.full.5bc08dc6">Location</span></span>
+                  <div id="biology-notebook-quick-sample-location-list" class="biology-notebook-quick-sample-location-list" role="listbox" aria-label="Storage locations" data-i18n-aria-label="notebook.full.1b4dce06"></div>
                   <label class="biology-notebook-quick-sample-container-field">
-                    Container
+                    <span data-i18n="notebook.full.b23d4718">Container</span>
                     <select id="biology-notebook-quick-sample-container" required></select>
                   </label>
                 </div>
                 <div class="biology-notebook-quick-sample-grid-panel">
                   <div class="biology-notebook-quick-sample-grid-head">
-                    <strong>Grid box</strong>
-                    <span id="biology-notebook-quick-sample-grid-label" class="small-note">Grid box</span>
+                    <strong><span data-i18n="notebook.full.54989f84">Grid box</span></strong>
+                    <span id="biology-notebook-quick-sample-grid-label" class="small-note"><span data-i18n="notebook.full.54989f84">Grid box</span></span>
                   </div>
-                  <div id="biology-notebook-quick-sample-grid" class="biology-notebook-quick-sample-grid is-empty" aria-label="Container positions">
-                    <p class="small-note">Choose a container.</p>
+                  <div id="biology-notebook-quick-sample-grid" class="biology-notebook-quick-sample-grid is-empty" aria-label="Container positions" data-i18n-aria-label="notebook.full.d8cb3878">
+                    <p class="small-note"><span data-i18n="notebook.full.b5182db6">Choose a container.</span></p>
                   </div>
                 </div>
               </section>
-              <section class="biology-notebook-quick-sample-fields" aria-label="Sample details">
+              <section class="biology-notebook-quick-sample-fields" aria-label="Sample details" data-i18n-aria-label="notebook.full.9836ee05">
                 <label>
-                  Sample Name
-                  <input id="biology-notebook-quick-sample-name" required autocomplete="off" placeholder="Required" />
+                  <span data-i18n="notebook.full.ab0de2a6">Sample Name</span>
+                  <input id="biology-notebook-quick-sample-name" required autocomplete="off" placeholder="Required"  data-i18n-placeholder="notebook.full.51e4b240"/>
                 </label>
                 <div class="biology-notebook-quick-sample-field-row">
                   <label>
-                    Sample Code
-                    <input id="biology-notebook-quick-sample-code" autocomplete="off" placeholder="Auto" />
+                    <span data-i18n="notebook.full.fb4006b4">Sample Code</span>
+                    <input id="biology-notebook-quick-sample-code" autocomplete="off" placeholder="Auto"  data-i18n-placeholder="notebook.full.126befb6"/>
                   </label>
                   <label>
-                    Type
+                    <span data-i18n="notebook.full.d155d06d">Type</span>
                     <select id="biology-notebook-quick-sample-type"></select>
                   </label>
                 </div>
                 <div class="biology-notebook-quick-sample-field-row">
                   <label>
-                    Lot / Batch
+                    <span data-i18n="notebook.full.a4819fc1">Lot / Batch</span>
                     <input id="biology-notebook-quick-sample-lot" autocomplete="off" />
                   </label>
                   <label>
-                    Concentration
+                    <span data-i18n="notebook.full.32bee3d6">Concentration</span>
                     <input id="biology-notebook-quick-sample-concentration" autocomplete="off" placeholder="e.g. 2 mg/mL" />
                   </label>
                 </div>
@@ -538,13 +538,13 @@
             <div class="biology-notebook-quick-sample-footer">
               <p id="biology-notebook-quick-sample-status" class="small-note" aria-live="polite"></p>
               <div class="form-actions">
-                <button id="biology-notebook-quick-sample-cancel-btn" class="ghost-btn" type="button">Cancel</button>
-                <button id="biology-notebook-quick-sample-submit-btn" class="primary-btn biology-notebook-quick-sample-submit-btn" type="submit" aria-label="Add Sample" title="Add Sample">
+                <button id="biology-notebook-quick-sample-cancel-btn" class="ghost-btn" type="button"><span data-i18n="notebook.full.35afca3b">Cancel</span></button>
+                <button id="biology-notebook-quick-sample-submit-btn" class="primary-btn biology-notebook-quick-sample-submit-btn" type="submit" aria-label="Add Sample" title="Add Sample" data-i18n-title="notebook.full.462bc166" data-i18n-aria-label="notebook.full.462bc166">
                   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                     <path d="M5.5 4h7M7 4v5l-2.6 6.4A3.2 3.2 0 0 0 7.4 20h2.2a3.2 3.2 0 0 0 3-4.4L10 9V4"></path>
                     <path d="M14 14.5h6M17 11.5v6"></path>
                   </svg>
-                  <span class="sr-only">Add Sample</span>
+                  <span class="sr-only"><span data-i18n="notebook.full.462bc166">Add Sample</span></span>
                 </button>
               </div>
             </div>
@@ -556,25 +556,25 @@
         <div class="biology-notebook-project-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="biology-notebook-project-dialog-title" aria-describedby="biology-notebook-project-dialog-description">
           <div class="app-dialog-head">
             <div>
-              <h3 id="biology-notebook-project-dialog-title">New project</h3>
-              <p id="biology-notebook-project-dialog-description" class="small-note">Keep related experiments and results together.</p>
+              <h3 id="biology-notebook-project-dialog-title" data-i18n="notebook.action.newProject">New project</h3>
+              <p id="biology-notebook-project-dialog-description" class="small-note" data-i18n="notebook.project.description">Keep related experiments and results together.</p>
             </div>
-            <button id="biology-notebook-project-dialog-close-btn" class="app-dialog-close-btn" type="button" aria-label="Close add project dialog" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            <button id="biology-notebook-project-dialog-close-btn" class="app-dialog-close-btn" type="button" aria-label="Close add project dialog" title="Close" data-i18n-title="notebook.action.close" data-i18n-aria-label="notebook.project.close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           </div>
           <form id="biology-notebook-project-form" class="stack-form biology-notebook-project-form" novalidate>
             <label>
-              Project name
-              <input id="biology-notebook-project-name" required autocomplete="off" placeholder="e.g. Protein stability study" aria-describedby="biology-notebook-project-form-status" />
+              <span data-i18n="notebook.project.name">Project name</span>
+              <input id="biology-notebook-project-name" required autocomplete="off" placeholder="e.g. Protein stability study" aria-describedby="biology-notebook-project-form-status"  data-i18n-placeholder="notebook.project.example"/>
             </label>
             <p id="biology-notebook-project-form-status" class="small-note is-error" role="status" hidden></p>
             <details id="biology-notebook-project-details" class="biology-notebook-project-details">
-              <summary>Add a description <span>Optional</span></summary>
-              <label class="sr-only" for="biology-notebook-project-description">Project description</label>
-              <textarea id="biology-notebook-project-description" rows="3" placeholder="What are you exploring? Add a goal or a little context."></textarea>
+              <summary><span data-i18n="notebook.project.addDescription">Add a description</span> <span data-i18n="notebook.project.optional">Optional</span></summary>
+              <label class="sr-only" for="biology-notebook-project-description" data-i18n="notebook.project.descriptionLabel">Project description</label>
+              <textarea id="biology-notebook-project-description" rows="3" placeholder="What are you exploring? Add a goal or a little context." data-i18n-placeholder="notebook.project.descriptionPlaceholder"></textarea>
             </details>
             <div class="form-actions">
-              <button id="biology-notebook-project-cancel-btn" class="ghost-btn" type="button">Cancel</button>
-              <button id="biology-notebook-project-create-btn" class="primary-btn" type="submit">Create project</button>
+              <button id="biology-notebook-project-cancel-btn" class="ghost-btn" type="button" data-i18n="notebook.action.cancel">Cancel</button>
+              <button id="biology-notebook-project-create-btn" class="primary-btn" type="submit" data-i18n="notebook.project.create">Create project</button>
             </div>
           </form>
         </div>

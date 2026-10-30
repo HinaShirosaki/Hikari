@@ -12,6 +12,7 @@ import { createWorkflowStepState } from './actions/step-state.js';
 import { createWorkflowTemplateEditor } from './actions/template-editor.js';
 import { createWorkflowExecutionBoard } from './actions/execution-board.js';
 import { showTransientNotice } from '../../lib/notify.js';
+import { workflowText } from './localization.js';
 
 export function createWorkflowActions(config = {}) {
   const state = config?.state || {};
@@ -370,7 +371,9 @@ export function createWorkflowActions(config = {}) {
       persistWorkflowChanges();
       renderWorkflowViews();
     } catch (error) {
-      showTransientNotice(String(error?.message || error || 'Failed to store workflow files.'), { type: 'error' });
+      showTransientNotice(String(error?.message || error || workflowText('file.failed')), {
+        type: 'error', i18nKey: error?.i18nKey || '', i18nParams: error?.i18nParams || {}
+      });
     } finally {
       fileInput.value = '';
     }

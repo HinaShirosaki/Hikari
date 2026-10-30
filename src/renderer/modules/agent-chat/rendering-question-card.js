@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("agent");
 import { asArray, normalizeAgentUserQuestion, trimText } from './shared.js';
 import { renderAgentChatIcon } from './icons.js';
 
@@ -38,8 +41,8 @@ export function renderUserQuestionCard(meta, messageId = '', safeText, { disable
       class="agent-user-question-card${controlsDisabled ? ' is-disabled' : ''}"
       data-agent-user-question-card="${safeText(messageKey)}"
       aria-label="Clarification question"
-    >
-      <p class="agent-user-question-kicker">Clarification Needed</p>
+     data-i18n-aria-label="agent.full.5e05be75">
+      <p class="agent-user-question-kicker">${i18nUi.html("Clarification Needed")}</p>
       <h4>${safeText(question.question)}</h4>
       ${question.context ? `<p class="agent-user-question-context">${safeText(question.context)}</p>` : ''}
       ${options.length || question.allow_custom ? `
@@ -59,7 +62,7 @@ export function renderUserQuestionCard(meta, messageId = '', safeText, { disable
           ${question.allow_custom ? `
             <div class="agent-user-question-custom">
               <label class="agent-user-question-custom-field">
-                <span>Other</span>
+                <span>${i18nUi.html("Other")}</span>
                 <input
                   type="text"
                   data-agent-question-custom-input="${safeText(messageKey)}"

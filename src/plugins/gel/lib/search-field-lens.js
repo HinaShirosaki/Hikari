@@ -28,7 +28,7 @@ export function runSearchInput(input) {
   return true;
 }
 
-export function applySearchFieldLens(input) {
+export function applySearchFieldLens(input, { label = 'Search', bindLabel } = {}) {
   if (String(input?.tagName || '').toUpperCase() !== 'INPUT') {
     return false;
   }
@@ -53,31 +53,35 @@ export function applySearchFieldLens(input) {
   const lens = documentObject.createElement('button');
   lens.type = 'button';
   lens.className = SEARCH_LENS_CLASS;
-  lens.setAttribute('aria-label', 'Search');
+  lens.setAttribute('aria-label', label);
+  bindLabel?.(lens);
   lens.innerHTML = LENS_MARKUP;
   lens.addEventListener('click', () => runSearchInput(input));
   field.appendChild(lens);
   return true;
 }
 
-function refreshSearchFields(root) {
+function refreshSearchFields(root, options) {
   if (!root) {
     return;
   }
-  applySearchFieldLens(root);
-  root.querySelectorAll?.('input[type="search"]').forEach(applySearchFieldLens);
+  applySearchFieldLens(root, options);
+  root.querySelectorAll?.('input[type="search"]').forEach(input => applySearchFieldLens(input, options));
 }
 
 export function installSearchFieldLens({
   documentObject = document,
-  windowObject = window
+  windowObject = window,
+  label = 'Search',
+  bindLabel
 } = {}) {
   const root = documentObject?.body || documentObject?.documentElement;
   if (!root) {
     return { disconnect() {}, refresh() {} };
   }
 
-  const refresh = () => refreshSearchFields(root);
+  const options = { label, bindLabel };
+  const refresh = () => refreshSearchFields(root, options);
   refresh();
 
   const MutationObserverConstructor = windowObject?.MutationObserver;
@@ -88,7 +92,7 @@ export function installSearchFieldLens({
   // Views render their own search boxes long after boot, so wrapping is driven
   // by the DOM rather than by every renderer remembering to call refresh().
   const observer = new MutationObserverConstructor((records) => {
-    records.forEach((record) => record.addedNodes?.forEach(refreshSearchFields));
+    records.forEach((record) => record.addedNodes?.forEach(node => refreshSearchFields(node, options)));
   });
   observer.observe(root, { childList: true, subtree: true });
 

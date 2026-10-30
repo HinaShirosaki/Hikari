@@ -1,3 +1,7 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("settings");
+import { settingsMessage, settingsAttributes } from './localization.js';
 import {
   createCustomSampleTypeId,
   getEditableSampleTypeEntries,
@@ -73,15 +77,15 @@ export function createSampleInventorySettingsController({
   function renderLocationList() {
     const locations = state.settings.inventoryLocations || [];
     if (!locations.length) {
-      locationList.innerHTML = '<p class="small-note">No locations configured.</p>';
+      i18nUi.setHtml(locationList, `<p class="small-note">${settingsMessage('locations.empty')}</p>`);
       return;
     }
-    locationList.innerHTML = locations.map((location, index) => `
+    i18nUi.setHtml(locationList, locations.map((location, index) => `
       <div class="card-actions">
         <span>${escapeHtml(location)}</span>
-        <button type="button" class="danger-btn" data-location-delete="${index}">Delete</button>
+        <button type="button" class="danger-btn" data-location-delete="${index}">${settingsMessage('locations.delete')}</button>
       </div>
-    `).join('');
+    `).join(''));
     locationList.querySelectorAll('[data-location-delete]').forEach((button) => {
       button.addEventListener('click', () => {
         state.settings.inventoryLocations.splice(Number(button.dataset.locationDelete), 1);
@@ -139,19 +143,19 @@ export function createSampleInventorySettingsController({
     }
     const locations = getLocations();
     if (!locations.length) {
-      sampleInventoryLocationList.innerHTML = '<p class="small-note">No sample inventory locations configured.</p>';
+      i18nUi.setHtml(sampleInventoryLocationList, `<p class="small-note">${settingsMessage('locations.emptyStorage')}</p>`);
       return;
     }
-    sampleInventoryLocationList.innerHTML = locations.map((location, index) => {
+    i18nUi.setHtml(sampleInventoryLocationList, locations.map((location, index) => {
       const count = containerCount(location);
       return `
         <div class="settings-edit-row settings-sample-inventory-location-row">
-          <input value="${escapeHtml(location)}" data-sample-inventory-location-input="${index}" aria-label="Sample inventory location ${index + 1}" />
-          <span class="small-note">${escapeHtml(`${count} container${count === 1 ? '' : 's'}`)}</span>
-          <button type="button" class="danger-btn settings-inline-icon settings-inline-icon-danger" data-sample-inventory-location-delete="${index}" aria-label="Delete ${escapeHtml(location)}" title="${count > 0 ? 'Move or rename containers before deleting this location.' : 'Delete location'}"${count > 0 ? ' disabled' : ''}><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+          <input value="${escapeHtml(location)}" data-sample-inventory-location-input="${index}" ${settingsAttributes({ 'aria-label': 'locations.rowLabel' }, { index: index + 1 })} />
+          <span class="small-note">${settingsMessage('locations.containers', { count })}</span>
+          <button type="button" class="danger-btn settings-inline-icon settings-inline-icon-danger" data-sample-inventory-location-delete="${index}" ${settingsAttributes({ 'aria-label': 'locations.deleteLabel', title: count > 0 ? 'locations.protected' : 'locations.deleteLocation' }, { name: location })}${count > 0 ? ' disabled' : ''}><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
         </div>
       `;
-    }).join('');
+    }).join(''));
     // ponytail: rename commits on change (blur/Enter) instead of a per-row save button
     sampleInventoryLocationList.querySelectorAll('[data-sample-inventory-location-input]').forEach((input) => {
       input.addEventListener('change', () => {
@@ -168,20 +172,20 @@ export function createSampleInventorySettingsController({
       return;
     }
     const entries = getEditableSampleTypeEntries(state.settings);
-    sampleTypeLabelList.innerHTML = entries.map((entry) => {
+    i18nUi.setHtml(sampleTypeLabelList, entries.map((entry) => {
       const sampleCount = (state.samples || []).filter((sample) => normalizeSampleType(sample?.type) === entry.type).length;
-      const deleteTitle = sampleCount > 0 ? 'Reassign samples before removing this type.' : 'Remove sample type';
+      const deleteTitle = sampleCount > 0 ? 'locations.protectedType' : 'locations.removeType';
       const removeButton = entry.isCustom
-        ? `<button type="button" class="ghost-btn settings-sample-type-remove" data-sample-type-delete="${escapeHtml(entry.type)}" aria-label="Remove ${escapeHtml(entry.label)}" title="${deleteTitle}"${sampleCount > 0 ? ' disabled' : ''}><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>`
+        ? `<button type="button" class="ghost-btn settings-sample-type-remove" data-sample-type-delete="${escapeHtml(entry.type)}" ${settingsAttributes({ 'aria-label': 'locations.removeTypeLabel', title: deleteTitle }, { name: entry.label })}${sampleCount > 0 ? ' disabled' : ''}><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>`
         : '<span class="settings-sample-type-remove" aria-hidden="true"></span>';
       return `
       <li class="settings-sample-type-label-row">
         <span class="settings-sample-type-label-bullet" aria-hidden="true"></span>
-        <input class="settings-sample-type-label-input" data-sample-type-label="${escapeHtml(entry.type)}" value="${escapeHtml(entry.label)}" placeholder="${escapeHtml(entry.defaultLabel)}" aria-label="Sample type name: ${escapeHtml(entry.defaultLabel)}" />
+        <input class="settings-sample-type-label-input" data-sample-type-label="${escapeHtml(entry.type)}" value="${escapeHtml(entry.label)}" placeholder="${escapeHtml(entry.defaultLabel)}" ${settingsAttributes({ 'aria-label': 'locations.typeLabel' }, { name: entry.defaultLabel })} />
         ${removeButton}
       </li>
     `;
-    }).join('');
+    }).join(''));
     sampleTypeLabelList.querySelectorAll('[data-sample-type-delete]').forEach((button) => {
       button.addEventListener('click', () => deleteSampleType(button.dataset.sampleTypeDelete));
     });

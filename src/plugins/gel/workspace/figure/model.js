@@ -2,6 +2,7 @@ import { buildLanesFromManualSegmentation } from '../analysis/analysis-core.js';
 import { detectLanes } from '../analysis/auto-lanes.js';
 import { resolveStackCrop } from './trim.js';
 import { buildLadderLabels } from '../rendering/ladder-labels.js';
+import { CAPTION_ANGLE, estimateTextEm } from '../shared.js';
 
 export const MAX_BLOTS = 16;
 export const FIGURE_WIDTH = 900;
@@ -12,6 +13,7 @@ export const FIGURE_FONT_SIZE = 22;
 export const GUIDE_LEFT = 0.08;
 export const GUIDE_RIGHT = 0.92;
 const MIN_CROP_SPAN = 1;
+const estimateTextWidth = text => estimateTextEm(text) * FIGURE_FONT_SIZE;
 
 export function inferBlotPlacement(draft) {
   const image = draft.currentImage;
@@ -83,8 +85,7 @@ export function dragPlacement(placement, image, zone, dx, dy) {
     last: nextFirst + FIGURE_WIDTH * (GUIDE_RIGHT - GUIDE_LEFT) / (image.width * nextScale) * 100 });
 }
 
-export function wrapAntibodyLabel(value, measureText = text => Array.from(text).reduce((sum, char) =>
-  sum + (/[MW@\u2e80-\uffff]/u.test(char) ? 1 : 0.6) * FIGURE_FONT_SIZE, 0), maxWidth = LABEL_WIDTH - 20) {
+export function wrapAntibodyLabel(value, measureText = estimateTextWidth, maxWidth = LABEL_WIDTH - 20) {
   const lines = [];
   for (const paragraph of String(value || '').split('\n')) {
     let line = '';
@@ -104,9 +105,19 @@ export function wrapAntibodyLabel(value, measureText = text => Array.from(text).
   return lines;
 }
 
+// A Stack's own table follows the lanes of its first gel with lane dividers.
+export function stackTableReference(rows) {
+  for (const row of rows) {
+    const image = row.draft.currentImage;
+    const lanes = buildLanesFromManualSegmentation(row.draft.manualOverrides, image.width, image.height) || [];
+    if (lanes.length) return { row, lanes };
+  }
+  return null;
+}
+
 // One affine horizontal transform per intact blot. The same factor is used on
 // Y, preserving band proportions; no lanes are cut apart or independently warped.
-export function buildBlotFigurePlan(rows, { measureText, trim, showLadderLabels = false } = {}) {
+export function buildBlotFigurePlan(rows, { measureText, trim, table, showLadderLabels = false } = {}) {
   if (!rows?.length) throw new Error('Add at least one blot to the figure.');
   if (rows.length > MAX_BLOTS) throw new Error(`A figure can contain up to ${MAX_BLOTS} blots.`);
   const plannedRows = rows.map(row => {
@@ -140,13 +151,15 @@ export function buildBlotFigurePlan(rows, { measureText, trim, showLadderLabels 
   const imageWidth = crop.sourceWidth;
   plannedRows.forEach(row => { row.imageX -= crop.sourceLeft; });
   let y = FIGURE_MARGIN;
+  let captionRight = 0;
+  const sin = Math.sin(CAPTION_ANGLE * Math.PI / 180), cos = Math.cos(CAPTION_ANGLE * Math.PI / 180);
   const tables = [];
-  plannedRows.forEach((part, index) => {
-    const reference = rows[index];
-    const image = reference.draft.currentImage;
-    const lanes = buildLanesFromManualSegmentation(reference.draft.manualOverrides, image.width, image.height) || [];
+  function laneColumns(index) {
+    const part = plannedRows[index];
+    const image = rows[index].draft.currentImage;
+    const lanes = buildLanesFromManualSegmentation(rows[index].draft.manualOverrides, image.width, image.height) || [];
     const centers = lanes.map(lane => part.imageX + lane.center / image.width * part.imageWidth);
-    const columns = lanes.map((lane, index) => {
+    return lanes.map((lane, index) => {
       const width = Math.max(8, Math.min(
         (lane.xEnd - lane.xStart + 1) / image.width * part.imageWidth,
         index ? (centers[index] - centers[index - 1]) * 0.96 : Infinity,
@@ -155,27 +168,52 @@ export function buildBlotFigurePlan(rows, { measureText, trim, showLadderLabels 
       ));
       return { laneIndex: lane.index + 1, center: centers[index], width, x: centers[index] - width / 2 };
     }).filter(column => column.center >= 0 && column.center <= imageWidth);
-    if (columns.length && reference.draft.manualOverrides?.laneTable?.rows?.length) {
-      let tableY = y;
-      const tableRows = reference.draft.manualOverrides.laneTable.rows.map(row => {
-        const labelLines = wrapAntibodyLabel(row.label, measureText);
+  }
+  function placeTable(laneTableRows, columns, sourceId, label) {
+    const rotated = laneTableRows.length === 1;
+    let tableY = y;
+    const tableRows = laneTableRows.map(row => {
+      const labelLines = wrapAntibodyLabel(row.label, measureText);
+      if (!rotated) {
         const values = columns.map(column => wrapAntibodyLabel(row.values?.[column.laneIndex - 1] || '', measureText, Math.max(8, column.width - 12)));
         const height = Math.max(44, Math.max(labelLines.length, ...values.map(lines => lines.length)) * 28 + 12);
-        const result = { labelLines, values, y: tableY, height };
+        const result = { labelLines, values, y: tableY, height, labelY: tableY, labelHeight: height };
         tableY += height;
         return result;
-      });
-      const table = { sourceId: reference.id, label: reference.label, columns, rows: tableRows, y, height: tableY - y };
-      tables.push(table);
-      part.table = table;
-      y = tableY + 16;
-    }
+      }
+      // Each caption starts at its lane center (captionY) and rises to the
+      // right; the row label sits beside the captions' starting line.
+      const values = columns.map(column => [String(row.values?.[column.laneIndex - 1] || '').replace(/\s+/g, ' ').trim()]);
+      const widths = values.map(([text]) => (measureText || estimateTextWidth)(text));
+      widths.forEach((width, index) => { captionRight = Math.max(captionRight, columns[index].center + width * cos + FIGURE_FONT_SIZE / 2 * sin); });
+      const height = Math.max(44, labelLines.length * 28 + 12, Math.max(...widths) * sin + FIGURE_FONT_SIZE * cos + 12);
+      const captionY = tableY + height - 6 - FIGURE_FONT_SIZE / 2 * cos;
+      const result = { labelLines, values, widths, y: tableY, height, captionY,
+        labelY: captionY + 14 - labelLines.length * 28, labelHeight: labelLines.length * 28 };
+      tableY += height;
+      return result;
+    });
+    const table = { sourceId, label, columns, rows: tableRows, rotated, y, height: tableY - y };
+    tables.push(table);
+    y = tableY + 16;
+    return table;
+  }
+  // The Stack's own table heads the figure and replaces the gels' own tables.
+  const stackTable = table?.rows?.length ? table.rows : null;
+  const tableReference = stackTable && stackTableReference(rows);
+  const referenceIndex = tableReference ? rows.indexOf(tableReference.row) : -1;
+  const referenceColumns = referenceIndex >= 0 ? laneColumns(referenceIndex) : [];
+  if (referenceColumns.length) placeTable(stackTable, referenceColumns, rows[referenceIndex].id, 'Stack').stack = true;
+  plannedRows.forEach((part, index) => {
+    const laneTableRows = stackTable ? [] : rows[index].draft.manualOverrides?.laneTable?.rows || [];
+    const columns = laneTableRows.length ? laneColumns(index) : [];
+    if (columns.length) part.table = placeTable(laneTableRows, columns, rows[index].id, rows[index].label);
     part.y = y;
     part.imageY = y + (part.rowHeight - part.imageHeight) / 2;
     y += part.rowHeight + 16;
   });
   const ladderLabelWidth = Math.max(...plannedRows.map(row => row.ladderLabels.width));
-  const width = Math.ceil(FIGURE_MARGIN * 2 + LABEL_WIDTH + ladderLabelWidth + imageWidth);
+  const width = Math.ceil(FIGURE_MARGIN * 2 + LABEL_WIDTH + ladderLabelWidth + Math.max(imageWidth, captionRight));
   const height = Math.ceil(y - 16 + FIGURE_MARGIN);
   if (height > 12000 || width > 12000 || width * height > 24000000) {
     throw new Error('This figure is too large. Check the lane anchors, crop the blots, or use fewer rows.');

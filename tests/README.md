@@ -102,6 +102,60 @@ real renderer modules with a temporary profile and stubbed storage IPC. It
 checks module routing, Inventory's shared history, editor refreshes, and
 workspace history resets without touching saved workspaces.
 
+`node tests/i18n-selfcheck.mjs` covers locale normalization, English/parent
+fallback, interpolation, plural rules, date formatting, Spanish catalog keys and
+parameters, and old workspace compatibility. `node node_modules/electron/cli.js tests/i18n-electron.cjs`
+checks the real renderer and Settings with disposable data: English parity,
+opt-in DOM translation, draft/focus/selection preservation, safe attributes,
+save/discard, and undo. It uses the bundled Spanish preview; untranslated keys
+fall back to English. Browser interaction checks live under `tests/fixtures/i18n/`. They verify numerical and
+sequence invariance, cloned-row indices, workflow drafts/graph identity,
+context menus, process creation, and module undo/redo. `execution-checks.mjs`
+also covers locked steps, completion/failure/retry/reopen, optional branches,
+protocol/result drafts, staged file selections and uploads, notice ownership,
+notebook option metadata, dates, and locale-independent artifact paths.
+`home-settings-checks.mjs` also exercises Home timers, experiment saves and
+reminders, translated dock/search routing, journal/location drafts, PDF values,
+and isolated updater/plugin preference/install states. No updater, install,
+agent request, or file operation reaches a live backend.
+`node tests/home-quick-log-inputs-selfcheck.mjs` covers Experiment log input,
+IME shortcuts, autosave status, storage failure rollback/retry, and assistant
+handoff failures. `node tests/home-quick-log-inputs-electron.cjs` runs realistic
+notes through the production Home controls and notebook review, including
+Unicode, pasted tables, literal HTML, 3,000/3,001-character boundaries, large
+local notes, reload, disk serialization, and 1300/800/390px layouts. It uses a
+disposable profile and simulated assistant replies; it does not evaluate a live
+model or open a user workspace. Reports and screenshots go to
+`artifacts/home-quick-log-inputs/`.
+`notebook-checks.mjs` covers project/experiment dialogs, state badges and metadata,
+notes and protocol-copy drafts, staged files and simulated imports, clarification
+validation, and Home note save/cancel while switching between English and Spanish.
+`protocol-checks.mjs` covers Protocols drafts, presets, previews, search/menus,
+JSON imports, undo/redo, attachment selection, progress and review states, and
+stale generation replies. Agent and polish responses use deterministic local
+stubs, including pending requests during language changes.
+`chemicals-checks.mjs` covers Chemicals drafts, filters, sorting, dates, CAS codes,
+linked samples, imports and mapping fallback, SQLite notices, and undo/redo. The
+fixture checks exact English summary parity and uses simulated parser/mapper/
+SQLite APIs so no model, network, or live workspace is involved.
+`samples-checks.mjs` covers storage navigation, folder/container creation, custom
+grid values and well IDs, menu guards, inline rename, deletion/reparenting and
+undo/redo. It checks that live Spanish translation preserves sample/editor drafts,
+names, links, sample vocabulary and exact CSV output. Grid/plate/tube and dialog
+captures use the real renderer at 1300px and 800px.
+`plate-checks.mjs` covers Plate Setup/Analyze: well tooltips and axis headers,
+inline well edits and form drafts across switches, fill statuses, the serial
+dilution dialog, save/undo/redo, saved English dilution summaries, Analyze
+headers and result notices. It exports no files and opens no native dialogs.
+`papers-checks.mjs` opens a generated PDF in the real viewer and covers the rail,
+toolbar, side panels, highlight popover, external-link confirm, folder rename
+validation and comment drafts while switching languages.
+`agent-checks.mjs` covers the Agent view and shared rail chrome (empty state, message
+copy/attachments, composer draft, session folders, folder rename guard, draft,
+file-change and HTML cards, quick prompts) without sending agent requests.
+Spanish desktop/narrow
+layout captures are written to `artifacts/i18n-es/`.
+
 `storage-setup-electron.cjs` covers the first-launch workspace page with an
 isolated temporary profile and real storage IPC/import/save handlers, with a
 simulated folder picker: cancellation, failures, retry, saving, and recovery
@@ -171,3 +225,20 @@ Guidelines:
   `context.scope` (`const { assert, test, path } = scope;`). The scope keys are
   the `suiteScope` object in `test.js`. `no-undef` is on for `tests/`, so a
   helper you forgot to destructure fails `npm run lint`, not the test run.
+
+`samples-editor-checks.mjs` extends the i18n UI fixture to sample type fields and
+canonical option values, validation/save/delete/clone, structure clipboard IPC,
+CSV collisions, and export bytes/filename. Clipboard, URL and anchor APIs use
+isolated stubs; no live clipboard or files are touched. `shared-gaps-checks.mjs`
+tests the real quit/reload service against cloned dialog markup and isolated
+editors/close/reload callbacks, including deferred saves, selection, failures,
+retry, and CSS captions. See `docs/renderer/architecture/i18n-audit.md` for the
+remaining localization surfaces reviewed after the newer module migrations.
+
+`colony-search-checks.mjs` verifies search candidate/order/routing invariance and
+live result/feedback labels, then runs the lazy Colony Counter with a generated
+PNG: marker add/remove, mask counts and crop cancellation use the real UI and
+CropperJS. Deferred model callbacks use the controller factory's defaultable model
+dependency, preserve output geometry/scores/settings and verify translated busy/error
+states without touching user images, user files or a model/network service. Colony
+and crop-menu layout captures run at 1300px and 800px.

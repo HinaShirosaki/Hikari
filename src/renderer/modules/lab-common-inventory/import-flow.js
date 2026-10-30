@@ -1,10 +1,11 @@
+import { chemicalUi, chemicalError, chemicalImportFailure } from './localization.js';
 export function installImportFlow(ctx) {
   const { persist } = ctx;
   const { chemicalImportFile } = ctx.elements;
   const parseChemicalImportFile = (...args) => ctx.parseChemicalImportFile(...args);
   const inferChemicalImportHeaders = (...args) => ctx.inferChemicalImportHeaders(...args);
   const importChemicalRows = (...args) => ctx.importChemicalRows(...args);
-  const buildImportMappingSummary = (...args) => ctx.buildImportMappingSummary(...args);
+  const setChemicalImportResult = (...args) => ctx.setChemicalImportResult(...args);
   const setChemicalImportStatus = (...args) => ctx.setChemicalImportStatus(...args);
   const syncChemicalSqliteBundle = (...args) => ctx.syncChemicalSqliteBundle(...args);
   const renderAll = (...args) => ctx.renderAll(...args);
@@ -17,39 +18,34 @@ async function onChemicalImportFileChange(event) {
   if (!file) {
     return;
   }
-  setChemicalImportStatus(`Reading ${file.name}...`, 'busy');
+  setChemicalImportStatus(chemicalUi('import.reading', { file: file.name }), 'busy');
   try {
     const parsed = await parseChemicalImportFile(file);
     if (!Array.isArray(parsed.headers) || !parsed.headers.length) {
-      throw new Error('Import file needs a header row.');
+      throw chemicalError('import.headerRequired');
     }
     if (!Array.isArray(parsed.rows) || !parsed.rows.length) {
-      throw new Error('Import file does not contain chemical rows.');
+      throw chemicalError('import.noRows');
     }
 
-    setChemicalImportStatus('Matching spreadsheet columns...', 'busy');
+    setChemicalImportStatus(chemicalUi('import.matching'), 'busy');
     const inference = await inferChemicalImportHeaders(parsed.headers, parsed.rows);
     if (inference.fieldToColumn.name == null) {
-      throw new Error('Could not find a chemical name column.');
+      throw chemicalError('import.nameColumn');
     }
 
     const result = importChemicalRows(parsed, inference, file.name);
     if (!result.created && !result.updated) {
-      setChemicalImportStatus(`No chemicals imported from ${file.name}. ${result.skipped} rows were skipped.`, 'error');
+      setChemicalImportStatus(chemicalUi('import.nothing', { file: file.name, count: result.skipped }), 'error');
       return;
     }
 
     persist();
     void syncChemicalSqliteBundle(true);
     renderAll();
-    const mappingSummary = buildImportMappingSummary(inference);
-    const llmNote = inference.llmError ? ` LLM mapping unavailable: ${inference.llmError}` : '';
-    setChemicalImportStatus(
-      `Imported ${result.created} new and updated ${result.updated} chemicals from ${file.name}. Skipped ${result.skipped}. ${mappingSummary ? `Mapped ${mappingSummary}.` : ''}${llmNote}`,
-      inference.llmError ? 'warning' : 'success'
-    );
+    setChemicalImportResult(result, inference, file.name);
   } catch (error) {
-    setChemicalImportStatus(`Import failed: ${String(error?.message || error)}`, 'error');
+    setChemicalImportStatus(chemicalImportFailure(error), 'error');
   } finally {
     if (chemicalImportFile) {
       chemicalImportFile.value = '';

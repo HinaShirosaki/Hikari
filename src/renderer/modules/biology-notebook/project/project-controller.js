@@ -1,3 +1,4 @@
+import { setNotebookText, notebookNotice } from '../localization.js';
 import { showTransientNotice } from '../../../lib/notify.js';
 import { positionContextMenu as placeContextMenu } from '../../../lib/context-menu.js';
 import { projectFolderPath, sanitizeFolderName } from '../../../../shared/storage-layout.mjs';
@@ -47,12 +48,12 @@ export function createNotebookProjectController({
     placeContextMenu(contextMenuEl, clientX, clientY, windowRef);
   }
 
-  function setDialogError(message = '') {
+  function setDialogError(key = '', params = {}) {
     if (dialogStatus) {
-      dialogStatus.textContent = message;
-      dialogStatus.hidden = !message;
+      setNotebookText(dialogStatus, key || 'empty', params);
+      dialogStatus.hidden = !key;
     }
-    projectNameInput?.setAttribute?.('aria-invalid', String(Boolean(message)));
+    projectNameInput?.setAttribute?.('aria-invalid', String(Boolean(key)));
   }
 
   function openProjectDialog(event) {
@@ -107,7 +108,7 @@ export function createNotebookProjectController({
       const result = await windowRef.hikariApi.ensureStorageDirectory(projectFolder);
       if (result?.ok !== true) {
         console.warn('Failed to create project directory:', result?.error || projectFolder);
-        showTransientNotice(`Could not create the project folder: ${result?.error || projectFolder}`, { type: 'error' });
+        notebookNotice('project.folderError', { detail: result?.error || projectFolder }, { type: 'error' });
       }
     } catch (error) {
       console.warn('Failed to create project directory:', error);
@@ -119,7 +120,7 @@ export function createNotebookProjectController({
     if (creating) return null;
     const name = cleanText(projectNameInput?.value);
     if (!name) {
-      setDialogError('Enter a project name.');
+      setDialogError('project.nameRequired');
       projectNameInput?.focus?.();
       return null;
     }
@@ -131,8 +132,8 @@ export function createNotebookProjectController({
     if (clash) {
       setDialogError(
         cleanText(clash.name).toLowerCase() === name.toLowerCase()
-          ? 'A project with this name already exists. Choose a different name.'
-          : `This name shares a storage folder with "${cleanText(clash.name)}". Choose a more distinct name.`
+          ? 'project.duplicate' : 'project.folderClash',
+        { name: cleanText(clash.name) }
       );
       projectNameInput?.focus?.();
       return null;
@@ -155,7 +156,7 @@ export function createNotebookProjectController({
     creating = true;
     if (dialogCreateBtn) {
       dialogCreateBtn.disabled = true;
-      dialogCreateBtn.textContent = 'Creating…';
+      setNotebookText(dialogCreateBtn, 'project.creating');
     }
     try {
       state.projects.push(project);
@@ -171,7 +172,7 @@ export function createNotebookProjectController({
       creating = false;
       if (dialogCreateBtn) {
         dialogCreateBtn.disabled = false;
-        dialogCreateBtn.textContent = 'Create project';
+        setNotebookText(dialogCreateBtn, 'project.create');
       }
     }
   }

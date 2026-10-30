@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
 import {
   buildSamplePlaceholderTypeAliases,
   formatSampleRecordLabel,
@@ -70,7 +73,7 @@ export function createPlaceholderSuggestions({
     list.className = 'biology-notebook-sample-suggestions';
     list.setAttribute('popover', 'manual');
     list.setAttribute('role', 'listbox');
-    list.setAttribute('aria-label', `${name} samples`);
+    i18nUi.setAttribute(list, "aria-label", i18nUi.message("{p0} samples", { p0: name }));
     for (const [index, sample] of candidates.entries()) {
       const option = doc.createElement('div');
       option.id = `${list.id}-${index}`;
@@ -78,10 +81,10 @@ export function createPlaceholderSuggestions({
       option.setAttribute('role', 'option');
       option.setAttribute('aria-selected', 'false');
       const title = doc.createElement('span');
-      title.textContent = formatSampleRecordLabel(sample);
+      i18nUi.setText(title, formatSampleRecordLabel(sample));
       const detail = doc.createElement('span');
       detail.className = 'biology-notebook-sample-suggestion-detail';
-      detail.textContent = [sample.lot && `Lot: ${sample.lot}`, formatSampleStorageLabel(sample, getInventory())].filter(Boolean).join(' · ');
+      i18nUi.setText(detail, [sample.lot && `Lot: ${sample.lot}`, formatSampleStorageLabel(sample, getInventory())].filter(Boolean).join(' · '));
       option.append(title, detail);
       list.append(option);
     }

@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { buildCircularMapSvg } from './sequence-map/circular-map.js';
 import { getMapKind } from './sequence-map/geometry.js';
 import { buildLinearMapSvg } from './sequence-map/linear-map.js';
@@ -44,7 +47,7 @@ export function resolveBaseFromPoint(rect, clientX, clientY, sequenceLength, kin
 
 export function buildSequenceMapSvg(record, options = {}) {
   if (!Number(record?.sequence?.length)) {
-    return '<p class="small-note">No sequence available to map.</p>';
+    return `<p class="small-note">${i18nUi.html("No sequence available to map.")}</p>`;
   }
   return getMapKind(record) === 'circular'
     ? buildCircularMapSvg(record, options)

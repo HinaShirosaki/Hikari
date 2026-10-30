@@ -1,3 +1,6 @@
+import "./localization.js";
+import { createPresentation } from "../../lib/i18n/presentation.js";
+const i18nUi = createPresentation("settings");
 import {
   DEFAULT_AGENT_LLM_PROVIDER as DEFAULT_LLM_PROVIDER
 } from '../codex-model-catalog.generated.js';
@@ -15,11 +18,13 @@ import {
   normalizeAppearanceMode
 } from '../app-state/appearance.js';
 import { applyAppearanceToDocument } from '../../app/appearance.js';
+import { i18n, normalizeLocale } from '../../lib/i18n/index.js';
 import { createCodexAccountSettings } from './codex-account.js';
 import { createPreferredJournalSettings } from './preferred-journals.js';
 import { createNotebookPdfSettingsController } from './notebook-pdf-controller.js';
 import { createSettingsFormPresentation } from './form-presentation.js';
-
+import { translateTree } from '../../lib/i18n/dom.js';
+import './localization.js';
 
 export function initSettings({
   state,
@@ -36,6 +41,7 @@ export function initSettings({
     settingsNavItems,
     settingsPanels,
     appearanceForm,
+    settingLanguage,
     settingFontSize,
     settingMode,
     storageForm,
@@ -250,19 +256,19 @@ export function initSettings({
   openLogsFolderBtn?.addEventListener('click', async () => {
     const result = await window.hikariApi?.openLogsFolder?.();
     if (result && result.ok === false) {
-      showTransientNotice(result.error || 'Could not open the logs folder.', { type: 'error' });
+      showTransientNotice((((((result.error || i18nUi.message("Could not open the logs folder.")))))), { type: 'error' });
     }
   });
   openThirdPartyNoticesBtn?.addEventListener('click', async () => {
     const result = await window.hikariApi?.openThirdPartyNotices?.();
     if (result && result.ok === false) {
-      showTransientNotice(result.error || 'Could not open the third-party notices.', { type: 'error' });
+      showTransientNotice((((((result.error || i18nUi.message("Could not open the third-party notices.")))))), { type: 'error' });
     }
   });
   openTutorialBtn?.addEventListener('click', async () => {
     const result = await window.hikariApi?.openTutorial?.();
     if (result && result.ok === false) {
-      showTransientNotice(result.error || 'Could not open the tutorial.', { type: 'error' });
+      showTransientNotice((((((result.error || i18nUi.message("Could not open the tutorial.")))))), { type: 'error' });
     }
   });
   formPresentation.bind(notebookPdfForm, notebookPdfController.save);
@@ -389,17 +395,17 @@ export function initSettings({
     if (selected && !modelOptions.some((entry) => entry.value === selected)) {
       modelOptions.push({ value: selected, label: selected });
     }
-    settingModel.textContent = '';
+    i18nUi.setText(settingModel, '');
 
     const defaultOption = document.createElement('option');
     defaultOption.value = '';
-    defaultOption.textContent = 'Use the default model';
+    i18nUi.setText(defaultOption, i18nUi.message("Use the default model"));
     settingModel.append(defaultOption);
 
     modelOptions.forEach((entry) => {
       const option = document.createElement('option');
       option.value = entry.value;
-      option.textContent = entry.label || entry.value;
+      i18nUi.setText(option, (entry.label || entry.value));
       settingModel.append(option);
     });
     settingModel.value = String(selectedModel || '').trim();
@@ -413,22 +419,22 @@ export function initSettings({
     const modelConfig = llmModelCatalog.getModelConfig(provider, model);
     const supported = Array.isArray(modelConfig?.reasoningEfforts) ? modelConfig.reasoningEfforts : [];
     const normalizedSelected = llmModelCatalog.normalizeReasoning(provider, model, selectedReasoningEffort);
-    settingReasoningEffort.textContent = '';
+    i18nUi.setText(settingReasoningEffort, '');
 
     const defaultOption = document.createElement('option');
     defaultOption.value = '';
     if (supported.length) {
       const fallbackLabel = String(modelConfig?.defaultReasoningEffort || supported[0] || '').trim();
-      defaultOption.textContent = fallbackLabel ? `Default (${fallbackLabel})` : 'Default';
+      i18nUi.setText(defaultOption, (fallbackLabel ? i18nUi.message("Default ({p0})", { p0: fallbackLabel }) : i18nUi.message("Default")));
     } else {
-      defaultOption.textContent = 'Not configurable for this model';
+      i18nUi.setText(defaultOption, i18nUi.message("Not configurable for this model"));
     }
     settingReasoningEffort.append(defaultOption);
 
     supported.forEach((effort) => {
       const option = document.createElement('option');
       option.value = effort;
-      option.textContent = effort;
+      i18nUi.setText(option, effort);
       settingReasoningEffort.append(option);
     });
 
@@ -442,6 +448,7 @@ export function initSettings({
   }
 
   function renderForms() {
+    translateTree(document.getElementById('setting-view'));
     const drafts = formPresentation.captureDrafts();
     const didSyncCodexSettings = syncCodexSettingsFromCatalog();
     const appearance = state.settings.appearance;
@@ -449,6 +456,7 @@ export function initSettings({
 
     settingFontSize.value = String(appearance.fontSize || 16);
     settingMode.value = appearance.mode || 'day';
+    if (settingLanguage) settingLanguage.value = normalizeLocale(state.settings.locale);
 
     settingStoragePath.value = state.settings.storagePath || '';
     if (settingStartupDefaultView) {
@@ -490,6 +498,7 @@ export function initSettings({
   function onSaveAppearance(event) {
     event.preventDefault();
 
+    state.settings.locale = normalizeLocale(settingLanguage?.value || state.settings.locale);
     state.settings.appearance = {
       ...state.settings.appearance,
       fontSize: Number(settingFontSize.value) || 16,
@@ -497,6 +506,7 @@ export function initSettings({
     };
 
     persist();
+    i18n.setLocale(state.settings.locale);
     applyAppearance();
   }
 

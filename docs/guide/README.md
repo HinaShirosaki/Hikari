@@ -111,7 +111,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 
 | Module | One-liner |
 | --- | --- |
-| <img src="../../assets/icons/home.svg" width="16"/> [`Home`](#home) | Bench dashboard: timers, experiment log, notebook notes, activity heatmap, reminders, and paper finder. |
+| <img src="../../assets/icons/home.svg" width="16"/> [`Home`](#home) | Bench dashboard: timers, experiment log, notebook notes, activity heatmap, reminders, and suggested papers. |
 | <img src="../../assets/icons/protocols.svg" width="16"/> [`Protocols`](#protocols) | Protocol library with a structured editor, JSON import/export, and LLM drafting. |
 | <img src="../../assets/icons/biology-notebook.svg" width="16"/> [`Notebook`](#notebook) | Projects and protocol-linked experiment records with result tables and PDF export. |
 | <img src="../../assets/icons/papers.svg" width="16"/> [`Papers`](#papers) | Local PDF library, anchored comments, summaries, and method extraction. |
@@ -136,7 +136,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 - **Lab activity** — an 18-week contribution heatmap built from notebook entries, workflow steps, assay analyses, and experiment-log lines.
 - **Cell passage** — reminders for upcoming and overdue sub-cultures.
 - **Overnight incubation** — named incubators (managed from the widget itself) with an optional reminder date for tomorrow.
-- **Paper finder** — results of the scheduled literature sweeps you set up from a Notebook project, against your preferred journals, with a **Find papers now** button and one-click download into the library (see [`Papers`](#papers)).
+- **Suggested papers** — results of the scheduled literature sweeps you set up from a Notebook project, against your preferred journals, with a **Find papers now** button and one-click download into the library (see [`Papers`](#papers)).
 
 ![Hikari Home dashboard with timers and passage and incubation reminders](../screenshots/home.png)
 

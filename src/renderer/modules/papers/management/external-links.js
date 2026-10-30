@@ -1,3 +1,5 @@
+import { paperText } from '../localization.js';
+
 // Opening a paper's publisher page goes through the host shell, never the
 // renderer, so the URL is validated before it leaves the app.
 function createExternalLinkOpener({ windowRef } = {}) {
@@ -24,7 +26,7 @@ function createExternalLinkOpener({ windowRef } = {}) {
     }
 
     const shouldOpen = typeof windowRef?.confirm === 'function'
-      ? windowRef.confirm(`This PDF link opens an external website:\n\n${normalizedUrl}\n\nOpen it in your browser?`)
+      ? windowRef.confirm(paperText('viewer.confirmExternal', { url: normalizedUrl }))
       : true;
     if (!shouldOpen) {
       return { ok: false, cancelled: true, error: 'External website was not opened.' };

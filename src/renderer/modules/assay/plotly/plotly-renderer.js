@@ -1,3 +1,4 @@
+import "../localization.js";
 import { resolveAxisStyle, plotlyAxisRange } from './chart-style-targets.js';
 import { buildPlotlyTraces } from './plotly-traces.js';
 import { buildPlotElements, plotElementEditPatch } from './plot-elements.js';

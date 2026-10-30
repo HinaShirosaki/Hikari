@@ -7,9 +7,9 @@ import {
   buildPaperStorageFolder,
   resolveStoredPaperPath
 } from './storage.js';
-import { showTransientNotice } from '../../lib/notify.js';
 import { createPaperUploadActions } from './actions-upload.js';
 import { createPaperAnalysisActions } from './actions-analysis.js';
+import { paperFailure, paperNotice, paperUi } from './localization.js';
 
 export function createPapersActions(context) {
   const {
@@ -55,17 +55,17 @@ export function createPapersActions(context) {
 
     const rootPath = String(state.settings?.storagePath || '').trim();
     if (!rootPath) {
-      showTransientNotice('Set Storage Folder Path in Settings before moving papers.', { type: 'error' });
+      paperNotice(paperUi('notice.storageForMove'), { type: 'error' });
       return { ok: false, error: 'Missing storage path.' };
     }
     if (typeof windowRef?.hikariApi?.moveStoredFile !== 'function') {
-      showTransientNotice('Stored file move API is unavailable.', { type: 'error' });
+      paperNotice(paperUi('notice.moveUnavailable'), { type: 'error' });
       return { ok: false, error: 'Stored file move API is unavailable.' };
     }
 
     const sourcePath = resolveStoredPaperPath(paper, rootPath);
     if (!sourcePath) {
-      showTransientNotice('This paper does not have a stored PDF file to move.', { type: 'error' });
+      paperNotice(paperUi('notice.noStoredPdf'), { type: 'error' });
       return { ok: false, error: 'Missing stored PDF path.' };
     }
 
@@ -106,7 +106,8 @@ export function createPapersActions(context) {
       return { ok: true, paper };
     } catch (error) {
       const message = String(error?.message || error || 'Failed to move stored PDF.');
-      showTransientNotice(message, { type: 'error' });
+      // The returned error stays English for callers; only the notice translates.
+      paperNotice(paperFailure(error, 'notice.moveFailed'), { type: 'error' });
       return { ok: false, error: message };
     }
   }

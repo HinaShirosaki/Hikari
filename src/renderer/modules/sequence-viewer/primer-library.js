@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../lib/html.js';
 import { showTransientNotice } from '../../lib/notify.js';
 import { addPrimersToLibrary, normalizePrimerLibrary } from '../../../shared/primer-library.mjs';
@@ -27,21 +30,21 @@ export function createPrimerLibraryController(config = {}) {
       elements.primerLibrarySelectAll.indeterminate = checked > 0 && checked < visible.length;
       elements.primerLibrarySelectAll.disabled = !visible.length;
     }
-    if (elements.primerLibraryCount) elements.primerLibraryCount.textContent = `${rows.length} primer${rows.length === 1 ? '' : 's'} · ${selected.size} selected`;
+    if (elements.primerLibraryCount) i18nUi.setText(elements.primerLibraryCount, i18nUi.message((rows.length === 1 ? "{p0} primer · {p2} selected" : "{p0} primers · {p2} selected"), { p0: rows.length, p2: selected.size }));
     if (elements.primerLibraryExportBtn) elements.primerLibraryExportBtn.disabled = !selected.size;
     if (elements.primerLibraryRemoveBtn) elements.primerLibraryRemoveBtn.disabled = !selected.size;
   }
 
   function render() {
     const rows = visibleEntries();
-    if (elements.primerLibraryBody) elements.primerLibraryBody.innerHTML = rows.length ? rows.map(row => `
+    if (elements.primerLibraryBody) i18nUi.setHtml(elements.primerLibraryBody, rows.length ? rows.map(row => `
       <tr>
-        <td><input type="checkbox" data-primer-library-select="${escapeHtml(row.id)}" aria-label="Select ${escapeHtml(row.name)}"${selected.has(row.id) ? ' checked' : ''}></td>
-        <td><textarea rows="1" class="sequence-viewer-primer-library-name" data-primer-library-name="${escapeHtml(row.id)}" maxlength="160" spellcheck="false" aria-label="Primer name for ${escapeHtml(row.name)}">${escapeHtml(row.name)}</textarea></td>
+        <td><input type="checkbox" data-primer-library-select="${escapeHtml(row.id)}" ${i18nUi.attributeMessage("aria-label", i18nUi.message("Select {p0}", { p0: row.name }))}${selected.has(row.id) ? ' checked' : ''}></td>
+        <td><textarea rows="1" class="sequence-viewer-primer-library-name" data-primer-library-name="${escapeHtml(row.id)}" maxlength="160" spellcheck="false" ${i18nUi.attributeMessage("aria-label", i18nUi.message("Primer name for {p0}", { p0: row.name }))}>${escapeHtml(row.name)}</textarea></td>
         <td><code>${escapeHtml(row.sequence)}</code></td>
         <td class="sequence-viewer-primer-library-length">${row.sequence.length}</td>
         <td>${escapeHtml(row.sourceName || '—')}</td>
-      </tr>`).join('') : `<tr><td colspan="5" class="sequence-viewer-primer-library-empty">${query ? 'No primers match your search.' : 'Save primers from a cloning design or a primer hover window to build your library.'}</td></tr>`;
+      </tr>`).join('') : `<tr><td colspan="5" class="sequence-viewer-primer-library-empty">${i18nUi.render((query ? i18nUi.message("No primers match your search.") : i18nUi.message("Save primers from a cloning design or a primer hover window to build your library.")))}</td></tr>`);
     syncSelection();
   }
 
@@ -54,7 +57,7 @@ export function createPrimerLibraryController(config = {}) {
       return true;
     } catch (error) {
       appState.primerLibrary = previous;
-      showTransientNotice(error?.message || 'Could not save the primer library.', { type: 'error' });
+      showTransientNotice((((((error?.message || i18nUi.message("Could not save the primer library.")))))), { type: 'error' });
       render();
       return false;
     }
@@ -67,7 +70,7 @@ export function createPrimerLibraryController(config = {}) {
     const message = [result.added ? `Saved ${result.added} primer${result.added === 1 ? '' : 's'} to Primer Library.` : '',
       existing ? `${existing} already in the library.` : '',
       result.invalid ? `${result.invalid} primer${result.invalid === 1 ? '' : 's'} could not be saved because the DNA sequence is invalid.` : ''].filter(Boolean).join(' ');
-    showTransientNotice(message || 'No primers to save.', { type: result.invalid ? 'error' : 'success' });
+    showTransientNotice((((((message || i18nUi.message("No primers to save.")))))), { type: result.invalid ? 'error' : 'success' });
     render();
     return result.savedIds.length > 0;
   }
@@ -115,7 +118,7 @@ export function createPrimerLibraryController(config = {}) {
       const row = rows.find(entry => entry.id === input.dataset.primerLibraryName);
       const name = input.value.replace(/[\t\r\n]+/g, ' ').trim().slice(0, 160);
       if (!row || !name || rows.some(entry => entry.id !== row.id && entry.name === name && entry.sequence === row.sequence)) {
-        showTransientNotice('Enter a primer name that does not duplicate this sequence in the library.', { type: 'error' });
+        showTransientNotice(i18nUi.message("Enter a primer name that does not duplicate this sequence in the library."), { type: 'error' });
         render();
         return;
       }

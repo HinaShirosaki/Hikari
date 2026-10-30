@@ -1,9 +1,12 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("agent");
 import { trimText } from './shared.js';
 import { collectReviewItemsForMessage } from './review-overlay/review-items.js';
 import { renderNotebookAppendPreview, renderNotebookPreview, renderProtocolPreview } from './review-overlay/review-previews.js';
 import { markNotebookAppendReview, markProtocolReview } from './review-overlay/review-status.js';
 import { renderFileChangePreview, decideFileChange, fileDecisionMessage } from './review-overlay/file-changes.js';
-import { showTransientNotice } from '../../lib/notify.js';
+import { agentNotice, agentUi, setAgentText } from './localization.js';
 
 export function createAgentReviewOverlayController({
   dom,
@@ -32,10 +35,10 @@ export function createAgentReviewOverlayController({
       dom.reviewOverlay.classList?.remove('is-file-review');
     }
     if (dom.reviewTrack) {
-      dom.reviewTrack.innerHTML = '';
+      i18nUi.setHtml(dom.reviewTrack, '');
     }
     if (dom.reviewPageLabel) {
-      dom.reviewPageLabel.textContent = '';
+      i18nUi.setText(dom.reviewPageLabel, '');
     }
   }
 
@@ -60,8 +63,8 @@ export function createAgentReviewOverlayController({
     activeIndex = Math.min(Math.max(activeIndex, 0), reviewItems.length - 1);
     dom.reviewOverlay.hidden = false;
     dom.reviewOverlay.classList?.toggle('is-file-review', reviewItems[activeIndex]?.type === 'file-change');
-    if (dom.reviewTitle) dom.reviewTitle.textContent = reviewItems[activeIndex]?.type === 'file-change' ? 'Allow file change?' : 'Review changes';
-    dom.reviewTrack.innerHTML = reviewItems.map((item) => {
+    if (dom.reviewTitle) setAgentText(dom.reviewTitle, reviewItems[activeIndex]?.type === 'file-change' ? 'review.fileTitle' : 'review.title');
+    i18nUi.setHtml(dom.reviewTrack, reviewItems.map((item) => {
       if (item.type === 'file-change') return renderFileChangePreview(item, safeText);
       if (item.type === 'protocol') {
         return renderProtocolPreview(item, safeText);
@@ -70,9 +73,9 @@ export function createAgentReviewOverlayController({
         return renderNotebookAppendPreview(item, safeText);
       }
       return renderNotebookPreview(item, safeText);
-    }).join('');
+    }).join(''));
     if (dom.reviewPageLabel) {
-      dom.reviewPageLabel.textContent = `${activeIndex + 1} / ${reviewItems.length}`;
+      i18nUi.setText(dom.reviewPageLabel, `${activeIndex + 1} / ${reviewItems.length}`);
     }
     if (dom.reviewPrevBtn) {
       dom.reviewPrevBtn.disabled = activeIndex <= 0;
@@ -94,14 +97,14 @@ export function createAgentReviewOverlayController({
   function approveProtocol(item) {
     const protocol = protocolReviewAdapter?.approveGeneratedProtocol?.(item.protocol) || null;
     if (!protocol) {
-      setStatus?.('Generated protocol could not be added.');
+      setStatus?.(agentUi('status.protocolFailed'));
       return;
     }
     markProtocolReview(state.agentChat?.messages, item.messageId, item.id, 'approved', 'Generated protocol approved by user.');
     persist();
     renderContextSummary?.();
     renderHistoryView?.({ forceScroll: true });
-    setStatus?.('Generated protocol added to Protocol Module.');
+    setStatus?.(agentUi('status.protocolAdded'));
     removeItem(item.id);
   }
 
@@ -109,7 +112,7 @@ export function createAgentReviewOverlayController({
     markProtocolReview(state.agentChat?.messages, item.messageId, item.id, 'rejected', 'Generated protocol rejected by user.');
     persist();
     renderHistoryView?.({ forceScroll: true });
-    setStatus?.('Generated protocol rejected.');
+    setStatus?.(agentUi('status.protocolRejected'));
     removeItem(item.id);
   }
 
@@ -124,7 +127,7 @@ export function createAgentReviewOverlayController({
   async function approveNotebookAppend(item) {
     const result = await onAppendNotebookEntry(item.append?.proposal || {});
     if (result?.ok !== true) {
-      setStatus?.(trimText(result?.error, 500) || 'The notebook append could not be applied.');
+      setStatus?.(trimText(result?.error, 500) || agentUi('status.appendFailed'));
       return;
     }
     markNotebookAppendReview(
@@ -136,7 +139,7 @@ export function createAgentReviewOverlayController({
     persist();
     renderContextSummary?.();
     renderHistoryView?.({ forceScroll: true });
-    setStatus?.(trimText(result?.summary, 320) || 'Content appended to notebook page.');
+    setStatus?.(trimText(result?.summary, 320) || agentUi('status.appended'));
     removeItem(item.id);
   }
 
@@ -149,7 +152,7 @@ export function createAgentReviewOverlayController({
     );
     persist();
     renderHistoryView?.({ forceScroll: true });
-    setStatus?.('Notebook append rejected.');
+    setStatus?.(agentUi('status.appendRejected'));
     removeItem(item.id);
   }
 
@@ -212,19 +215,19 @@ export function createAgentReviewOverlayController({
 
   // The Agent view has no status pill (setStatus is a no-op there), so file
   // review outcomes and errors go through the app-wide toast instead.
-  function notifyFile(text, ok = true) {
-    showTransientNotice(text, { type: ok ? 'success' : 'error' });
+  function notifyFile(message, ok = true) {
+    agentNotice(message, { type: ok ? 'success' : 'error' });
   }
 
   async function openFileChanges({ quietEmpty = false } = {}) {
     if (!fileAccessApi?.agentFilesStatus) return;
     try {
       const result = await fileAccessApi.agentFilesStatus();
-      if (!result?.ok) { notifyFile(result?.error || 'File access is unavailable.', false); return; }
+      if (!result?.ok) { notifyFile(result?.error || agentUi('notice.fileUnavailable'), false); return; }
       fileRootId = result.root_id;
       reviewItems = reviewItems.filter(item => item.type !== 'file-change');
       reviewItems.push(...result.pending.map(change => ({ type: 'file-change', id: change.id, change })));
-      if (!result.pending.length && !quietEmpty) notifyFile('No file changes are waiting for approval.');
+      if (!result.pending.length && !quietEmpty) notifyFile(agentUi('notice.noFileChanges'));
       render();
     } catch (error) { notifyFile(error.message, false); }
   }
@@ -236,7 +239,7 @@ export function createAgentReviewOverlayController({
     try {
       const result = await decideFileChange(fileAccessApi, fileRootId, id, decision);
       notifyFile(result?.ok ? (result.warning || fileDecisionMessage(decision))
-        : result?.error || 'File change failed.', Boolean(result?.ok && !result.warning));
+        : result?.error || agentUi('notice.fileFailed'), Boolean(result?.ok && !result.warning));
       await openFileChanges({ quietEmpty: true });
     } catch (error) { notifyFile(error.message, false); }
     finally { fileDecisionPending = false; render(); }

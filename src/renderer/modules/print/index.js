@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "../../lib/i18n/shell.js";
+const i18nUi = createPresentation("shell");
 import { showTransientNotice } from '../../lib/notify.js';
 import { escapeHtml } from '../../lib/html.js';
 
@@ -92,7 +95,7 @@ function disposePrintFrame(frame, blobUrl) {
 function invokePrintOnFrame(frame) {
   const win = frame?.contentWindow;
   if (!win) {
-    showTransientNotice('Could not open the print dialog.', { type: 'error' });
+    showTransientNotice(i18nUi.message("Could not open the print dialog."), { type: 'error' });
     return false;
   }
   try {
@@ -135,7 +138,7 @@ export function printHtmlContent(bodyHtml, { title = 'Print', extraStyles = '' }
     frame.srcdoc = html;
   } catch (error) {
     console.error('Failed to set print frame content:', error);
-    showTransientNotice('Could not prepare the document for printing.', { type: 'error' });
+    showTransientNotice(i18nUi.message("Could not prepare the document for printing."), { type: 'error' });
     disposePrintFrame(frame);
     return false;
   }
@@ -181,11 +184,11 @@ export function printPdfBlob(blob, { title = 'Print' } = {}) {
   }, { once: true });
 
   try {
-    frame.title = title;
+    i18nUi.setAttribute(frame, "title", title);
     frame.src = blobUrl;
   } catch (error) {
     console.error('Failed to load PDF for printing:', error);
-    showTransientNotice('Could not load the PDF for printing.', { type: 'error' });
+    showTransientNotice(i18nUi.message("Could not load the PDF for printing."), { type: 'error' });
     disposePrintFrame(frame, blobUrl);
     return false;
   }

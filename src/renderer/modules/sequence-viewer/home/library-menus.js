@@ -1,6 +1,7 @@
 import { cleanText } from '../shared.js';
 import { startInlineRename } from '../../../lib/folder-tree.js';
 import { positionContextMenu } from '../../../lib/context-menu.js';
+import { dnaFailure, dnaText, dnaUi, setDnaAttribute } from '../localization.js';
 
 // Right-click menu, inline rename, and folder create/delete/move for the
 // sequence library list on the home page.
@@ -62,7 +63,7 @@ function createLibraryMenus({
     libraryContextType = contextType;
     libraryContextId = contextId;
     const visibleActions = contextType === 'entry'
-      ? new Set(['new-folder', 'rename', 'move-entry'])
+      ? new Set(['new-folder', 'rename', 'move-entry', 'recognize-backbone'])
       : contextType === 'folder'
         ? new Set(['new-folder', 'rename-folder', 'delete-folder'])
         : new Set(['new-folder']);
@@ -110,14 +111,16 @@ function createLibraryMenus({
       return;
     }
     renderLibraryList();
-    startInlineRename(findLibraryRow(type, target.id, libraryList), {
+    const labelKey = type === 'folder' ? 'menu.renameFolder' : 'menu.renameSequence';
+    const input = startInlineRename(findLibraryRow(type, target.id, libraryList), {
       value: String(target.name || (type === 'folder' ? 'Folder' : 'sequence')),
       maxLength: 140,
-      label: `Rename ${type === 'folder' ? 'folder' : 'sequence'}`,
+      label: dnaText(labelKey),
       onCommit: (nextName) => {
         void commitLibraryRename(type, cleanText(target.id, 200), nextName);
       }
     });
+    setDnaAttribute(input, 'aria-label', labelKey);
   }
 
   // Folder names are unique in the store, so the placeholder has to be too.
@@ -138,7 +141,7 @@ function createLibraryMenus({
       return;
     }
     if (!nextName) {
-      setHomeStatus(`Enter a ${type === 'folder' ? 'folder' : 'sequence'} name.`, true);
+      setHomeStatus(dnaUi(type === 'folder' ? 'menu.enterFolderName' : 'menu.enterSequenceName'), true);
       return;
     }
     try {
@@ -149,7 +152,7 @@ function createLibraryMenus({
       }
       renderLibraryList();
     } catch (error) {
-      setHomeStatus(error?.message || `Failed to rename sequence ${type}.`, true);
+      setHomeStatus(dnaFailure(error, type === 'folder' ? 'menu.renameFolderFailed' : 'menu.renameEntryFailed'), true);
     }
   }
 
@@ -160,7 +163,7 @@ function createLibraryMenus({
       const folder = await onCreateLibraryFolder(nextName);
       beginLibraryRename('folder', folder?.id, libraryList);
     } catch (error) {
-      setHomeStatus(error?.message || 'Failed to create sequence folder.', true);
+      setHomeStatus(dnaFailure(error, 'menu.createFolderFailed'), true);
     }
   }
 
@@ -173,13 +176,13 @@ function createLibraryMenus({
       return;
     }
     const confirmFn = rootDocument?.defaultView?.confirm || globalThis?.confirm;
-    if (typeof confirmFn === 'function' && !confirmFn(`Delete folder "${folder.name}"? Its sequences will become unfiled.`)) {
+    if (typeof confirmFn === 'function' && !confirmFn(dnaText('menu.confirmDeleteFolder', { name: folder.name }))) {
       return;
     }
     try {
       await onDeleteLibraryFolder(folderId);
     } catch (error) {
-      setHomeStatus(error?.message || 'Failed to delete sequence folder.', true);
+      setHomeStatus(dnaFailure(error, 'menu.deleteFolderFailed'), true);
     }
   }
 
@@ -193,17 +196,17 @@ function createLibraryMenus({
       return;
     }
     if (!folders.length) {
-      setHomeStatus('Create a folder before moving sequences.', true);
+      setHomeStatus(dnaUi('menu.needsFolder'), true);
       return;
     }
     const promptFn = getPromptFunction();
     if (typeof promptFn !== 'function') {
-      setHomeStatus('Folder prompt unavailable.', true);
+      setHomeStatus(dnaUi('menu.promptUnavailable'), true);
       return;
     }
     const currentFolder = folders.find((folder) => cleanText(folder?.id, 200) === cleanText(entry.folderId, 200));
     const requestedName = promptFn(
-      `Move "${entry.name || 'sequence'}" to folder (${folders.map((folder) => folder.name).join(', ')}). Leave blank to remove from its folder.`,
+      dnaText('menu.movePrompt', { name: entry.name || 'sequence', folders: folders.map((folder) => folder.name).join(', ') }),
       currentFolder?.name || ''
     );
     if (requestedName === null) {
@@ -214,7 +217,7 @@ function createLibraryMenus({
       ? folders.find((item) => String(item?.name || '').trim().toLowerCase() === normalizedName)
       : null;
     if (normalizedName && !folder) {
-      setHomeStatus(`Folder "${normalizePromptName(requestedName)}" was not found.`, true);
+      setHomeStatus(dnaUi('menu.folderNotFound', { name: normalizePromptName(requestedName) }), true);
       return;
     }
     await moveLibraryEntry(entryId, folder?.id || '');
@@ -224,7 +227,7 @@ function createLibraryMenus({
     try {
       await onMoveLibraryEntry(entryId, folderId);
     } catch (error) {
-      setHomeStatus(error?.message || 'Failed to move sequence entry.', true);
+      setHomeStatus(dnaFailure(error, 'menu.moveFailed'), true);
     }
   }
 

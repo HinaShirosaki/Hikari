@@ -1,6 +1,8 @@
+import { createPresentation } from "./i18n.mjs";
+const i18nUi = createPresentation("figura");
 import { icon } from './icons.mjs';
 
-export function initAssetsPanel({ workspace, getSelection, getCanvas, getIllustrationId, selectCopies, showAssets, status }) {
+export function initAssetsPanel({ workspace, getSelection, getCanvas, getIllustrationId, selectCopies, showAssets, sendToChat, status }) {
   const $ = id => document.getElementById(id), cache = new Map();
   let library, saveSelection;
   const observer = new IntersectionObserver(entries => {
@@ -24,7 +26,7 @@ export function initAssetsPanel({ workspace, getSelection, getCanvas, getIllustr
       const result = await workspace.request({ action: 'apply', illustration_id: illustrationId, expected_revision: current.revision, request_id: crypto.randomUUID(),
         operations: [{ op: 'insert_asset', asset_id: entry.id, canvas, width: entry.width * scale }] });
       if (!result.ok) throw new Error(result.error);
-      selectCopies(result.inserted_assets[0].ids); status(`Inserted ${entry.name}`);
+      selectCopies(result.inserted_assets[0].ids); status(i18nUi.text("Inserted {p0}", { p0: entry.name }));
     } catch (error) { status(error.message); }
     finally { button.disabled = false; }
   }
@@ -40,14 +42,14 @@ export function initAssetsPanel({ workspace, getSelection, getCanvas, getIllustr
     for (const entry of entries) {
       const row = document.createElement('div'); row.className = 'saved-asset'; row.dataset.savedAsset = entry.id; row.setAttribute('role', 'listitem');
       const button = document.createElement('button'); button.type = 'button'; button.className = 'asset-insert'; button.dataset.assetAction = 'insert';
-      button.setAttribute('aria-label', `Insert ${entry.name}`); button.title = `Insert an editable copy of ${entry.name}`;
-      const image = document.createElement('img'); image.className = 'asset-preview'; image.alt = ''; image.dataset.assetPreview = entry.id;
+      i18nUi.setAttribute(button, "aria-label", i18nUi.message("Insert {p0}", { p0: entry.name })); i18nUi.setAttribute(button, "title", i18nUi.message("Insert an editable copy of {p0}", { p0: entry.name }));
+      const image = document.createElement('img'); image.className = 'asset-preview'; i18nUi.setAttribute(image, "alt", ''); image.dataset.assetPreview = entry.id;
       const text = document.createElement('span'); text.className = 'asset-description';
-      const name = document.createElement('span'); name.className = 'layer-name'; name.textContent = entry.name;
-      const detail = document.createElement('small'); detail.textContent = `${entry.objectCount} ${entry.objectCount === 1 ? 'layer' : 'layers'} · ${Math.round(entry.width)} × ${Math.round(entry.height)}`;
+      const name = document.createElement('span'); name.className = 'layer-name'; i18nUi.setText(name, entry.name);
+      const detail = document.createElement('small'); i18nUi.setText(detail, i18nUi.message(entry.objectCount === 1 ? '{count} layer · {width} × {height}' : '{count} layers · {width} × {height}', { count: entry.objectCount, width: Math.round(entry.width), height: Math.round(entry.height) }));
       text.append(name, detail); button.append(image, text); button.addEventListener('click', () => void insert(entry, button));
       const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'icon-button asset-remove danger-button'; remove.dataset.assetAction = 'remove';
-      remove.title = `Remove ${entry.name} from Assets`; remove.setAttribute('aria-label', remove.title); remove.append(icon('trash'));
+      i18nUi.setAttribute(remove, "title", i18nUi.message("Remove {p0} from Assets", { p0: entry.name })); remove.setAttribute('aria-label', remove.title); remove.append(icon('trash'));
       remove.addEventListener('click', async () => {
         remove.disabled = true;
         const result = await workspace.manageAsset('asset_delete', { asset_id: entry.id });
@@ -55,17 +57,18 @@ export function initAssetsPanel({ workspace, getSelection, getCanvas, getIllustr
       });
       row.append(button, remove); $('saved-assets').append(row); observer.observe(image);
     }
-    $('assets-hint').textContent = library.reusable_assets.length
-      ? 'Click to insert on the canvas. Copies stay editable.' : 'Import artwork, or right-click components and choose Save as an asset.';
+    // The hint only explains how to fill an empty library.
+    $('assets-hint').hidden = library.reusable_assets.length > 0;
+    i18nUi.setText($('assets-hint'), i18nUi.message("Import artwork, or right-click components and choose Save as an asset."));
     $('assets-empty').hidden = entries.length > 0;
-    $('assets-empty').textContent = library.reusable_assets.length ? 'No assets match your search.' : 'Your reusable components will appear here.';
+    i18nUi.setText($('assets-empty'), (library.reusable_assets.length ? i18nUi.message("No assets match your search.") : i18nUi.message("Your reusable components will appear here.")));
     if (focusedId && action) ($('saved-assets').querySelector(`[data-saved-asset="${focusedId}"] [data-asset-action="${action}"]`) || $('asset-search')).focus({ preventScroll: true });
   }
   $('asset-search').addEventListener('input', () => render());
   function save() {
     const selection = getSelection(); if (!selection?.ids.length) return;
     saveSelection = { ids: [...selection.ids], illustration_id: getIllustrationId(), expected_revision: workspace.getDocument().revision };
-    $('asset-name').value = selection.name; $('asset-save-error').textContent = '';
+    $('asset-name').value = selection.name; i18nUi.setText($('asset-save-error'), '');
     $('save-asset-dialog').showModal(); $('asset-name').focus(); $('asset-name').select();
   }
   $('cancel-save-asset').addEventListener('click', () => $('save-asset-dialog').close());
@@ -76,8 +79,24 @@ export function initAssetsPanel({ workspace, getSelection, getCanvas, getIllustr
     try {
       const result = await workspace.manageAsset('asset_save', { ...saveSelection, name: $('asset-name').value });
       if (!result.ok) throw new Error(result.error);
-      $('save-asset-dialog').close(); showAssets(); status('Asset saved for future illustrations');
-    } catch (error) { $('asset-save-error').textContent = error.message; }
+      $('save-asset-dialog').close(); showAssets(); status(i18nUi.text("Asset saved for future illustrations"));
+    } catch (error) { i18nUi.setOwnedText($('asset-save-error'), error.message); }
+    finally { button.disabled = false; }
+  });
+  $('generate-asset').addEventListener('click', () => {
+    $('generate-asset-error').textContent = ''; $('generate-asset-dialog').showModal(); $('generate-asset-description').focus();
+  });
+  $('cancel-generate-asset').addEventListener('click', () => $('generate-asset-dialog').close());
+  $('generate-asset-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    const button = $('confirm-generate-asset'); button.disabled = true;
+    try {
+      const description = $('generate-asset-description').value.trim().replace(/[.\s]+$/, '');
+      if (!description) throw new Error('Describe the component to generate.');
+      await sendToChat(`Generate a reusable asset: ${description}.`);
+      $('generate-asset-dialog').close(); $('generate-asset-description').value = '';
+      status('Codex is generating the asset. It appears in Assets once saved.');
+    } catch (error) { $('generate-asset-error').textContent = error.message; }
     finally { button.disabled = false; }
   });
   return { render, save, closeSave: () => $('save-asset-dialog').close() };

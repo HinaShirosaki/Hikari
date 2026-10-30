@@ -1,6 +1,7 @@
 import { buildLanesFromManualSegmentation } from '../analysis/analysis-core.js';
-import { clamp, normalizeManualOverrides } from '../shared.js';
+import { CAPTION_ANGLE, clamp, estimateTextEm, normalizeManualOverrides } from '../shared.js';
 import { buildLadderLabels, drawLadderLabels } from './ladder-labels.js';
+import { FIGURE_FONT_SIZE, FIGURE_WIDTH } from '../figure/model.js';
 
 const MIN_LABEL_WIDTH_PX = 118;
 const MAX_LABEL_WIDTH_PX = 260;
@@ -51,9 +52,19 @@ function resolveVerticalCrop(segmentation, imageHeight) {
   };
 }
 
-function resolveFigureTypography(gelWidth, laneCount) {
-  const averageLaneWidth = gelWidth / Math.max(1, laneCount);
-  const fontSize = clamp(Math.round(averageLaneWidth * 0.26), 18, 36);
+// Caption widths in ems from the export's own font, when the canvas can measure.
+export function canvasTextEm(context) {
+  if (typeof context?.measureText !== 'function') return undefined;
+  return (text) => {
+    context.font = '100px Arial, Helvetica, sans-serif';
+    return context.measureText(text).width / 100;
+  };
+}
+
+// The Stack figure's type proportion (FIGURE_FONT_SIZE across FIGURE_WIDTH), so
+// a single gel's table reads the same as a Stack's.
+function resolveFigureTypography(gelWidth) {
+  const fontSize = clamp(Math.round(gelWidth * FIGURE_FONT_SIZE / FIGURE_WIDTH), 12, 40);
   return {
     fontSize,
     rowHeight: clamp(Math.round(fontSize * 1.9), MIN_ROW_HEIGHT_PX, MAX_ROW_HEIGHT_PX),
@@ -68,7 +79,8 @@ export function buildGelFigurePlan({
   includeLadder = true,
   ladderLane = null,
   showLadderLabels = false,
-  ladderPreset = null
+  ladderPreset = null,
+  measureTextEm = estimateTextEm
 } = {}) {
   const width = positiveInteger(imageWidth);
   const height = positiveInteger(imageHeight);
@@ -103,27 +115,26 @@ export function buildGelFigurePlan({
     };
   });
   const gelWidth = rawSlices.reduce((sum, slice) => sum + slice.sourceWidth, 0);
-  const typography = resolveFigureTypography(gelWidth, visibleLanes.length);
+  const typography = resolveFigureTypography(gelWidth);
   // Without a lane table there is nothing to label, so the header strip and the
   // label column collapse and the figure is the bare gel.
   const labelWidth = rows.length ? typography.labelWidth : 0;
   const tableGap = rows.length ? Math.max(12, Math.round(typography.rowHeight * 0.32)) : 0;
-  const tableHeight = (rows.length * typography.rowHeight) + tableGap;
+  // A one-row table becomes captions rising from each lane center; the strip
+  // grows to fit the longest one.
+  const sin = Math.sin(CAPTION_ANGLE * Math.PI / 180);
+  const cos = Math.cos(CAPTION_ANGLE * Math.PI / 180);
+  const captionWidths = rows.length === 1
+    ? rawSlices.map((slice) => measureTextEm(String(rows[0]?.values?.[slice.laneIndex - 1] ?? '')) * typography.fontSize)
+    : null;
+  const rowsHeight = captionWidths
+    ? Math.max(typography.rowHeight, Math.ceil((Math.max(...captionWidths) * sin) + (typography.fontSize * cos) + 12))
+    : rows.length * typography.rowHeight;
+  const tableHeight = rowsHeight + tableGap;
   const crop = resolveVerticalCrop(overrides.laneSegmentation, height);
   const ladderLabels = buildLadderLabels({ manualOverrides: showLadderLabels ? overrides : null,
     ladderPreset, sourceTop: crop.sourceTop, sourceHeight: crop.sourceHeight, sourceImageHeight: height,
     fontSize: clamp(Math.round(typography.fontSize * .75), 12, 22) });
-  const canvasWidth = labelWidth + ladderLabels.width + gelWidth;
-  const canvasHeight = tableHeight + ladderLabels.height;
-
-  if (
-    canvasWidth > MAX_FIGURE_DIMENSION_PX
-    || canvasHeight > MAX_FIGURE_DIMENSION_PX
-    || (canvasWidth * canvasHeight) > MAX_FIGURE_PIXELS
-  ) {
-    throw new Error('The gel and table are too large to generate as one PNG. Remove table rows or crop the gel first.');
-  }
-
   let gelOffset = 0;
   const slices = rawSlices.map((slice) => {
     const outputX = labelWidth + ladderLabels.width + gelOffset;
@@ -134,6 +145,19 @@ export function buildGelFigurePlan({
       centerX: outputX + (slice.sourceWidth / 2)
     };
   });
+  const captionRight = captionWidths
+    ? Math.max(...slices.map((slice, index) => slice.centerX + (captionWidths[index] * cos) + (typography.fontSize / 2 * sin)))
+    : 0;
+  const canvasWidth = Math.max(labelWidth + ladderLabels.width + gelWidth, Math.ceil(captionRight));
+  const canvasHeight = tableHeight + ladderLabels.height;
+
+  if (
+    canvasWidth > MAX_FIGURE_DIMENSION_PX
+    || canvasHeight > MAX_FIGURE_DIMENSION_PX
+    || (canvasWidth * canvasHeight) > MAX_FIGURE_PIXELS
+  ) {
+    throw new Error('The gel and table are too large to generate as one PNG. Remove table rows or crop the gel first.');
+  }
 
   return {
     canvasWidth,
@@ -153,6 +177,8 @@ export function buildGelFigurePlan({
     ladderLane: validLadderLane,
     includeLadder: Boolean(includeLadder || !validLadderLane),
     slices,
+    // Each caption starts at its lane center on line y; widths are in figure pixels.
+    captions: captionWidths ? { y: rowsHeight - 6 - (typography.fontSize / 2 * cos), widths: captionWidths } : null,
     rows: rows.map((row) => ({
       label: String(row?.label ?? ''),
       values: slices.map((slice) => String(row?.values?.[slice.laneIndex - 1] ?? ''))
@@ -176,6 +202,9 @@ export function createGelImageCanvas({
     throw new Error('The current gel image is unavailable for PowerPoint generation.');
   }
 
+  const sourceCanvas = documentObject.createElement('canvas');
+  const gelCanvas = documentObject.createElement('canvas');
+  const gelContext = gelCanvas.getContext('2d');
   const plan = buildGelFigurePlan({
     imageWidth,
     imageHeight,
@@ -183,17 +212,15 @@ export function createGelImageCanvas({
     includeLadder,
     ladderLane,
     showLadderLabels,
-    ladderPreset
+    ladderPreset,
+    measureTextEm: canvasTextEm(gelContext)
   });
-  const sourceCanvas = documentObject.createElement('canvas');
   sourceCanvas.width = positiveInteger(imageWidth);
   sourceCanvas.height = positiveInteger(imageHeight);
   const sourceContext = sourceCanvas.getContext('2d');
-  const gelCanvas = documentObject.createElement('canvas');
   const scale = resolveRasterScale(plan.gelWidth, plan.sourceHeight, rasterScale);
   gelCanvas.width = plan.gelWidth * scale;
   gelCanvas.height = plan.sourceHeight * scale;
-  const gelContext = gelCanvas.getContext('2d');
   if (!sourceContext || !gelContext) {
     throw new Error('Canvas image generation is unavailable in this environment.');
   }
@@ -234,6 +261,9 @@ export function createGelFigureCanvas({
     throw new Error('The current gel image is unavailable for figure generation.');
   }
 
+  const sourceCanvas = documentObject.createElement('canvas');
+  const outputCanvas = documentObject.createElement('canvas');
+  const outputContext = outputCanvas.getContext('2d');
   const plan = buildGelFigurePlan({
     imageWidth,
     imageHeight,
@@ -241,17 +271,15 @@ export function createGelFigureCanvas({
     includeLadder,
     ladderLane,
     showLadderLabels,
-    ladderPreset
+    ladderPreset,
+    measureTextEm: canvasTextEm(outputContext)
   });
-  const sourceCanvas = documentObject.createElement('canvas');
   sourceCanvas.width = positiveInteger(imageWidth);
   sourceCanvas.height = positiveInteger(imageHeight);
   const sourceContext = sourceCanvas.getContext('2d');
-  const outputCanvas = documentObject.createElement('canvas');
   const scale = resolveRasterScale(plan.canvasWidth, plan.canvasHeight, rasterScale);
   outputCanvas.width = plan.canvasWidth * scale;
   outputCanvas.height = plan.canvasHeight * scale;
-  const outputContext = outputCanvas.getContext('2d');
   if (!sourceContext || !outputContext) {
     throw new Error('Canvas image generation is unavailable in this environment.');
   }
@@ -276,17 +304,27 @@ export function createGelFigureCanvas({
 
   outputContext.save();
   outputContext.fillStyle = '#000000';
-  outputContext.font = `600 ${plan.fontSize * scale}px Arial, Helvetica, sans-serif`;
+  outputContext.font = `${plan.fontSize * scale}px Arial, Helvetica, sans-serif`;
   outputContext.textAlign = 'center';
   outputContext.textBaseline = 'middle';
   plan.rows.forEach((row, rowIndex) => {
-    const centerY = ((rowIndex * plan.rowHeight) + (plan.rowHeight / 2)) * scale;
+    const centerY = (plan.captions ? plan.captions.y : (rowIndex * plan.rowHeight) + (plan.rowHeight / 2)) * scale;
+    // Row labels end beside the first lane, right-aligned like a Stack's.
     if (row.label) {
-      outputContext.fillText(row.label, (plan.labelWidth / 2) * scale, centerY, (plan.labelWidth - 16) * scale);
+      outputContext.textAlign = 'right';
+      outputContext.fillText(row.label, (plan.labelWidth - 12) * scale, centerY, (plan.labelWidth - 16) * scale);
+      outputContext.textAlign = 'center';
     }
     plan.slices.forEach((slice, visibleIndex) => {
       const value = row.values[visibleIndex];
-      if (value) {
+      if (value && plan.captions) {
+        outputContext.save();
+        outputContext.translate(slice.centerX * scale, centerY);
+        outputContext.rotate(-CAPTION_ANGLE * Math.PI / 180);
+        outputContext.textAlign = 'left';
+        outputContext.fillText(value, 0, 0);
+        outputContext.restore();
+      } else if (value) {
         outputContext.fillText(
           value,
           slice.centerX * scale,

@@ -516,13 +516,15 @@
 
 .assay-form-actions > .assay-plate-type-field {
   display: block;
-  flex: 0 0 104px;
-  width: 104px;
+  flex: 0 0 auto;
   margin: 0 0 0 var(--space-4);
 }
 
+/* Sized to the selected plate, so it grows past 104px only when a translated
+   label ("96 pocillos") needs it. */
 .assay-form-actions > .assay-plate-type-field select {
-  width: 100%;
+  field-sizing: content;
+  min-width: 104px;
   min-height: 34px;
   padding: var(--space-6) 26px var(--space-6) 9px;
   font-size: var(--text-base);

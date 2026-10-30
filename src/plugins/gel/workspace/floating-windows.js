@@ -1,3 +1,5 @@
+import { createPresentation } from "../i18n.mjs";
+const i18nUi = createPresentation("gel");
 // Window placement is presentation state. It never enters the saved gel or its
 // undo history, and opening a window never changes the viewer's dimensions.
 export function createFloatingWindows({ documentObject, onOpen = {}, onClose = {} }) {
@@ -89,7 +91,7 @@ export function createFloatingWindows({ documentObject, onOpen = {}, onClose = {
     node.classList.add('gel-floating-window');
     if (handle) {
       handle.tabIndex = 0;
-      handle.setAttribute('title', 'Drag to move. Use arrow keys when this title bar is focused.');
+      i18nUi.setAttribute(handle, "title", i18nUi.message("Drag to move. Use arrow keys when this title bar is focused."));
     }
     listen(trigger, 'click', () => node.hidden ? open(key) : close(key));
     listen(node, 'pointerdown', () => raise(entry));

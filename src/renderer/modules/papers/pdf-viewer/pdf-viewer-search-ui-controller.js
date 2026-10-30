@@ -1,7 +1,11 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("papers");
 import { clamp } from './pdf-viewer-anchors.js';
 import { renderSearchHighlights } from './pdf-viewer-overlays.js';
 import { escapeHtml } from './pdf-viewer-search.js';
-import { showTransientNotice } from '../../../lib/notify.js';
+import { messageSpan } from '../../../lib/i18n/markup.js';
+import { paperMessage, paperNotice, paperUi } from '../localization.js';
 
 export const installPdfViewerSearchUiController = (ctx) => {
   const { elements, state } = ctx;
@@ -33,7 +37,7 @@ export const installPdfViewerSearchUiController = (ctx) => {
       selectionSearchNextBtn.disabled = total <= 1;
     }
     if (selectionSearchCount) {
-      selectionSearchCount.textContent = total ? `${activeIndex + 1} / ${total}` : '0 / 0';
+      i18nUi.setText(selectionSearchCount, (total ? `${activeIndex + 1} / ${total}` : '0 / 0'));
     }
   }
 
@@ -60,7 +64,7 @@ export const installPdfViewerSearchUiController = (ctx) => {
       selectionSearchPopover.hidden = true;
     }
     if (selectionSearchResults) {
-      selectionSearchResults.innerHTML = '';
+      i18nUi.setHtml(selectionSearchResults, '');
     }
     if (clearMatches) {
       clearSelectionSearchMatches();
@@ -89,15 +93,15 @@ export const installPdfViewerSearchUiController = (ctx) => {
 
   function renderSelectionSearchMessage(message = '', isError = false) {
     if (isError && message) {
-      showTransientNotice(message, { type: 'error' });
+      paperNotice(message, { type: 'error' });
     }
     if (!selectionSearchResults) {
       return;
     }
-    const text = String(message || '').trim();
-    selectionSearchResults.innerHTML = text
-      ? `<p class="${isError ? 'is-error' : 'small-note'}">${escapeHtml(text)}</p>`
-      : '';
+    const html = message?.i18nKey ? messageSpan(message.i18nKey, message.i18nParams) : escapeHtml(String(message || '').trim());
+    i18nUi.setHtml(selectionSearchResults, html
+      ? `<p class="${isError ? 'is-error' : 'small-note'}">${html}</p>`
+      : '');
   }
 
   function setPdfSearchMatches(matches = [], targetMatchIndex = 0) {
@@ -117,12 +121,11 @@ export const installPdfViewerSearchUiController = (ctx) => {
     const pages = Array.isArray(result.pages) ? result.pages : [];
     const totalMatches = Math.max(0, Math.round(Number(result.totalMatches) || 0));
     if (!pages.length || totalMatches <= 0) {
-      renderSelectionSearchMessage('No matching text was found in this PDF.');
+      renderSelectionSearchMessage(paperUi('search.noPdfMatches'));
       return;
     }
-    const matchLabel = `${totalMatches} matched word${totalMatches === 1 ? '' : 's'}`;
-    const pageLabel = `${pages.length} page${pages.length === 1 ? '' : 's'}`;
-    selectionSearchResults.innerHTML = `<p class="small-note">Found ${escapeHtml(matchLabel)} on ${escapeHtml(pageLabel)}.</p>`;
+    const foundKey = pages.length === 1 ? 'search.foundOnePage' : 'search.foundPages';
+    i18nUi.setHtml(selectionSearchResults, `<p class="small-note">${paperMessage(foundKey, { count: totalMatches, pages: pages.length })}</p>`);
   }
 
   function renderPaperDatabaseSearchResults(result = {}) {
@@ -132,11 +135,11 @@ export const installPdfViewerSearchUiController = (ctx) => {
     const matches = Array.isArray(result.matches) ? result.matches : [];
     if (!matches.length) {
       clearSelectionSearchMatches();
-      renderSelectionSearchMessage('No matching papers were found in the paper database.');
+      renderSelectionSearchMessage(paperUi('search.noPapers'));
       return;
     }
     clearSelectionSearchMatches();
-    selectionSearchResults.innerHTML = `<p class="small-note">Found ${escapeHtml(String(matches.length))} matching paper${matches.length === 1 ? '' : 's'}.</p>`;
+    i18nUi.setHtml(selectionSearchResults, `<p class="small-note">${paperMessage('search.foundPapers', { count: matches.length })}</p>`);
   }
 
   function openSelectionSearchPopover() {
@@ -148,7 +151,7 @@ export const installPdfViewerSearchUiController = (ctx) => {
     ctx.hideSelectionCommentPopover();
     selectionSearchPopover.hidden = false;
     clearSelectionSearchMatches();
-    renderSelectionSearchMessage('Choose where to search.');
+    renderSelectionSearchMessage(paperUi('search.choose'));
     ctx.positionFloatingElement(selectionSearchPopover, state.pendingSearchSelection.clientRect, { preferBelow: true });
     selectionSearchPdfBtn?.focus?.();
   }

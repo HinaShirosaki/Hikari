@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
 import { buildNotebookEntryFromDraft, normalizeNotebookDraft } from '../agent/notebook-drafts.js';
 import { showTransientNotice } from '../../../lib/notify.js';
 import { isAgentAvailable } from '../../../lib/agent-availability.js';
@@ -14,9 +17,9 @@ export function createExperimentSuggestions({
     host?.querySelectorAll('[data-suggest-experiment]').forEach((button) => {
       const run = runs.get(button.dataset.suggestExperiment);
       button.disabled = Boolean(run?.busy || pauses()[button.dataset.suggestExperiment]);
-      button.textContent = run?.busy ? 'Suggesting…' : 'Suggest next experiment';
+      i18nUi.setText(button, (run?.busy ? i18nUi.message("Suggesting…") : i18nUi.message("Suggest next experiment")));
       const status = host.querySelector('[data-experiment-suggestion-status]');
-      if (status) status.textContent = run?.error || (pauses()[button.dataset.suggestExperiment] ? pauseMessage : '');
+      if (status) i18nUi.setOwnedText(status, (run?.error || (pauses()[button.dataset.suggestExperiment] ? pauseMessage : '')));
     });
   }
 
@@ -120,7 +123,7 @@ export function createExperimentSuggestions({
       if (getActiveEntry()?.id === planned.id) editEntry(planned.id);
       return planned;
     } catch (error) {
-      showTransientNotice(error?.message || 'Could not take this experiment into plan.', { type: 'error' });
+      showTransientNotice((((((error?.message || i18nUi.message("Could not take this experiment into plan.")))))), { type: 'error' });
       return null;
     } finally {
       if (acceptButton) acceptButton.disabled = false;

@@ -1,7 +1,11 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("plate");
 import {
   buildSerialDilutionGroups as buildSerialDilutionGroupsModel,
   buildSerialDilutionSummaryModel
 } from './serial-dilution-model.js';
+import { bindPlateMessage, plateAttributes, plateMessage, setPlateText } from './localization.js';
 
 export function createSerialDilutionController({
   elements,
@@ -95,9 +99,10 @@ export function createSerialDilutionController({
     return {
       concentrationAxisName: model.concentrationAxisName,
       volumePerWellUl: model.volumePerWellUl,
-      feedbackMessages: model.feedbackMessages.map((item) => ({ ...item })),
+      // Saved summaries keep their canonical English shape; display descriptors stay in the UI.
+      feedbackMessages: model.feedbackMessages.map(({ type, text }) => ({ type, text })),
       initialDilutionRows: model.initialDilutionRows.map((item) => ({ ...item })),
-      followingDilutionRows: model.followingDilutionRows.map((item) => ({ ...item })),
+      followingDilutionRows: model.followingDilutionRows.map(({ stepMessage, transferMessage, ...item }) => item),
       followingRowsAreShared: model.followingRowsAreShared,
       hasValidPlans: model.hasValidPlans
     };
@@ -119,12 +124,12 @@ export function createSerialDilutionController({
     } = model;
 
     if (!groups.length) {
-      summary.textContent = 'Map sample IDs and concentrations on the plate first.';
-      content.innerHTML = '<p class="small-note">No mapped sample dilution series are available yet.</p>';
+      setPlateText(summary, 'dilution.mapFirst');
+      i18nUi.setHtml(content, `<p class="small-note">${plateMessage('dilution.noSeries')}</p>`);
       return;
     }
 
-    summary.textContent = '';
+    bindPlateMessage(summary, '');
 
     const renderSerialDilutionTable = (headers, rows, className = '') => {
       if (!rows.length) {
@@ -135,13 +140,13 @@ export function createSerialDilutionController({
           <table class="assay-serial-dilution-table ${className}">
             <thead>
               <tr>
-                ${headers.map((header) => `<th>${safeText(header)}</th>`).join('')}
+                ${headers.map((header) => `<th>${plateMessage(header)}</th>`).join('')}
               </tr>
             </thead>
             <tbody>
               ${rows.map((cells) => `
                 <tr>
-                  ${cells.map((cell) => `<td>${safeText(cell)}</td>`).join('')}
+                  ${cells.map((cell) => `<td>${cell?.id ? plateMessage(cell.id, cell.params) : safeText(cell)}</td>`).join('')}
                 </tr>
               `).join('')}
             </tbody>
@@ -153,14 +158,14 @@ export function createSerialDilutionController({
     const sampleInputTable = `
       <section class="assay-serial-dilution-sample">
         <div class="assay-serial-dilution-sample-head">
-          <h4>Sample Concentrations</h4>
+          <h4>${plateMessage('dilution.sampleConcentrations')}</h4>
         </div>
         <div class="assay-serial-dilution-stock-table-wrap">
           <table class="assay-serial-dilution-stock-table">
             <thead>
               <tr>
-                <th>Sample</th>
-                <th>Stock Conc.</th>
+                <th>${plateMessage('dilution.sample')}</th>
+                <th>${plateMessage('dilution.stockConcentration')}</th>
               </tr>
             </thead>
             <tbody>
@@ -173,7 +178,7 @@ export function createSerialDilutionController({
                       <input
                         type="text"
                         value="${safeText(stockValue)}"
-                        placeholder="e.g. 10 mM"
+                        ${plateAttributes({ placeholder: 'dilution.stockPlaceholder' })}
                         data-assay-serial-stock-sample="${safeText(group.sampleId)}"
                       />
                     </td>
@@ -187,17 +192,18 @@ export function createSerialDilutionController({
     `;
 
     const feedbackLines = feedbackMessages.map((item) => `
-      <p class="small-note ${item.type === 'error' ? 'assay-serial-dilution-error' : 'assay-serial-dilution-note'}">${safeText(item.text)}</p>
+      <p class="small-note ${item.type === 'error' ? 'assay-serial-dilution-error' : 'assay-serial-dilution-note'}">${item.message
+        ? `${safeText(item.sampleId)}: ${plateMessage(item.message.id, item.message.params)}` : safeText(item.text)}</p>
     `).join('');
 
     const initialDilutionSection = initialDilutionRows.length
       ? `
         <section class="assay-serial-dilution-sample">
           <div class="assay-serial-dilution-sample-head">
-            <h4>Initial Dilution</h4>
+            <h4>${plateMessage('dilution.initial')}</h4>
           </div>
           ${renderSerialDilutionTable(
-            ['Sample', 'Stock Vol.', 'Buffer Vol.'],
+            ['dilution.sample', 'dilution.stockVolume', 'dilution.bufferVolume'],
             initialDilutionRows.map((row) => [row.sample, row.stockVolume, row.bufferVolume]),
             'assay-serial-dilution-table-compact'
           )}
@@ -209,17 +215,17 @@ export function createSerialDilutionController({
       ? `
         <section class="assay-serial-dilution-sample">
           <div class="assay-serial-dilution-sample-head">
-            <h4>Following Dilution</h4>
+            <h4>${plateMessage('dilution.following')}</h4>
           </div>
-          ${!followingRowsAreShared ? '<p class="small-note assay-serial-dilution-note">Following-dilution rows were not identical across every sample, so this table is based on the first valid sample sequence.</p>' : ''}
+          ${!followingRowsAreShared ? `<p class="small-note assay-serial-dilution-note">${plateMessage('dilution.notShared')}</p>` : ''}
           ${renderSerialDilutionTable(
-            ['Step', 'Target Conc.', 'From Previous Well', 'Buffer Vol.', 'Transfer / Discard', 'Final Vol.'],
+            ['dilution.step', 'dilution.targetConcentration', 'dilution.fromPrevious', 'dilution.bufferVolume', 'dilution.transferDiscard', 'dilution.finalVolume'],
             followingDilutionRows.map((row) => [
-              row.step,
+              row.stepMessage,
               row.targetConcentration,
               row.fromPreviousWell,
               row.bufferVolume,
-              row.transferOrDiscard,
+              row.transferMessage,
               row.finalVolume
             ])
           )}
@@ -229,18 +235,18 @@ export function createSerialDilutionController({
         ? `
         <section class="assay-serial-dilution-sample">
           <div class="assay-serial-dilution-sample-head">
-            <h4>Following Dilution</h4>
+            <h4>${plateMessage('dilution.following')}</h4>
           </div>
-          <p class="small-note">No downstream dilution steps are needed for the current mapped series.</p>
+          <p class="small-note">${plateMessage('dilution.noFollowing')}</p>
         </section>
       `
         : '';
 
     const emptyState = !hasValidPlans
-      ? '<p class="small-note">No serial dilution recipe could be calculated yet.</p>'
+      ? `<p class="small-note">${plateMessage('dilution.noRecipe')}</p>`
       : '';
 
-    content.innerHTML = `${feedbackLines}<div class="assay-serial-dilution-overview">${sampleInputTable}${initialDilutionSection}</div>${followingDilutionSection}${emptyState}`;
+    i18nUi.setHtml(content, `${feedbackLines}<div class="assay-serial-dilution-overview">${sampleInputTable}${initialDilutionSection}</div>${followingDilutionSection}${emptyState}`);
   }
 
   function open() {

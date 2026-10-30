@@ -1,5 +1,8 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
 import { showTransientNotice } from '../../../lib/notify.js';
-import { buildViewerMeta } from '../entry/viewer-renderer.js';
+import { buildViewerMetaHtml } from '../entry/viewer-renderer.js';
 import { normalizeNotebookSampleLinks } from '../samples/sample-helpers.js';
 import {
   mergeNotebookValues,
@@ -105,7 +108,9 @@ function createNotebookSampleLinks({
     persist();
     entryListRenderer.renderEntries();
     if (notebookProtocolMeta) {
-      notebookProtocolMeta.textContent = buildViewerMeta({ entry: nextEntry });
+      notebookProtocolMeta.removeAttribute?.('data-i18n');
+      notebookProtocolMeta.removeAttribute?.('data-i18n-params');
+      i18nUi.setHtml(notebookProtocolMeta, buildViewerMetaHtml({ entry: nextEntry }));
     }
     if (typeof onNotebookEntriesChanged === 'function') {
       onNotebookEntriesChanged();
@@ -124,7 +129,7 @@ function createNotebookSampleLinks({
     };
     appendNotebookResultLine(note);
     persistActiveEntrySampleLinks();
-    showTransientNotice(`Added sample ${record?.code || record?.name || ''} to this notebook page.`);
+    showTransientNotice(i18nUi.message("Added sample {p0} to this notebook page.", { p0: record?.code || record?.name || '' }));
   }
 
   return {

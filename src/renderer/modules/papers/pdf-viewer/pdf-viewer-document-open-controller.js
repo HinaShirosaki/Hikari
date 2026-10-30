@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("papers");
 import { hasPaperPdfMetadata } from '../pdf-metadata.js';
 import { clamp } from './pdf-viewer-anchors.js';
 import {
@@ -17,6 +20,7 @@ import {
   restorePreviousOpenState
 } from './pdf-viewer-open-state.js';
 import { prepareAndSwapPageRecords } from './pdf-viewer-open-render-swap.js';
+import { paperFailure } from '../localization.js';
 
 export const installPdfViewerDocumentOpenController = (ctx) => {
   const { elements, state } = ctx;
@@ -38,7 +42,7 @@ export const installPdfViewerDocumentOpenController = (ctx) => {
         return;
       }
       const percent = Math.round((loaded / total) * 100);
-      ctx.setStatus(`Loading PDF... ${percent}%`);
+      ctx.setStatus(i18nUi.text("Loading PDF... {p0}%", { p0: percent }));
     };
     return loadingTask.promise;
   }
@@ -65,7 +69,7 @@ export const installPdfViewerDocumentOpenController = (ctx) => {
     ctx.refreshToolbar();
     ctx.setTitle(state.paperTitle);
     ctx.setMeta(state.paperMeta);
-    ctx.setStatus('Loading PDF...');
+    ctx.setStatus(i18nUi.text("Loading PDF..."));
 
     try {
       const [pdfjsLib, pdfBytes] = await Promise.all([
@@ -83,7 +87,7 @@ export const installPdfViewerDocumentOpenController = (ctx) => {
       }
 
       state.loadingTask = null;
-      ctx.setStatus('Preparing pages...');
+      ctx.setStatus(i18nUi.text("Preparing pages..."));
 
       const [embeddedMetadata, pageMetrics, hasFormFields] = await Promise.all([
         loadEmbeddedPdfMetadata(pdfDocument),
@@ -138,7 +142,7 @@ export const installPdfViewerDocumentOpenController = (ctx) => {
         state.pageRecords = [];
       }
       ctx.refreshToolbar();
-      ctx.setStatus(String(error?.message || error || 'Failed to load PDF.'), true);
+      ctx.setStatus(paperFailure(error, 'viewer.loadFailed'), true);
       return false;
     }
   }

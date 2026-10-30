@@ -4,6 +4,7 @@ export function getSettingsElements(rootDocument = globalThis?.document || null)
     settingsNavItems: [...(rootDocument?.querySelectorAll?.('#setting-view [data-settings-target]') || [])],
     settingsPanels: [...(rootDocument?.querySelectorAll?.('#setting-view [data-settings-panel]') || [])],
     appearanceForm: getById('appearance-form'),
+    settingLanguage: getById('setting-language'),
     settingFontSize: getById('setting-font-size'),
     settingMode: getById('setting-mode'),
     storageForm: getById('storage-form'),

@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("workflow");
 import { createGraphRendering } from './graph/rendering.js';
 import { createGraphPointerDrag } from './graph/pointer-drag.js';
 import { showTransientNotice } from '../../lib/notify.js';
@@ -154,12 +157,12 @@ export function createWorkflowGraphController(config = {}) {
     if (inPortBtn) {
       const targetBlockId = inPortBtn.dataset.workflowPortIn;
       if (!runtime.activeLinkFromBlockId) {
-        showTransientNotice('Select an output dot first, then click this input dot.', { type: 'error' });
+        showTransientNotice(i18nUi.message("Select an output dot first, then click this input dot."), { type: 'error' });
         event.stopPropagation();
         return;
       }
       if (runtime.activeLinkFromBlockId === targetBlockId) {
-        showTransientNotice('Cannot connect a block to itself.', { type: 'error' });
+        showTransientNotice(i18nUi.message("Cannot connect a block to itself."), { type: 'error' });
         event.stopPropagation();
         return;
       }
@@ -168,7 +171,7 @@ export function createWorkflowGraphController(config = {}) {
         (link) => link.fromBlockId === runtime.activeLinkFromBlockId && link.toBlockId === targetBlockId
       );
       if (hasDuplicate) {
-        showTransientNotice('This connection already exists.', { type: 'error' });
+        showTransientNotice(i18nUi.message("This connection already exists."), { type: 'error' });
         event.stopPropagation();
         return;
       }
@@ -227,7 +230,7 @@ export function createWorkflowGraphController(config = {}) {
 
     if (linkPath) {
       showContextMenu(event, [
-        { action: 'remove-link', label: 'Delete Connection' }
+        { action: 'remove-link', label: 'Delete Connection', messageKey: 'graph.deleteConnection' }
       ], {
         type: 'link',
         linkId: linkPath.dataset.workflowLinkId
@@ -245,9 +248,9 @@ export function createWorkflowGraphController(config = {}) {
 
       const selectedCount = runtime.selectedBlockIds.size || 1;
       showContextMenu(event, [
-        { action: 'delete-selected', label: selectedCount > 1 ? `Delete ${selectedCount} Blocks` : 'Delete Block' },
-        { action: 'disconnect-selected', label: selectedCount > 1 ? `Disconnect ${selectedCount} Blocks` : 'Disconnect Block' },
-        { action: 'clear-selection', label: 'Clear Selection' }
+        { action: 'delete-selected', label: selectedCount > 1 ? `Delete ${selectedCount} Blocks` : 'Delete Block', messageKey: selectedCount > 1 ? 'graph.deleteBlocks' : 'graph.deleteBlock', params: { count: selectedCount } },
+        { action: 'disconnect-selected', label: selectedCount > 1 ? `Disconnect ${selectedCount} Blocks` : 'Disconnect Block', messageKey: selectedCount > 1 ? 'graph.disconnectBlocks' : 'graph.disconnectBlock', params: { count: selectedCount } },
+        { action: 'clear-selection', label: 'Clear Selection', messageKey: 'graph.clear' }
       ], {
         type: 'block',
         blockId
@@ -257,13 +260,13 @@ export function createWorkflowGraphController(config = {}) {
 
     const items = [];
     if (runtime.activeLinkFromBlockId) {
-      items.push({ action: 'cancel-link', label: 'Cancel Connection Mode' });
+      items.push({ action: 'cancel-link', label: 'Cancel Connection Mode', messageKey: 'graph.cancelConnection' });
     }
     if (runtime.selectedBlockIds.size) {
-      items.push({ action: 'clear-selection', label: `Clear Selection (${runtime.selectedBlockIds.size})` });
+      items.push({ action: 'clear-selection', label: `Clear Selection (${runtime.selectedBlockIds.size})`, messageKey: 'graph.clearCount', params: { count: runtime.selectedBlockIds.size } });
     }
     if (!items.length) {
-      items.push({ action: 'noop', label: 'No actions available' });
+      items.push({ action: 'noop', label: 'No actions available', messageKey: 'graph.noActions' });
     }
 
     showContextMenu(event, items, { type: 'canvas' });

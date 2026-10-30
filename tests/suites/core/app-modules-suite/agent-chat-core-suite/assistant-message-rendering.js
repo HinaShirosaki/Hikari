@@ -1,3 +1,4 @@
+const { stripI18nMarkup } = require('../../../../support/i18n-markup.cjs');
 module.exports = function registerAppAgentChatCoreSuiteAssistantMessageRendering(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
@@ -89,15 +90,15 @@ test('agent-chat clarification cards disappear after one answer or any later use
   };
 
   assert.match(
-    questionRenderer.renderUserQuestionCard(questionMeta, 'assistant-question', shared.safeText),
+    stripI18nMarkup(questionRenderer.renderUserQuestionCard(questionMeta, 'assistant-question', shared.safeText)),
     /agent-user-question-card/
   );
   assert.match(
-    questionRenderer.renderUserQuestionCard(questionMeta, 'assistant-question', shared.safeText),
+    stripI18nMarkup(questionRenderer.renderUserQuestionCard(questionMeta, 'assistant-question', shared.safeText)),
     /agent-user-question-custom-field[\s\S]*<span>Other<\/span>[\s\S]*type="text"/
   );
   assert.match(
-    questionRenderer.renderUserQuestionCard(questionMeta, 'assistant-question', shared.safeText),
+    stripI18nMarkup(questionRenderer.renderUserQuestionCard(questionMeta, 'assistant-question', shared.safeText)),
     /agent-send-icon-btn[\s\S]*aria-label="Send answer"[\s\S]*agent-send-icon/
   );
   assert.equal(
@@ -367,7 +368,7 @@ test('agent-chat shows vendor images from Codex replies only after a click and k
   assert.equal(placeholders.length, 4);
   assert.match(history.innerHTML, /data-agent-image-alt="Vendor &quot;product&quot; &lt;photo&gt;"/);
   assert.match(history.innerHTML, /<a[^>]+><button[^>]+data-agent-load-image="https:\/\/vendor\.test\/product\(front\)\.jpg"/);
-  assert.match(history.innerHTML, /Load image: HTTP product <span>\(vendor\.test\)<\/span>/);
+  assert.match(stripI18nMarkup(history.innerHTML), /Load image: HTTP product <span>\(vendor\.test\)<\/span>/);
 
   const controller = createHistoryActionController({ state: {} });
   for (const [, src, alt] of placeholders) {

@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("samples");
 const fieldPairs = ['single', 'well'].flatMap((kind) => ['', 'new-'].map((mode) => [
   `[data-${kind}-sample-${mode}name]`, `[data-${kind}-sample-${mode}type]`
 ]));
@@ -53,10 +56,10 @@ export function bindPlasmidNameSuggestions(root, state, {
     list.className = 'sample-plasmid-suggestions';
     list.hidden = true;
     list.setAttribute('role', 'listbox');
-    list.setAttribute('aria-label', 'DNA matches');
+    i18nUi.setAttribute(list, "aria-label", i18nUi.message("DNA matches"));
     input.insertAdjacentElement('afterend', list);
     input.setAttribute('role', 'combobox');
-    input.setAttribute('aria-label', 'Sample Name');
+    i18nUi.setAttribute(input, "aria-label", i18nUi.message("Sample Name"));
     input.setAttribute('aria-autocomplete', 'list');
     input.setAttribute('aria-controls', list.id);
     input.setAttribute('aria-expanded', 'false');
@@ -95,14 +98,14 @@ export function bindPlasmidNameSuggestions(root, state, {
       option.dataset.plasmidOption = String(index);
       option.setAttribute('role', 'option');
       option.setAttribute('aria-selected', 'false');
-      option.textContent = name;
+      i18nUi.setText(option, name);
       control.list.append(option);
     }
     if (message) {
       const note = doc.createElement('span');
       note.className = 'sample-plasmid-suggestions-note';
       note.setAttribute('role', 'status');
-      note.textContent = message;
+      i18nUi.setText(note, message);
       control.list.append(note);
     }
     control.list.hidden = !names.length && !message;

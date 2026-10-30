@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../../lib/i18n/presentation.js";
+import "../../localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../../../lib/html.js';
 import { clampNumber } from '../../../../lib/numbers.js';
 import { renderPrimerCopyButton, copyPrimerValueFromEvent } from '../../primer-copy.js';
@@ -57,11 +60,11 @@ export function initCrisprTool(options = {}) {
 
   function setCrisprTableMessage(message = 'No sgRNA candidates yet.') {
     setCrisprCandidates([]);
-    crisprTableBody.innerHTML = `
+    i18nUi.setHtml(crisprTableBody, `
       <tr>
         <td colspan="12" class="small-note">${escapeHtml(message)}</td>
       </tr>
-    `;
+    `);
   }
 
   function getSelectedCrisprTargets() {
@@ -77,7 +80,7 @@ export function initCrisprTool(options = {}) {
     }
 
     if (!crisprState.targets.length) {
-      crisprSelectionSummary.textContent = 'Add target sequences to begin.';
+      i18nUi.setText(crisprSelectionSummary, i18nUi.message("Add target sequences to begin."));
       return;
     }
 
@@ -90,13 +93,13 @@ export function initCrisprTool(options = {}) {
       ? Math.max(...selectedTargets.map((target) => target.sequence.length))
       : 0;
 
-    crisprSelectionSummary.innerHTML = `
-      <p><strong>Targets loaded:</strong> ${crisprState.targets.length}</p>
-      <p><strong>Targets selected:</strong> ${selectedTargets.length}</p>
-      <p><strong>Total selected length:</strong> ${totalBases.toLocaleString()} bp</p>
-      <p><strong>Length range:</strong> ${shortest.toLocaleString()}-${longest.toLocaleString()} bp</p>
-      <p class="small-note">Tip: Use FASTA headers to name each target sequence.</p>
-    `;
+    i18nUi.setHtml(crisprSelectionSummary, `
+      <p><strong>${i18nUi.html("Targets loaded:")}</strong> ${crisprState.targets.length}</p>
+      <p><strong>${i18nUi.html("Targets selected:")}</strong> ${selectedTargets.length}</p>
+      <p><strong>${i18nUi.html("Total selected length:")}</strong> ${totalBases.toLocaleString()} bp</p>
+      <p><strong>${i18nUi.html("Length range:")}</strong> ${shortest.toLocaleString()}-${longest.toLocaleString()} bp</p>
+      <p class="small-note">${i18nUi.html("Tip: Use FASTA headers to name each target sequence.")}</p>
+    `);
   }
 
   function refreshCrisprTargets(selectAll = false) {
@@ -107,7 +110,7 @@ export function initCrisprTool(options = {}) {
     crisprState.targets = parseCrisprTargetsInput(crisprTargetInput.value);
 
     if (!crisprState.targets.length) {
-      crisprTargetSelect.innerHTML = '<option value="" disabled>No targets parsed.</option>';
+      i18nUi.setHtml(crisprTargetSelect, `<option value="" disabled data-i18n="dna.full.73883839">${i18nUi.text("No targets parsed.")}</option>`);
       renderCrisprSelectionSummary();
       return;
     }
@@ -117,7 +120,7 @@ export function initCrisprTool(options = {}) {
       const selectedAttr = shouldSelect ? ' selected' : '';
       return `<option value="${target.id}"${selectedAttr}>${escapeHtml(target.name)} (${target.sequence.length.toLocaleString()} bp)</option>`;
     }).join('');
-    crisprTargetSelect.innerHTML = optionsMarkup;
+    i18nUi.setHtml(crisprTargetSelect, optionsMarkup);
     renderCrisprSelectionSummary();
   }
 
@@ -136,11 +139,11 @@ export function initCrisprTool(options = {}) {
         ? 'No candidates passed current GC and scoring filters. Try widening GC range or using a different PAM.'
         : 'No PAM-matching guides were found for the selected targets.';
       if (crisprResultSummary) {
-        crisprResultSummary.innerHTML = `
-          <p><strong>PAM:</strong> ${escapeHtml(pamPattern)} | <strong>Guide length:</strong> ${guideLength} nt</p>
-          <p><strong>PAM-matching guides:</strong> ${result.totalPamMatches.toLocaleString()}</p>
+        i18nUi.setHtml(crisprResultSummary, `
+          <p><strong>${i18nUi.html("PAM:")}</strong> ${escapeHtml(pamPattern)} | <strong>${i18nUi.html("Guide length:")}</strong> ${guideLength} nt</p>
+          <p><strong>${i18nUi.html("PAM-matching guides:")}</strong> ${result.totalPamMatches.toLocaleString()}</p>
           <p class="small-note">${escapeHtml(noCandidateMessage)}</p>
-        `;
+        `);
       }
       setCrisprTableMessage(noCandidateMessage);
       return;
@@ -170,16 +173,16 @@ export function initCrisprTool(options = {}) {
       `;
     }).join('');
 
-    crisprTableBody.innerHTML = tableRows;
+    i18nUi.setHtml(crisprTableBody, tableRows);
     setCrisprCandidates(result.candidates);
 
     if (crisprResultSummary) {
-      crisprResultSummary.innerHTML = `
-        <p><strong>PAM:</strong> ${escapeHtml(pamPattern)} | <strong>Guide length:</strong> ${guideLength} nt</p>
-        <p><strong>Guides evaluated:</strong> ${result.evaluatedCandidateCount.toLocaleString()} / ${result.filteredCandidateCount.toLocaleString()} filtered candidates (${result.totalPamMatches.toLocaleString()} PAM-matching guides detected)</p>
-        <p><strong>Background sites scanned:</strong> ${result.scannedBackgroundSiteCount.toLocaleString()} / ${result.backgroundSiteCount.toLocaleString()}</p>
+      i18nUi.setHtml(crisprResultSummary, `
+        <p><strong>${i18nUi.html("PAM:")}</strong> ${escapeHtml(pamPattern)} | <strong>${i18nUi.html("Guide length:")}</strong> ${guideLength} nt</p>
+        <p><strong>${i18nUi.html("Guides evaluated:")}</strong> ${result.evaluatedCandidateCount.toLocaleString()} / ${result.filteredCandidateCount.toLocaleString()} ${i18nUi.html("filtered candidates (")}${result.totalPamMatches.toLocaleString()} ${i18nUi.html("PAM-matching guides detected)")}</p>
+        <p><strong>${i18nUi.html("Background sites scanned:")}</strong> ${result.scannedBackgroundSiteCount.toLocaleString()} / ${result.backgroundSiteCount.toLocaleString()}</p>
         ${warnings.map((warning) => `<p class="small-note">${escapeHtml(warning)}</p>`).join('')}
-      `;
+      `);
     }
   }
 
@@ -187,7 +190,7 @@ export function initCrisprTool(options = {}) {
     const selectedTargets = getSelectedCrisprTargets();
     if (!selectedTargets.length) {
       if (crisprResultSummary) {
-        crisprResultSummary.textContent = 'Select at least one target sequence to design sgRNAs.';
+        i18nUi.setText(crisprResultSummary, i18nUi.message("Select at least one target sequence to design sgRNAs."));
       }
       setCrisprTableMessage('Select at least one target sequence to design sgRNAs.');
       return;
@@ -195,7 +198,7 @@ export function initCrisprTool(options = {}) {
 
     if (crisprRunBtn) {
       crisprRunBtn.disabled = true;
-      crisprRunBtn.textContent = 'Designing...';
+      i18nUi.setText(crisprRunBtn, i18nUi.message("Designing..."));
     }
     // The scan is synchronous, so yield one tick to let the busy label paint before it blocks.
     await new Promise((resolve) => { setTimeout(resolve, 0); });
@@ -205,13 +208,13 @@ export function initCrisprTool(options = {}) {
     } catch (error) {
       const message = `Design failed: ${error?.message || 'unexpected error'}`;
       if (crisprResultSummary) {
-        crisprResultSummary.textContent = message;
+        i18nUi.setText(crisprResultSummary, message);
       }
       setCrisprTableMessage(message);
     } finally {
       if (crisprRunBtn) {
         crisprRunBtn.disabled = false;
-        crisprRunBtn.textContent = 'Design sgRNAs';
+        i18nUi.setText(crisprRunBtn, i18nUi.message("Design sgRNAs"));
       }
     }
   }
@@ -252,7 +255,7 @@ export function initCrisprTool(options = {}) {
       refreshCrisprTargets();
       if (!crisprTargetInput.value.trim()) {
         if (crisprResultSummary) {
-          crisprResultSummary.textContent = 'Enter target sequences and run design to view candidate guides.';
+          i18nUi.setText(crisprResultSummary, i18nUi.message("Enter target sequences and run design to view candidate guides."));
         }
         setCrisprTableMessage('No sgRNA candidates yet.');
       }
@@ -273,12 +276,12 @@ export function initCrisprTool(options = {}) {
     }
     try {
       await clipboard.writeText(buildCrisprGuideTsv(crisprState.candidates));
-      crisprCopyTsvBtn.textContent = 'Copied';
-      setTimeout(() => { crisprCopyTsvBtn.textContent = 'Copy Results (TSV)'; }, 1500);
+      i18nUi.setText(crisprCopyTsvBtn, i18nUi.message("Copied"));
+      setTimeout(() => { i18nUi.setText(crisprCopyTsvBtn, i18nUi.message("Copy Results (TSV)")); }, 1500);
     } catch {
-      crisprCopyTsvBtn.textContent = 'Copy failed';
-      showTransientNotice('Could not copy the sgRNA table to the clipboard.', { type: 'error' });
-      setTimeout(() => { crisprCopyTsvBtn.textContent = 'Copy Results (TSV)'; }, 1500);
+      i18nUi.setText(crisprCopyTsvBtn, i18nUi.message("Copy failed"));
+      showTransientNotice(i18nUi.message("Could not copy the sgRNA table to the clipboard."), { type: 'error' });
+      setTimeout(() => { i18nUi.setText(crisprCopyTsvBtn, i18nUi.message("Copy Results (TSV)")); }, 1500);
     }
   });
 
@@ -293,10 +296,10 @@ export function initCrisprTool(options = {}) {
   crisprClearBtn?.addEventListener('click', () => {
     crisprTargetInput.value = '';
     crisprState.targets = [];
-    crisprTargetSelect.innerHTML = '<option value="" disabled>No targets parsed.</option>';
+    i18nUi.setHtml(crisprTargetSelect, `<option value="" disabled data-i18n="dna.full.73883839">${i18nUi.text("No targets parsed.")}</option>`);
     renderCrisprSelectionSummary();
     if (crisprResultSummary) {
-      crisprResultSummary.textContent = 'Enter target sequences and run design to view candidate guides.';
+      i18nUi.setText(crisprResultSummary, i18nUi.message("Enter target sequences and run design to view candidate guides."));
     }
     setCrisprTableMessage('No sgRNA candidates yet.');
   });

@@ -1,6 +1,9 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("plate");
 import { createAnalyzeWorkspace } from './workspace/analyze-workspace.js';
 import { createPlotAgentController } from './plotly/plot-agent-controller.js';
-import { showTransientNotice } from '../../lib/notify.js';
+import { bindPlateMessage, plateError, plateNotice, plateUi } from './localization.js';
 import { getAssayElements } from './dom.js';
 import { createAssayLayoutManager } from './layout-manager.js';
 import { createAssayResultsManager } from './results-manager.js';
@@ -146,22 +149,23 @@ export function initAssay({
 
   // These three lines double as running context ("Mapped wells: 24."), so only
   // the failures are raised as app notices — the rest would be constant noise.
+  // Messages are plateUi() descriptors or verbatim backend strings.
   function setCsvStatus(message, isError = false) {
     if (isError && message) {
-      showTransientNotice(String(message), { type: 'error' });
+      plateNotice(message, { type: 'error' });
     }
     if (elements.assayCsvStatus) {
-      elements.assayCsvStatus.textContent = message || '';
+      bindPlateMessage(elements.assayCsvStatus, message);
       elements.assayCsvStatus.classList.toggle('is-error', Boolean(isError && message));
     }
   }
 
   function setLayoutStatus(message, isError = false) {
     if (isError && message) {
-      showTransientNotice(String(message), { type: 'error' });
+      plateNotice(message, { type: 'error' });
     }
     if (elements.assayLayoutStatus) {
-      elements.assayLayoutStatus.textContent = message || '';
+      bindPlateMessage(elements.assayLayoutStatus, message);
       elements.assayLayoutStatus.classList.toggle('is-error', Boolean(isError && message));
     }
   }
@@ -170,17 +174,17 @@ export function initAssay({
   // recoverable failure goes to the shared transient notice.
   function setResultStatus(message, isError = false) {
     if (message) {
-      showTransientNotice(String(message), { type: isError ? 'error' : 'success' });
+      plateNotice(message, { type: isError ? 'error' : 'success' });
     }
   }
 
   function renderAssayNumberDisplay() {
     const editingAssay = getAssayById(elements.assayIdInput?.value || '');
     if (editingAssay) {
-      elements.assayNumberDisplay.textContent = editingAssay.assayNumber || '-';
+      i18nUi.setText(elements.assayNumberDisplay, (editingAssay.assayNumber || '-'));
       return;
     }
-    elements.assayNumberDisplay.textContent = previewNextAssayNumber(state);
+    i18nUi.setText(elements.assayNumberDisplay, previewNextAssayNumber(state));
   }
 
   function getActiveResultsAssay() {
@@ -218,11 +222,11 @@ export function initAssay({
 
   async function parseAssayResultImport(payload) {
     if (!window.hikariApi?.parseAssayResultImportFile) {
-      throw new Error('Assay result file parser is unavailable.');
+      throw plateError('results.parserUnavailable');
     }
     const result = await window.hikariApi.parseAssayResultImportFile(payload);
     if (!result?.ok) {
-      throw new Error(result?.error || 'Unable to parse assay result file.');
+      throw result?.error ? new Error(result.error) : plateError('results.parseFailed');
     }
     return result;
   }
@@ -230,7 +234,7 @@ export function initAssay({
   async function onAssayResultImportApplied({ attachment } = {}) {
     const assay = getActiveResultsAssay();
     if (!assay) {
-      throw new Error('Selected assay plate was not found.');
+      throw plateError('results.notFound');
     }
     const def = getPlateDefinition(assay.plateType || elements.assayPlateTypeInput?.value || '96');
     assay.resultValues = layoutManager.filterMappedResults(normalizeResults(runtime.currentResults, def));
@@ -461,8 +465,8 @@ export function initAssay({
       elements.assayNameInput.focus();
     }
     setResultStatus(notebookEntryId
-      ? `New assay will be linked to notebook page ${notebookEntryId}.`
-      : 'Create a new linked assay.');
+      ? plateUi('results.linkedNew', { id: notebookEntryId })
+      : plateUi('results.createLinked'));
   }
 
   bindAssayEvents({

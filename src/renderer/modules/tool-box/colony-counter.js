@@ -1,3 +1,8 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("tools");
+import { bindToolMessage, toolFailure, toolNotice, toolUi } from './localization.js';
+import { colonySummaryMarkup } from './colony-counter/summary.js';
 // Colony counter tool.
 //
 // Responsibilities:
@@ -7,7 +12,6 @@
 // - present the annotated plate and count summary in a two-column workspace
 import { clampNumber } from './common.js';
 import { bindFileDropTarget } from '../../lib/file-drop.js';
-import { showTransientNotice } from '../../lib/notify.js';
 import { EMPTY_MASK, getCanvasPointerPosition } from './colony-counter/canvas-utils.js';
 import { createColonyViewport } from './colony-counter/viewport.js';
 import { createColonyPreviewRendering } from './colony-counter/preview-rendering.js';
@@ -80,12 +84,12 @@ export function initColonyCounterTool() {
   // Update the status line and optionally switch it into an error color.
   function setColonyStatus(message, isError = false) {
     if (isError && message) {
-      showTransientNotice(message, { type: 'error' });
+      toolNotice(message, { type: 'error' });
     }
     if (!colonyStatus) {
       return;
     }
-    colonyStatus.textContent = message;
+    bindToolMessage(colonyStatus, message);
     colonyStatus.classList.toggle('is-error', Boolean(isError));
   }
 
@@ -94,7 +98,7 @@ export function initColonyCounterTool() {
     if (!colonySummary) {
       return;
     }
-    colonySummary.textContent = '';
+    i18nUi.setText(colonySummary, '');
   }
 
   const {
@@ -127,15 +131,7 @@ export function initColonyCounterTool() {
     const countedMarkers = getCountedMarkers();
     const count = countedMarkers.length;
     const total = colonyState.markers.length;
-    const hasMask = hasActiveMask();
-    const label = colonyState.lastCountSource === 'model' ? 'Model colonies counted' : 'Colonies counted';
-    const maskNote = hasMask && total !== count
-      ? `<p class="small-note">${count} of ${total} marker${total === 1 ? '' : 's'} are inside the active mask.</p>`
-      : '';
-    colonySummary.innerHTML = `
-      <p><strong>${label}:</strong> ${count}</p>
-      ${maskNote}
-    `;
+    i18nUi.setHtml(colonySummary, colonySummaryMarkup({ count, total, hasMask: hasActiveMask(), lastCountSource: colonyState.lastCountSource }));
   }
 
   // Check whether CropperJS is currently active on the loaded image.
@@ -319,10 +315,10 @@ export function initColonyCounterTool() {
     accept: colonyImageInput?.getAttribute?.('accept') || 'image/*',
     onFiles: ([file]) => handleColonyImageFile(file, { syncFileInput: true }),
     onRejected: () => {
-      setColonyStatus('Drop an image file to load a colony plate.', true);
+      setColonyStatus(toolUi('colony.dropImage'), true);
     },
     onError: (error) => {
-      setColonyStatus(String(error?.message || error || 'Failed to load the dropped colony image.'), true);
+      setColonyStatus(toolFailure(error, 'colony.dropFailed'), true);
     }
   });
 
@@ -362,7 +358,7 @@ export function initColonyCounterTool() {
     try {
       await startCropMode();
     } catch (error) {
-      setColonyStatus(error.message || 'Failed to start crop mode.', true);
+      setColonyStatus(toolFailure(error, 'colony.startCropFailed'), true);
       destroyCropper();
     }
   });
@@ -375,7 +371,7 @@ export function initColonyCounterTool() {
   // Exit crop mode without changing the current source image.
   colonyCancelCropBtn?.addEventListener('click', () => {
     destroyCropper();
-    setColonyStatus('Crop cancelled.');
+    setColonyStatus(toolUi('colony.cropCancelled'));
   });
 
   // Restore the original uncropped image.
@@ -463,6 +459,6 @@ export function initColonyCounterTool() {
   syncDisplayInput();
   syncModelInputs();
   resetColonySummary();
-  setColonyStatus('Choose or drop an image, then run auto count or click colonies manually.');
+  setColonyStatus(toolUi('colony.initial'));
   updateControlState();
 }

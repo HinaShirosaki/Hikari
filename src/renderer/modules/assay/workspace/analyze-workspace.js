@@ -1,3 +1,9 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("plate");
+import { setTranslatedText } from '../../../lib/i18n/dom.js';
+import { bindPlateMessage, setPlateAttribute, setPlateText } from '../localization.js';
+
 // Presentation state lives here, outside saved scientific data and chart models.
 export function createAnalyzeWorkspace({ elements, runtime, resultsManager, analysisView, getAssay, getDefinition }) {
   const root = elements.assayAnalyzeWorkspace;
@@ -54,14 +60,18 @@ export function createAnalyzeWorkspace({ elements, runtime, resultsManager, anal
     Object.entries(panels).forEach(([tab, panel]) => {
       panel.hidden = tab !== activeTab && !(comparing && tab === 'raw');
     });
-    find('assay-workspace-title').textContent = assay?.name || 'Assay analysis';
-    find('assay-workspace-meta').textContent = assay
-      ? `${definition.rows * definition.columns}-well plate · ${runtime.currentLayout.length} mapped wells` : 'Select an assay to analyze';
-    find('assay-workspace-chart-title').textContent = info.method === 'agent_plotly' ? 'Agent chart'
-      : elements.assayAnalysisKindInput?.selectedOptions?.[0]?.textContent || info.methodLabel;
-    find('assay-workspace-chart-source').textContent = info.dataSource === 'transformed' ? 'Transformed plate · Table2' : 'Plate results · Table1';
-    find('assay-workspace-table-label').textContent = activeTab === 'summary'
-      ? 'Analysis summary' : (comparing ? 'Table1 + Table2' : 'Table1');
+    // The assay name is user data, so it replaces the fallback's binding.
+    if (assay?.name) bindPlateMessage(find('assay-workspace-title'), assay.name);
+    else setPlateText(find('assay-workspace-title'), 'workspace.title');
+    if (assay) setPlateText(find('assay-workspace-meta'), 'workspace.meta', { wells: definition.rows * definition.columns, mapped: runtime.currentLayout.length });
+    else setPlateText(find('assay-workspace-meta'), 'workspace.selectAssay');
+    const methodKey = elements.assayAnalysisKindInput?.selectedOptions?.[0]?.dataset?.i18n;
+    if (info.method === 'agent_plotly') setPlateText(find('assay-workspace-chart-title'), 'workspace.agentChart');
+    else if (methodKey) setTranslatedText(find('assay-workspace-chart-title'), methodKey);
+    else bindPlateMessage(find('assay-workspace-chart-title'), info.methodLabel);
+    setPlateText(find('assay-workspace-chart-source'), info.dataSource === 'transformed' ? 'source.transformed' : 'source.raw');
+    if (activeTab === 'summary') setPlateText(find('assay-workspace-table-label'), 'workspace.summaryLabel');
+    else bindPlateMessage(find('assay-workspace-table-label'), comparing ? 'Table1 + Table2' : 'Table1');
     find('assay-show-empty-rows-field').hidden = activeTab === 'summary';
     find('assay-show-empty-rows').checked = runtime.showEmptyResultRows === true;
     const rows = resultsManager.buildResultGridData(definition, {
@@ -69,16 +79,19 @@ export function createAnalyzeWorkspace({ elements, runtime, resultsManager, anal
     });
     const hiddenRows = runtime.showEmptyResultRows ? 0 : rows.filter((row) => !row.__hasContent).length;
     find('assay-workspace-row-status').hidden = activeTab === 'summary';
-    find('assay-workspace-row-status').textContent = hiddenRows
-      ? `${rows.length - hiddenRows} rows shown · ${hiddenRows} empty rows hidden` : `${rows.length} rows shown`;
+    if (hiddenRows) setPlateText(find('assay-workspace-row-status'), 'workspace.rowsHidden', { shown: rows.length - hiddenRows, hidden: hiddenRows });
+    else setPlateText(find('assay-workspace-row-status'), 'workspace.rowsShown', { count: rows.length });
     const count = find('assay-transform-error-count');
     count.hidden = !info.errors.length;
-    count.textContent = String(info.errors.length);
-    count.setAttribute('aria-label', `${info.errors.length} formula errors`);
+    i18nUi.setText(count, String(info.errors.length));
+    setPlateAttribute(count, 'aria-label', 'workspace.formulaErrors', { count: info.errors.length });
     const notice = find('assay-transform-error-notice');
     notice.hidden = !info.errors.length;
-    notice.textContent = info.errors.length
-      ? `${info.errors.length} formula error${info.errors.length === 1 ? '' : 's'} · ${info.errors.slice(0,3).map(({well}) => well).join(', ')}. Select an error cell to edit.` : '';
+    if (info.errors.length) {
+      setPlateText(notice, 'workspace.formulaErrorNotice', {
+        count: info.errors.length, wells: info.errors.slice(0, 3).map(({ well }) => well).join(', ')
+      });
+    } else bindPlateMessage(notice, '');
     if (options.tab) redraw();
   }
 
@@ -104,7 +117,7 @@ export function createAnalyzeWorkspace({ elements, runtime, resultsManager, anal
   find('assay-data-order-btn').addEventListener('click', (event) => {
     const enabled = root.classList.toggle('is-data-first');
     event.currentTarget.setAttribute('aria-pressed', String(enabled));
-    event.currentTarget.textContent = enabled ? 'Chart first' : 'Data first';
+    setPlateText(event.currentTarget, enabled ? 'workspace.chartFirst' : 'workspace.dataFirst');
   });
   find('assay-chart-focus-btn').addEventListener('click', (event) => {
     const focused = root.classList.toggle('is-chart-focused');

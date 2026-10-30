@@ -48,6 +48,14 @@
   border-radius: 7px;
 }
 
+/* Two switches share the rail width (~48px per button), which already clipped
+   "Column". Segments size from their label so Row/Column (and longer
+   translations such as "Columna") fit without stacking the switches. */
+.assay-axis-switch .assay-mode-switch > button {
+  flex-basis: auto;
+  padding-inline: var(--space-4);
+}
+
 .assay-sample-picker {
   position: fixed;
   z-index: 2600;

@@ -1,3 +1,7 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("home");
+import { homeMessage, homeAttributes, setHomeText, setHomeAttribute } from './localization.js';
 import {
   ensureDashboardState,
   formatDateLocal,
@@ -112,18 +116,18 @@ export function initPassageWidget({
   // setup, neutral = tomorrow, plain = later.
   function passageTag(row) {
     if (row.status === 'unconfigured') {
-      return { text: 'Needs setup', tone: 'warn' };
+      return { key: 'reminder.needsSetup', tone: 'warn' };
     }
     if (row.status === 'overdue') {
-      return { text: `Overdue ${Math.abs(row.daysFromToday)} d`, tone: 'danger' };
+      return { key: 'reminder.overdue', params: { days: Math.abs(row.daysFromToday) }, tone: 'danger' };
     }
     if (row.status === 'due_today') {
-      return { text: 'Due today', tone: 'warn' };
+      return { key: 'reminder.today', tone: 'warn' };
     }
     if (row.daysFromToday <= 1) {
-      return { text: 'Tomorrow', tone: 'neutral' };
+      return { key: 'reminder.tomorrow', tone: 'neutral' };
     }
-    return { text: `In ${row.daysFromToday} days`, tone: 'plain' };
+    return { key: 'reminder.inDays', params: { days: row.daysFromToday }, tone: 'plain' };
   }
 
   function renderPassageActionButtons(row) {
@@ -132,24 +136,22 @@ export function initPassageWidget({
     }
     const passageId = safeText(String(row.sample?.id || ''));
     const passageSource = safeText(String(row.source || 'sample'));
-    const label = safeText(sampleLabel(row.sample));
+    const name = sampleLabel(row.sample);
     return `<button
         type="button"
         class="home-row-action home-passage-action is-extend"
         data-dashboard-passage-action="extend"
         data-dashboard-passage-id="${passageId}"
         data-dashboard-passage-source="${passageSource}"
-        aria-label="Remind me about ${label} tomorrow"
-        title="Remind me tomorrow"
-      >Tomorrow</button>
+        ${homeAttributes({ 'aria-label': 'passage.extend', title: 'reminder.remind' }, { name })}
+      >${homeMessage('reminder.tomorrow')}</button>
       <button
         type="button"
         class="home-row-action home-passage-action is-complete"
         data-dashboard-passage-action="done"
         data-dashboard-passage-id="${passageId}"
         data-dashboard-passage-source="${passageSource}"
-        aria-label="Mark passage done for ${label}"
-        title="Mark passaged"
+        ${homeAttributes({ 'aria-label': 'passage.doneLabel', title: 'passage.done' }, { name })}
       ><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>`;
   }
 
@@ -327,32 +329,32 @@ export function initPassageWidget({
 
   function renderPassageWidget(passageRows) {
     if (!passageRows.rows.length) {
-      summary.textContent = '';
+      setHomeText(summary, 'empty');
       summary.hidden = true;
-      list.innerHTML = '';
-      panelList.innerHTML = '';
+      i18nUi.setHtml(list, '');
+      i18nUi.setHtml(panelList, '');
       return;
     }
     const dueCount = passageRows.overdue.length + passageRows.dueToday.length;
-    summary.textContent = dueCount ? `${dueCount} due` : String(passageRows.rows.length);
+    setHomeText(summary, dueCount ? 'reminder.due' : 'reminder.count', { due: dueCount, count: passageRows.rows.length });
     summary.classList.toggle('is-due', passageRows.overdue.length > 0);
     summary.classList.toggle('is-soon', !passageRows.overdue.length && dueCount > 0);
-    summary.setAttribute('aria-label', `${dueCount} due · ${passageRows.rows.length} cell lines`);
-    summary.title = `${dueCount} due · ${passageRows.rows.length} cell lines`;
+    setHomeAttribute(summary, 'aria-label', 'passage.summary', { due: dueCount, count: passageRows.rows.length });
+    setHomeAttribute(summary, 'title', 'passage.summary', { due: dueCount, count: passageRows.rows.length });
     summary.hidden = false;
-    list.innerHTML = passageRows.rows.map((row) => {
+    i18nUi.setHtml(list, passageRows.rows.map((row) => {
       const tag = passageTag(row);
       return `
       <article class="home-row home-passage-row${row.status === 'unconfigured' ? ' is-muted' : ''}">
         <div class="home-row-copy">
-          <span class="home-row-name">${safeText(sampleLabel(row.sample))}</span>${row.passageNumber > 0 ? `<span class="home-passage-number">P${row.passageNumber}</span>` : ''}${row.intervalDays > 0 ? `<span class="home-passage-interval">· every ${row.intervalDays} d</span>` : ''}
+          <span class="home-row-name">${safeText(sampleLabel(row.sample))}</span>${row.passageNumber > 0 ? `<span class="home-passage-number">P${row.passageNumber}</span>` : ''}${row.intervalDays > 0 ? `<span class="home-passage-interval">${homeMessage('passage.every', { days: row.intervalDays })}</span>` : ''}
         </div>
-        <span class="home-status-pill" data-tone="${tag.tone}">${safeText(tag.text)}</span>
+        <span class="home-status-pill" data-tone="${tag.tone}">${homeMessage(tag.key, tag.params)}</span>
         <div class="home-row-end">${renderPassageActionButtons(row)}</div>
       </article>
     `;
-    }).join('');
-    panelList.innerHTML = list.innerHTML;
+    }).join(''));
+    i18nUi.setHtml(panelList, list.innerHTML);
   }
 
   function onPassageListClick(event) {

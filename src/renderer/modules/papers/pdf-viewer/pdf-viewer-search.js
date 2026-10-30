@@ -1,3 +1,4 @@
+import { paperAttributes, paperMessage } from '../localization.js';
 const PDF_SELECTION_SEARCH_STOP_WORDS = new Set([
   'about',
   'after',
@@ -74,8 +75,7 @@ export function buildHighlightPopoverMarkup(highlight = {}, { comment = null, ca
   if (!text) {
     return '';
   }
-  const annotationLabel = highlight.kind === 'underline' ? 'underline' : 'highlight';
-  const deleteLabel = `Delete ${annotationLabel}${comment ? ' and comment' : ''}`;
+  const deleteKey = `highlight.delete${highlight.kind === 'underline' ? 'Underline' : 'Highlight'}${comment ? 'Comment' : ''}`;
   return `
     ${comment ? buildHighlightCommentPopoverMarkup(comment) : ''}
     <div class="papers-highlight-actions">
@@ -84,39 +84,36 @@ export function buildHighlightPopoverMarkup(highlight = {}, { comment = null, ca
         class="ghost-btn papers-selection-action-btn"
         data-paper-highlight-ask
         data-requires-agent
-        aria-label="Ask Hikari about highlighted text"
-        title="Ask Hikari"
+        ${paperAttributes({ 'aria-label': 'highlight.askLabel', title: 'highlight.ask' })}
       >
         <svg class="papers-selection-action-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
           <path d="M9.25 8.5a3 3 0 0 1 5.85.95c0 2.8-3.3 2.55-3.3 5.05"></path>
           <path d="M12 18.25h.01"></path>
         </svg>
-        <span class="sr-only">Ask Hikari about highlighted text</span>
+        <span class="sr-only">${paperMessage('highlight.askLabel')}</span>
       </button>
       <button
         type="button"
         class="ghost-btn papers-selection-action-btn"
         data-paper-highlight-copy
-        aria-label="Copy highlighted text"
-        title="Copy highlighted text"
+        ${paperAttributes({ 'aria-label': 'highlight.copy', title: 'highlight.copy' })}
       >
         <svg class="papers-selection-action-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
           <rect x="8" y="8" width="11" height="11" rx="1.75"></rect>
           <path d="M5 16V6.75A1.75 1.75 0 0 1 6.75 5H16"></path>
         </svg>
-        <span class="sr-only">Copy highlighted text</span>
+        <span class="sr-only">${paperMessage('highlight.copy')}</span>
       </button>
       ${canDelete ? `<button
         type="button"
         class="ghost-btn papers-selection-action-btn"
         data-paper-highlight-delete
-        aria-label="${deleteLabel}"
-        title="${deleteLabel}"
+        ${paperAttributes({ 'aria-label': deleteKey, title: deleteKey })}
       >
         <svg class="papers-selection-action-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
           <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7M14 10v7"></path>
         </svg>
-        <span class="sr-only">${deleteLabel}</span>
+        <span class="sr-only">${paperMessage(deleteKey)}</span>
       </button>` : ''}
     </div>
     `;

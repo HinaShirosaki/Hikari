@@ -1,3 +1,7 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("settings");
+import { settingsMessage, settingsAttributes } from './localization.js';
 import { escapeHtml } from './html.js';
 import { normalizePreferredJournalList } from '../../lib/preferred-journals.js';
 
@@ -17,15 +21,15 @@ function createPreferredJournalSettings({
       return;
     }
     const journals = getPreferredJournalSettings();
-    preferredJournalList.innerHTML = journals.length
+    i18nUi.setHtml(preferredJournalList, journals.length
       ? journals.map((journal, index) => `
           <div class="settings-edit-row settings-preferred-journal-row" data-preferred-journal-row="${index}">
-            <input value="${escapeHtml(journal)}" data-preferred-journal-input="${index}" aria-label="Preferred journal ${index + 1}" />
-            <button type="button" class="ghost-btn settings-inline-icon" data-preferred-journal-save="${index}" aria-label="Save ${escapeHtml(journal)}" title="Save journal"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg></button>
-            <button type="button" class="danger-btn settings-inline-icon settings-inline-icon-danger" data-preferred-journal-delete="${index}" aria-label="Delete ${escapeHtml(journal)}" title="Delete journal"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            <input value="${escapeHtml(journal)}" data-preferred-journal-input="${index}" ${settingsAttributes({ 'aria-label': 'journals.label' }, { index: index + 1 })} />
+            <button type="button" class="ghost-btn settings-inline-icon" data-preferred-journal-save="${index}" ${settingsAttributes({ 'aria-label': 'journals.saveLabel', title: 'journals.save' }, { name: journal })}><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5"/></svg></button>
+            <button type="button" class="danger-btn settings-inline-icon settings-inline-icon-danger" data-preferred-journal-delete="${index}" ${settingsAttributes({ 'aria-label': 'journals.deleteLabel', title: 'journals.delete' }, { name: journal })}><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
           </div>
         `).join('')
-      : '<p class="small-note">No preferred journals configured.</p>';
+      : `<p class="small-note">${settingsMessage('journals.empty')}</p>`);
   }
 
   function onSavePreferredJournal(event) {

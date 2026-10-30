@@ -142,13 +142,16 @@ function calculateFixedReactionReagent({
   let status = '';
   let volumeL = null;
   let quantityText = '';
+  let displayMessage = null;
   if (!missing.length) {
     if (!bufferConcentrationsCompatible(stock, final)) {
       status = 'warning';
       resultText = `${resolvedName}: stock and final concentration must use matching unit types.`;
+      displayMessage = { id: 'reaction.incompatible', params: {} };
     } else if (bufferConcentrationBaseValue(final) > bufferConcentrationBaseValue(stock)) {
       status = 'warning';
       resultText = `${resolvedName}: final concentration cannot be higher than stock.`;
+      displayMessage = { id: 'reaction.higher', params: {} };
     } else {
       volumeL = roundNearZero(total.valueL * (bufferConcentrationBaseValue(final) / bufferConcentrationBaseValue(stock)));
       const outputUnit = manualVolumeUnit || total.unit || 'uL';
@@ -184,7 +187,8 @@ function calculateFixedReactionReagent({
       finalConcentration: final
     }],
     missing,
-    status
+    status,
+    displayMessage
   });
 }
 

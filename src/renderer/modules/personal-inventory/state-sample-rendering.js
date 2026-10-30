@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("samples");
 import { getWellName } from './constants.js';
 
 export function createSampleRenderingStateHelpers({ state, safeText, sampleHelpers }) {
@@ -39,7 +42,7 @@ export function createSampleRenderingStateHelpers({ state, safeText, sampleHelpe
     }
 
     return `
-      <div class="well-sample-legend" aria-label="Sample type color legend">
+      <div class="well-sample-legend" ${i18nUi.attribute("aria-label", "Sample type color legend")}>
         ${linkedTypes.map((type) => `
           <span class="well-sample-legend-item">
             <span class="well-sample-legend-dot" style="--sample-type-color:${getSampleTypeColor(type)};"></span>

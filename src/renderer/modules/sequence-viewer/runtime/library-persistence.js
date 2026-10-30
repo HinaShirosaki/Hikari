@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { buildRecordGenbankText } from '../storage.js';
 import { parseInputRecords } from '../parsing.js';
 import {
@@ -75,7 +78,7 @@ export function createLibraryPersistenceActions(ctx) {
   // unsaved record keeps them in memory until the user saves.
   async function persistFeatureMutation(record, actionLabel, mutationOptions = {}) {
     if (!state.activeEntryId) {
-      actions.setStatus(`${actionLabel} Save the record to persist changes.`);
+      actions.setStatus(i18nUi.text("{p0} Save the record to persist changes.", { p0: actionLabel }));
       return;
     }
     try {
@@ -85,16 +88,16 @@ export function createLibraryPersistenceActions(ctx) {
         name: record.name || 'sequence'
       });
       await controllers.home?.refreshLibraryEntries({ selectedId: entry.id, filter: entry.status || state.activeEntryStatus || LIBRARY_STATUS_TEMPORARY, silent: true });
-      actions.setStatus(mutationOptions?.silentSuccess ? '' : `${actionLabel} Saved to ${entry.name}.`);
+      actions.setStatus((((((mutationOptions?.silentSuccess ? '' : i18nUi.text("{p0} Saved to {p1}.", { p0: actionLabel, p1: entry.name })))))));
     } catch (error) {
-      actions.setStatus(`${actionLabel} Changes remain local: ${error?.message || 'Failed to save.'}`, true);
+      actions.setStatus(i18nUi.text("{p0} Changes remain local: {p1}", { p0: actionLabel, p1: error?.message || 'Failed to save.' }), true);
     }
   }
 
   async function saveCurrentRecordToLibrary() {
     const record = actions.getSelectedRecord();
     if (!record?.sequence?.length) {
-      actions.setStatus('Load a sequence before saving.', true);
+      actions.setStatus(i18nUi.text("Load a sequence before saving."), true);
       return;
     }
     try {
@@ -105,9 +108,9 @@ export function createLibraryPersistenceActions(ctx) {
       });
       await controllers.home?.refreshLibraryEntries({ selectedId: entry.id, filter: LIBRARY_STATUS_SAVED, silent: true });
       controllers.detail?.syncActionButtonsState?.();
-      actions.setStatus(`Saved ${entry.name} to the library.`);
+      actions.setStatus(i18nUi.text("Saved {p0} to the library.", { p0: entry.name }));
     } catch (error) {
-      actions.setStatus(`Failed to save: ${error?.message || 'Unknown error.'}`, true);
+      actions.setStatus(i18nUi.text("Failed to save: {p0}", { p0: error?.message || 'Unknown error.' }), true);
     }
   }
 
@@ -169,7 +172,7 @@ export function createLibraryPersistenceActions(ctx) {
       filter: response.entry.status || current.entry.status,
       silent: true
     });
-    actions.setStatus(`Renamed sequence to ${response.entry.name}.`);
+    actions.setStatus(i18nUi.text("Renamed sequence to {p0}.", { p0: response.entry.name }));
     return response.entry;
   }
 

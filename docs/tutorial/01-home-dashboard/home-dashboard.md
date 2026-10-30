@@ -135,9 +135,9 @@ To remove a location, open **Manage locations** and click the trash icon beside 
 
 ## 8. Find and open papers
 
-Paper finder appears when the AI connection is available.
+Suggested papers appears when the AI connection is available.
 
-![Use Manage schedules, Find papers now, Summary, and Download in the Paper finder tile.](images/12-paper-finder.png)
+![Use Manage schedules, Find papers now, Summary, and Download in the Suggested papers tile.](images/12-paper-finder.png)
 
 1. Click **Set up paper finding**, or the sliders icon labeled **Manage schedules**, to open Notebook.
 2. Open the relevant project's dashboard and find its **Paper finder** controls.

@@ -1,3 +1,6 @@
+import { createPresentation } from "../lib/i18n/presentation.js";
+import "../lib/i18n/shell.js";
+const i18nUi = createPresentation("shell");
 import { resolveManifestViewIds } from './manifest-runtime.js';
 import { showTransientNotice } from '../lib/notify.js';
 
@@ -35,7 +38,7 @@ export function createModuleHistoryRuntime(manifests, context) {
 
   function beforeHistoryRestore(change) {
     if (restoredModules(change).some(manifest => modules[manifest.key]?.hasUnsavedChanges?.())) {
-      showTransientNotice('Save or discard the open editor changes before undoing saved changes.', { type: 'error' });
+      showTransientNotice(i18nUi.message("Save or discard the open editor changes before undoing saved changes."), { type: 'error' });
       return false;
     }
     return true;
@@ -49,7 +52,7 @@ export function createModuleHistoryRuntime(manifests, context) {
       try { render?.(context, { viewId: document?.body?.dataset?.activeView, history: change }); }
       catch (error) {
         console.error(`Module "${manifest.key}" failed to refresh history:`, error);
-        showTransientNotice('The change was restored, but its view could not refresh. Reopen the module.', { type: 'error' });
+        showTransientNotice(i18nUi.message("The change was restored, but its view could not refresh. Reopen the module."), { type: 'error' });
       }
     }
   }

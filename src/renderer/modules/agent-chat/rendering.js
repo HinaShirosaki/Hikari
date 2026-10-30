@@ -1,3 +1,5 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+const i18nUi = createPresentation("agent");
 import { renderAgentHtml, mountAgentHtml } from './html-artifacts.js';
 import { updateHistoryKeepingHtmlFrames } from './html-history.js';
 import { renderAgentImages } from './image-artifacts.js';
@@ -11,6 +13,7 @@ import { renderUserQuestionCard } from './rendering-question-card.js';
 import { formatTime } from './rendering-time.js';
 import { asArray, trimText } from './shared.js';
 import { renderAgentChatIcon } from './icons.js';
+import { agentAttributes, agentMessage } from './localization.js';
 
 export { updateHistoryKeepingHtmlFrames };
 
@@ -30,14 +33,14 @@ function getLiveStreamText(message) {
   );
 }
 
-function renderLiveActivityLine(message, safeText) {
+function renderLiveActivityLine(message) {
   const rows = asArray(message?.meta?.live_progress?.activity_rows);
   const pending = rows.filter((row) => row?.status === 'pending').pop();
   const text = trimText(pending?.text, 240);
   if (!text) {
     return '';
   }
-  return `<div class="agent-stream-activity agent-progress-flow-text">${safeText(text)}</div>`;
+  return `<div class="agent-stream-activity agent-progress-flow-text">${i18nUi.renderOwned(text)}</div>`;
 }
 
 function renderAssistantMessageBody(message, safeText, { hasLiveProgress = false } = {}) {
@@ -45,11 +48,11 @@ function renderAssistantMessageBody(message, safeText, { hasLiveProgress = false
   if (liveStreamText) {
     return `
       <div class="agent-chat-body agent-chat-markdown agent-stream-live">${renderMarkdown(liveStreamText, safeText)}</div>
-      ${renderLiveActivityLine(message, safeText)}
+      ${renderLiveActivityLine(message)}
     `;
   }
   if (hasLiveProgress) {
-    return `<div class="agent-chat-body agent-chat-body-plain agent-progress-flow-text">${safeText(message.text || 'Working on this...')}</div>`;
+    return `<div class="agent-chat-body agent-chat-body-plain agent-progress-flow-text">${message.text ? i18nUi.renderOwned(message.text) : agentMessage('status.working')}</div>`;
   }
   return `<div class="agent-chat-body agent-chat-markdown">${renderMarkdown(message.text || '', safeText)}</div>`;
 }
@@ -90,7 +93,7 @@ export function renderHistory({
 
   const markup = safeMessages.map((message, index) => {
     const role = message.role === 'assistant' ? 'assistant' : 'user';
-    const headerLabel = role === 'assistant' ? 'Hikari' : 'You';
+    const headerLabel = role === 'assistant' ? 'Hikari' : agentMessage('message.you');
     const cardClass = role === 'assistant' ? 'agent-chat-item-assistant' : 'agent-chat-item-user';
     const rowClass = role === 'assistant' ? 'agent-chat-row-assistant' : 'agent-chat-row-user';
     const hasLiveProgress = Boolean(message?.meta?.live_progress && typeof message.meta.live_progress === 'object');
@@ -113,7 +116,7 @@ export function renderHistory({
       : `<p class="agent-chat-body agent-chat-body-plain">${safeText(message.text || '')}</p>`;
     return `
       <div data-agent-render-key="${safeText(`${state.agentChat?.currentSessionId || ''}:${message.meta?.html_artifacts?.[0]?.id || message.id || index}`)}" class="agent-chat-row ${rowClass}${hasLiveProgress ? ' is-live' : ''}">
-        <article class="agent-chat-item ${cardClass}${message.meta?.parser?.clarification_reason === 'agent_error' ? ' is-error' : ''}" aria-label="${role === 'assistant' ? 'Hikari response' : 'Your message'}">
+        <article class="agent-chat-item ${cardClass}${message.meta?.parser?.clarification_reason === 'agent_error' ? ' is-error' : ''}" ${agentAttributes({ 'aria-label': role === 'assistant' ? 'message.assistantLabel' : 'message.userLabel' })}>
           <header class="agent-chat-header${role === 'user' ? ' sr-only' : ''}">
             <div class="agent-chat-header-copy">
               <strong>${headerLabel}</strong>
@@ -129,7 +132,7 @@ export function renderHistory({
           ${role === 'assistant' ? renderSequenceActions(message.meta, safeText) : ''}
           ${role === 'assistant' && !hasLiveProgress && trimText(message.text) && message.id ? `
             <footer class="agent-message-actions">
-              <button type="button" class="ghost-btn agent-message-copy" data-agent-copy-message="${safeText(message.id)}" aria-label="Copy response" title="Copy response">
+              <button type="button" class="ghost-btn agent-message-copy" data-agent-copy-message="${safeText(message.id)}" ${agentAttributes({ 'aria-label': 'message.copy', title: 'message.copy' })}>
                 ${renderAgentChatIcon('copy', { className: 'agent-message-copy-icon' })}
               </button>
             </footer>` : ''}

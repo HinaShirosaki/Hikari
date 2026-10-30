@@ -1,4 +1,4 @@
-import { showTransientNotice } from '../../lib/notify.js';
+import { protocolUi, protocolError, protocolDisplayText, bindProtocolMessage, protocolNotice } from './localization.js';
 
 export function createProtocolImportController({
   state,
@@ -54,12 +54,12 @@ export function createProtocolImportController({
     return new Promise((resolve, reject) => {
       const Reader = FileReaderClass || globalThis.FileReader;
       if (typeof Reader !== 'function') {
-        reject(new Error('File reading is unavailable in this environment.'));
+        reject(protocolError('import.readerUnavailable'));
         return;
       }
       const reader = new Reader();
       reader.onload = () => resolve(String(reader.result || ''));
-      reader.onerror = () => reject(new Error('Failed to read selected JSON file.'));
+      reader.onerror = () => reject(protocolError('import.readFileError'));
       reader.readAsText(file);
     });
   }
@@ -81,8 +81,8 @@ export function createProtocolImportController({
     if (!ui.protocolJsonImportStatus) {
       return;
     }
-    const text = String(message || '').trim();
-    ui.protocolJsonImportStatus.textContent = text;
+    const text = protocolDisplayText(message).trim();
+    bindProtocolMessage(ui.protocolJsonImportStatus, message);
     ui.protocolJsonImportStatus.hidden = !text;
     ui.protocolJsonImportStatus.classList.toggle('is-error', Boolean(isError && text));
   }
@@ -154,32 +154,36 @@ export function createProtocolImportController({
     try {
       rawInput = await readProtocolJsonImportInput();
     } catch (error) {
-      setProtocolJsonImportStatus(String(error?.message || error || 'Failed to read JSON input.'), true);
-      showTransientNotice(String(error?.message || error || 'Failed to read JSON input.'), { type: 'error' });
+      const message = error || protocolUi('import.readError');
+      setProtocolJsonImportStatus(message, true);
+      protocolNotice(message, { type: 'error' });
       return;
     }
 
     if (!String(rawInput || '').trim()) {
-      setProtocolJsonImportStatus('Paste protocol JSON or choose a JSON file first.', true);
-      showTransientNotice('Paste protocol JSON or choose a JSON file first.', { type: 'error' });
+      const message = protocolUi('import.required');
+      setProtocolJsonImportStatus(message, true);
+      protocolNotice(message, { type: 'error' });
       return;
     }
 
     const result = importProtocolsFromJson(rawInput, { copySuffixLabel: 'Imported Copy' });
     if (!result.ok) {
-      setProtocolJsonImportStatus(result.error || 'Failed to import protocol JSON.', true);
-      showTransientNotice(result.error || 'Failed to import protocol JSON.', { type: 'error' });
+      // The public import result retains its English API error; this is its UI copy.
+      const message = protocolUi(result.error ? 'import.invalid' : 'import.error');
+      setProtocolJsonImportStatus(message, true);
+      protocolNotice(message, { type: 'error' });
       return;
     }
 
     resetProtocolJsonImportUi();
 
     if (result.importedProtocols.length === 1) {
-      setProtocolJsonImportStatus(`Imported "${result.importedProtocols[0].name}".`);
+      setProtocolJsonImportStatus(protocolUi('import.one', { name: result.importedProtocols[0].name }));
       closeProtocolJsonImportOverlay();
       return;
     }
-    setProtocolJsonImportStatus(`Imported ${result.importedProtocols.length} protocols.`);
+    setProtocolJsonImportStatus(protocolUi('import.many', { count: result.importedProtocols.length }));
     closeProtocolJsonImportOverlay();
   }
 

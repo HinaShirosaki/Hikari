@@ -1,3 +1,4 @@
+const { stripI18nMarkup } = require('../../../support/i18n-markup.cjs');
 // Gel is an internal plugin (src/plugins/gel); these suites follow that source,
 // which is the only copy of its implementation.
 module.exports = function registerEdgeGelAnalysisSuite(context = {}) {
@@ -357,7 +358,7 @@ test('[EDGE] gel-analysis crop rotation follows free drag away from crop borders
   assert.equal(statuses[statuses.length - 1], '', 'cancelling needs no message');
 });
 
-test('[EDGE] gel-analysis lane table render includes gel-edge offsets for divider alignment', () => {
+test('[EDGE] gel-analysis lane table strip places each lane input over its lane', () => {
   const runtime = {
     currentImage: { width: 600, imageData: { tag: 'source' } },
     cropperActive: false,
@@ -400,12 +401,12 @@ test('[EDGE] gel-analysis lane table render includes gel-edge offsets for divide
 
   assert.equal(elements.gelLaneTableShell.hidden, false);
   assert.equal(elements.gelViewerStage.classList.contains('has-lane-table'), true);
-  assert.match(elements.gelLaneTableShell.innerHTML, /gel-lane-table-grid-offsets/);
-  assert.match(elements.gelLaneTableShell.innerHTML, /padding-left:16\.6667%;/);
-  assert.match(elements.gelLaneTableShell.innerHTML, /padding-right:16\.6667%;/);
-  assert.match(elements.gelLaneTableShell.innerHTML, /width:37\.5%;/);
-  assert.match(elements.gelLaneTableShell.innerHTML, /width:31\.25%;/);
-  assert.match(elements.gelLaneTableShell.innerHTML, /data-gel-table-include-ladder/);
+  // One row: rotated captions, each starting at its lane center (percent of the image width).
+  const strip = stripI18nMarkup(elements.gelLaneTableShell.innerHTML);
+  [['1', '29\\.1666', 'A'], ['2', '52%', 'B'], ['3', '72\\.8333', 'C']].forEach(([lane, left, value]) => {
+    assert.match(strip, new RegExp(`is-rotated[^>]*data-table-lane="${lane}"[^>]*left:${left}[^>]*value="${value}"`));
+  });
+  assert.match(strip, /is-label[^>]*value="Samples"/);
   assert.equal(elements.gelExportImageBtn.disabled, false);
   assert.equal(elements.gelExportPptxBtn.disabled, false);
 });
@@ -522,30 +523,25 @@ test('[EDGE] gel-analysis lane table hides the ladder column and restores its sa
     }
   };
 
+  const lanes = () => [...stripI18nMarkup(elements.gelLaneTableShell.innerHTML).matchAll(/data-table-lane="(\d+)"/g)].map((match) => match[1]);
   controller.render();
-  assert.match(elements.gelLaneTableShell.innerHTML, /Lane 1/);
-  assert.match(elements.gelLaneTableShell.innerHTML, /value="Ladder"/);
+  assert.deepEqual(lanes(), ['1', '2', '3']);
+  assert.match(stripI18nMarkup(elements.gelLaneTableShell.innerHTML), /value="Ladder"/);
 
   controller.onShellInput({ target: ladderToggle });
 
+  // An excluded ladder lane has no caption; the others stay over their own lanes.
   assert.equal(runtime.figureExportIncludeLadder, false);
-  assert.doesNotMatch(elements.gelLaneTableShell.innerHTML, /Lane 1/);
-  assert.doesNotMatch(elements.gelLaneTableShell.innerHTML, /value="Ladder"/);
-  assert.match(elements.gelLaneTableShell.innerHTML, /Lane 2/);
-  assert.match(elements.gelLaneTableShell.innerHTML, /Lane 3/);
-  assert.doesNotMatch(elements.gelLaneTableShell.innerHTML, /data-gel-table-col="0"/);
-  assert.match(elements.gelLaneTableShell.innerHTML, /data-gel-table-col="1"/);
-  assert.match(elements.gelLaneTableShell.innerHTML, /data-gel-table-col="2"/);
-  assert.equal((elements.gelLaneTableShell.innerHTML.match(/width:50%;/g) || []).length, 2);
-  assert.match(elements.gelLaneTableShell.innerHTML, /padding-left:41\.6667%;/);
-  assert.match(elements.gelLaneTableShell.innerHTML, /padding-right:16\.6667%;/);
+  assert.deepEqual(lanes(), ['2', '3']);
+  assert.doesNotMatch(stripI18nMarkup(elements.gelLaneTableShell.innerHTML), /value="Ladder"/);
+  assert.match(stripI18nMarkup(elements.gelLaneTableShell.innerHTML), /data-table-lane="2"[^>]*left:52%/);
 
   ladderToggle.checked = true;
   controller.onShellInput({ target: ladderToggle });
 
   assert.equal(runtime.figureExportIncludeLadder, true);
-  assert.match(elements.gelLaneTableShell.innerHTML, /Lane 1/);
-  assert.match(elements.gelLaneTableShell.innerHTML, /value="Ladder"/);
+  assert.deepEqual(lanes(), ['1', '2', '3']);
+  assert.match(stripI18nMarkup(elements.gelLaneTableShell.innerHTML), /value="Ladder"/);
 
   runtime.manualOverrides = {
     ...runtime.manualOverrides,
@@ -554,17 +550,7 @@ test('[EDGE] gel-analysis lane table hides the ladder column and restores its sa
   ladderToggle.checked = false;
   controller.onShellInput({ target: ladderToggle });
 
-  assert.match(elements.gelLaneTableShell.innerHTML, /Lane 1/);
-  assert.doesNotMatch(elements.gelLaneTableShell.innerHTML, /Lane 2/);
-  assert.match(elements.gelLaneTableShell.innerHTML, /Lane 3/);
-  assert.equal(
-    (elements.gelLaneTableShell.innerHTML.match(/gel-lane-table-excluded-cell/g) || []).length,
-    2,
-    'an interior ladder should leave one invisible header and value gap'
-  );
-  assert.doesNotMatch(elements.gelLaneTableShell.innerHTML, /data-gel-table-col="1"/);
-  assert.match(elements.gelLaneTableShell.innerHTML, /padding-left:16\.6667%;/);
-  assert.match(elements.gelLaneTableShell.innerHTML, /padding-right:16\.6667%;/);
+  assert.deepEqual(lanes(), ['1', '3'], 'an interior ladder leaves a gap where its caption would be');
 });
 
 test('[EDGE] gel-analysis figure plan crops between band lines and removes the ladder from table and gel', () => {
@@ -606,7 +592,7 @@ test('[EDGE] gel-analysis figure plan crops between band lines and removes the l
   assert.equal(plan.canvasHeight, plan.tableHeight + 61);
 });
 
-test('[EDGE] gel-analysis figure canvas leaves the table transparent and centers its text', () => {
+test('[EDGE] gel-analysis figure canvas leaves the table transparent and centers its values', () => {
   const calls = { clear: [], draw: [], text: [], put: [] };
   const sourceContext = {
     putImageData: (...args) => calls.put.push(args)
@@ -647,7 +633,7 @@ test('[EDGE] gel-analysis figure canvas leaves the table transparent and centers
         bandBottom: 52
       },
       laneTable: {
-        rows: [{ label: 'Mutant', values: ['-', '+'] }]
+        rows: [{ label: 'Mutant', values: ['-', '+'] }, { label: 'WT', values: ['+', '-'] }]
       }
     }
   });
@@ -663,9 +649,9 @@ test('[EDGE] gel-analysis figure canvas leaves the table transparent and centers
   assert.equal(calls.draw[0][6], result.plan.tableHeight * result.scale, 'gel pixels start below the transparent table');
   assert.equal(outputContext.textAlign, 'center');
   assert.equal(outputContext.textBaseline, 'middle');
-  assert.equal(calls.text.length, 3);
+  assert.equal(calls.text.length, 6);
   assert.equal(calls.text[0][0], 'Mutant');
-  assert.equal(calls.text[0][1], (result.plan.labelWidth / 2) * result.scale);
+  assert.equal(calls.text[0][1], (result.plan.labelWidth - 12) * result.scale, 'row labels are right-aligned beside the first lane');
   assert.match(outputContext.font, new RegExp(`${result.plan.fontSize * result.scale}px`));
 });
 
@@ -877,6 +863,44 @@ test('[EDGE] gel-analysis PowerPoint export without a lane table ships the gel a
   assert.match(slideXml, /name="Cropped gel image"/);
   assert.equal(result.layout.tableHeight, 0);
   assert.equal(result.layout.gelLeft, result.layout.tableLeft, 'without a label column the gel starts at the group edge');
+});
+
+test('[EDGE] gel-analysis one-row lane table exports rotated captions instead of a table', async () => {
+  const laneSegmentation = { gelLeft: 10, gelRight: 310, dividers: [110, 210], dividerDone: true, bandTop: null, bandBottom: null };
+  const row = { label: 'Treatment', values: ['Control', '', 'Drug A 10 µM'] };
+  const plan = gelLaneTableInternals.buildGelFigurePlan({ imageWidth: 320, imageHeight: 100, manualOverrides: { laneSegmentation, laneTable: { rows: [row] } } });
+  assert.ok(plan.captions, 'a one-row table becomes captions');
+  assert.ok(plan.tableHeight > plan.rowHeight + plan.tableGap, 'the caption strip grows to fit the longest caption');
+  assert.ok(plan.canvasWidth > plan.labelWidth + plan.gelWidth, 'the canvas widens so the last caption is not clipped');
+  assert.equal(gelLaneTableInternals.buildGelFigurePlan({ imageWidth: 320, imageHeight: 100,
+    manualOverrides: { laneSegmentation, laneTable: { rows: [row, row] } } }).captions, null, 'two rows stay a table');
+
+  const rotations = [];
+  const context = { putImageData() {}, clearRect() {}, drawImage() {}, fillText() {}, save() {}, restore() {}, scale() {}, translate() {},
+    rotate: (angle) => rotations.push(angle) };
+  gelLaneTableInternals.createGelFigureCanvas({ documentObject: { createElement: () => ({ getContext: () => context }) },
+    imageData: {}, imageWidth: 320, imageHeight: 100, manualOverrides: { laneSegmentation, laneTable: { rows: [row] } } });
+  assert.deepEqual(rotations, [-Math.PI / 4, -Math.PI / 4], 'each non-empty caption is drawn at 45°');
+
+  const pptxgen = loadPptxGenJsSandbox();
+  const powerPointModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'plugins', 'gel', 'workspace', 'rendering', 'powerpoint-export.js'),
+    {}
+  );
+  const result = await powerPointModule.createGelPowerPoint({
+    pptxgenConstructor: pptxgen.PptxGenJS,
+    zipConstructor: pptxgen.JSZip,
+    gelImageDataUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+Av5PAAAAAElFTkSuQmCC',
+    plan
+  });
+  const archive = await pptxgen.JSZip.loadAsync(Array.from(result.bytes));
+  const slideXml = await archive.file('ppt/slides/slide1.xml').async('string');
+  assert.doesNotMatch(slideXml, /<a:tbl>/);
+  assert.equal((slideXml.match(/rot="18900000"/g) || []).length, 2, 'captions are editable text rotated 45°');
+  assert.match(slideXml, /<a:t>Treatment<\/a:t>/);
+  const last = result.layout.captions[2];
+  assert.ok(last.x + (last.width * Math.SQRT1_2) < result.layout.slideWidth, 'the longest caption stays on the slide');
+  assert.ok(last.y < result.layout.gelTop, 'captions sit above the gel');
 });
 
 test('[EDGE] gel-analysis PowerPoint action exports PPTX bytes with the current ladder choice', async () => {

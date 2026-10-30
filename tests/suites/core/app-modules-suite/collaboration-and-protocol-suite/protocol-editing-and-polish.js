@@ -21,7 +21,7 @@ test('protocol-management keeps interactive-bar presets outside the Steps label 
 
   assert.match(
     viewSource,
-    /<div class="protocol-steps-field">\s*<label for="protocol-steps">Steps<\/label>/
+    /<div class="protocol-steps-field">\s*<label for="protocol-steps"(?: data-i18n="protocol.field.steps")?>Steps<\/label>/
   );
   // The preset buttons are rendered into this host at runtime, so the static
   // markup can only show where the host sits.

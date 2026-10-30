@@ -77,7 +77,6 @@ async function main() {
       window.click=id=>el(id).click();
       window.action=name=>(name==='save'?el('gel-save-btn'):document.querySelector('[data-figure-action="'+name+'"]')).click();
       window.set=(id,value)=>{el(id).value=value;el(id).dispatchEvent(new Event('input',{bubbles:true}));el(id).dispatchEvent(new Event('change',{bubbles:true}))};
-      window.field=(name,value)=>{const input=document.querySelector('[data-figure-field="'+name+'"]');input.value=value;input.dispatchEvent(new Event('change',{bubbles:true}))};
       window.savedSizeInfo=async(reopen=false)=>{
         const content=exports.findLast(item=>item.content).content;
         const project=reopen?await parseBlotProject(content,()=>crypto.randomUUID()):JSON.parse(content);
@@ -152,7 +151,8 @@ async function main() {
           for(let x=642;x<=c.width;x++){
             const i=(y*c.width+x)*4;const dark=x<c.width&&pixels[i]<60&&pixels[i+1]<60&&pixels[i+2]<60;
             if(dark&&start<0)start=x;
-            if(!dark&&start>=0){if(x-start>3)centers.push((start+x)/2);start=-1}
+            // Bands are 40+ px wide at 3×; rotated lane captions cross a row in ~22 px strokes.
+            if(!dark&&start>=0){if(x-start>30)centers.push((start+x)/2);start=-1}
           }
           if(centers.length===6){if(y>lastBandY+1)bandRows.push(centers);lastBandY=y}
         }
@@ -191,7 +191,9 @@ async function main() {
           rows.push({id,label,placement:{first:10,last:90,top:0,bottom:100},draft:{currentImage:image,originalImage:image,
             controls:{'gel-type':'western'},viewerMode:'original',manualOverrides:{
               laneSegmentation:{gelLeft:0,gelRight:width-1,dividers:Array.from({length:Math.max(0,count-1)},(_,i)=>Math.round(width*(i+1)/count))},
-              laneTable:{rows:count?[{label:label+' samples',values:Array.from({length:count},(_,i)=>prefix+(i+1))}]:[]}}}});
+              laneTable:{rows:count?[{label:label+' samples',values:Array.from({length:count},(_,i)=>prefix+(i+1))},
+                // A one-row table becomes rotated captions; Treatment B keeps a second row, so it stays a table.
+                ...(prefix==='B'?[{label:'Dose',values:Array.from({length:count},(_,i)=>String(i+1))}]:[])]:[]}}}});
         }
         const project=JSON.parse(serializeBlotProject(rows,'Individual tables',image=>{const c=document.createElement('canvas');c.width=image.width;c.height=image.height;c.getContext('2d').putImageData(image,0,0);return c.toDataURL()},
           {stackIds:rows.map(row=>row.id),selectedId:'stack'}));
@@ -203,14 +205,14 @@ async function main() {
         const project=JSON.parse(exports.findLast(item=>item.content).content);
         const parsed=await parseBlotProject(JSON.stringify(project),()=>crypto.randomUUID());
         const members=parsed.rows.filter(row=>parsed.stackIds.includes(row.id));
-        const plan=buildBlotFigurePlan(members,{trim:parsed.stackTrim});
+        const plan=buildBlotFigurePlan(members,{trim:parsed.stackTrim,table:parsed.stacks.find(stack=>stack.id===parsed.activeStackId)?.table});
         return plan.tables.map(table=>{
           const referenceIndex=members.findIndex(row=>row.id===table.sourceId);
           const part=plan.rows[referenceIndex],reference=members[referenceIndex];
           const source=reference.draft.manualOverrides.laneSegmentation;
           const boundaries=[source.gelLeft,...source.dividers,source.gelRight];
           const previous=plan.rows[referenceIndex-1];
-          return {label:reference.label,tableTop:table.y,tableBottom:table.y+table.height,blotTop:part.imageY,
+          return {label:reference.label,rotated:table.rotated,tableTop:table.y,tableBottom:table.y+table.height,blotTop:part.imageY,
             previousBottom:previous?previous.imageY+previous.imageHeight:0,values:table.rows[0].values,
             centers:table.columns.map(column=>column.center),
             expected:table.columns.map(column=>{const i=column.laneIndex-1;return part.imageX+Math.round((boundaries[i]+boundaries[i+1]-1)/2)/reference.draft.currentImage.width*part.imageWidth})};
@@ -266,18 +268,44 @@ async function main() {
     }
     await exec("click('gel-export-pptx-btn')");await waitFor("el('gel-figure-status').textContent==='PPTX exported.'");
     const individualPptx=await exec('pptxInfo()');
-    assert.equal((individualPptx.xml.match(/<a:tbl>/g)||[]).length,10,'Both independent tables remain editable PowerPoint cells');
+    assert.deepEqual(ownTables.map(table=>table.rotated),[true,false],'Only a one-row table becomes rotated captions');
+    assert.equal((individualPptx.xml.match(/<a:tbl>/g)||[]).length,6,'A multi-row table remains editable PowerPoint cells');
+    assert.equal((individualPptx.xml.match(/rot="18900000"/g)||[]).length,4,'One-row captions are editable text rotated 45°');
     assert.match(individualPptx.xml,/<a:t>A4<\/a:t>/);assert.match(individualPptx.xml,/<a:t>B6<\/a:t>/);
     await exec("click('gel-export-image-btn')");await waitFor("el('gel-figure-status').textContent==='PNG exported.'");
     fs.writeFileSync(path.join(output,'individual-lane-tables-export.png'),Buffer.from((await exec("exports.findLast(item=>item.fileName.endsWith('.png'))")).dataBase64,'base64'));
     fs.writeFileSync(path.join(output,'individual-lane-tables.png'),(await win.webContents.capturePage()).toPNG());
+    // A Stack's own table heads the figure on its first gel's lanes and replaces the gels' own tables.
+    await exec("action('add-table')");
+    await exec("[...document.querySelectorAll('.gel-figure-table-layer [data-table-lane]')].forEach((input,i)=>{input.value='L'+(i+1);input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}))})");
+    await exec("action('save')");await waitFor("el('gel-figure-status').textContent==='Figure project saved.'");
+    const [stackTable,...extraTables]=await exec('headerCheck()');
+    assert.deepEqual({label:stackTable.label,rotated:stackTable.rotated,values:stackTable.values,extra:extraTables.length},
+      {label:'Treatment A',rotated:true,values:[['L1'],['L2'],['L3'],['L4']],extra:0},'One Stack table follows the top gel lanes, as captions');
+    assert.ok(stackTable.tableBottom<stackTable.blotTop,'The Stack table sits above the first gel');
+    stackTable.centers.forEach((center,i)=>assert.ok(Math.abs(center-stackTable.expected[i])<.001,'Stack table captions align to the lanes'));
+    // The table is typed on the figure: each caption input starts on its lane (figure margin + label column = 214).
+    const anchors=await exec("(()=>{const c=document.querySelector('#gel-figure-preview canvas'),r=c.getBoundingClientRect(),k=r.width/c.width,layer=document.querySelector('.gel-figure-table-layer'),l=layer.getBoundingClientRect();return [...layer.querySelectorAll('.gel-figure-table-layer [data-table-lane]')].map(input=>({x:(l.left+input.offsetLeft-r.left)/k,value:input.value,rotated:input.classList.contains('is-rotated')}))})()");
+    assert.deepEqual(anchors.map(a=>[a.value,a.rotated]),[['L1',true],['L2',true],['L3',true],['L4',true]],'Caption inputs sit on the figure, rotated like the export');
+    anchors.forEach((a,i)=>assert.ok(Math.abs(a.x-(214+stackTable.centers[i]))<1.5,`Caption input ${i+1} starts on its lane center`));
+    win.focus();
+    await exec("const input=document.querySelector('.gel-figure-table-layer [data-table-lane=\"1\"]');input.focus();input.setSelectionRange(2,2)");
+    for (const keyCode of ['x','y']) win.webContents.sendInputEvent({type:'char',keyCode});
+    await settle();
+    assert.deepEqual(await exec("({value:document.activeElement.value,lane:document.activeElement.dataset.tableLane})"),{value:'L1xy',lane:'1'},'Typing on the figure redraws it without losing the caret');
+    await exec("action('add-table-row')");
+    assert.equal(await exec("document.querySelectorAll('.gel-figure-table-layer [data-table-row=\"1\"][data-table-lane]').length"),4,'Add row adds one input per lane');
+    await exec("action('save')");await waitFor("el('gel-figure-status').textContent==='Figure project saved.'");
+    assert.equal((await exec('headerCheck()'))[0].rotated,false,'A second row draws the Stack table as a table');
+    await exec("action('remove-table-row');action('remove-table-row');action('save')");await waitFor("el('gel-figure-status').textContent==='Figure project saved.'");
+    assert.deepEqual(await exec('headerCheck()'),ownTables,"Removing the Stack table's rows restores the gels' own tables");
     await exec("moveGel('Treatment B','stack','Treatment A')");await settle();
     await exec("action('save')");await waitFor("el('gel-figure-status').textContent==='Figure project saved.'");
     assert.deepEqual((await exec('headerCheck()')).map(table=>table.label),['Treatment B','Treatment A'],'Tables follow their gels when reordered');
     await exec('controller.undo()');
     await exec("action('save')");await waitFor("el('gel-figure-status').textContent==='Figure project saved.'");
     assert.deepEqual(await exec('headerCheck()'),ownTables,'Undo restores each gel and its table together');
-    await exec("edit('Treatment B');click('gel-open-lane-table-btn');const cell=document.querySelector('[data-gel-table-role=value]');cell.value='B changed';cell.dispatchEvent(new Event('input',{bubbles:true}));stackView();action('save')");
+    await exec("edit('Treatment B');click('gel-open-lane-table-btn');const cell=document.querySelector('#gel-lane-table-shell [data-table-lane]');cell.value='B changed';cell.dispatchEvent(new Event('input',{bubbles:true}));stackView();action('save')");
     await waitFor("el('gel-figure-status').textContent==='Figure project saved.'");
     const editedTables=await exec('headerCheck()');
     assert.deepEqual(editedTables[0].values,ownTables[0].values,'Editing the second gel leaves the first table intact');
@@ -608,7 +636,8 @@ async function main() {
     await waitFor("!el('gel-crop-mode-btn').disabled");
     assert.equal(await exec("el('gel-canvas').width"), 900, 'The individual editor loads the dropped image');
     assert.equal(await exec('count()'), 1, 'The dropped gel appears in navigation before opening Layout');
-    await exec("set('gel-contrast-strength','70');click('gel-process-image-btn');set('gel-expected-lane-count','6');click('gel-auto-detect-lanes-btn');click('gel-tool-dividers-btn');click('gel-open-lane-table-btn');click('gel-add-table-btn');const label=document.querySelector('[data-gel-table-role=label]');label.value='Condition';label.dispatchEvent(new Event('input',{bubbles:true}));document.querySelectorAll('[data-gel-table-role=value]').forEach((input,i)=>{input.value='S'+(i+1);input.dispatchEvent(new Event('input',{bubbles:true}))});action('add')");
+    assert.deepEqual(await exec("({panel:el('gel-lane-table-panel').checkVisibility(),add:!el('gel-add-table-btn').disabled})"),{panel:true,add:true},'A gel shows the lane table strip with Add table ready, before any dividers');
+    await exec("set('gel-contrast-strength','70');click('gel-process-image-btn');set('gel-expected-lane-count','6');click('gel-auto-detect-lanes-btn');click('gel-tool-dividers-btn');click('gel-open-lane-table-btn');click('gel-add-table-btn');const label=document.querySelector('#gel-lane-table-shell .is-label');label.value='Condition';label.dispatchEvent(new Event('input',{bubbles:true}));document.querySelectorAll('#gel-lane-table-shell [data-table-lane]').forEach((input,i)=>{input.value='S'+(i+1);input.dispatchEvent(new Event('input',{bubbles:true}))});action('add')");
     assert.equal(await exec('count()'), 1, 'Current gel does not duplicate an automatically imported layer');
     assert.match(await exec("document.querySelector('[data-figure-row]').textContent"), /^Gel 1/);
     assert.equal(await exec("el('gel-blot-figure').hidden"), true, 'Adding the current gel keeps it in the editor');
@@ -636,7 +665,7 @@ async function main() {
     assert.equal(await exec("el('gel-blot-figure').hidden"), true);
     await exec("set('gel-contrast-strength','30');click('gel-process-image-btn');edit(0)");
     assert.equal(await exec("el('gel-contrast-strength').value"), '70', 'Each blot retains its enhancement settings');
-    assert.equal(await exec("document.querySelector('[data-gel-table-role=label]').value"), 'Condition', 'Lane table edits remain with their blot');
+    assert.equal(await exec("document.querySelector('#gel-lane-table-shell .is-label').value"), 'Condition', 'Lane table edits remain with their blot');
     assert.equal(await exec("el('gel-processed-preview').checked"), true, 'Each blot retains its processed preview mode');
     await exec("edit(1)");
     assert.equal(await exec("el('gel-contrast-strength').value"), '30');
@@ -680,7 +709,15 @@ async function main() {
     assert.equal(await exec("Boolean(document.querySelector('[data-figure-stack-view]'))"), true, 'Redo restores the created Stack');
     await exec("moveGel('β-actin','stack');moveGel('p-ERK1/2','stack')");
     assert.equal(await exec("el('gel-figure-preview-title').textContent"), 'Stack');
-    assert.equal(await exec("el('gel-figure-preview-detail').textContent"), '2 gels');
+    // The fold button hides a Stack's contents in the rail; it is view state, not an edit.
+    const foldState = () => exec("({hidden:document.querySelector('.gel-figure-stack-children').hidden,expanded:document.querySelector('[data-figure-fold]').getAttribute('aria-expanded'),focused:document.activeElement.hasAttribute('data-figure-fold')})");
+    const historyBeforeFold = await exec('JSON.stringify(controller.getHistoryState?.())');
+    await exec("document.querySelector('[data-figure-fold]').click()");
+    assert.deepEqual(await foldState(), { hidden: true, expanded: 'false', focused: true }, 'Folding a Stack hides its gels and keeps focus on the fold button');
+    await exec("document.querySelector('[data-figure-fold]').click()");
+    assert.deepEqual(await foldState(), { hidden: false, expanded: 'true', focused: true }, 'Unfolding shows the Stack contents again');
+    assert.equal(await exec('JSON.stringify(controller.getHistoryState?.())'), historyBeforeFold, 'Folding adds no undo step');
+    assert.equal((await exec('stackTree()'))[0].gels.length, 2);
     await exec("document.querySelector('[data-figure-stack-view]').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));document.activeElement.value='ERK experiment';document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}))");
     assert.equal(await exec("document.querySelector('[data-figure-stack-view] span').textContent"), 'ERK experiment', 'Stack renames inline');
     assert.equal(await exec("el('gel-figure-preview-title').textContent"), 'ERK experiment', 'Stack preview uses its renamed title');
@@ -693,22 +730,16 @@ async function main() {
     const layoutRename = await exec("(()=>{document.querySelector('[data-figure-layout-view]').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));const a=document.activeElement,info={label:a.getAttribute('aria-label'),tag:a.tagName,connected:a.isConnected};a.value='Publication panel';a.blur();if(a.isConnected)a.dispatchEvent(new FocusEvent('blur'));return info})()");
     assert.equal(layoutRename.label, 'Rename layout', JSON.stringify(layoutRename));
     assert.equal(await exec("document.querySelector('[data-figure-layout-view]').textContent.trim()"), 'Publication panel', `Layout saves its inline name on blur: ${JSON.stringify(layoutRename)}`);
-    assert.equal(await exec("el('gel-figure-placement').hidden"), true, 'Stack has its own view');
     assert.equal(await exec("el('gel-figure-stack-trim').hidden"), false);
     assert.equal(await exec("el('gel-figure-size')"), null, 'Layout sizing is edited directly on the canvas');
     await exec("action('save')"); await waitFor("el('gel-figure-status').textContent==='Figure project saved.'");
     assert.equal(await exec("notices.some(notice=>notice.message==='Figure project saved.'&&notice.type==='success')"), true, 'Project save completion reaches the overall notification callback');
     assert.equal(await exec("el('gel-figure-status').hidden"), true, 'The figure does not display a duplicate local status');
-    // Clicking a blot in the Stack shows its placement; a single gel has no Layout of its own.
-    await exec('focusBlot(0)');
-    assert.equal(await exec("el('gel-figure-placement').hidden"), false, 'Clicking a Stack blot shows its placement');
-    assert.equal(await exec("el('gel-figure-placement-title').textContent"), 'β-actin');
-    await exec("field('first',20);field('last',80);field('top',25);field('bottom',75)");
-    assert.equal(await exec("document.querySelector('[data-figure-field=first]').value"), '20');
-    await exec("field('first',99)");
-    assert.equal(await exec("document.querySelector('[data-figure-field=first]').value"), '20', 'Invalid coordinates are rejected');
-    assert.equal(await exec("notices.at(-1).type"), 'error', 'Placement errors reach the overall error notification');
-    const fieldValue = name => exec(`Number(document.querySelector('[data-figure-field=${name}]').value)`);
+    // Placement is edited only on the canvas; read it back from a saved project.
+    const placementOf = async position => {
+      await exec("el('gel-figure-status').textContent='';action('save')"); await waitFor("el('gel-figure-status').textContent==='Figure project saved.'");
+      return exec(`(()=>{const p=JSON.parse(exports.findLast(item=>item.content).content);return p.rows[p.stack[${position}]].placement})()`);
+    };
     const mouse = (type, x, y) => win.webContents.sendInputEvent({ type, x: Math.round(x), y: Math.round(y), button: 'left', clickCount: 1 });
     const middle = (await exec('blotBoxes()'))[0];
     mouse('mouseMove', middle.x, middle.y); await settle();
@@ -738,10 +769,10 @@ async function main() {
     assert.deepEqual((await exec('savedSizeInfo()')).placement, afterGrip.placement, 'Redo reapplies the canvas resize');
     fs.writeFileSync(path.join(output, 'proportional-size.png'), (await win.webContents.capturePage()).toPNG());
     await exec('controller.undo()');
-    const before = { first: await fieldValue('first'), last: await fieldValue('last'), top: await fieldValue('top') };
+    const before = await placementOf(0);
     mouse('mouseDown', middle.x, middle.y); mouse('mouseMove', middle.x + 40, middle.y); await settle();
     mouse('mouseUp', middle.x + 40, middle.y); await settle();
-    const moved = { first: await fieldValue('first'), last: await fieldValue('last') };
+    const moved = await placementOf(0);
     assert.ok(moved.first < before.first - 1, `Dragging right slides the blot: ${JSON.stringify({ before, moved })}`);
     assert.ok(Math.abs((moved.last - moved.first) - (before.last - before.first)) < 0.2, 'A move keeps the lane spacing');
     const edge = { x: middle.x, y: hover.rect.y + 2 };
@@ -749,13 +780,11 @@ async function main() {
     assert.equal(await exec("el('gel-figure-preview').style.cursor"), 'ns-resize', 'The top edge offers a crop');
     mouse('mouseDown', edge.x, edge.y); mouse('mouseMove', edge.x, edge.y + 15); await settle();
     mouse('mouseUp', edge.x, edge.y + 15); await settle();
-    assert.ok(await fieldValue('top') > before.top + 1, 'Dragging the top edge down crops the blot');
+    assert.ok((await placementOf(0)).top > before.top + 1, 'Dragging the top edge down crops the blot');
     await exec('controller.undo()');
-    assert.ok(Math.abs(await fieldValue('top') - before.top) < 0.05, 'Undo restores the crop');
+    assert.ok(Math.abs((await placementOf(0)).top - before.top) < 0.05, 'Undo restores the crop');
     await exec('controller.undo()');
-    assert.ok(Math.abs(await fieldValue('first') - before.first) < 0.05, 'Undo restores the position');
-    // Place the first anchor at 20% again for the checks below.
-    await exec("field('first',20);field('last',80)");
+    assert.ok(Math.abs((await placementOf(0)).first - before.first) < 0.05, 'Undo restores the position');
     await exec("click('gel-save-btn')"); await waitFor("el('gel-figure-status').textContent==='Figure project saved.'");
     assert.equal(JSON.parse(await exec("exports.findLast(item=>item.content).content")).stackName, 'ERK experiment', 'The toolbar Save icon saves the active figure project');
     const integrated = await exec("(()=>{const panel=el('gel-blot-figure'),stage=el('gel-viewer-stage'),rail=document.querySelector('.gel-setup-panel');return {inStage:panel.parentElement===stage,editorVisible:!document.querySelector('.gel-main-stack').hidden,railVisible:rail.checkVisibility(),railInteractive:!rail.inert,toolbarVisible:document.querySelector('.gel-viewer-toolbar').checkVisibility(),originalVisible:el('gel-image-row').checkVisibility()}})()");
@@ -774,7 +803,10 @@ async function main() {
       win.webContents.sendInputEvent({type:'mouseUp',button:'left',clickCount:1,x:Math.round(x+delta),y});
       await settle();
     }
+    const trimRows = () => exec("({start:el('gel-figure-trim-start').hidden,actions:el('gel-figure-trim-actions').hidden,reset:document.querySelector('[data-figure-action=reset-trim]').hidden})");
+    assert.deepEqual(await trimRows(), { start: false, actions: true, reset: true }, 'Without a trim, only Set trim edges shows');
     await exec("action('trim')"); await settle();
+    assert.deepEqual(await trimRows(), { start: true, actions: false, reset: true }, 'While trimming, Apply and Cancel replace the start row');
     assert.equal(await exec("document.querySelector('.gel-tool-panel-close').disabled && el('gel-open-figure-btn').inert"), true, 'Trim keeps Apply and Cancel accessible in the Layout panel');
     const fullEdges = await trimHandles();
     assert.equal(await exec("document.querySelectorAll('[data-trim-edge]').length"), 2, 'Trim opens two draggable edges on the full canvas');
@@ -794,6 +826,7 @@ async function main() {
     await exec("action('apply-trim');action('save')"); await waitFor("el('gel-figure-status').textContent==='Figure project saved.'");
     const trimmed = await exec('trimCheck()');
     assert.equal(trimmed.mode, 'manual'); assert.equal(trimmed.coverage, true);
+    assert.deepEqual(await trimRows(), { start: false, actions: true, reset: false }, 'After a trim, Adjust and Reset show');
     assert.ok(trimmed.crop.left > 10 && trimmed.crop.right < 90, 'Canvas edges determine the saved trim');
     assert.ok(trimmed.imageWidth < trimmed.fullImageWidth);
     trimmed.edges.forEach(([left, right]) => assert.ok(left < 253 && right < 253, `Both blot edges contain image pixels (${left}, ${right})`));
@@ -830,7 +863,7 @@ async function main() {
     fs.writeFileSync(path.join(output, 'figure.png'), (await win.webContents.capturePage()).toPNG());
     // focus() defers focusin until the window has OS focus, which another app can hold;
     // deliver the event the rail listens for so the check does not depend on the desktop.
-    await exec("focusBlot(0);action('edit')"); await settle();
+    await exec("layer('β-actin').click()"); await settle();
     await exec("if(el('gel-process-image-btn').getAttribute('aria-expanded')!=='true')click('gel-process-image-btn')"); await settle();
     await exec("const c=el('gel-contrast-strength');c.focus();if(!document.hasFocus())c.dispatchEvent(new FocusEvent('focusin',{bubbles:true}))");
     assert.equal(await exec("el('gel-blot-figure').hidden"), true, 'Process gel opens the selected layer with its editing tools on the right');
@@ -859,7 +892,8 @@ async function main() {
     const pptx = await exec('pptxInfo()'); assert.equal(pptx.images, 2, 'The existing viewer export includes the visible Stack');
     assert.match(pptx.xml, /<a:t>β-actin<\/a:t>/); assert.match(pptx.xml, /<a:t>p-ERK1\/2<\/a:t>/);
     assert.match(pptx.xml, /<a:t>Condition<\/a:t>/); assert.match(pptx.xml, /<a:t>S6<\/a:t>/);
-    assert.equal((pptx.xml.match(/<a:tbl>/g) || []).length, 6, 'Shared lane table cells remain native PowerPoint tables');
+    assert.equal((pptx.xml.match(/<a:tbl>/g) || []).length, 0, 'A one-row lane table exports as captions, not table cells');
+    assert.equal((pptx.xml.match(/rot="18900000"/g) || []).length, 6, 'Each lane caption is rotated 45°');
     assert.equal((pptx.xml.match(/<p:pic>/g) || []).length, 2, 'Blots remain separate slide images');
     assert.doesNotMatch(pptx.xml, /anchor="mid"/);
     const pptxData = await exec("exports.findLast(item=>item.fileName.endsWith('.pptx'))");
@@ -875,7 +909,7 @@ async function main() {
     assert.equal(await exec('count()'), 3);
     assert.equal(await exec("el('gel-figure-preview-title').textContent"), 'ERK experiment', 'Importing in Layout keeps showing the Stack');
     await exec("renameRow('Gel 3','GAPDH');stackView()");
-    assert.equal(await exec("el('gel-figure-preview-detail').textContent"), '2 gels', 'Importing a layer keeps the existing Stack intact');
+    assert.equal((await exec('stackTree()'))[0].gels.length, 2, 'Importing a layer keeps the existing Stack intact');
     await exec("moveGel('p-ERK1/2','root');moveGel('GAPDH','stack');click('gel-export-pptx-btn')");
     await waitFor("el('gel-figure-status').textContent==='PPTX exported.'");
     const subset = await exec('pptxInfo()');
@@ -928,7 +962,7 @@ async function main() {
     assert.equal(await exec("document.querySelector('[data-figure-layout-view]').textContent.trim()"), 'Publication panel', 'Project reopening restores the Layout name');
     assert.equal(await exec("Boolean(el('gel-figure-stack-picker'))"), false, 'Reopening a project does not restore a gel-picker step');
     await exec("stackView()");
-    assert.equal(await exec("document.querySelector('[data-figure-action=reset-trim]').disabled"), false, 'Saved projects restore Stack trim');
+    assert.equal(await exec("document.querySelector('[data-figure-action=reset-trim]').hidden"), false, 'Saved projects restore Stack trim');
     await exec("action('trim')");
     assert.ok((await trimHandles())[0].value > 0, 'Reopening trim places its left edge at the saved position');
     await exec("action('cancel-trim')");
@@ -995,7 +1029,7 @@ async function main() {
     await waitFor("el('gel-figure-status').textContent==='Figure project opened.'");
     // In a Stack, dragging one blot aligns that blot only.
     await exec("stackView()"); await settle();
-    const firstOf = async position => { await exec(`focusBlot(${position})`); return Number(await exec("document.querySelector('[data-figure-field=first]').value")); };
+    const firstOf = async position => (await placementOf(position)).first;
     const stackBefore = [await firstOf(0), await firstOf(1)];
     const lower = await exec(`(()=>{const p=el('gel-figure-preview'),c=p.querySelector('canvas').getBoundingClientRect(),box=p.querySelector('.gel-figure-hover-box'),x=c.left+c.width*.6;
       for(let y=c.bottom-3;y>c.top;y-=4){p.dispatchEvent(new PointerEvent('pointermove',{clientX:x,clientY:y,bubbles:true}));if(!box.hidden){const r=box.getBoundingClientRect();return {x,y:r.top+r.height/2};}}return null})()`);
@@ -1049,7 +1083,7 @@ async function main() {
     await win.loadFile(fixture,{query:{autosave:'1'}}); await waitFor('Boolean(window.ready)');
     assert.deepEqual(await exec('stackTree()'),durableTree,'Restart restores multiple stacks, empty stacks, layout names and membership');
     assert.equal(await exec('controller.hasUnsavedChanges()'),false,'Restoration is clean');
-    assert.equal(await exec("document.querySelector('[data-figure-action=reset-trim]').disabled"),false,'Restart restores canvas trim');
+    assert.equal(await exec("document.querySelector('[data-figure-action=reset-trim]').hidden"),false,'Restart restores canvas trim');
     await exec("edit('Gel 1')");
     assert.equal(await exec("el('gel-denoise-strength').value"),'42','Restart restores individual processing');
     assert.equal(await exec("el('gel-contrast-strength').value"),'160');

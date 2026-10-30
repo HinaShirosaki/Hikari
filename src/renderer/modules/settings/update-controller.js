@@ -1,18 +1,25 @@
+import { setSettingsText } from './localization.js';
+
 // Settings > Updates. The main-process updater owns the state; this panel
 // renders its status and offers Check / Install.
 function describe(update = {}) {
-  const current = update.currentVersion ? `You are using Hikari ${update.currentVersion}.` : '';
+  const params = { version: update.currentVersion || '', latest: String(update.latestVersion) };
+  let key;
   switch (update.status) {
-    case 'checking': return 'Checking for updates…';
-    case 'up-to-date': return `Hikari is up to date. ${current}`;
-    case 'update-available': return `Hikari ${update.latestVersion} is available. ${current}`;
-    case 'installing': return `Downloading and installing Hikari ${update.latestVersion}. This takes ${update.installKind === 'app' ? 'under a minute' : 'a few minutes'}; you can keep working. Hikari restarts when it is done.`;
-    case 'ready': return 'Restarting Hikari…';
-    case 'error': return `Could not update: ${update.error || 'unknown error'}`;
-    case 'development-disabled': return 'Updates are available in the installed app, not in a development run.';
-    case 'not-configured': return 'Updates are not available in this build.';
-    default: return current;
+    case 'checking': key = 'checking'; break;
+    case 'up-to-date': key = update.currentVersion ? 'upToDateCurrent' : 'upToDate'; break;
+    case 'update-available': key = update.currentVersion ? 'availableCurrent' : 'available'; break;
+    case 'installing': key = update.installKind === 'app' ? 'installingApp' : 'installingSource'; break;
+    case 'ready': key = 'ready'; break;
+    case 'error':
+      key = update.error ? 'error' : 'unknownError';
+      params.error = String(update.error || '');
+      break;
+    case 'development-disabled': key = 'development'; break;
+    case 'not-configured': key = 'unavailable'; break;
+    default: return { key: update.currentVersion ? 'updates.current' : 'empty', params };
   }
+  return { key: `updates.${key}`, params };
 }
 
 export function createUpdateSettings({ api, statusElement, checkButton, installButton }) {
@@ -22,7 +29,8 @@ export function createUpdateSettings({ api, statusElement, checkButton, installB
   function render(update = {}) {
     last = update;
     if (statusElement) {
-      statusElement.textContent = describe(update);
+      const message = describe(update);
+      setSettingsText(statusElement, message.key, message.params);
       statusElement.dataset.error = String(update.status === 'error');
     }
     const working = busy || update.status === 'installing' || update.status === 'ready';

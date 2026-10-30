@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import {
   cleanText,
   clamp
@@ -47,7 +50,7 @@ export function createBackboneRecognitionWorkflow(ctx) {
     const current = nextRecords[recordIndex];
     if (!current?.sequence?.length) {
       dialogs.closeBackboneRecognitionDialog();
-      actions.setStatus('Selected record no longer exists.', true);
+      actions.setStatus(i18nUi.text("Selected record no longer exists."), true);
       return;
     }
     const removedRecognitionFeatures = removeExistingRecognitionFeatures(current, nextRecords);
@@ -78,25 +81,25 @@ export function createBackboneRecognitionWorkflow(ctx) {
     }
     const record = actions.getSelectedRecord();
     if (!record?.sequence?.length) {
-      actions.setStatus('Load a record before backbone recognition.', true);
+      actions.setStatus(i18nUi.text("Load a record before backbone recognition."), true);
       return;
     }
     if (!actions.getStoragePath()) {
-      actions.setStatus('Set Storage Folder Path in Settings before recognizing vector backbone.', true);
+      actions.setStatus(i18nUi.text("Set Storage Folder Path in Settings before recognizing vector backbone."), true);
       return;
     }
     const bridge = actions.getBridge();
     if (!bridge?.sequenceLibraryRecognizeBackbone) {
-      actions.setStatus('Backbone recognition API unavailable.', true);
+      actions.setStatus(i18nUi.text("Backbone recognition API unavailable."), true);
       return;
     }
     state.isRecognizingBackbone = true;
     controllers.detail?.syncActionButtonsState();
-    actions.setStatus(`Recognizing vector backbone for ${record.name || 'record'}...`);
+    actions.setStatus(i18nUi.text("Recognizing vector backbone for {p0}...", { p0: record.name || 'record' }));
     try {
       await runBackboneRecognitionRequest({ bridge, record });
     } catch (error) {
-      actions.setStatus(error?.message || 'Backbone recognition failed.', true);
+      actions.setStatus((((((error?.message || i18nUi.text("Backbone recognition failed.")))))), true);
     } finally {
       state.isRecognizingBackbone = false;
       controllers.detail?.syncActionButtonsState();
@@ -137,7 +140,7 @@ export function createBackboneRecognitionWorkflow(ctx) {
       return;
     }
     dialogs.openBackboneRecognitionDialog(response.match, selectedIndex);
-    actions.setStatus('Backbone recognized. Review promoter / ORF candidates before applying.');
+    actions.setStatus(i18nUi.text("Backbone recognized. Review promoter / ORF candidates before applying."));
   }
   async function clearRecognitionFeaturesWhenNoMatch(current, selectedIndex) {
     const nextRecords = [...state.records];
@@ -151,7 +154,7 @@ export function createBackboneRecognitionWorkflow(ctx) {
     if (hadRecognitionFeatures && state.activeEntryId) {
       await actions.persistFeatureMutation(current, 'Cleared auto-detected backbone/insert features.');
     }
-    actions.setStatus('No backbone candidate was recognized from promoter alignment.');
+    actions.setStatus(i18nUi.text("No backbone candidate was recognized from promoter alignment."));
   }
   async function persistBackboneSelectionEffects({ match, current, _displayMatch, dialogState, removedRecognitionFeatures }) {
     const result = { artifactStored: false, artifactError: '', sequenceCleanupSaved: false, sequenceCleanupError: '' };

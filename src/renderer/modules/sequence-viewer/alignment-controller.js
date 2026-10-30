@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../lib/html.js';
 import {
   clampIndex,
@@ -79,7 +82,7 @@ export function createSequenceViewerAlignmentController(config = {}) {
     if (!elements.alignmentStatus) {
       return;
     }
-    elements.alignmentStatus.textContent = state.statusMessage;
+    i18nUi.setOwnedText(elements.alignmentStatus, state.statusMessage);
     elements.alignmentStatus.hidden = !state.statusMessage;
     elements.alignmentStatus.classList.toggle('is-error', Boolean(state.statusIsError));
   }
@@ -185,14 +188,12 @@ export function createSequenceViewerAlignmentController(config = {}) {
 
   function renderQuerySource() {
     if (elements.alignmentQueryFileName) {
-      elements.alignmentQueryFileName.textContent = state.query.fileName || '';
+      i18nUi.setText(elements.alignmentQueryFileName, (state.query.fileName || ''));
       elements.alignmentQueryFileName.hidden = !state.query.fileName;
     }
 
     if (elements.alignmentQuerySummary) {
-      elements.alignmentQuerySummary.textContent = state.query.records.length
-        ? describeSelectedRecord(getSelectedRecord('query'))
-        : '';
+      i18nUi.setText(elements.alignmentQuerySummary, (state.query.records.length ? describeSelectedRecord(getSelectedRecord('query')) : ''));
       elements.alignmentQuerySummary.hidden = !state.query.records.length;
     }
 
@@ -201,28 +202,28 @@ export function createSequenceViewerAlignmentController(config = {}) {
     }
     if (elements.alignmentQueryRecordSelect) {
       if (state.query.records.length < 2) {
-        elements.alignmentQueryRecordSelect.innerHTML = '<option value="0">Single record</option>';
+        i18nUi.setHtml(elements.alignmentQueryRecordSelect, `<option value="0" data-i18n="dna.full.398eccca">${i18nUi.text("Single record")}</option>`);
       } else {
-        elements.alignmentQueryRecordSelect.innerHTML = state.query.records
+        i18nUi.setHtml(elements.alignmentQueryRecordSelect, state.query.records
           .map((record, index) => `
             <option value="${index}"${index === clampIndex(state.query.selectedRecordIndex, state.query.records.length) ? ' selected' : ''}>
               ${escapeHtml(`${record.name} (${record.sequence.length.toLocaleString()} bp)`)}
             </option>
           `)
-          .join('');
+          .join(''));
       }
     }
 
     if (elements.alignmentQueryStatus) {
       if (state.query.errors.length) {
-        elements.alignmentQueryStatus.textContent = state.query.errors[0];
+        i18nUi.setOwnedText(elements.alignmentQueryStatus, state.query.errors[0]);
       } else if (state.query.warnings.length) {
-        elements.alignmentQueryStatus.textContent = state.query.warnings.join(' | ');
+        i18nUi.setOwnedText(elements.alignmentQueryStatus, state.query.warnings.join(' | '));
       } else if (state.query.records.length) {
         const sourceFormat = String(state.query.format || state.query.records[0]?.sourceFormat || 'unknown').toUpperCase();
-        elements.alignmentQueryStatus.textContent = `Loaded ${state.query.records.length} ${sourceFormat} record${state.query.records.length === 1 ? '' : 's'}.`;
+        i18nUi.setOwnedText(elements.alignmentQueryStatus, i18nUi.message((state.query.records.length === 1 ? "Loaded {p0} {p1} record." : "Loaded {p0} {p1} records."), { p0: state.query.records.length, p1: sourceFormat }));
       } else {
-        elements.alignmentQueryStatus.textContent = '';
+        i18nUi.setOwnedText(elements.alignmentQueryStatus, '');
       }
       elements.alignmentQueryStatus.hidden = !String(elements.alignmentQueryStatus.textContent || '').trim();
       elements.alignmentQueryStatus.classList.toggle('is-error', state.query.errors.length > 0);
@@ -243,7 +244,7 @@ export function createSequenceViewerAlignmentController(config = {}) {
     if (onNavigateDetail) {
       onNavigateDetail();
     }
-    setStatus('Opened sequencing alignment workspace.');
+    setStatus(i18nUi.text("Opened sequencing alignment workspace."));
     render();
   }
 
@@ -253,7 +254,7 @@ export function createSequenceViewerAlignmentController(config = {}) {
       onNavigateDetail();
     }
     if (options.silent !== true) {
-      setStatus('Returned to sequence detail.');
+      setStatus(i18nUi.text("Returned to sequence detail."));
     }
   }
 
@@ -329,7 +330,7 @@ export function createSequenceViewerAlignmentController(config = {}) {
         });
       },
       onRejected: () => {
-        setAlignmentStatus('Drop an AB1, FASTA, GenBank, or plain-text sequence file.', true);
+        setAlignmentStatus(i18nUi.text("Drop an AB1, FASTA, GenBank, or plain-text sequence file."), true);
       }
     });
 
@@ -339,7 +340,7 @@ export function createSequenceViewerAlignmentController(config = {}) {
       }
       state.query = createEmptySourceState('query');
       state.result = null;
-      setAlignmentStatus('Pasted query ready. Click Run Alignment to parse and align.');
+      setAlignmentStatus(i18nUi.text("Pasted query ready. Click Run Alignment to parse and align."));
       render();
     });
 
@@ -349,7 +350,7 @@ export function createSequenceViewerAlignmentController(config = {}) {
         state.query.records.length
       );
       state.result = null;
-      setAlignmentStatus(`Selected query record: ${getSelectedRecord('query')?.name || '-'}`);
+      setAlignmentStatus(i18nUi.text("Selected query record: {p0}", { p0: getSelectedRecord('query')?.name || '-' }));
       render();
     });
 

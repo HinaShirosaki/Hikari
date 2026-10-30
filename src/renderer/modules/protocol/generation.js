@@ -1,4 +1,7 @@
-import { showTransientNotice } from '../../lib/notify.js';
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("protocol");
+import { protocolUi, protocolError, protocolDisplayText, protocolMessage, protocolAttributes, bindProtocolMessage, setProtocolText, protocolNotice } from './localization.js';
 
 function trimText(value, maxLength = 5000) {
   const text = String(value || '').trim();
@@ -139,37 +142,37 @@ export function createProtocolGenerationController({
 
     const items = composerAttachments.filter((attachment) => trimText(attachment?.name, 180));
     if (!items.length) {
-      ui.protocolGenerateAttachmentList.innerHTML = '';
+      i18nUi.setHtml(ui.protocolGenerateAttachmentList, '');
       ui.protocolGenerateAttachmentList.hidden = true;
       return;
     }
 
     ui.protocolGenerateAttachmentList.hidden = false;
-    ui.protocolGenerateAttachmentList.innerHTML = items.map((attachment) => {
-      const label = trimText(attachment?.kind, 20) === 'image' ? 'Image' : 'File';
+    i18nUi.setHtml(ui.protocolGenerateAttachmentList, items.map((attachment) => {
+      const isImage = trimText(attachment?.kind, 20) === 'image';
       const size = formatAttachmentSize(attachment?.size);
       return `
-        <span class="agent-attachment-pill${label === 'Image' ? ' is-image' : ''}">
-          <span>${safeText(label)}</span>
+        <span class="agent-attachment-pill${isImage ? ' is-image' : ''}">
+          <span>${protocolMessage(isImage ? 'generate.image' : 'generate.file')}</span>
           <span>${safeText(trimText(attachment?.name, 180))}</span>
           ${size ? `<span>${safeText(size)}</span>` : ''}
-          <button type="button" data-protocol-generate-remove-attachment="${safeText(trimText(attachment?.id, 120))}" aria-label="${safeText(`Remove ${trimText(attachment?.name, 180)}`)}"><svg class="agent-chat-icon agent-attachment-remove-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+          <button type="button" data-protocol-generate-remove-attachment="${safeText(trimText(attachment?.id, 120))}" ${protocolAttributes({ 'aria-label': 'generate.removeAttachment' }, { name: trimText(attachment?.name, 180) })}><svg class="agent-chat-icon agent-attachment-remove-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
         </span>
       `;
-    }).join('');
+    }).join(''));
   }
 
   function setProtocolGenerateInputStatus(message = '', options = {}) {
     if (options.state === 'error' && message) {
-      showTransientNotice(message, { type: 'error' });
+      protocolNotice(message, { type: 'error' });
     }
     if (!ui.protocolGenerateInputStatus) {
       return;
     }
 
-    const normalized = String(message || '').trim();
+    const normalized = protocolDisplayText(message).trim();
     const stateLabel = String(options.state || '').trim();
-    ui.protocolGenerateInputStatus.textContent = normalized;
+    bindProtocolMessage(ui.protocolGenerateInputStatus, message);
     ui.protocolGenerateInputStatus.hidden = !normalized;
 
     if (stateLabel) {
@@ -181,15 +184,15 @@ export function createProtocolGenerationController({
 
   function setProtocolGenerateStatus(message = '', options = {}) {
     if (options.state === 'error' && message) {
-      showTransientNotice(message, { type: 'error' });
+      protocolNotice(message, { type: 'error' });
     }
     if (!ui.protocolGenerateStatus) {
       return;
     }
 
-    const normalized = String(message || '').trim();
+    const normalized = protocolDisplayText(message).trim();
     const stateLabel = String(options.state || '').trim();
-    ui.protocolGenerateStatus.textContent = normalized;
+    bindProtocolMessage(ui.protocolGenerateStatus, message);
     ui.protocolGenerateStatus.hidden = !normalized;
 
     if (stateLabel) {
@@ -207,7 +210,7 @@ export function createProtocolGenerationController({
     }
     if (ui.protocolGenerateSendBtn) {
       ui.protocolGenerateSendBtn.disabled = localState.isProtocolGenerationPending;
-      ui.protocolGenerateSendBtn.textContent = localState.isProtocolGenerationPending ? 'Generating...' : 'Generate Protocol';
+      setProtocolText(ui.protocolGenerateSendBtn, localState.isProtocolGenerationPending ? 'generate.generating' : 'action.generate');
     }
     if (ui.protocolGenerateApplyBtn) {
       ui.protocolGenerateApplyBtn.disabled = localState.isProtocolGenerationPending || !localState.generatedProtocolDraft;
@@ -231,7 +234,7 @@ export function createProtocolGenerationController({
     setProtocolGeneratePendingState(false);
     setProtocolGenerateStatus('');
     if (ui.protocolGenerateResultPreview) {
-      ui.protocolGenerateResultPreview.innerHTML = '';
+      i18nUi.setHtml(ui.protocolGenerateResultPreview, '');
     }
   }
 
@@ -280,13 +283,13 @@ export function createProtocolGenerationController({
 
   function fileToDataUrl(file) {
     if (typeof FileReaderClass !== 'function') {
-      return Promise.reject(new Error('Attachments are unavailable in this build.'));
+      return Promise.reject(protocolError('generate.attachmentsUnavailable'));
     }
 
     return new Promise((resolve, reject) => {
       const reader = new FileReaderClass();
       reader.onload = () => resolve(String(reader.result || ''));
-      reader.onerror = () => reject(reader.error || new Error(`Failed to read ${file?.name || 'attachment'}.`));
+      reader.onerror = () => reject(reader.error || protocolError('generate.readAttachment', { name: file?.name || 'attachment' }));
       reader.readAsDataURL(file);
     });
   }
@@ -315,11 +318,11 @@ export function createProtocolGenerationController({
       composerAttachments = [...composerAttachments, ...nextAttachments].slice(-8);
       renderComposerAttachments();
       setProtocolGenerateInputStatus(
-        `${composerAttachments.length} attachment${composerAttachments.length === 1 ? '' : 's'} ready.`
+        protocolUi('generate.attachments', { count: composerAttachments.length })
       );
     } catch (error) {
       setProtocolGenerateInputStatus(
-        String(error?.message || error || 'Failed to load attachments.'),
+        error || protocolUi('generate.attachmentsError'),
         { state: 'error' }
       );
     }
@@ -349,14 +352,14 @@ export function createProtocolGenerationController({
 
     if (!prompt && !attachments.length && !hasEditorContext) {
       setProtocolGenerateInputStatus(
-        'Add a prompt, current draft content, or an attachment before generating a protocol.',
+        protocolUi('generate.required'),
         { state: 'error' }
       );
       return;
     }
 
     if (!api?.agentGenerateProtocol) {
-      setProtocolGenerateInputStatus('Protocol generation is unavailable in this build.', { state: 'error' });
+      setProtocolGenerateInputStatus(protocolUi('generate.unavailable'), { state: 'error' });
       return;
     }
 
@@ -367,10 +370,10 @@ export function createProtocolGenerationController({
       ui.protocolGenerateResultOverlay.hidden = false;
     }
     renderProtocolPolishLoadingState(ui.protocolGenerateResultPreview, {
-      ariaLabel: 'Generating protocol',
-      message: 'The agent is researching and building a structured protocol from your prompt, current draft, and attached files.'
+      ariaLabel: protocolUi('generate.loading'),
+      message: protocolUi('generate.researching')
     });
-    setProtocolGenerateStatus('Agent is researching online and in the literature when useful.');
+    setProtocolGenerateStatus(protocolUi('generate.status'));
     setProtocolGeneratePendingState(true);
 
     try {
@@ -398,12 +401,13 @@ export function createProtocolGenerationController({
       }
 
       if (!result?.ok || !result.protocol) {
-        throw new Error(result?.error || 'Failed to generate protocol.');
+        if (result?.error) throw new Error(result.error);
+        throw protocolError('generate.error');
       }
 
       const generatedDraft = sanitizeIncomingProtocol(result.protocol);
       if (!generatedDraft || !Array.isArray(generatedDraft.steps) || !generatedDraft.steps.length) {
-        throw new Error('The generated response could not be converted into a protocol.');
+        throw protocolError('generate.invalid');
       }
 
       localState.generatedProtocolDraft = generatedDraft;
@@ -413,7 +417,7 @@ export function createProtocolGenerationController({
       if (requestToken !== localState.protocolGenerationRequestToken || ui.protocolGenerateResultOverlay?.hidden) {
         return;
       }
-      const message = String(error?.message || error || 'Failed to generate protocol.');
+      const message = error || protocolUi('generate.error');
       renderProtocolPolishEmptyState(ui.protocolGenerateResultPreview, message, { state: 'error' });
       setProtocolGenerateStatus(message, { state: 'error' });
     } finally {

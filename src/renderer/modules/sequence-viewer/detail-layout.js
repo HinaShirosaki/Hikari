@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("dna");
 import {
   DEFAULT_SEQUENCE_LINE_LENGTH,
   FALLBACK_CHAR_ADVANCE_PX,
@@ -28,7 +31,7 @@ function measureSequenceTypography(rootDocument, sequenceHost) {
       for (let index = 0; index < sampleLength; index += 1) {
         const base = rootDocument.createElement('span');
         base.className = 'sequence-viewer-seq-base';
-        base.textContent = 'A';
+        i18nUi.setText(base, 'A');
         content.appendChild(base);
       }
       probe.appendChild(content);

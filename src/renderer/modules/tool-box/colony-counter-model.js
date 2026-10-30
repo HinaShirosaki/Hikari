@@ -1,3 +1,4 @@
+import { toolError } from './localization.js';
 const ORT_RUNTIME_URL = '../../../../vendor/onnxruntime/ort.wasm.min.mjs';
 const ORT_WASM_URL = '../../../../vendor/onnxruntime/ort-wasm-simd-threaded.wasm';
 const COLONY_MODEL_URL = '../../../../vendor/colony-counter/colony_heatmap_unet.onnx';
@@ -30,12 +31,12 @@ async function readAssetBytes(relativePath) {
   const readFileBytes = window.hikariApi?.readFileBytes;
   const path = assetPath(relativePath);
   if (!path || typeof readFileBytes !== 'function') {
-    throw new Error(`No file reader available for ${relativePath}`);
+    throw toolError('colony.error.noReader', { path: relativePath });
   }
 
   const result = await readFileBytes(path);
   if (!result?.ok || !result.bytes) {
-    throw new Error(result?.error || `Failed to read ${relativePath}`);
+    throw (result?.error ? new Error(result.error) : toolError('colony.error.read', { path: relativePath }));
   }
   return result.bytes;
 }
@@ -46,7 +47,7 @@ async function fetchLocalArrayBuffer(relativePath) {
   try {
     const response = await fetch(assetUrl(relativePath));
     if (!response.ok && response.status !== 0) {
-      throw new Error(`Failed to load ${relativePath}`);
+      throw toolError('colony.error.load', { path: relativePath });
     }
     return response.arrayBuffer();
   } catch (error) {
@@ -124,7 +125,7 @@ function buildInputTensor(ort, sourceCanvas, imgSize) {
 
   const ctx = inputCanvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) {
-    throw new Error('Could not prepare the image for model inference.');
+    throw toolError('colony.error.prepare');
   }
 
   ctx.imageSmoothingEnabled = true;
@@ -382,7 +383,7 @@ function getOutputTensor(result, outputNames, modelName = 'model') {
   const outputName = outputNames?.[0] || 'heatmap';
   const output = result[outputName] || result.heatmap || Object.values(result)[0];
   if (!output) {
-    throw new Error(`The ${modelName} did not return a heatmap output.`);
+    throw toolError('colony.error.heatmap', { model: modelName });
   }
   return output;
 }
@@ -418,7 +419,7 @@ async function detectPlateMask(sourceCanvas, threshold) {
 // pixels.
 export async function countColoniesWithModel(sourceCanvas, options = {}) {
   if (!sourceCanvas?.width || !sourceCanvas?.height) {
-    throw new Error('Load a plate image before running the colony model.');
+    throw toolError('colony.error.modelImage');
   }
 
   const startedAt = performance.now();

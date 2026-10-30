@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
 import { positionContextMenu } from '../../../lib/context-menu.js';
 
 export function createSampleLinkMenuController({
@@ -24,7 +27,7 @@ export function createSampleLinkMenuController({
   function close() {
     if (menu) {
       menu.hidden = true;
-      menu.innerHTML = '';
+      i18nUi.setHtml(menu, '');
     }
     menuState = null;
   }
@@ -56,11 +59,11 @@ export function createSampleLinkMenuController({
       placeholderName,
       value: String(hiddenValue?.value || '').trim()
     };
-    menuEl.innerHTML = `
+    i18nUi.setHtml(menuEl, `
       <button type="button" class="biology-notebook-placeholder-table-action" role="menuitem" data-placeholder-add-table>
-        Add Table
+        ${i18nUi.html("Add Table")}
       </button>
-    `;
+    `);
     positionContextMenu(menuEl, x, y, win);
     menuEl.querySelector('[data-placeholder-add-table]')?.focus?.();
   }

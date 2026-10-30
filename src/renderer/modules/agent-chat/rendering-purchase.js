@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("agent");
 import { asArray, trimText } from './shared.js';
 
 export function renderPurchaseRecommendationCards(purchaseRecommendation, safeText) {
@@ -13,14 +16,14 @@ export function renderPurchaseRecommendationCards(purchaseRecommendation, safeTe
     return '';
   }
   return `
-    <section class="agent-purchase-group" aria-label="Purchase recommendations">
+    <section class="agent-purchase-group" ${i18nUi.attribute("aria-label", "Purchase recommendations")}>
       <div class="agent-purchase-grid">
         ${items.map((item) => `
           <button
             type="button"
             class="agent-purchase-item"
             data-agent-open-external-url="${safeText(trimText(item.product_url, 2000))}"
-            aria-label="${safeText(`Open ${trimText(item.title, 220)} from ${trimText(item.vendor, 180)}`)}"
+            ${i18nUi.attributeMessage("aria-label", i18nUi.message("Open {p0} from {p1}", { p0: trimText(item.title, 220), p1: trimText(item.vendor, 180) }))}
           >
             <span class="agent-purchase-image-wrap">
               <img

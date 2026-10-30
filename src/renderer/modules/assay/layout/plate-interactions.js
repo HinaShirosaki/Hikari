@@ -8,6 +8,7 @@ import {
   layoutToMap,
   normalizeCurrentAxisTemplateValues
 } from '../plate-model.js';
+import { plateUi } from '../localization.js';
 
 // Per-well edits that sit on top of the generated layout: dropping an inventory
 // sample onto a well, inline field edits, and folding those back into the
@@ -41,8 +42,8 @@ function createPlateInteractions({
     updateInlineWellOverride(wellId, 'sampleId', sampleValue);
     renderPlatePreview();
     renderResultTable();
-    setLayoutStatus(`Updated ${wellId} from inventory.`);
-    setCsvStatus(`Mapped wells: ${runtime.currentLayout.length}.`);
+    setLayoutStatus(plateUi('status.updatedFromInventory', { well: wellId }));
+    setCsvStatus(plateUi('status.mappedWells', { count: runtime.currentLayout.length }));
     requestAnimationFrame(() => {
       assayPlatePreview
         ?.querySelector(`[data-well="${wellId}"] [data-well-inline-field="sampleId"]`)

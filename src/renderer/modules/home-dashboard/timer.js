@@ -1,3 +1,7 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("home");
+import { homeText, homeAttributes, setHomeAttribute } from './localization.js';
 import {
   ensureDashboardState,
   formatTimerTemplateDuration,
@@ -86,7 +90,7 @@ export function initTimerWidget({
     const durationMinutes = parseTimerDuration(timerMinutesInput.value);
     timerMinutesInput.setCustomValidity(durationMinutes
       ? ''
-      : 'Enter a duration such as "90 min", "1.5 h", or "1 h 30 min".');
+      : homeText('timer.durationError'));
     if (!timerDialogForm.reportValidity()) {
       return;
     }
@@ -202,10 +206,10 @@ export function initTimerWidget({
       ? state.settings.dashboard.timerTemplates
       : [];
     if (!templates.length) {
-      timerTemplateList.innerHTML = '';
+      i18nUi.setHtml(timerTemplateList, '');
       return;
     }
-    timerTemplateList.innerHTML = templates.map((template, index) => `
+    i18nUi.setHtml(timerTemplateList, templates.map((template, index) => `
       <div class="home-timer-template-row">
         <div class="home-timer-template-copy">
           <strong class="home-timer-template-name">${safeText(template.name)}</strong>
@@ -216,8 +220,7 @@ export function initTimerWidget({
             type="button"
             class="home-timer-template-start-btn"
             data-dashboard-start-timer-template="${index}"
-            aria-label="Start timer ${safeText(template.name)}"
-            title="Start timer"
+            ${homeAttributes({ 'aria-label': 'timer.startLabel', title: 'timer.start' }, { name: template.name })}
           >
             <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
               <path d="M8 6.5 18 12 8 17.5Z" fill="currentColor"></path>
@@ -225,7 +228,7 @@ export function initTimerWidget({
           </button>
         </div>
       </div>
-    `).join('');
+    `).join(''));
   }
 
   function renderLocalClock() {
@@ -238,9 +241,9 @@ export function initTimerWidget({
       minute: '2-digit',
       hour12: false
     });
-    topbarLocalTime.textContent = localTime;
+    i18nUi.setText(topbarLocalTime, localTime);
     topbarLocalTime.setAttribute('datetime', now.toTimeString().slice(0, 5));
-    topbarLocalTime.setAttribute('aria-label', `Current local time ${localTime}`);
+    setHomeAttribute(topbarLocalTime, 'aria-label', 'clock.label', { time: localTime });
   }
 
   function savedTemplates() {
@@ -252,7 +255,7 @@ export function initTimerWidget({
   function renderTimerPresets() {
     const presets = savedTemplates();
     timerPresetList.hidden = !presets.length;
-    timerPresetList.innerHTML = presets.map(({ template, index }) => renderTimerPreset(template, index, safeText)).join('');
+    i18nUi.setHtml(timerPresetList, presets.map(({ template, index }) => renderTimerPreset(template, index, safeText)).join(''));
   }
 
   function stopTimerTick() {
@@ -322,9 +325,9 @@ export function initTimerWidget({
     const tickingCount = running.filter((timer) => !timer.isPaused).length;
     const finished = activeTimers.filter((timer) => timer.isAlert);
     updateTopbarTimer({ topbarTimer, topbarTimerTime, topbarTimerProgress }, running[0] || null);
-    timerStatus.textContent = activeTimers.length ? String(activeTimers.length) : '';
+    i18nUi.setOwnedText(timerStatus, (activeTimers.length ? String(activeTimers.length) : ''));
     timerStatus.hidden = !activeTimers.length;
-    timerStatus.setAttribute('aria-label', `${tickingCount} running, ${running.length - tickingCount} paused, ${finished.length} finished`);
+    setHomeAttribute(timerStatus, 'aria-label', 'timer.status', { running: tickingCount, paused: running.length - tickingCount, finished: finished.length });
 
     const structure = JSON.stringify([activeTimers.map((timer) => [
       timer.sourceIndex, timer.name, timer.durationMinutes, timer.isPaused, timer.isAlert, timer.endAtMs
@@ -334,9 +337,9 @@ export function initTimerWidget({
       const finishedHtml = finished.length
         ? `<div class="home-timer-finished">${finished.map((timer) => renderFinishedTimer(timer, safeText)).join('')}</div>`
         : '';
-      timerActiveList.innerHTML = activeTimers.length
+      i18nUi.setHtml(timerActiveList, activeTimers.length
         ? finishedHtml + running.map((timer, index) => renderActiveTimer(timer, index, safeText)).join('')
-        : '';
+        : '');
       lastTimerStructure = structure;
       if (focusedIndex !== undefined) {
         timerActiveList.querySelector(`[data-dashboard-toggle-active-timer="${Number(focusedIndex)}"], [data-dashboard-remove-active-timer="${Number(focusedIndex)}"]`)?.focus();

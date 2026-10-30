@@ -1,5 +1,6 @@
 import { asArray, trimText } from './shared.js';
 import { collectNotebookDrafts, findNotebookDraft } from './notebook-draft-list.js';
+import { agentUi } from './localization.js';
 
 function updateAssistantNotebookDraftMessage(messages, messageId, nextDraft, notebookDraftAdapter, draftId = '') {
   const normalizedMessageId = trimText(messageId, 120);
@@ -53,14 +54,14 @@ export function createNotebookHistoryActions({
     const draft = findNotebookDraft(message?.meta, notebookDraftAdapter, draftId)?.draft;
     const existingEntry = notebookDraftAdapter?.findEntryForDraft?.(draft) || null;
     if (!draft || !existingEntry) {
-      setStatus('Notebook page is unavailable for opening.');
+      setStatus(agentUi('status.pageUnavailable'));
       return;
     }
     openExistingEntry(existingEntry);
     setStatus(
       notebookDraftAdapter?.normalizeState?.(existingEntry?.notebookState) === 'planned'
-        ? 'Opened planned notebook page.'
-        : 'Opened notebook page.'
+        ? agentUi('status.openedPlanned')
+        : agentUi('status.openedPage')
     );
   }
 
@@ -68,7 +69,7 @@ export function createNotebookHistoryActions({
     const message = findMessage(messageId);
     const draft = findNotebookDraft(message?.meta, notebookDraftAdapter, draftId)?.draft;
     if (!draft || draft.save.mode !== 'confirm_before_save') {
-      setStatus('Planned notebook draft is unavailable for creation.');
+      setStatus(agentUi('status.plannedUnavailable'));
       return false;
     }
     if (draft.save.status === 'rejected') return false;
@@ -77,11 +78,11 @@ export function createNotebookHistoryActions({
       trimText(message?.meta?.requestText, 3000)
     );
     if (!result?.ok && result?.reason === 'missing_binding') {
-      setStatus('Planned notebook draft is missing a project or protocol binding.');
+      setStatus(agentUi('status.plannedMissing'));
       return false;
     }
     if (!result?.ok || !result.entry || !result.draft) {
-      setStatus('Planned notebook draft is unavailable for creation.');
+      setStatus(agentUi('status.plannedUnavailable'));
       return false;
     }
     updateAssistantNotebookDraftMessage(
@@ -97,7 +98,7 @@ export function createNotebookHistoryActions({
     }
     renderHistoryView({ forceScroll: true });
     openExistingEntry(result.entry);
-    setStatus(result.created ? 'Planned notebook page created.' : 'Opened planned notebook page.');
+    setStatus(agentUi(result.created ? 'status.plannedCreated' : 'status.openedPlanned'));
     return true;
   }
 
@@ -105,7 +106,7 @@ export function createNotebookHistoryActions({
     const message = findMessage(messageId);
     const draft = findNotebookDraft(message?.meta, notebookDraftAdapter, draftId)?.draft;
     if (!draft || draft.save.mode !== 'confirm_before_save') {
-      setStatus('Planned notebook draft is unavailable for rejection.');
+      setStatus(agentUi('status.plannedRejectUnavailable'));
       return;
     }
     if (draft.save.applied || notebookDraftAdapter?.findEntryForDraft?.(draft)) return false;
@@ -120,7 +121,7 @@ export function createNotebookHistoryActions({
     }, notebookDraftAdapter, draftId);
     persist();
     renderHistoryView({ forceScroll: true });
-    setStatus('Planned notebook draft rejected.');
+    setStatus(agentUi('status.plannedRejected'));
     return true;
   }
 

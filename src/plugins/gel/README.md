@@ -6,7 +6,9 @@ module. It remains a full workspace: image/TIFF ingestion,
 crop and free rotation, enhancement, lane segmentation, ladder calibration,
 band quantification, band integration, reports, saved records, and CSV export.
 Generated PNG figures use up to 4× raster density for publication-scale text,
-and PowerPoint export keeps the lane table as an editable native table.
+and PowerPoint export keeps the lane table as an editable native table. A
+one-row table exports as lane captions rotated 45° (editable text in PowerPoint),
+in individual gels and in Stack alike.
 
 Enable **Export → Ladder labels** to add marked ladder sizes beside an exported
 PNG or PowerPoint clip. It defaults to off and applies to both individual gels
@@ -70,8 +72,7 @@ entries open each gel for processing, while **Layout** returns to the Stack.
 The navigator and right-side actions stay visible. Clicking any gel entry
 opens its analysis tools; without a Stack, imports and opened projects go
 straight to the gel editor. In the Stack, the **Export** menu's image and
-PowerPoint entries export the Stack. Click a blot in the Stack to show its
-placement in Layout; **Process gel** there opens that gel’s analysis tools.
+PowerPoint entries export the Stack.
 Drag gels between stacks to change their membership.
 Dragging changes membership immediately. Gels moved out remain available at the
 top level; new imports also appear there until moved into Stack.
@@ -103,8 +104,8 @@ record index. Recovery keeps existing records, adds each missing ID once, and
 leaves the saved files intact. It runs only when requested, so normal startup
 does not bring back records removed from the index.
 Lane detection or existing dividers give the
-starting position; **Reset alignment** returns to it, and **Exact values**
-shows the same first/last lane anchors and crop as numbers. The figure
+starting position; drag a blot to move it, a side grip to resize it, or its
+top or bottom edge to crop it. The figure
 translates and uniformly scales each intact blot; it does not rearrange lanes
 or warp individual bands. Use **Lanes → Auto-detect** to detect lanes in the
 individual gel.
@@ -127,13 +128,21 @@ file. Undo and redo are also saved. Browsing alone stays clean. Quit's Save
 flushes pending workspace changes without a download dialog; **Save project**
 remains a portable backup. Failed writes remain unsaved and can be retried.
 
-The editable lane table sits above the image in the individual editor, with
-columns aligned to the gel lanes. In Stack, each gel keeps its own table directly
-above its image. Each table follows its gel when moved, resized, cropped, or
-reordered, in the preview and both exports. Edit a table in its gel's processing
-view. Gels without a table have no table header. PowerPoint retains editable
-table cells. Older projects keep every gel's table; obsolete shared-header
-selection settings are ignored.
+A single gel and a Stack edit their lane table the same way: a **Lane table**
+bar (**Add table**, then **Add row** and **Remove row**, which removes the last
+row) above a white strip where labels and lane values are typed in the export's
+own type and position, so what you type is what exports. A single gel's strip
+sits above its image over its own lanes; its bar also has **Include ladder
+lane** and × (hide; **Lanes → Table** shows it again), and a long table scrolls
+in the strip. **Add table** asks for finished lane dividers when they are
+missing. A Stack has one overall table of its own, typed on the top of its
+figure over the lanes of its first gel with lane dividers. While a
+Stack has this table, its gels' own tables are left out of the Stack; without it,
+each gel's own table sits directly above its image and follows its gel when
+moved, resized, cropped, or reordered. A one-row table is drawn as lane captions
+rotated 45° instead of table cells. PowerPoint keeps multi-row tables as editable
+table cells and captions as editable rotated text. Obsolete shared-header
+selection settings in older projects are ignored.
 
 The main workspace stays on the gel image. The right editing panel groups tools by
 function: **Image** (name and analysis type), **Processed** (denoise and contrast),
@@ -172,8 +181,7 @@ CSV reports include the baseline method, status, background sum, and signed net
 intensity. Saved reports with source pixels are recalculated when reopened.
 Band intensity and the band integration window can be moved by dragging their title bars,
 or by focusing the title bar and using the arrow keys (Shift moves farther).
-Escape closes the front window. The lane table scrolls
-within its panel above the gel.
+Escape closes the front window.
 
 ## Distribution and permissions
 

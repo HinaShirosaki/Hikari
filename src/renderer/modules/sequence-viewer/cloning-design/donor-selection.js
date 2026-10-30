@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../../lib/html.js';
 import { asArray } from '../../../lib/normalize.js';
 import { cleanText, normalizeSequenceText } from '../shared.js';
@@ -80,9 +83,7 @@ function createDonorSelection({
       }
       donorRecord = hydrated;
       if (!silent) {
-        setStatus(safeId
-          ? `Insert will be amplified from ${donorRecord?.name || 'the donor plasmid'}.`
-          : 'Insert will be amplified from this record.');
+        setStatus((((((safeId ? i18nUi.text("Insert will be amplified from {p0}.", { p0: donorRecord?.name || 'the donor plasmid' }) : i18nUi.text("Insert will be amplified from this record.")))))));
       }
     } catch (error) {
       if (requestId !== donorHydrationRequestId) {
@@ -90,7 +91,7 @@ function createDonorSelection({
       }
       designState.donorEntryId = '';
       donorRecord = null;
-      setStatus(error?.message || 'Donor plasmid could not be loaded.', true);
+      setStatus((((((error?.message || i18nUi.text("Donor plasmid could not be loaded.")))))), true);
     } finally {
       if (requestId === donorHydrationRequestId) {
         donorHydrationPending = false;
@@ -108,17 +109,15 @@ function createDonorSelection({
     const designState = getDesignState();
     if (elements.cloningDesignDonorSelect) {
       const entries = getDonorEntries();
-      elements.cloningDesignDonorSelect.innerHTML = [
-        '<option value="">This record</option>',
+      i18nUi.setHtml(elements.cloningDesignDonorSelect, [
+        `<option value="" data-i18n="dna.full.bca93b62">${i18nUi.text("This record")}</option>`,
         ...entries.map((entry) => `<option value="${escapeHtml(entry.id)}">${escapeHtml(entry.name)}</option>`)
-      ].join('');
+      ].join(''));
       elements.cloningDesignDonorSelect.value = cleanText(designState.donorEntryId, 200);
     }
     if (elements.cloningDesignDonorNote) {
       const donor = getActiveDonor();
-      elements.cloningDesignDonorNote.textContent = donor
-        ? `Insert is amplified from ${donor.name} (${donor.sequence.length.toLocaleString()} bp); primer specificity is checked against the whole donor.`
-        : 'The insert is amplified from this record.';
+      i18nUi.setText(elements.cloningDesignDonorNote, (donor ? i18nUi.message("Insert is amplified from {p0} ({p1} bp); primer specificity is checked against the whole donor.", { p0: donor.name, p1: donor.sequence.length.toLocaleString() }) : i18nUi.message("The insert is amplified from this record.")));
     }
   }
 

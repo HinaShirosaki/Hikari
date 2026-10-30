@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("workflow");
 import { BLOCK_TYPES } from '../constants.js';
 import {
   getBlockType,
@@ -322,7 +325,7 @@ function createWorkflowTemplateEditor({
     const inUse = templateHasProcesses(templateId);
     menu.dataset.templateId = templateId;
     elements.workflowTemplateDeleteBtn.disabled = inUse;
-    elements.workflowTemplateDeleteBtn.title = inUse ? 'Delete its processes first.' : '';
+    i18nUi.setAttribute(elements.workflowTemplateDeleteBtn, "title", (inUse ? i18nUi.message("Delete its processes first.") : ''));
     positionContextMenu(menu, event.clientX, event.clientY);
   }
 

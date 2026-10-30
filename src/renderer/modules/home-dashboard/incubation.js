@@ -1,3 +1,7 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("home");
+import { homeMessage, homeAttributes, setHomeText, setHomeAttribute } from './localization.js';
 import {
   ensureDashboardState,
   formatDateLocal,
@@ -124,22 +128,21 @@ export function initIncubationWidget({
     const locations = Array.isArray(state.settings?.dashboard?.incubationLocations)
       ? state.settings.dashboard.incubationLocations
       : [];
-    locationList.innerHTML = locations.map((location, index) => `
+    i18nUi.setHtml(locationList, locations.map((location, index) => `
       <div class="home-incubation-location-row">
         <span class="home-incubation-location-name">${safeText(location.name)}</span>
         <button
           type="button"
           class="home-incubation-delete-btn"
           data-dashboard-incubation-location-delete="${index}"
-          aria-label="Delete incubation location ${safeText(location.name)}"
-          title="Delete location"
+          ${homeAttributes({ 'aria-label': 'incubation.deleteLabel', title: 'incubation.delete' }, { name: location.name })}
         >
           <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
             <path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 10v7M14 10v7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path>
           </svg>
         </button>
       </div>
-    `).join('');
+    `).join(''));
   }
 
   function collectIncubationLocations() {
@@ -157,15 +160,15 @@ export function initIncubationWidget({
         const dayDelta = reminder
           ? Math.round((reminder.getTime() - today.getTime()) / 86400000)
           : null;
-        let status = { text: 'No reminder', tone: 'plain' };
+        let status = { key: 'incubation.none', tone: 'plain' };
         if (dayDelta === 0) {
-          status = { text: 'Check today', tone: 'warn' };
+          status = { key: 'incubation.today', tone: 'warn' };
         } else if (dayDelta === 1) {
-          status = { text: 'Tomorrow', tone: 'neutral' };
+          status = { key: 'reminder.tomorrow', tone: 'neutral' };
         } else if (dayDelta !== null && dayDelta > 1) {
-          status = { text: `In ${dayDelta} days`, tone: 'plain' };
+          status = { key: 'reminder.inDays', params: { days: dayDelta }, tone: 'plain' };
         } else if (dayDelta !== null && dayDelta < 0) {
-          status = { text: `Overdue ${Math.abs(dayDelta)} d`, tone: 'danger' };
+          status = { key: 'reminder.overdue', params: { days: Math.abs(dayDelta) }, tone: 'danger' };
         }
         return {
           sourceIndex: index,
@@ -192,38 +195,37 @@ export function initIncubationWidget({
 
   function renderIncubationWidget(locations) {
     if (!locations.length) {
-      summary.textContent = '';
+      setHomeText(summary, 'empty');
       summary.hidden = true;
-      list.innerHTML = '';
-      panelList.innerHTML = '';
+      i18nUi.setHtml(list, '');
+      i18nUi.setHtml(panelList, '');
       return;
     }
     const dueCount = locations.filter((location) => location.isDue).length;
-    summary.textContent = dueCount ? `${dueCount} due` : String(locations.length);
+    setHomeText(summary, dueCount ? 'reminder.due' : 'reminder.count', { due: dueCount, count: locations.length });
     summary.classList.toggle('is-soon', dueCount > 0);
-    summary.setAttribute('aria-label', `${dueCount} due · ${locations.length} location${locations.length === 1 ? '' : 's'}`);
+    setHomeAttribute(summary, 'aria-label', 'incubation.summary', { due: dueCount, count: locations.length });
     summary.hidden = false;
-    list.innerHTML = locations.map((location) => {
+    i18nUi.setHtml(list, locations.map((location) => {
       const isSet = location.dayDelta === 1;
       const name = safeText(location.name);
       return `
       <article class="home-row home-incubation-row">
         <svg class="home-incubation-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
         <span class="home-row-name">${name}</span>
-        <span class="home-status-pill" data-tone="${location.status.tone}">${safeText(location.status.text)}</span>
+        <span class="home-status-pill" data-tone="${location.status.tone}">${homeMessage(location.status.key, location.status.params)}</span>
         <button
           type="button"
           class="home-row-action home-incubation-remind${isSet ? ' is-set' : ''}"
           data-dashboard-incubation-remind="${location.sourceIndex}"
-          aria-label="${isSet ? `Reminder set for tomorrow for ${name}` : `Remind me tomorrow about ${name}`}"
-          title="${isSet ? 'Reminder set for tomorrow' : 'Remind me tomorrow'}"
+          ${homeAttributes({ 'aria-label': isSet ? 'incubation.setLabel' : 'incubation.remindLabel', title: isSet ? 'incubation.set' : 'reminder.remind' }, { name: location.name })}
         >
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.268 21a2 2 0 0 0 3.464 0M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
         </button>
       </article>
     `;
-    }).join('');
-    panelList.innerHTML = list.innerHTML;
+    }).join(''));
+    i18nUi.setHtml(panelList, list.innerHTML);
   }
 
   function renderWidget() {

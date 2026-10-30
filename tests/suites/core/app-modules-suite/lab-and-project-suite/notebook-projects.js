@@ -349,7 +349,7 @@ test('biology-notebook keeps planned pages distinct, marks them executed, and pr
 
   assert.match(document.getElementById('biology-notebook-entry-list').innerHTML, /Planned/);
   assert.match(document.getElementById('biology-notebook-entry-list').innerHTML, /Executed/);
-  assert.equal(document.getElementById('biology-notebook-protocol-meta').textContent, '');
+  assert.equal(document.getElementById('biology-notebook-protocol-meta').innerHTML, '');
   assert.equal(document.getElementById('save-biology-notebook-btn').getAttribute('aria-label'), 'Save notebook page');
 
   trigger(document.getElementById('biology-notebook-entry-list'), 'click', {
@@ -660,7 +660,7 @@ test('biology-notebook project folder click renders the project dashboard in pla
   assert.equal(dashboard.hidden, true);
   assert.equal(document.getElementById('biology-notebook-protocol-area').hidden, false);
   assert.equal(document.getElementById('biology-notebook-protocol-title').textContent, 'Fresh Protocol');
-  assert.equal(document.getElementById('biology-notebook-protocol-meta').textContent, '');
+  assert.equal(document.getElementById('biology-notebook-protocol-meta').innerHTML, '');
   assert.equal(document.getElementById('biology-notebook-page-starter-project').textContent, 'Atlas');
 
   document.getElementById('biology-notebook-result').value = 'Observed healthy cells after setup.';

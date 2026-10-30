@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("papers");
 import { getPdfCommentPinPosition } from './pdf-viewer-anchors.js';
 import {
   buildHighlightSvgPath,
@@ -6,6 +9,7 @@ import {
   pdfQuadPointsToBoxes
 } from './pdf-viewer-geometry.js';
 import { normalizePdfHighlightText } from './pdf-viewer-search.js';
+import { setPaperAttribute } from '../localization.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -40,7 +44,7 @@ function renderHighlightDivFallback({ doc, layer, highlight, boxes }) {
       : `${(box.y * 100).toFixed(3)}%`;
     mark.style.width = `${(box.width * 100).toFixed(3)}%`;
     mark.style.height = `${(box.height * 100).toFixed(3)}%`;
-    mark.title = normalizePdfHighlightText(highlight.text);
+    i18nUi.setAttribute(mark, "title", normalizePdfHighlightText(highlight.text));
     layer.appendChild(mark);
   });
 }
@@ -50,7 +54,7 @@ export function clearPins({ pageRecords = [], placementMode = false } = {}) {
     if (!record?.overlay) {
       return;
     }
-    record.overlay.innerHTML = '';
+    i18nUi.setHtml(record.overlay, '');
     record.overlay.style.cursor = placementMode ? 'crosshair' : 'default';
     record.overlay.style.pointerEvents = placementMode ? 'auto' : 'none';
   });
@@ -70,7 +74,7 @@ export function renderHighlights({ pageRecords = [], highlights = [] } = {}) {
     if (!highlightLayer) {
       return;
     }
-    highlightLayer.innerHTML = '';
+    i18nUi.setHtml(highlightLayer, '');
     const pageHighlights = highlightsByPage.get(record.pageNumber) || [];
     if (!pageHighlights.length) {
       return;
@@ -110,7 +114,7 @@ export function renderHighlights({ pageRecords = [], highlights = [] } = {}) {
       path.dataset.highlightId = highlight.id;
       path.setAttribute('d', pathData);
       const title = doc.createElementNS(SVG_NS, 'title');
-      title.textContent = normalizePdfHighlightText(highlight.text);
+      i18nUi.setText(title, normalizePdfHighlightText(highlight.text));
       path.appendChild(title);
       svg.appendChild(path);
     });
@@ -160,7 +164,7 @@ export function renderSearchHighlights({
         mark.style.top = `${(box.y * 100).toFixed(3)}%`;
         mark.style.width = `${(box.width * 100).toFixed(3)}%`;
         mark.style.height = `${(box.height * 100).toFixed(3)}%`;
-        mark.title = String(match?.text || match?.term || '');
+        i18nUi.setAttribute(mark, "title", String(match?.text || match?.term || ''));
         highlightLayer.appendChild(mark);
       });
     });
@@ -216,7 +220,7 @@ export function renderPins({
       const position = getPdfCommentPinPosition(comment.anchorX, comment.anchorY);
       pin.style.left = position.left;
       pin.style.top = position.top;
-      pin.setAttribute('aria-label', `Comment by ${comment.author || 'Local user'}`);
+      setPaperAttribute(pin, 'aria-label', 'viewer.commentBy', { author: comment.author || 'Local user' });
       pin.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();

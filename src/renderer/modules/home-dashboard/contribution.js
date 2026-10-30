@@ -1,3 +1,6 @@
+import "./localization.js";
+import { createPresentation } from "../../lib/i18n/presentation.js";
+const i18nUi = createPresentation("home");
 import { getGelAnalyses } from '../../lib/gel-records.js';
 import { formatDateLocal, normalizeNotebookState } from './utils.js';
 
@@ -23,8 +26,8 @@ export function initContributionWidget({ state, safeText, elements }) {
     const dayKey = selectedDayKey || formatDateLocal(new Date());
     const day = visibleDays.find((item) => item.dayKey === dayKey);
     if (selected) {
-      selected.innerHTML = day ? selectedDayMarkup(day) : '';
-      selected.title = day ? contributionCellLabel(day) : '';
+      i18nUi.setHtml(selected, day ? selectedDayMarkup(day) : '');
+      i18nUi.setAttribute(selected, "title", (day ? contributionCellLabel(day) : ''));
     }
     grid.querySelectorAll('[data-contribution-day]').forEach((cell) => {
       cell.setAttribute('aria-selected', String(cell.dataset.contributionDay === day?.dayKey));
@@ -240,17 +243,31 @@ export function initContributionWidget({ state, safeText, elements }) {
 
   function formatContributionPart(count, label) {
     const value = Number(count) || 0;
-    if (!value) {
-      return '';
-    }
-    const plural = label.endsWith('entry') ? `${label.slice(0, -5)}entries` : `${label}s`;
-    return `${value} ${value === 1 ? label : plural}`;
+    if (!value) return null;
+    const labels = {
+      page: ['{count} page', '{count} pages'], protocol: ['{count} protocol', '{count} protocols'],
+      upload: ['{count} upload', '{count} uploads'], note: ['{count} note', '{count} notes'],
+      'quick log': ['{count} quick log', '{count} quick logs'],
+      'notebook entry': ['{count} notebook entry', '{count} notebook entries'],
+      'completed protocol': ['{count} completed protocol', '{count} completed protocols'],
+      'data upload': ['{count} data upload', '{count} data uploads'],
+      'analysis note': ['{count} analysis note', '{count} analysis notes'],
+      experiment: ['{count} experiment', '{count} experiments']
+    };
+    return i18nUi.message(labels[label][value === 1 ? 0 : 1], { count: value });
+  }
+
+  function joinParts(parts, separator) {
+    return parts.filter(Boolean).flatMap((part, index) => index ? [separator, part] : [part]);
   }
 
   function selectedDayMarkup(day) {
     const total = Number(day.bucket.total) || 0;
     const isToday = day.dayKey === formatDateLocal(new Date());
-    const title = `${isToday ? 'Today' : formatContributionDate(day.date)} · ${total} ${total === 1 ? 'entry' : 'entries'}`;
+    const title = i18nUi.compose([
+      isToday ? i18nUi.message('Today') : formatContributionDate(day.date), ' · ',
+      i18nUi.message(total === 1 ? '{count} entry' : '{count} entries', { count: total })
+    ]);
     const parts = [
       formatContributionPart(day.bucket.notebookEntries, 'page'),
       formatContributionPart(day.bucket.completedProtocols, 'protocol'),
@@ -258,24 +275,26 @@ export function initContributionWidget({ state, safeText, elements }) {
       formatContributionPart(day.bucket.analysisNotes, 'note'),
       formatContributionPart(day.bucket.quickLogs, 'quick log')
     ].filter(Boolean);
-    const detail = parts.length ? parts.join(' · ') : (isToday ? 'nothing logged yet' : 'no activity');
-    return `<strong>${safeText(title)}</strong> — ${safeText(detail)}`;
+    const detail = i18nUi.compose(parts.length ? joinParts(parts, ' · ')
+      : [i18nUi.message(isToday ? 'nothing logged yet' : 'no activity')]);
+    return `<strong>${i18nUi.render(title)}</strong> — ${i18nUi.render(detail)}`;
   }
 
   function contributionCellLabel(day) {
     const total = Number(day.bucket.total) || 0;
-    const dateLabel = formatContributionDate(day.date);
-    if (!total) {
-      return `No logged activity on ${dateLabel}`;
-    }
+    const date = formatContributionDate(day.date);
+    if (!total) return i18nUi.message('No logged activity on {date}', { date });
     const parts = [
       formatContributionPart(day.bucket.notebookEntries, 'notebook entry'),
       formatContributionPart(day.bucket.completedProtocols, 'completed protocol'),
       formatContributionPart(day.bucket.dataUploads, 'data upload'),
       formatContributionPart(day.bucket.analysisNotes, 'analysis note'),
       formatContributionPart(day.bucket.quickLogs, 'experiment')
-    ].filter(Boolean);
-    return `${total} logged activit${total === 1 ? 'y' : 'ies'} on ${dateLabel}: ${parts.join(', ')}`;
+    ];
+    return i18nUi.compose([
+      i18nUi.message(total === 1 ? '{count} logged activity on {date}: ' : '{count} logged activities on {date}: ', { count: total, date }),
+      ...joinParts(parts, ', ')
+    ]);
   }
 
   // One label per month, on the week holding its 1st. The partial first
@@ -294,14 +313,14 @@ export function initContributionWidget({ state, safeText, elements }) {
     });
     const visible = labels.filter((label, index) => !labels[index + 1] || labels[index + 1].column - label.column >= 3);
     monthLabels.style.gridTemplateColumns = `repeat(${weekCount}, var(--contribution-cell-size))`;
-    monthLabels.innerHTML = visible.map((label) => `
+    i18nUi.setHtml(monthLabels, visible.map((label) => `
       <span class="home-contribution-month-label" style="grid-column: ${label.column} / span 2;">${safeText(label.label)}</span>
-    `).join('');
+    `).join(''));
   }
 
   function renderContributionWidget(days) {
     renderContributionMonthLabels(days);
-    grid.innerHTML = days.map((day) => `
+    i18nUi.setHtml(grid, days.map((day) => `
       <button
         type="button"
         class="home-contribution-cell"
@@ -310,10 +329,10 @@ export function initContributionWidget({ state, safeText, elements }) {
         role="gridcell"
         aria-selected="${day.dayKey === selectedDayKey}"
         ${day.isFuture ? 'disabled' : ''}
-        title="${safeText(contributionCellLabel(day))}"
-        aria-label="${safeText(contributionCellLabel(day))}"
+        ${i18nUi.attributeMessage("title", contributionCellLabel(day))}
+        ${i18nUi.attributeMessage("aria-label", contributionCellLabel(day))}
       ></button>
-    `).join('');
+    `).join(''));
   }
 
   function computeLoggingStreak(dayMap) {
@@ -342,9 +361,9 @@ export function initContributionWidget({ state, safeText, elements }) {
       const total = days.reduce((sum, day) => sum + (Number(day.bucket.total) || 0), 0);
       const week = days.slice(-7).reduce((sum, day) => sum + (Number(day.bucket.total) || 0), 0);
       const streak = computeLoggingStreak(dayMap);
-      summary.innerHTML = `<strong>${total}</strong> ${total === 1 ? 'entry' : 'entries'}`
-        + ` · <strong>${week}</strong> this week`
-        + (streak ? ` · <strong>${streak}</strong>-day streak` : '');
+      i18nUi.setHtml(summary, `<strong>${total}</strong> ${i18nUi.render((total === 1 ? i18nUi.message("entry") : i18nUi.message("entries")))}`
+        + ` · <strong>${week}</strong> ${i18nUi.html("this week")}`
+        + (streak ? ` · <strong>${streak}</strong>${i18nUi.html("-day streak")}` : ''));
     }
   }
 

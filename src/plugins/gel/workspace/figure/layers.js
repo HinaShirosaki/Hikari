@@ -1,3 +1,5 @@
+import { createPresentation } from "../../i18n.mjs";
+const i18nUi = createPresentation("gel");
 export const STACK_VIEW = 'stack';
 
 export function rowsInStack(rows, stackIds) {
@@ -5,7 +7,7 @@ export function rowsInStack(rows, stackIds) {
   return rows.filter(row => members.has(row.id));
 }
 
-export function renderGelLayers({ list, rows, focusedId, stacks, activeStackId, documentObject }) {
+export function renderGelLayers({ list, rows, focusedId, stacks, activeStackId, foldedIds = new Set(), documentObject }) {
   list.replaceChildren();
   const members = new Set(stacks.flatMap(stack => stack.layerIds));
   function icon(type) {
@@ -28,13 +30,13 @@ export function renderGelLayers({ list, rows, focusedId, stacks, activeStackId, 
     button.classList.toggle('is-active', row.id === focusedId);
     if (nested) button.dataset.figureStackMember = row.id;
     button.draggable = false;
-    button.title = 'Drag between stacks or outside them. Double-click to rename. Alt+Left moves outside; Alt+Right moves to the current stack.';
-    const names = documentObject.createElement('span'); names.className = 'gel-figure-layer-names folder-tree-template__label folder-tree-template__leaf-label'; names.title = row.label;
-    const name = documentObject.createElement('span'); name.textContent = row.label;
+    i18nUi.setAttribute(button, "title", i18nUi.message("Drag between stacks or outside them. Double-click to rename. Alt+Left moves outside; Alt+Right moves to the current stack."));
+    const names = documentObject.createElement('span'); names.className = 'gel-figure-layer-names folder-tree-template__label folder-tree-template__leaf-label'; i18nUi.setAttribute(names, "title", row.label);
+    const name = documentObject.createElement('span'); i18nUi.setText(name, row.label);
     names.append(name); button.append(icon('gel'), names); layer.append(button); return layer;
   }
   const root = documentObject.createElement('div'); root.className = 'gel-figure-root-layers'; root.dataset.figureDrop = 'root';
-  root.setAttribute('role', 'group'); root.setAttribute('aria-label', 'Gels outside Stack');
+  root.setAttribute('role', 'group'); i18nUi.setAttribute(root, "aria-label", i18nUi.message("Gels outside Stack"));
   const outside = rows.filter(row => !members.has(row.id));
   for (const row of outside) root.append(gelButton(row));
   list.append(root);
@@ -44,17 +46,26 @@ export function renderGelLayers({ list, rows, focusedId, stacks, activeStackId, 
     const stack = documentObject.createElement('button'); stack.type = 'button'; stack.className = 'gel-figure-stack-layer folder-tree-template__leaf-control folder-tree-template__rail-leaf';
     stack.dataset.figureStackView = entry.id; stack.setAttribute('aria-current', active ? 'page' : 'false');
     stack.classList.toggle('is-active', active);
-    stack.title = 'Double-click to rename.';
-    const name = documentObject.createElement('span'); name.className = 'gel-figure-layer-names folder-tree-template__label'; name.textContent = entry.name; name.title = entry.name;
-    stack.append(icon('stack'), name); group.append(stack);
-    const children = documentObject.createElement('div'); children.className = 'gel-figure-stack-children';
-    children.setAttribute('role', 'group'); children.setAttribute('aria-label', `${entry.name} contents`);
+    i18nUi.setAttribute(stack, "title", i18nUi.message("Double-click to rename."));
+    const name = documentObject.createElement('span'); name.className = 'gel-figure-layer-names folder-tree-template__label'; i18nUi.setText(name, entry.name); i18nUi.setAttribute(name, "title", entry.name);
+    stack.append(icon('stack'), name);
+    // The fold control sits beside the row button (buttons cannot nest), at its right end.
+    const folded = foldedIds.has(entry.id);
+    const head = documentObject.createElement('div'); head.className = 'gel-figure-stack-head';
+    const fold = documentObject.createElement('button'); fold.type = 'button'; fold.className = 'folder-tree-template__disclosure gel-figure-stack-fold';
+    fold.dataset.figureFold = entry.id; fold.setAttribute('aria-expanded', String(!folded));
+    const foldLabel = i18nUi.message(folded ? "Expand {p0}" : "Collapse {p0}", { p0: entry.name });
+    i18nUi.setAttribute(fold, "aria-label", foldLabel); i18nUi.setAttribute(fold, "title", foldLabel);
+    const chevron = documentObject.createElement('span'); chevron.className = 'folder-tree-template__chevron'; chevron.setAttribute('aria-hidden', 'true');
+    fold.append(chevron); head.append(stack, fold); group.append(head);
+    const children = documentObject.createElement('div'); children.className = 'gel-figure-stack-children'; children.hidden = folded;
+    children.setAttribute('role', 'group'); i18nUi.setAttribute(children, "aria-label", i18nUi.message("{p0} contents", { p0: entry.name }));
     for (const row of rowsInStack(rows, entry.layerIds)) {
       children.append(gelButton(row, true));
     }
     const layout = documentObject.createElement('button'); layout.type = 'button'; layout.className = 'gel-figure-layout-layer folder-tree-template__leaf-control folder-tree-template__rail-leaf';
-    layout.dataset.figureLayoutView = entry.id; layout.title = 'Double-click to rename.';
-    const layoutLabel = documentObject.createElement('span'); layoutLabel.className = 'gel-figure-layer-names folder-tree-template__label'; layoutLabel.textContent = entry.layoutName; layoutLabel.title = entry.layoutName;
+    layout.dataset.figureLayoutView = entry.id; i18nUi.setAttribute(layout, "title", i18nUi.message("Double-click to rename."));
+    const layoutLabel = documentObject.createElement('span'); layoutLabel.className = 'gel-figure-layer-names folder-tree-template__label'; i18nUi.setText(layoutLabel, entry.layoutName); i18nUi.setAttribute(layoutLabel, "title", entry.layoutName);
     layout.append(icon('layout'), layoutLabel);
     layout.setAttribute('aria-current', active ? 'page' : 'false');
     layout.classList.toggle('is-active', active);
@@ -178,7 +189,7 @@ export function bindGelLayerDrag({ navigation, isBusy, onMove }) {
       drag.active = true;
       try { navigation.setPointerCapture(event.pointerId); } catch { /* Synthetic pointers cannot be captured. */ }
       drag.button.classList.add('is-dragging-gel-row'); navigation.classList.add('is-dragging-gel');
-      ghost = documentObject.createElement('div'); ghost.className = 'gel-figure-drag-label'; ghost.textContent = drag.button.textContent;
+      ghost = documentObject.createElement('div'); ghost.className = 'gel-figure-drag-label'; i18nUi.setText(ghost, drag.button.textContent);
       ghost.setAttribute('aria-hidden', 'true'); documentObject.body.append(ghost);
     }
     event.preventDefault();

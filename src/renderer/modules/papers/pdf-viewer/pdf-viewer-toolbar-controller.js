@@ -1,5 +1,9 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("papers");
 import { releasePageRecords } from './pdf-viewer-page-records.js';
 import { DEFAULT_ZOOM } from './pdf-viewer-constants.js';
+import { bindPaperMessage, setPaperText } from '../localization.js';
 
 export const installPdfViewerToolbarController = (ctx) => {
   const { elements, state } = ctx;
@@ -41,7 +45,7 @@ export const installPdfViewerToolbarController = (ctx) => {
       pageInput.max = String(Math.max(state.pageCount, 1));
     }
     if (pageCount) {
-      pageCount.textContent = active ? `/ ${state.pageCount}` : '/ 0';
+      i18nUi.setText(pageCount, (active ? `/ ${state.pageCount}` : '/ 0'));
     }
     if (saveFormBtn) {
       saveFormBtn.hidden = !active || !state.hasFormFields;
@@ -52,9 +56,8 @@ export const installPdfViewerToolbarController = (ctx) => {
       });
     if (zoomLabel) {
       const percent = Math.round((state.fitWidth && !active ? DEFAULT_ZOOM : state.zoom) * 100);
-      zoomLabel.textContent = active
-        ? `${Math.round(state.zoom * 100)}%${state.fitWidth ? ' fit' : ''}`
-        : `${percent}%`;
+      if (active && state.fitWidth) setPaperText(zoomLabel, 'toolbar.zoomFit', { percent: Math.round(state.zoom * 100) });
+      else bindPaperMessage(zoomLabel, active ? `${Math.round(state.zoom * 100)}%` : `${percent}%`);
     }
   }
 

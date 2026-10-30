@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
 import {
   buildNotebookSampleLinkMetadata,
   formatSampleLinkValue,
@@ -63,15 +66,11 @@ export function createInlinePlaceholderController({
     const cleanValue = hiddenValue.value || '';
     const sampleLink = key ? getSampleLink(key) : null;
     const suggestion = cleanValue ? '' : (wrap.dataset.suggestedValue || '');
-    token.textContent = cleanValue || suggestion || `[${name}]`;
+    i18nUi.setText(token, (cleanValue || suggestion || `[${name}]`));
     token.classList.toggle('is-empty', !cleanValue);
     token.classList.toggle('is-suggested', Boolean(suggestion));
     token.classList.toggle('is-linked-sample', Boolean(sampleLink?.sampleId));
-    token.title = sampleLink?.sampleId
-      ? `Linked sample: ${formatSampleLinkValue(sampleLink)}. Click and type to replace.`
-      : (wrap.dataset.samplePlaceholderType
-        ? `Click and type to find a ${getSampleTypeLabel(wrap.dataset.samplePlaceholderType, typeof getSettings === 'function' ? getSettings() : {})} sample.`
-        : '');
+    i18nUi.setAttribute(token, "title", (sampleLink?.sampleId ? i18nUi.message("Linked sample: {p0}. Click and type to replace.", { p0: formatSampleLinkValue(sampleLink) }) : (wrap.dataset.samplePlaceholderType ? i18nUi.message("Click and type to find a {p0} sample.", { p0: getSampleTypeLabel(wrap.dataset.samplePlaceholderType, typeof getSettings === 'function' ? getSettings() : {}) }) : '')));
     if (sampleLink?.sampleId) {
       wrap.dataset.linkedSampleId = sampleLink.sampleId;
     } else {

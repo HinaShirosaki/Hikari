@@ -1,6 +1,7 @@
 import { DEFAULT_MAX_RECORDS } from '../constants.js';
 import { parseInputRecords } from '../parsing.js';
 import { cleanText } from '../shared.js';
+import { dnaFailure, dnaUi } from '../localization.js';
 
 // Reading library entries from storage, previewing one on hover, and opening a
 // record (or a dropped file's parse result) in the detail page.
@@ -69,7 +70,7 @@ function createLibraryOpen({
       renderPreview({ ...record, name: cleanText(response.entry.name, 200) || record.name });
     } catch (error) {
       renderPreview(null);
-      setHomeStatus(error?.message || 'Failed to load preview.', true);
+      setHomeStatus(dnaFailure(error, 'library.previewFailed'), true);
     }
   }
 
@@ -95,7 +96,7 @@ function createLibraryOpen({
 
     const bridge = getBridge();
     if (!bridge?.sequenceLibraryList) {
-      setHomeStatus('Sequence library storage API unavailable.', true);
+      setHomeStatus(dnaUi('library.storageUnavailable'), true);
       return;
     }
 
@@ -147,7 +148,7 @@ function createLibraryOpen({
       state.selectedLibraryEntryId = '';
       renderLibraryList();
       renderPreview(null);
-      setHomeStatus(error?.message || 'Failed to load sequence library.', true);
+      setHomeStatus(dnaFailure(error, 'library.loadFailed'), true);
     }
   }
 
@@ -214,13 +215,13 @@ function createLibraryOpen({
     clearLibraryPreviewTimer();
     const storagePath = getStoragePath();
     if (!storagePath) {
-      setHomeStatus('Set Storage Folder Path in Settings before opening library entries.', true);
+      setHomeStatus(dnaUi('library.needsStorage'), true);
       return;
     }
 
     const bridge = getBridge();
     if (!bridge?.sequenceLibraryGet) {
-      setHomeStatus('Sequence library storage API unavailable.', true);
+      setHomeStatus(dnaUi('library.storageUnavailable'), true);
       return;
     }
 
@@ -256,7 +257,7 @@ function createLibraryOpen({
       navigateToDetail();
       setStatus('');
     } catch (error) {
-      setHomeStatus(error?.message || 'Failed to open sequence entry.', true);
+      setHomeStatus(dnaFailure(error, 'library.openFailed'), true);
     }
   }
 

@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../lib/html.js';
 import {
   FALLBACK_CHAR_ADVANCE_PX
@@ -47,7 +50,6 @@ export function createSequenceViewerDetailController(config = {}) {
   const persistFeatureMutation = config?.persistFeatureMutation || (async () => {});
   const onRequestSave = config?.onRequestSave || (() => {});
   const onRequestAnnotate = config?.onRequestAnnotate || (() => {});
-  const onRequestRecognizeBackbone = config?.onRequestRecognizeBackbone || (() => {});
   const onRequestAlignment = config?.onRequestAlignment || (() => {});
   const onRequestCloningDesign = config?.onRequestCloningDesign || (() => {});
   const onSelectAlignmentSession = config?.onSelectAlignmentSession || (() => {});
@@ -130,7 +132,7 @@ export function createSequenceViewerDetailController(config = {}) {
 
   function buildSelectionDetailHtml(record) {
     return featureEditingController?.buildSelectionDetailHtml(record)
-      || '<p class="small-note">Select a feature in the bottom track to view details.</p>';
+      || `<p class="small-note">${i18nUi.html("Select a feature in the bottom track to view details.")}</p>`;
   }
 
   function renderFeatureContextMenu(context, event) {
@@ -208,19 +210,19 @@ export function createSequenceViewerDetailController(config = {}) {
       return;
     }
     if (!state.records.length) {
-      elements.recordSelect.innerHTML = '<option value="">No records loaded</option>';
+      i18nUi.setHtml(elements.recordSelect, `<option value="" data-i18n="dna.full.d97fcd35">${i18nUi.text("No records loaded")}</option>`);
       elements.recordSelect.disabled = true;
       return;
     }
 
     elements.recordSelect.disabled = false;
-    elements.recordSelect.innerHTML = state.records
+    i18nUi.setHtml(elements.recordSelect, state.records
       .map((record, index) => {
         const selected = index === state.selectedRecordIndex ? ' selected' : '';
         const label = `${record.name} (${record.sequence.length.toLocaleString()} bp)`;
         return `<option value="${index}"${selected}>${escapeHtml(label)}</option>`;
       })
-      .join('');
+      .join(''));
   }
 
   function renderFeatureRail(record) {
@@ -463,7 +465,6 @@ export function createSequenceViewerDetailController(config = {}) {
       hasOpenSequenceEditDialog: () => sequenceEditingController?.hasOpenSequenceEditDialog?.() || false,
       onRequestSave,
       onRequestAnnotate,
-      onRequestRecognizeBackbone,
       onRequestAlignment,
       onRequestCloningDesign,
       onSelectAlignmentSession,

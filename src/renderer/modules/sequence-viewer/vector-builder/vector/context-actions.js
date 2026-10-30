@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../../lib/i18n/presentation.js";
+import "../../localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../../../lib/html.js';
 import { cleanText } from '../../shared.js';
 
@@ -111,24 +114,24 @@ function createVectorContextActions({
     // With a span selected, an insert has two meaningful sides; at a bare caret
     // there is only the one position, so offering sides would be noise.
     const insertBaseItems = hasRange
-      ? `<button type="button" class="sequence-viewer-context-item" data-vector-action="insert-bases-five">Insert Bases Before 5'...</button>
-      <button type="button" class="sequence-viewer-context-item" data-vector-action="insert-bases-three">Insert Bases After 3'...</button>`
-      : '<button type="button" class="sequence-viewer-context-item" data-vector-action="insert-bases">Insert Bases...</button>';
+      ? `<button type="button" class="sequence-viewer-context-item" data-vector-action="insert-bases-five">${i18nUi.html("Insert Bases Before 5'...")}</button>
+      <button type="button" class="sequence-viewer-context-item" data-vector-action="insert-bases-three">${i18nUi.html("Insert Bases After 3'...")}</button>`
+      : `<button type="button" class="sequence-viewer-context-item" data-vector-action="insert-bases">${i18nUi.html("Insert Bases...")}</button>`;
     const insertProteinItems = hasRange
-      ? `<button type="button" class="sequence-viewer-context-item" data-vector-action="protein-insert-five">Insert Protein Construct Before 5'...</button>
-      <button type="button" class="sequence-viewer-context-item" data-vector-action="protein-insert-three">Insert Protein Construct After 3'...</button>`
-      : '<button type="button" class="sequence-viewer-context-item" data-vector-action="protein-insert">Insert Protein Construct...</button>';
+      ? `<button type="button" class="sequence-viewer-context-item" data-vector-action="protein-insert-five">${i18nUi.html("Insert Protein Construct Before 5'...")}</button>
+      <button type="button" class="sequence-viewer-context-item" data-vector-action="protein-insert-three">${i18nUi.html("Insert Protein Construct After 3'...")}</button>`
+      : `<button type="button" class="sequence-viewer-context-item" data-vector-action="protein-insert">${i18nUi.html("Insert Protein Construct...")}</button>`;
 
-    menu.innerHTML = `
+    i18nUi.setHtml(menu, `
       ${rangeLabel ? `<p class="small-note">${escapeHtml(rangeLabel)}</p>` : ''}
       ${insertBaseItems}
-      <button type="button" class="sequence-viewer-context-item" data-vector-action="design-primer"${disabledRange}>Design Primer</button>
-      <button type="button" class="sequence-viewer-context-item" data-vector-action="replace-feature"${disabledRange}>Replace Feature...</button>
-      <button type="button" class="sequence-viewer-context-item sequence-viewer-context-item-danger" data-vector-action="delete-bases"${disabledRange}>Delete Bases${hasRange ? ` (${(range.end - range.start).toLocaleString()} bp)` : ''}</button>
+      <button type="button" class="sequence-viewer-context-item" data-vector-action="design-primer"${disabledRange}>${i18nUi.html("Design Primer")}</button>
+      <button type="button" class="sequence-viewer-context-item" data-vector-action="replace-feature"${disabledRange}>${i18nUi.html("Replace Feature...")}</button>
+      <button type="button" class="sequence-viewer-context-item sequence-viewer-context-item-danger" data-vector-action="delete-bases"${disabledRange}>${i18nUi.html("Delete Bases")}${hasRange ? ` (${(range.end - range.start).toLocaleString()} bp)` : ''}</button>
       <hr class="sequence-viewer-context-divider" />
       ${insertProteinItems}
-      <button type="button" class="sequence-viewer-context-item" data-vector-action="protein-replace"${disabledRange}>Replace With Protein Construct...</button>
-    `;
+      <button type="button" class="sequence-viewer-context-item" data-vector-action="protein-replace"${disabledRange}>${i18nUi.html("Replace With Protein Construct...")}</button>
+    `);
     menu.hidden = false;
     menu.dataset.sequenceLength = String(sequenceLength);
     positionFloatingMenu(menu, Number(event?.clientX) + 4, Number(event?.clientY) + 4);
@@ -155,7 +158,7 @@ function createVectorContextActions({
     if (action.startsWith('protein-insert') || action === 'protein-replace') {
       const isReplace = action === 'protein-replace';
       if (isReplace && !(range && range.end > range.start)) {
-        setStatus('Select a range or feature before replacing it with a protein construct.', true);
+        setStatus(i18nUi.text("Select a range or feature before replacing it with a protein construct."), true);
         return;
       }
       const at = isReplace ? range.start : insertAt;
@@ -182,7 +185,7 @@ function createVectorContextActions({
       return;
     }
     if (!range || range.end <= range.start) {
-      setStatus('Select bases or a feature first.', true);
+      setStatus(i18nUi.text("Select bases or a feature first."), true);
       return;
     }
     if (action === 'design-primer') {

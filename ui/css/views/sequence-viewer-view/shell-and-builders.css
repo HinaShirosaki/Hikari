@@ -263,6 +263,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   color: var(--theme-text-muted);
   background: transparent;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .sequence-viewer-library-switch-btn-active {
@@ -1807,8 +1808,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   gap: var(--space-12);
 }
 
-.sequence-viewer-backbone-dialog-head h4,
-.sequence-viewer-backbone-dialog-head p {
+.sequence-viewer-backbone-dialog-head h4 {
   margin: 0;
 }
 
@@ -1925,7 +1925,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-alignment-workspace.is-file-drop-active .sequence-viewer-alignment-dialog::after {
-  content: 'Drop sequence file to align';
+  content: attr(data-caption);
   position: absolute;
   inset: 10px;
   z-index: 1;

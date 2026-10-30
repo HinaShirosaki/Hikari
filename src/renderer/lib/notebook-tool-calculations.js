@@ -1,3 +1,6 @@
+import { createPresentation } from "./i18n/presentation.js";
+import "./i18n/shell.js";
+const i18nUi = createPresentation("shell");
 import { calculateBufferRecipe } from './bench-calculations.js';
 
 function clonePlainObject(value) {
@@ -334,9 +337,9 @@ export function buildNotebookToolCalculationsHtml({
             type="button"
             class="ghost-btn biology-notebook-tool-calculation-edit"
             data-tool-calculation-edit="${escapeText(calculation.id)}"
-            aria-label="Edit ${escapeText(calculation.title)}"
+            ${i18nUi.attributeMessage("aria-label", i18nUi.message("Edit {p0}", { p0: calculation.title }))}
             title="Edit in the toolbox"
-          >
+           data-i18n-title="shell.full.678d4f94">
             <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
               <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Z"></path>
               <path d="M14.5 7.5 16.5 9.5"></path>
@@ -346,9 +349,9 @@ export function buildNotebookToolCalculationsHtml({
             type="button"
             class="ghost-btn biology-notebook-tool-calculation-remove"
             data-tool-calculation-remove="${escapeText(calculation.id)}"
-            aria-label="Remove ${escapeText(calculation.title)}"
+            ${i18nUi.attributeMessage("aria-label", i18nUi.message("Remove {p0}", { p0: calculation.title }))}
             title="Remove table"
-          >
+           data-i18n-title="shell.full.e7479839">
             <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
               <path d="M4 7h16M10 4h4M9 7v12M15 7v12M6 7l1 13h10l1-13"></path>
             </svg>

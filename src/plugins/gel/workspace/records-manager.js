@@ -1,3 +1,5 @@
+import { createPresentation } from "../i18n.mjs";
+const i18nUi = createPresentation("gel");
 import { DEFAULT_LADDER_PRESET_ID, getLadderPresetBands } from './constants.js';
 import { createBandsCsv, downloadTextFile } from './export.js';
 import { normalizeEnhancementSettings } from './analysis/image-processing.js';
@@ -138,11 +140,11 @@ export function createRecordsManager({ runtime, elements, deps }) {
   async function performSaveAnalysis() {
     ensureState();
     try { await deps.beforeSave?.(); }
-    catch (error) { deps.setStatus(`Could not finish image processing: ${error.message}`); return null; }
+    catch (error) { deps.setStatus(i18nUi.text("Could not finish image processing: {p0}", { p0: error.message })); return null; }
 
     const name = elements.gelNameInput?.value.trim() || '';
     if (!name) {
-      deps.setStatus('Gel name is required.');
+      deps.setStatus(i18nUi.text("Gel name is required."));
       return null;
     }
 
@@ -152,7 +154,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
     try {
       record = await persistRecord(record);
     } catch (error) {
-      deps.setStatus(`Could not save gel: ${error?.message || error}`);
+      deps.setStatus(i18nUi.text("Could not save gel: {p0}", { p0: error?.message || error }));
       return null;
     }
     if (elements.gelIdInput) elements.gelIdInput.value = record.id;
@@ -165,7 +167,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
   function setActionLabel(button, label) {
     if (!button) return;
     const labelNode = button.querySelector?.('[data-gel-action-label]');
-    (labelNode || button).textContent = label;
+    i18nUi.setText(labelNode || button, label);
     button.setAttribute('aria-label', label);
     button.setAttribute('title', label);
   }
@@ -243,7 +245,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
       return exportPromise;
     }
     if (!runtime.currentReport) {
-      deps.setStatus('No analysis results to export.');
+      deps.setStatus(i18nUi.text("No analysis results to export."));
       return Promise.resolve(null);
     }
 
@@ -255,10 +257,10 @@ export function createRecordsManager({ runtime, elements, deps }) {
           fileName,
           mimeType: 'text/csv;charset=utf-8;'
         });
-        deps.setStatus(result?.canceled ? '' : `Exported ${result?.fileName || fileName}.`);
+        deps.setStatus(((result?.canceled ? '' : i18nUi.text("Exported {p0}.", { p0: result?.fileName || fileName }))));
         return result;
       } catch (error) {
-        deps.setStatus(`Could not export CSV: ${error?.message || error}`);
+        deps.setStatus(i18nUi.text("Could not export CSV: {p0}", { p0: error?.message || error }));
         return null;
       }
     });
@@ -266,7 +268,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
 
   function resetForm() {
     if (savePromise) {
-      deps.setStatus('Wait for the current save to finish before clearing the form.');
+      deps.setStatus(i18nUi.text("Wait for the current save to finish before clearing the form."));
       return;
     }
     recordLoadRequest += 1;
@@ -351,7 +353,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
     deps.leaveCropMode();
     deps.renderManualProgress();
     deps.renderCanvas();
-    deps.setStatus('Loading saved gel image...');
+    deps.setStatus(i18nUi.text("Loading saved gel image..."));
 
     const restored = await restoreRecordImage(record);
     if (loadRequest !== recordLoadRequest || elements.gelIdInput.value !== record.id) {
@@ -375,14 +377,12 @@ export function createRecordsManager({ runtime, elements, deps }) {
       runtime.originalImage = deps.copyNormalizedImage(restored.image);
       deps.leaveCropMode();
       deps.renderCanvas();
-      deps.setStatus(restored.kind === 'source'
-        ? ''
-        : 'Showing the saved preview only. Upload the original image before reanalyzing.');
+      deps.setStatus(((restored.kind === 'source' ? '' : i18nUi.text("Showing the saved preview only. Upload the original image before reanalyzing."))));
     } else if (restored.hadCandidate) {
       const reason = restored.error instanceof Error ? ` ${restored.error.message}` : '';
-      deps.setStatus(`Loaded saved analysis, but its image could not be restored.${reason}`);
+      deps.setStatus(i18nUi.text("Loaded saved analysis, but its image could not be restored.{p0}", { p0: reason }));
     } else {
-      deps.setStatus('Loaded saved analysis. This older record has no stored image; upload the original to restore the viewer.');
+      deps.setStatus(i18nUi.text("Loaded saved analysis. This older record has no stored image; upload the original to restore the viewer."));
     }
     runtime.markDraftSaved?.();
   }
@@ -408,7 +408,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
     } catch (error) {
       runtime.state.gelAnalyses = previousRecords;
       syncNotebookGelLinks();
-      deps.setStatus(`Could not delete gel: ${error?.message || error}`);
+      deps.setStatus(i18nUi.text("Could not delete gel: {p0}", { p0: error?.message || error }));
       return;
     } finally {
       deleteRequests.delete(recordId);
@@ -425,7 +425,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
 
   async function onListClick(event) {
     if (savePromise) {
-      deps.setStatus('Wait for the current save to finish before opening or deleting another record.');
+      deps.setStatus(i18nUi.text("Wait for the current save to finish before opening or deleting another record."));
       return;
     }
     const target = event?.target;
@@ -472,7 +472,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
       elements.gelNameInput.focus();
       elements.gelNameInput.select?.();
     }
-    deps.setStatus(notebookEntryId ? `This gel will be linked to notebook page ${notebookEntryId}.` : '');
+    deps.setStatus(((notebookEntryId ? i18nUi.text("This gel will be linked to notebook page {p0}.", { p0: notebookEntryId }) : '')));
   }
 
   return {

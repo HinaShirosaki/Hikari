@@ -106,6 +106,7 @@ function calculateMolarityDilution({
   const formulaText = `V1 = ${target.text} x ${finalVolume.text} / ${stock.text}; diluent = ${finalVolume.text} - V1`;
   let resultText = '';
   let status = '';
+  let displayMessage = null;
   if (!missing.length) {
     const stockM = concentrationToM(stock.value, stockConcentrationUnit);
     const targetM = concentrationToM(target.value, targetConcentrationUnit);
@@ -113,10 +114,14 @@ function calculateMolarityDilution({
     if (targetM > stockM) {
       status = 'warning';
       resultText = 'Desired concentration cannot be higher than stock concentration.';
+      displayMessage = { id: 'dilution.higher', params: {} };
     } else {
       const stockL = (targetM * finalL) / stockM;
       const diluentL = finalL - stockL;
       resultText = `Use ${formatAdaptiveVolume(stockL)} stock + ${formatAdaptiveVolume(diluentL)} diluent.`;
+      displayMessage = { id: 'dilution.use', params: {
+        stock: formatAdaptiveVolume(stockL), diluent: formatAdaptiveVolume(diluentL)
+      } };
     }
   }
   return buildResult({
@@ -134,7 +139,8 @@ function calculateMolarityDilution({
     resultText,
     formulaText,
     missing,
-    status
+    status,
+    displayMessage
   });
 }
 

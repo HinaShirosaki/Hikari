@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("papers");
 import { clamp } from './pdf-viewer-anchors.js';
 import {
   normalizeHighlightBoxes,
@@ -14,6 +17,7 @@ import {
   copyPdfHighlightText,
   normalizePdfHighlightText
 } from './pdf-viewer-search.js';
+import { setPaperAttribute } from '../localization.js';
 
 export const installPdfViewerHighlightController = (ctx) => {
   const { elements, state } = ctx;
@@ -43,7 +47,7 @@ export const installPdfViewerHighlightController = (ctx) => {
     activeHighlight = null;
     if (highlightCommentPopover) {
       highlightCommentPopover.hidden = true;
-      highlightCommentPopover.innerHTML = '';
+      i18nUi.setHtml(highlightCommentPopover, '');
     }
   }
 
@@ -84,7 +88,7 @@ export const installPdfViewerHighlightController = (ctx) => {
   }
 
   function showAnnotationPopover(markup, clientX, clientY) {
-    highlightCommentPopover.innerHTML = markup;
+    i18nUi.setHtml(highlightCommentPopover, markup);
     highlightCommentPopover.hidden = false;
     const shellRect = shell.getBoundingClientRect?.();
     const rawLeft = (Number(clientX) || 0) - Number(shellRect?.left || 0) + 12;
@@ -254,7 +258,7 @@ export const installPdfViewerHighlightController = (ctx) => {
       if (didDelete !== false) {
         hideHighlightCommentPopover();
         const label = highlight.kind === 'underline' ? 'underline' : 'highlight';
-        ctx.setStatus(`Deleted ${label}${hasComment ? ' and comment' : ''}. Use Undo to restore.`);
+        ctx.setStatus(i18nUi.text("Deleted {p0}{p1}. Use Undo to restore.", { p0: label, p1: hasComment ? ' and comment' : '' }));
       }
       return;
     }
@@ -274,15 +278,15 @@ export const installPdfViewerHighlightController = (ctx) => {
       if (didOpen !== false) {
         const pageNumber = activeHighlight.pageNumber;
         hideHighlightCommentPopover();
-        ctx.setStatus(`Loaded highlighted text from page ${pageNumber} into chat context.`);
+        ctx.setStatus(i18nUi.text("Loaded highlighted text from page {p0} into chat context.", { p0: pageNumber }));
       }
       return;
     }
     const copied = await copyPdfHighlightText(activeHighlightCopyText, ctx.getWindowRef()?.navigator);
-    ctx.setStatus(copied ? 'Copied highlighted text.' : 'Unable to copy highlighted text.');
+    ctx.setStatus((((((copied ? i18nUi.text("Copied highlighted text.") : i18nUi.text("Unable to copy highlighted text.")))))));
     button.classList?.toggle?.('is-copied', copied);
-    button.setAttribute?.('aria-label', copied ? 'Highlighted text copied' : 'Copy highlighted text');
-    button.setAttribute?.('title', copied ? 'Copied' : 'Copy highlighted text');
+    setPaperAttribute(button, 'aria-label', copied ? 'highlight.copied' : 'highlight.copy');
+    setPaperAttribute(button, 'title', copied ? 'highlight.copiedTitle' : 'highlight.copy');
   }
 
   Object.assign(ctx, {

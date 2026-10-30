@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
 import { setNotebookResultTableColumnUnit } from '../../../lib/notebook-result-tables.js';
 import { notebookTableColumnLetter } from '../../../lib/notebook-table-formulas.js';
 import { columnBaseTitle, columnUnit, unitOptions } from '../../../lib/table-units.js';
@@ -15,8 +18,8 @@ function createSpreadsheetColumnDefs({
     const computed = getComputedTables()[tableIndex]?.[rowId]?.[cell?.getField?.()];
     const element = document.createElement('span');
     if (!computed?.formula) {
-      element.textContent = computed?.text ?? raw;
-      element.title = element.textContent;
+      i18nUi.setText(element, (computed?.text ?? raw));
+      i18nUi.setAttribute(element, "title", element.textContent);
       return element;
     }
     if (computed.error) {
@@ -27,11 +30,11 @@ function createSpreadsheetColumnDefs({
     } else {
       element.className = 'spreadsheet-cell spreadsheet-cell--formula';
     }
-    element.textContent = computed.text;
+    i18nUi.setText(element, computed.text);
     // A solve table's formula is set by the table, not stored in the cell, so `source`
     // is where it lives -- and the tooltip is the only place it shows.
     const source = computed.source || raw;
-    element.title = computed.error ? `${source} — ${computed.error}` : source;
+    i18nUi.setAttribute(element, "title", (computed.error ? `${source} — ${computed.error}` : source));
     return element;
   }
 
@@ -41,11 +44,11 @@ function createSpreadsheetColumnDefs({
   function buildUnitPicker(unit, columnIndex, tableIndex) {
     const select = document.createElement('select');
     select.className = 'spreadsheet-head-unit';
-    select.title = 'Unit for this column';
+    i18nUi.setAttribute(select, "title", i18nUi.message("Unit for this column"));
     unitOptions(unit.dimension).forEach((option) => {
       const item = document.createElement('option');
       item.value = option;
-      item.textContent = option;
+      i18nUi.setText(item, option);
       item.selected = option === unit.unit;
       select.appendChild(item);
     });
@@ -69,10 +72,10 @@ function createSpreadsheetColumnDefs({
     return () => {
       const head = document.createElement('span');
       head.className = 'spreadsheet-head';
-      head.title = column.title;
+      i18nUi.setAttribute(head, "title", column.title);
       const address = document.createElement('span');
       address.className = 'spreadsheet-head-address';
-      address.textContent = notebookTableColumnLetter(columnIndex);
+      i18nUi.setText(address, notebookTableColumnLetter(columnIndex));
       head.appendChild(address);
       const unit = columnUnit(column.title);
       // The picker shows the unit, so the name drops the "(mL)" it would repeat.
@@ -81,7 +84,7 @@ function createSpreadsheetColumnDefs({
       if (label && label !== `Column ${columnIndex + 1}`) {
         const name = document.createElement('span');
         name.className = 'spreadsheet-head-name';
-        name.textContent = label;
+        i18nUi.setText(name, label);
         head.appendChild(name);
       }
       if (unit) {

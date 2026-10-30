@@ -4,14 +4,16 @@ export const INSPECTION_CHECKS = ['layout', 'labels', 'artwork', 'science'];
 // Ephemeral receipts prove a preview was generated in this run, for this exact
 // revision. Reload, another run, or any saved edit requires a fresh inspection.
 export function createInspectionTracker() {
-  const runs = new Map();
+  const runs = new Map(), editedRuns = new Set();
   function current(illustrationId, revision, runId) {
     const entry = runs.get(runId);
     return entry?.illustrationId === illustrationId && entry.revision === revision ? entry : null;
   }
   function status(illustrationId, revision, runId, includeToken = false) {
     const entry = current(illustrationId, revision, runId);
-    return { required: true, complete: Boolean(entry?.review), revision,
+    // A run that never edited the canvas (an asset-only request) has nothing to review.
+    // ponytail: edit marks are in memory, so a plugin reload mid-run skips the review; persist them if that matters.
+    return { required: true, complete: Boolean(entry?.review) || !editedRuns.has(runId), revision,
       rendered_canvases: CANVASES.filter(canvas => entry?.canvases.has(canvas)),
       ...(includeToken && entry?.token ? { inspection_id: entry.token } : {}),
       ...(entry?.review ? { review: entry.review } : {}) };
@@ -36,5 +38,9 @@ export function createInspectionTracker() {
     return { ok: true, status: 'inspected', illustration_id: illustrationId, revision,
       inspection: status(illustrationId, revision, runId) };
   }
-  return { status, rendered, inspect };
+  function edited(runId) {
+    editedRuns.delete(runId); editedRuns.add(runId);
+    if (editedRuns.size > 64) editedRuns.delete(editedRuns.values().next().value);
+  }
+  return { status, rendered, inspect, edited };
 }

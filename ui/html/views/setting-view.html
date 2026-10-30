@@ -1,84 +1,84 @@
 <section id="setting-view" class="view">
   <div class="settings-layout left-rail-template">
-    <aside class="settings-nav app-left-rail left-rail-template__rail" data-sync-left-rail aria-label="Settings sections">
+    <aside class="settings-nav app-left-rail left-rail-template__rail" data-sync-left-rail aria-label="Settings sections" data-i18n-aria-label="settings.nav.label">
       <div class="left-rail-template__stack">
         <section class="left-rail-template__section settings-nav-list">
           <div class="settings-nav-group">
-            <h3 class="settings-nav-heading">
+            <h3 class="settings-nav-heading" data-i18n="settings.nav.workspace">
               Workspace
             </h3>
             <button type="button" class="settings-nav-item" data-settings-target="appearance" aria-pressed="true">
-              <span>
+              <span data-i18n="settings.nav.appearance">
                 Appearance
               </span>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="startup" aria-pressed="false">
-              <span>
+              <span data-i18n="settings.nav.startup">
                 Startup
               </span>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="storage" aria-pressed="false">
-              <span>
+              <span data-i18n="settings.nav.storage">
                 Storage &amp; data
               </span>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="updates" aria-pressed="false">
-              <span>
+              <span data-i18n="settings.nav.updates">
                 Updates
               </span>
             </button>
           </div>
           <div class="settings-nav-group">
-            <h3 class="settings-nav-heading">
+            <h3 class="settings-nav-heading" data-i18n="settings.nav.lab">
               Lab preferences
             </h3>
             <button type="button" class="settings-nav-item" data-settings-target="locations" aria-pressed="false">
-              <span>
+              <span data-i18n="settings.nav.locations">
                 Locations &amp; samples
               </span>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="preferred-journal" aria-pressed="false">
-              <span>
+              <span data-i18n="settings.nav.papers">
                 Papers
               </span>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="notebook-pdf" aria-pressed="false">
-              <span>
+              <span data-i18n="settings.nav.notebookPdf">
                 Notebook PDF
               </span>
             </button>
           </div>
           <div class="settings-nav-group">
-            <h3 class="settings-nav-heading">
+            <h3 class="settings-nav-heading" data-i18n="settings.nav.extensions">
               Agent &amp; extensions
             </h3>
             <button type="button" class="settings-nav-item" data-settings-target="llm" aria-pressed="false">
-              <span>
+              <span data-i18n="settings.nav.codex">
                 Codex
               </span>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="mcp-tools" aria-pressed="false">
-              <span>
+              <span data-i18n="settings.nav.tools">
                 Tool access
               </span>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="skills" aria-pressed="false">
-              <span>
+              <span data-i18n="settings.nav.skills">
                 External skills
               </span>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="plugins" aria-pressed="false">
-              <span>
+              <span data-i18n="settings.nav.plugins">
                 Plugins
               </span>
             </button>
           </div>
           <div class="settings-nav-group">
-            <h3 class="settings-nav-heading">
+            <h3 class="settings-nav-heading" data-i18n="settings.nav.help">
               Help
             </h3>
             <button type="button" class="settings-nav-item" data-settings-target="tutorial" aria-pressed="false">
-              <span>
+              <span data-i18n="settings.nav.tutorial">
                 Tutorial
               </span>
             </button>
@@ -89,37 +89,47 @@
     <div class="settings-detail left-rail-template__main">
       <section class="settings-section" data-settings-panel="appearance">
         <div class="settings-section-head">
-          <h3>
+          <h3 data-i18n="settings.appearance.title">
             Appearance
           </h3>
-          <p class="settings-description">
+          <p class="settings-description" data-i18n="settings.appearance.description">
             Make Hikari comfortable to work in.
           </p>
         </div>
         <form id="appearance-form" class="stack-form settings-preference-form">
           <div class="settings-row">
             <div class="settings-row-copy">
-              <label for="setting-mode">
+              <label for="setting-language" data-i18n="settings.appearance.language">Language</label>
+              <p id="setting-language-description" data-i18n="settings.appearance.languageDescription">Choose the language for menus and controls. Spanish is a preview; some text still appears in English.</p>
+            </div>
+            <select id="setting-language" aria-describedby="setting-language-description">
+              <option value="en" data-i18n="settings.appearance.languageEnglish">English</option>
+              <option value="es" data-i18n="settings.appearance.languageSpanish">Español (preview)</option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <div class="settings-row-copy">
+              <label for="setting-mode" data-i18n="settings.appearance.theme">
                 Theme
               </label>
-              <p>
+              <p data-i18n="settings.appearance.themeDescription">
                 Choose a light or dark workspace.
               </p>
             </div>
             <div>
               <select id="setting-mode" hidden>
-                <option value="day">
+                <option value="day" data-i18n="settings.appearance.day">
                   Day
                 </option>
-                <option value="night">
+                <option value="night" data-i18n="settings.appearance.night">
                   Night
                 </option>
               </select>
-              <div class="settings-theme-options" role="group" aria-label="Theme">
-                <button type="button" data-settings-mode="day" aria-pressed="true">
+              <div class="settings-theme-options" role="group" aria-label="Theme" data-i18n-aria-label="settings.appearance.theme">
+                <button type="button" data-settings-mode="day" aria-pressed="true" data-i18n="settings.appearance.day">
                   Day
                 </button>
-                <button type="button" data-settings-mode="night" aria-pressed="false">
+                <button type="button" data-settings-mode="night" aria-pressed="false" data-i18n="settings.appearance.night">
                   Night
                 </button>
               </div>
@@ -127,60 +137,60 @@
           </div>
           <div class="settings-row">
             <div class="settings-row-copy">
-              <label for="setting-font-size">
+              <label for="setting-font-size" data-i18n="settings.appearance.textSize">
                 Text size
               </label>
-              <p>
+              <p data-i18n="settings.appearance.textSizeDescription">
                 Applies throughout Hikari.
               </p>
             </div>
             <select id="setting-font-size">
-              <option value="14">
+              <option value="14" data-i18n="settings.appearance.small">
                 Small
               </option>
-              <option value="16">
+              <option value="16" data-i18n="settings.appearance.medium">
                 Medium
               </option>
-              <option value="18">
+              <option value="18" data-i18n="settings.appearance.large">
                 Large
               </option>
             </select>
           </div>
-          <div id="setting-appearance-preview" class="settings-appearance-preview" aria-label="Appearance preview">
+          <div id="setting-appearance-preview" class="settings-appearance-preview" aria-label="Appearance preview" data-i18n-aria-label="settings.appearance.previewLabel">
             <div class="settings-preview-heading">
-              <span>
+              <span data-i18n="settings.appearance.notebook">
                 Notebook
               </span>
-              <span>
+              <span data-i18n="settings.appearance.preview">
                 Preview
               </span>
             </div>
             <div class="settings-preview-page">
-              <strong>
+              <strong data-i18n="settings.appearance.exampleTitle">
                 Protein expression · Day 2
               </strong>
-              <p>
+              <p data-i18n="settings.appearance.exampleDescription">
                 Compare induction conditions for the next assay.
               </p>
               <div class="settings-preview-task">
-                <span>
+                <span data-i18n="settings.appearance.exampleTask">
                   ✓ Record culture density
                 </span>
-                <span class="settings-preview-badge">
+                <span class="settings-preview-badge" data-i18n="settings.appearance.complete">
                   Complete
                 </span>
               </div>
             </div>
           </div>
           <div class="settings-save-bar">
-            <span class="small-note" data-settings-save-status role="status">
+            <span class="small-note" data-settings-save-status role="status" data-i18n="common.status.saved">
               All changes saved
             </span>
             <div class="form-actions">
-              <button type="button" class="ghost-btn" data-settings-discard disabled>
+              <button type="button" class="ghost-btn" data-settings-discard disabled data-i18n="common.action.discard">
                 Discard
               </button>
-              <button type="submit" class="primary-btn" disabled>
+              <button type="submit" class="primary-btn" disabled data-i18n="common.action.saveChanges">
                 Save changes
               </button>
             </div>
@@ -189,36 +199,36 @@
       </section>
       <section class="settings-section" data-settings-panel="storage" hidden>
         <div class="settings-section-head">
-          <h3>
+          <h3 data-i18n="settings.nav.storage">
             Storage &amp; data
           </h3>
-          <p class="settings-description">
+          <p class="settings-description" data-i18n="settings.storage.description">
             Your workspace files, in one place.
           </p>
         </div>
         <form id="storage-form" class="stack-form">
           <label>
-            Root Folder Path
+            <span data-i18n="settings.storage.path">Root Folder Path</span>
             <input id="setting-storage-path" placeholder="/path/to/storage-root" readonly />
           </label>
           <div class="form-actions">
-            <button type="button" id="select-storage-path-btn" class="ghost-btn">
+            <button type="button" id="select-storage-path-btn" class="ghost-btn" data-i18n="settings.storage.select">
               Select Folder
             </button>
-            <button type="submit" class="primary-btn">
+            <button type="submit" class="primary-btn" data-i18n="settings.storage.save">
               Save Storage Path
             </button>
           </div>
         </form>
         <details class="settings-disclosure">
-          <summary>
+          <summary data-i18n="settings.storage.diagnostics">
             Diagnostics &amp; app information
           </summary>
           <div class="form-actions">
-            <button type="button" id="open-logs-folder-btn" class="ghost-btn">
+            <button type="button" id="open-logs-folder-btn" class="ghost-btn" data-i18n="settings.storage.logs">
               Open Logs Folder
             </button>
-            <button type="button" id="open-third-party-notices-btn" class="ghost-btn">
+            <button type="button" id="open-third-party-notices-btn" class="ghost-btn" data-i18n="settings.storage.notices">
               Third-Party Notices
             </button>
           </div>
@@ -226,101 +236,101 @@
       </section>
       <section class="settings-section" data-settings-panel="updates" hidden>
         <div class="settings-section-head">
-          <h3>
+          <h3 data-i18n="settings.nav.updates">
             Updates
           </h3>
-          <p class="settings-description">
+          <p class="settings-description" data-i18n="settings.updates.description">
             Get the newest Hikari. Installing downloads and builds it in the background, then restarts Hikari.
           </p>
         </div>
         <p id="setting-update-status" class="small-note" role="status" aria-live="polite"></p>
         <div class="form-actions">
-          <button type="button" id="check-updates-btn" class="ghost-btn">
+          <button type="button" id="check-updates-btn" class="ghost-btn" data-i18n="settings.updates.check">
             Check for Updates
           </button>
-          <button type="button" id="install-update-btn" class="primary-btn" disabled>
+          <button type="button" id="install-update-btn" class="primary-btn" disabled data-i18n="settings.updates.install">
             Install Update
           </button>
         </div>
       </section>
       <section class="settings-section" data-settings-panel="startup" hidden>
         <div class="settings-section-head">
-          <h3>
+          <h3 data-i18n="settings.startup.title">
             Startup
           </h3>
-          <p class="settings-description">
+          <p class="settings-description" data-i18n="settings.startup.description">
             Choose where your next session begins.
           </p>
         </div>
         <form id="startup-form" class="stack-form settings-preference-form">
           <div class="settings-row">
             <div class="settings-row-copy">
-              <label for="setting-startup-default-view">
+              <label for="setting-startup-default-view" data-i18n="settings.startup.defaultModule">
                 Open on launch
               </label>
-              <p>
+              <p data-i18n="settings.startup.defaultDescription">
                 Your default starting module.
               </p>
             </div>
             <select id="setting-startup-default-view">
-              <option value="home-view">
+              <option value="home-view" data-i18n="settings.module.home">
                 Home
               </option>
-              <option value="protocol-management-view">
+              <option value="protocol-management-view" data-i18n="settings.module.protocols">
                 Protocols
               </option>
-              <option value="biology-notebook-view">
+              <option value="biology-notebook-view" data-i18n="settings.module.notebook">
                 Notebook
               </option>
-              <option value="lab-common-inventory-view">
+              <option value="lab-common-inventory-view" data-i18n="settings.module.chemicals">
                 Chemicals
               </option>
-              <option value="sample-registry-view">
+              <option value="sample-registry-view" data-i18n="settings.module.samples">
                 Samples
               </option>
-              <option value="assay-view">
+              <option value="assay-view" data-i18n="settings.module.plate">
                 Plate
               </option>
-              <option value="workflow-management-view">
+              <option value="workflow-management-view" data-i18n="settings.module.workflows">
                 Workflows
               </option>
-              <option value="papers-view">
+              <option value="papers-view" data-i18n="settings.module.papers">
                 Papers
               </option>
-              <option value="agent-view" data-requires-agent>
+              <option value="agent-view" data-requires-agent data-i18n="settings.module.agent">
                 Agent
               </option>
-              <option value="sequence-viewer-view">
+              <option value="sequence-viewer-view" data-i18n="settings.module.dna">
                 DNA
               </option>
-              <option value="tool-box-view">
+              <option value="tool-box-view" data-i18n="settings.module.tools">
                 Tools
               </option>
-              <option value="setting-view">
+              <option value="setting-view" data-i18n="settings.module.settings">
                 Settings
               </option>
             </select>
           </div>
           <div class="settings-row">
             <div class="settings-row-copy">
-              <label for="setting-startup-remember-last-view">
+              <label for="setting-startup-remember-last-view" data-i18n="settings.startup.resume">
                 Resume last module
               </label>
-              <p>
+              <p data-i18n="settings.startup.resumeDescription">
                 Takes priority over your default.
               </p>
             </div>
             <input id="setting-startup-remember-last-view" type="checkbox" />
           </div>
           <div class="settings-save-bar">
-            <span class="small-note" data-settings-save-status role="status">
+            <span class="small-note" data-settings-save-status role="status" data-i18n="common.status.saved">
               All changes saved
             </span>
             <div class="form-actions">
-              <button type="button" class="ghost-btn" data-settings-discard disabled>
+              <button type="button" class="ghost-btn" data-settings-discard disabled data-i18n="common.action.discard">
                 Discard
               </button>
-              <button type="submit" class="primary-btn" disabled>
+              <button type="submit" class="primary-btn" disabled data-i18n="common.action.saveChanges">
                 Save changes
               </button>
             </div>
@@ -329,25 +339,25 @@
       </section>
       <section class="settings-section" data-settings-panel="notebook-pdf" hidden>
         <div class="settings-section-head">
-          <h3>
+          <h3 data-i18n="settings.nav.notebookPdf">
             Notebook PDF
           </h3>
-          <p class="settings-description">
+          <p class="settings-description" data-i18n="settings.pdf.description">
             Set the defaults for notebook exports.
           </p>
         </div>
         <form id="notebook-pdf-form" class="stack-form settings-preference-form">
           <div class="settings-row">
             <div class="settings-row-copy">
-              <label for="setting-notebook-pdf-page-size">
+              <label for="setting-notebook-pdf-page-size" data-i18n="settings.pdf.pageSize">
                 Page size
               </label>
-              <p>
+              <p data-i18n="settings.pdf.pageDescription">
                 Used for new notebook exports.
               </p>
             </div>
             <select id="setting-notebook-pdf-page-size">
-              <option value="letter">
+              <option value="letter" data-i18n="settings.pdf.letter">
                 US Letter
               </option>
               <option value="a4">
@@ -356,41 +366,41 @@
               <option value="a5">
                 A5
               </option>
-              <option value="legal">
+              <option value="legal" data-i18n="settings.pdf.legal">
                 US Legal
               </option>
             </select>
           </div>
           <div class="settings-row">
             <div class="settings-row-copy">
-              <label for="setting-notebook-pdf-staple-edge">
+              <label for="setting-notebook-pdf-staple-edge" data-i18n="settings.pdf.binding">
                 Binding space
               </label>
-              <p>
+              <p data-i18n="settings.pdf.bindingDescription">
                 Reserve an edge for stapling.
               </p>
             </div>
             <select id="setting-notebook-pdf-staple-edge">
-              <option value="none">
+              <option value="none" data-i18n="settings.pdf.none">
                 None
               </option>
-              <option value="left">
+              <option value="left" data-i18n="settings.pdf.left">
                 Left edge
               </option>
-              <option value="top">
+              <option value="top" data-i18n="settings.pdf.top">
                 Top edge
               </option>
             </select>
           </div>
           <div class="settings-save-bar">
-            <span class="small-note" data-settings-save-status role="status">
+            <span class="small-note" data-settings-save-status role="status" data-i18n="common.status.saved">
               All changes saved
             </span>
             <div class="form-actions">
-              <button type="button" class="ghost-btn" data-settings-discard disabled>
+              <button type="button" class="ghost-btn" data-settings-discard disabled data-i18n="common.action.discard">
                 Discard
               </button>
-              <button type="submit" class="primary-btn" disabled>
+              <button type="submit" class="primary-btn" disabled data-i18n="common.action.saveChanges">
                 Save changes
               </button>
             </div>
@@ -399,20 +409,20 @@
       </section>
       <section class="settings-section" data-settings-panel="locations" hidden>
         <div class="settings-section-head">
-          <h3>
+          <h3 data-i18n="settings.nav.locations">
             Locations &amp; samples
           </h3>
-          <p class="settings-description">
+          <p class="settings-description" data-i18n="settings.locations.description">
             Keep names consistent across your lab.
           </p>
         </div>
         <div class="stack-form">
-          <h4>
+          <h4 data-i18n="settings.locations.inventory">
             Inventory locations
           </h4>
           <div class="inline-row settings-location-entry">
-            <input id="setting-location-input" placeholder="Add approximate location" />
-            <button type="button" id="setting-location-add-btn" class="ghost-btn">
+            <input id="setting-location-input" placeholder="Add approximate location"  data-i18n-placeholder="settings.locations.approximate"/>
+            <button type="button" id="setting-location-add-btn" class="ghost-btn" data-i18n="settings.locations.add">
               Add Location
             </button>
           </div>
@@ -421,12 +431,12 @@
         </div>
         <div class="stack-form">
           <div class="settings-subsection">
-            <h4>
+            <h4 data-i18n="settings.locations.storage">
               Sample storage
             </h4>
             <div class="inline-row settings-location-entry settings-sample-inventory-add">
-              <input id="setting-sample-inventory-location-input" placeholder="Add sample storage location" />
-              <button type="button" id="setting-sample-inventory-location-add-btn" class="ghost-btn settings-inline-icon" aria-label="Add sample storage location" title="Add storage location">
+              <input id="setting-sample-inventory-location-input" placeholder="Add sample storage location"  data-i18n-placeholder="settings.locations.newStorage"/>
+              <button type="button" id="setting-sample-inventory-location-add-btn" class="ghost-btn settings-inline-icon" aria-label="Add sample storage location" title="Add storage location" data-i18n-aria-label="settings.locations.newStorage" data-i18n-title="settings.locations.addStorage">
                 <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                   <path d="M12 5v14M5 12h14"/>
                 </svg>
@@ -436,13 +446,13 @@
             </div>
           </div>
           <details class="settings-disclosure">
-            <summary>
+            <summary data-i18n="settings.locations.types">
               Sample type names
             </summary>
             <form id="sample-type-labels-form" class="stack-form settings-subsection">
               <div class="inline-row settings-sample-type-add">
-                <input id="setting-sample-type-add-input" placeholder="Add sample type" aria-label="Add sample type" />
-                <button type="button" id="setting-sample-type-add-btn" class="ghost-btn settings-inline-icon" aria-label="Add sample type" title="Add sample type">
+                <input id="setting-sample-type-add-input" placeholder="Add sample type" aria-label="Add sample type"  data-i18n-aria-label="settings.locations.addType" data-i18n-placeholder="settings.locations.addType"/>
+                <button type="button" id="setting-sample-type-add-btn" class="ghost-btn settings-inline-icon" aria-label="Add sample type" title="Add sample type" data-i18n-aria-label="settings.locations.addType" data-i18n-title="settings.locations.addType">
                   <svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                     <path d="M12 5v14M5 12h14"/>
                   </svg>
@@ -456,25 +466,25 @@
       </section>
       <section class="settings-section" data-settings-panel="preferred-journal" hidden>
         <div class="settings-section-head">
-          <h3>
+          <h3 data-i18n="settings.nav.papers">
             Papers
           </h3>
-          <p class="settings-description">
+          <p class="settings-description" data-i18n="settings.papers.description">
             Set the journals you prefer for literature searches.
           </p>
         </div>
         <form id="preferred-journal-form" class="stack-form">
           <label>
-            Journal Names or URLs
-            <input id="setting-preferred-journal" placeholder="Journal name or https://..." />
+            <span data-i18n="settings.papers.journals">Journal Names or URLs</span>
+            <input id="setting-preferred-journal" placeholder="Journal name or https://..."  data-i18n-placeholder="settings.papers.placeholder"/>
           </label>
           <div id="setting-preferred-journal-list" class="stack-form">
           </div>
           <div class="form-actions">
-            <button type="submit" class="primary-btn">
+            <button type="submit" class="primary-btn" data-i18n="settings.papers.add">
               Add Journal
             </button>
-            <button type="button" id="clear-preferred-journal-btn" class="ghost-btn">
+            <button type="button" id="clear-preferred-journal-btn" class="ghost-btn" data-i18n="settings.papers.clear">
               Clear
             </button>
           </div>
@@ -482,55 +492,55 @@
       </section>
       <section class="settings-section" data-settings-panel="llm" hidden>
         <div class="settings-section-head">
-          <h3>
+          <h3 data-i18n="settings.nav.codex">
             Codex
           </h3>
-          <p class="settings-description">
+          <p class="settings-description" data-i18n="settings.codex.description">
             Configure the AI you use inside Hikari.
           </p>
         </div>
-        <div class="settings-codex-tabs" role="tablist" aria-label="Codex setup">
-          <button type="button" id="codex-hikari-tab" role="tab" aria-selected="true" aria-controls="codex-hikari-panel">
+        <div class="settings-codex-tabs" role="tablist" aria-label="Codex setup" data-i18n-aria-label="settings.codex.setup">
+          <button type="button" id="codex-hikari-tab" role="tab" aria-selected="true" aria-controls="codex-hikari-panel" data-i18n="settings.codex.inside">
             Codex in Hikari
           </button>
-          <button type="button" id="codex-desktop-tab" role="tab" aria-selected="false" aria-controls="codex-desktop-panel" tabindex="-1">
+          <button type="button" id="codex-desktop-tab" role="tab" aria-selected="false" aria-controls="codex-desktop-panel" tabindex="-1" data-i18n="settings.codex.desktop">
             Connect Codex Desktop
           </button>
         </div>
         <div id="codex-hikari-panel" role="tabpanel" aria-labelledby="codex-hikari-tab">
-          <p class="small-note">
+          <p class="small-note" data-i18n="settings.codex.configure">
             Configure the AI used inside Hikari.
           </p>
           <div id="setting-codex-auth-controls" class="settings-codex-account stack-form">
             <div class="settings-codex-account-row">
               <p id="setting-codex-status" class="small-note" aria-live="polite">
-                OpenAI account: checking…
+                <span data-i18n="settings.full.50525c48">OpenAI account: checking…</span>
               </p>
               <div class="form-actions">
-                <button type="button" id="start-codex-login-btn" class="ghost-btn">
+                <button type="button" id="start-codex-login-btn" class="ghost-btn" data-i18n="settings.codex.signIn">
                   Sign in with OpenAI
                 </button>
                 <button type="button" id="clear-codex-login-btn" class="ghost-btn" hidden>
-                  Sign out
+                  <span data-i18n="settings.full.8b4f3c70">Sign out</span>
                 </button>
               </div>
             </div>
             <div id="setting-codex-install" class="settings-subsection" hidden>
-              <h4>
+              <h4 data-i18n="settings.codex.install">
                 Install Codex CLI
               </h4>
-              <p class="small-note">
+              <p class="small-note" data-i18n="settings.codex.cliDescription">
                 Hikari needs Codex CLI to run its AI. Copy the command below and run it in your terminal.
               </p>
-              <textarea id="setting-codex-install-command" rows="3" readonly spellcheck="false" aria-label="Codex CLI install command" aria-describedby="setting-codex-install-help">
+              <textarea id="setting-codex-install-command" rows="3" readonly spellcheck="false" aria-label="Codex CLI install command" aria-describedby="setting-codex-install-help" data-i18n-aria-label="settings.codex.installCommand">
               </textarea>
               <p id="setting-codex-install-help" class="small-note">
               </p>
               <div class="form-actions">
-                <button type="button" id="copy-codex-install-command-btn" class="primary-btn">
+                <button type="button" id="copy-codex-install-command-btn" class="primary-btn" data-i18n="settings.codex.copyCommand">
                   Copy install command
                 </button>
-                <button type="button" id="check-codex-cli-btn" class="ghost-btn">
+                <button type="button" id="check-codex-cli-btn" class="ghost-btn" data-i18n="settings.codex.check">
                   Check again
                 </button>
               </div>
@@ -538,37 +548,37 @@
           </div>
           <section id="setting-codex-usage" class="settings-codex-usage" aria-labelledby="setting-codex-usage-title" aria-busy="false">
             <div class="settings-codex-account-row">
-              <h4 id="setting-codex-usage-title">Account usage</h4>
-              <button type="button" id="refresh-codex-usage-btn" class="ghost-btn" disabled>Refresh usage</button>
+              <h4 id="setting-codex-usage-title" data-i18n="settings.codex.usage">Account usage</h4>
+              <button type="button" id="refresh-codex-usage-btn" class="ghost-btn" disabled data-i18n="settings.codex.refresh">Refresh usage</button>
             </div>
             <div class="settings-codex-usage-windows">
               <div class="settings-codex-usage-window" data-codex-usage-window="fiveHour">
                 <div class="settings-codex-account-row">
-                  <span data-codex-usage-label>5-hour usage</span>
-                  <span data-codex-usage-value>Unavailable</span>
+                  <span data-codex-usage-label><span data-i18n="settings.full.cc291c42">5-hour usage</span></span>
+                  <span data-codex-usage-value><span data-i18n="settings.full.da4baaa9">Unavailable</span></span>
                 </div>
-                <progress max="100" aria-label="5-hour usage" hidden></progress>
+                <progress max="100" aria-label="5-hour usage" hidden data-i18n-aria-label="settings.full.cc291c42"></progress>
                 <p class="small-note" data-codex-usage-reset></p>
               </div>
               <div class="settings-codex-usage-window" data-codex-usage-window="weekly">
                 <div class="settings-codex-account-row">
-                  <span data-codex-usage-label>Weekly usage</span>
-                  <span data-codex-usage-value>Unavailable</span>
+                  <span data-codex-usage-label><span data-i18n="settings.full.47bb16b5">Weekly usage</span></span>
+                  <span data-codex-usage-value><span data-i18n="settings.full.da4baaa9">Unavailable</span></span>
                 </div>
-                <progress max="100" aria-label="Weekly usage" hidden></progress>
+                <progress max="100" aria-label="Weekly usage" hidden data-i18n-aria-label="settings.full.47bb16b5"></progress>
                 <p class="small-note" data-codex-usage-reset></p>
               </div>
             </div>
-            <p id="setting-codex-usage-status" class="small-note" aria-live="polite">Sign in to view account usage.</p>
+            <p id="setting-codex-usage-status" class="small-note" aria-live="polite"><span data-i18n="settings.full.c2f04421">Sign in to view account usage.</span></p>
           </section>
           <form id="llm-form" class="stack-form settings-preference-form">
             <div class="settings-codex-model-fields">
               <div class="settings-row">
                 <div class="settings-row-copy">
-                  <label for="setting-model">
+                  <label for="setting-model" data-i18n="settings.codex.model">
                     Model
                   </label>
-                  <p>
+                  <p data-i18n="settings.codex.modelDescription">
                     Used for new agent requests.
                   </p>
                 </div>
@@ -577,10 +587,10 @@
               </div>
               <div class="settings-row">
                 <div class="settings-row-copy">
-                  <label for="setting-reasoning-effort">
+                  <label for="setting-reasoning-effort" data-i18n="settings.codex.reasoning">
                     Reasoning effort
                   </label>
-                  <p>
+                  <p data-i18n="settings.codex.reasoningDescription">
                     How much time the model spends thinking.
                   </p>
                 </div>
@@ -589,61 +599,61 @@
               </div>
             </div>
             <div class="settings-save-bar">
-              <span class="small-note" data-settings-save-status role="status">
+              <span class="small-note" data-settings-save-status role="status" data-i18n="common.status.saved">
                 All changes saved
               </span>
               <div class="form-actions">
-                <button type="button" class="ghost-btn" data-settings-discard disabled>
+                <button type="button" class="ghost-btn" data-settings-discard disabled data-i18n="common.action.discard">
                   Discard
                 </button>
-                <button type="submit" class="primary-btn" disabled>
+                <button type="submit" class="primary-btn" disabled data-i18n="common.action.saveChanges">
                   Save changes
                 </button>
               </div>
             </div>
           </form>
-          <div id="setting-agent-file-access" class="settings-skill-list" aria-label="Agent file permissions"></div>
+          <div id="setting-agent-file-access" class="settings-skill-list" aria-label="Agent file permissions" data-i18n-aria-label="settings.codex.permissions"></div>
         </div>
         <div id="codex-desktop-panel" role="tabpanel" aria-labelledby="codex-desktop-tab" hidden>
-          <p class="small-note">
+          <p class="small-note" data-i18n="settings.codex.desktopDescription">
             Let Codex Desktop work with your Hikari data and tools.
           </p>
           <ol class="settings-codex-steps">
             <li>
-              <strong>
+              <strong data-i18n="settings.codex.copySetup">
                 Copy setup instructions
               </strong>
-              <p class="small-note">
+              <p class="small-note" data-i18n="settings.codex.preserveSettings">
                 Adds Hikari’s connection while preserving your other Codex settings.
               </p>
               <div class="form-actions settings-codex-desktop-mcp-actions">
-                <button type="button" id="copy-codex-desktop-mcp-prompt-btn" class="primary-btn">
+                <button type="button" id="copy-codex-desktop-mcp-prompt-btn" class="primary-btn" data-i18n="settings.codex.copySetup">
                   Copy setup instructions
                 </button>
                 <span id="setting-codex-desktop-mcp-status" class="small-note" aria-live="polite">
                 </span>
               </div>
               <details id="setting-codex-desktop-preview">
-                <summary>
+                <summary data-i18n="settings.codex.viewSetup">
                   View setup instructions
                 </summary>
-                <textarea id="setting-codex-desktop-prompt" rows="8" readonly spellcheck="false" aria-label="Codex Desktop setup instructions" placeholder="Open to prepare the setup instructions">
+                <textarea id="setting-codex-desktop-prompt" rows="8" readonly spellcheck="false" aria-label="Codex Desktop setup instructions" placeholder="Open to prepare the setup instructions" data-i18n-placeholder="settings.codex.promptPlaceholder" data-i18n-aria-label="settings.codex.setupInstructions">
                 </textarea>
               </details>
             </li>
             <li>
-              <strong>
+              <strong data-i18n="settings.codex.paste">
                 Paste into a Codex Desktop task and send
               </strong>
-              <p class="small-note">
+              <p class="small-note" data-i18n="settings.codex.pasteDescription">
                 Codex will set up the connection. Paste into the task’s message box, not a terminal.
               </p>
             </li>
             <li>
-              <strong>
+              <strong data-i18n="settings.codex.restart">
                 Restart Codex Desktop
               </strong>
-              <p class="small-note">
+              <p class="small-note" data-i18n="settings.codex.restartDescription">
                 After setup finishes, restart Codex Desktop once. Keep Hikari open while using the connection.
               </p>
             </li>
@@ -652,34 +662,34 @@
       </section>
       <section class="settings-section" data-settings-panel="mcp-tools" hidden>
         <div class="settings-section-head">
-          <h3>
+          <h3 data-i18n="settings.nav.tools">
             Tool access
           </h3>
-          <p class="settings-description">
+          <p class="settings-description" data-i18n="settings.tools.description">
             Choose which Hikari tools agents can use.
           </p>
         </div>
-        <div id="setting-mcp-tools-list" class="settings-skill-list settings-mcp-tool-list" aria-label="Hikari MCP tool availability">
+        <div id="setting-mcp-tools-list" class="settings-skill-list settings-mcp-tool-list" aria-label="Hikari MCP tool availability" data-i18n-aria-label="settings.tools.availability">
         </div>
       </section>
       <section class="settings-section" data-settings-panel="skills" hidden>
         <div class="settings-section-head">
-          <h3>
+          <h3 data-i18n="settings.nav.skills">
             External skills
           </h3>
-          <p class="settings-description">
+          <p class="settings-description" data-i18n="settings.skills.description">
             Manage the skill folders available to the agent.
           </p>
         </div>
         <div class="stack-form">
           <label class="inline-row settings-toggle-row settings-switch-row">
             <input id="setting-agent-external-skills-enabled" type="checkbox" />
-            <span>
+            <span data-i18n="settings.skills.enabled">
               External skills enabled
             </span>
           </label>
           <div class="form-actions">
-            <button type="button" id="setting-external-skills-refresh-btn" class="ghost-btn">
+            <button type="button" id="setting-external-skills-refresh-btn" class="ghost-btn" data-i18n="settings.skills.refresh">
               Refresh Skills
             </button>
           </div>
@@ -689,31 +699,31 @@
       </section>
       <section class="settings-section" data-settings-panel="plugins" hidden>
         <div class="settings-section-head">
-          <h3>
+          <h3 data-i18n="settings.nav.plugins">
             Plugins
           </h3>
-          <p class="settings-description">
+          <p class="settings-description" data-i18n="settings.plugins.description">
             Add and manage Hikari extensions.
           </p>
         </div>
         <div class="stack-form">
           <form id="setting-plugins-github-form" class="stack-form">
             <label for="setting-plugins-github-url">
-              GitHub repository URL
+              <span data-i18n="settings.plugins.repository">GitHub repository URL</span>
               <input type="url" id="setting-plugins-github-url" placeholder="https://github.com/owner/plugin-repo" required autocomplete="off" spellcheck="false" aria-describedby="setting-plugins-github-help" />
             </label>
-            <p id="setting-plugins-github-help" class="small-note">
+            <p id="setting-plugins-github-help" class="small-note" data-i18n="settings.plugins.installDescription">
               Clone and install a ready-to-use plugin from its default branch. Requires Git and a plugin.json at the repository root.
             </p>
             <div class="form-actions">
-              <button type="submit" id="setting-plugins-github-install-btn" class="primary-btn">Install from GitHub</button>
+              <button type="submit" id="setting-plugins-github-install-btn" class="primary-btn" data-i18n="settings.plugins.install">Install from GitHub</button>
             </div>
           </form>
           <div class="form-actions">
-            <button type="button" id="setting-plugins-add-btn" class="primary-btn">
+            <button type="button" id="setting-plugins-add-btn" class="primary-btn" data-i18n="settings.plugins.folder">
               Add Plugin Folder
             </button>
-            <button type="button" id="setting-plugins-reload-btn" class="ghost-btn">
+            <button type="button" id="setting-plugins-reload-btn" class="ghost-btn" data-i18n="settings.plugins.reload">
               Reload App
             </button>
           </div>
@@ -725,15 +735,15 @@
       </section>
       <section class="settings-section" data-settings-panel="tutorial" hidden>
         <div class="settings-section-head">
-          <h3>
+          <h3 data-i18n="settings.nav.tutorial">
             Tutorial
           </h3>
-          <p class="settings-description">
+          <p class="settings-description" data-i18n="settings.tutorial.description">
             Step-by-step guides to each part of Hikari, with annotated screenshots. They open in your web browser and work offline.
           </p>
         </div>
         <div class="form-actions">
-          <button type="button" id="open-tutorial-btn" class="primary-btn">
+          <button type="button" id="open-tutorial-btn" class="primary-btn" data-i18n="settings.tutorial.open">
             Open Tutorial in Browser
           </button>
         </div>

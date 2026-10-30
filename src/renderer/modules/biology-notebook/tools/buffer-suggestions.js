@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
 import {
   bufferCandidateForm as resolveBufferCandidateForm,
   buildBufferCandidates as buildSharedBufferCandidates,
@@ -46,7 +49,7 @@ function createBufferSuggestions({
       const menu = getElement(doc, `biology-notebook-tool-buffer-suggestions-${rowIndex}`);
       if (menu) {
         menu.hidden = true;
-        menu.innerHTML = '';
+        i18nUi.setHtml(menu, '');
       }
       getElement(doc, `biology-notebook-tool-buffer-name-${rowIndex}`)?.setAttribute?.('aria-expanded', 'false');
     }
@@ -143,7 +146,7 @@ function createBufferSuggestions({
       return;
     }
     const escapeText = typeof safeText === 'function' ? safeText : (value) => String(value || '');
-    menu.innerHTML = matches.map((candidate) => {
+    i18nUi.setHtml(menu, matches.map((candidate) => {
       const meta = [
         candidate.mw ? `${candidate.mw} g/mol` : '',
         candidate.pKa ? `pKa ${candidate.pKa}` : '',
@@ -156,7 +159,7 @@ function createBufferSuggestions({
           <span>${escapeText(meta)}</span>
         </button>
       `;
-    }).join('');
+    }).join(''));
     menu.hidden = false;
     input.setAttribute?.('aria-expanded', 'true');
     positionBufferSuggestions(index);

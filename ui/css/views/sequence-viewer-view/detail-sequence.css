@@ -579,7 +579,6 @@
   left: 0;
   top: 0;
   height: 100%;
-  max-width: 100%;
   pointer-events: none;
   overflow: visible;
 }
@@ -587,6 +586,7 @@
 .sequence-viewer-restriction-annot {
   position: absolute;
   top: 0;
+  z-index: var(--sequence-viewer-restriction-lane-order, 1);
   --sequence-viewer-restriction-stroke-width: 1px;
   border: 0;
   background: transparent;
@@ -602,14 +602,40 @@
   position: absolute;
   top: auto;
   bottom: calc(100% + 3px + var(--sequence-viewer-restriction-label-stack-offset, 0px));
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  height: 14px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  border-radius: 2px;
+  background: var(--theme-surface);
   font-size: var(--text-2xs);
   font-weight: 650;
-  line-height: 1;
+  line-height: 14px;
   color: var(--sequence-viewer-aa-ink);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  pointer-events: auto;
+}
+
+/* Guides live behind all labels so a dense stack stays readable. */
+.sequence-viewer-restriction-guides {
+  position: absolute;
+  left: 0;
+  overflow: visible;
   pointer-events: none;
+}
+
+.sequence-viewer-restriction-guide {
+  stroke: var(--theme-accent);
+  stroke-width: 1px;
+  opacity: 0.4;
+}
+
+.sequence-viewer-restriction-guide-active {
+  stroke: var(--theme-focus);
+  opacity: 1;
 }
 
 .sequence-viewer-restriction-box {
@@ -620,7 +646,7 @@
   bottom: 0;
   border: var(--sequence-viewer-restriction-stroke-width, 1px) solid var(--theme-accent);
   border-radius: 0;
-  background: var(--theme-accent-wash);
+  background: transparent;
   pointer-events: none;
 }
 
@@ -642,11 +668,24 @@
   stroke-linecap: round;
 }
 
+.sequence-viewer-restriction-annot-active {
+  z-index: 1000;
+}
+
+.sequence-viewer-restriction-annot:hover,
+.sequence-viewer-restriction-annot:focus-visible {
+  z-index: 1001;
+}
+
+.sequence-viewer-restriction-annot:hover .sequence-viewer-restriction-box,
+.sequence-viewer-restriction-annot:focus-visible .sequence-viewer-restriction-box,
 .sequence-viewer-restriction-annot-active .sequence-viewer-restriction-box {
   border-color: var(--theme-focus);
   background: var(--theme-accent-soft);
 }
 
+.sequence-viewer-restriction-annot:hover .sequence-viewer-restriction-label,
+.sequence-viewer-restriction-annot:focus-visible .sequence-viewer-restriction-label,
 .sequence-viewer-restriction-annot-active .sequence-viewer-restriction-label {
   color: var(--theme-text-strong);
 }
@@ -819,16 +858,18 @@
   background: transparent;
 }
 
-.sequence-viewer-line-feature-active {
-  border-color: var(--theme-focus);
-  box-shadow: 0 0 0 1px var(--theme-focus);
-  color: inherit;
-  opacity: 1;
-}
-
 .sequence-viewer-line-feature-bar:hover,
 .sequence-viewer-line-feature-bar:focus-visible {
   background: color-mix(in srgb, var(--sequence-viewer-feature-color) 22%, var(--theme-surface-elevated));
+}
+
+/* A selected feature deepens its own hue. The blue belongs to the sequence
+   highlight above it, and an outer focus ring would overhang that highlight.
+   Declared after :hover so hovering the selected bar keeps it selected. */
+.sequence-viewer-line-feature-bar.sequence-viewer-line-feature-active {
+  border-color: var(--sequence-viewer-feature-color);
+  background: color-mix(in srgb, var(--sequence-viewer-feature-color) 32%, var(--theme-surface-elevated));
+  color: color-mix(in srgb, var(--sequence-viewer-feature-color) 45%, var(--theme-text-strong));
 }
 
 .sequence-viewer-line-feature:hover,

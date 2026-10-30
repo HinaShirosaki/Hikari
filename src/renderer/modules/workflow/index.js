@@ -11,6 +11,8 @@ import { createWorkflowRenderer } from './renderer.js';
 import { createWorkflowGraphController } from './graph-controller.js';
 import { createWorkflowActions } from './actions.js';
 import { createWorkflowRuntime, resolveDefaultAssigneeId } from './state.js';
+import { translateTree } from '../../lib/i18n/dom.js';
+import './localization.js';
 
 // Workflow view: template graph editor (graph-controller), workflow list, and
 // the execution board where each entry (run) records step results. Without
@@ -78,7 +80,7 @@ export function initWorkflowManagement({
     createId,
     normalizeBlocks,
     normalizeLinks,
-    titleForBlock: renderer.titleForBlock,
+    titleForBlock: renderer.displayTitleForBlock,
     labelForBlockType: renderer.labelForBlockType,
     labelForAssignee: renderer.labelForAssignee,
     getBlockType,
@@ -107,6 +109,7 @@ export function initWorkflowManagement({
   });
 
   function render() {
+    translateTree(document.getElementById('workflow-management-view'));
     actions.ensureStateShape();
     actions.normalizeDraft();
     graphController.pruneSelectedBlockIds();

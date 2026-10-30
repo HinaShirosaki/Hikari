@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "../../lib/i18n/shell.js";
+const i18nUi = createPresentation("shell");
 import { resolveNotebookResultTablesValues } from '../../lib/notebook-table-formulas.js';
 import { normalizeNotebookToolCalculations } from '../../lib/notebook-tool-calculations.js';
 import {
@@ -343,7 +346,7 @@ export const exportProjectNotebookEntriesPdf = async ({
     }
     const pages = Array.isArray(entries) ? entries.filter(Boolean) : [];
     if (!pages.length) {
-      showTransientNotice('No notebook pages to export for this project.', { type: 'error' });
+      showTransientNotice(i18nUi.message("No notebook pages to export for this project."), { type: 'error' });
       return false;
     }
 

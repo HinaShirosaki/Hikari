@@ -1,4 +1,9 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("tools");
 import { calculateFixedReaction } from '../../lib/bench-calculations.js';
+import { setToolAttribute, setToolPlaceholder } from './localization.js';
+import { translateTree } from '../../lib/i18n/dom.js';
 
 const STATIC_ROW_COUNT = 6;
 
@@ -14,13 +19,19 @@ function addListener(element, eventName, handler) {
 
 function setText(element, value) {
   if (element) {
-    element.textContent = String(value || '');
+    i18nUi.setText(element, String(value || ''));
   }
 }
 
 function setPlaceholder(element, value) {
   if (element) {
-    element.placeholder = String(value || '');
+    if (value === 'auto') {
+      element.setAttribute?.('data-i18n-placeholder', 'tools.hint.auto');
+      setToolAttribute(element, 'placeholder', 'hint.auto');
+    } else {
+      element.removeAttribute?.('data-i18n-placeholder');
+      i18nUi.setAttribute(element, "placeholder", String(value || ''));
+    }
   }
 }
 
@@ -97,13 +108,17 @@ export function initFixedReactionTool(options = {}) {
     row.querySelectorAll('[id]').forEach((element) => {
       element.id = `${element.id.replace(/-\d+$/, '')}-${index}`;
       element.value = '';
-      element.textContent = '';
+      i18nUi.setText(element, '');
       const label = element.getAttribute?.('aria-label');
       if (label) {
         element.setAttribute('aria-label', label.replace(/\d+/, String(index)));
       }
+      if (element.hasAttribute?.('data-i18n-params')) {
+        element.setAttribute('data-i18n-params', JSON.stringify({ index }));
+      }
     });
     insertReactionRowBeforeSolvent(row);
+    translateTree(row);
     rowTotal = index;
     bindRowInputs(index);
   }
@@ -170,7 +185,8 @@ export function initFixedReactionTool(options = {}) {
         return;
       }
       const rowDetail = Array.isArray(detail.details) ? detail.details[0] : null;
-      setPlaceholder(volume, rowDetail?.quantityText || resultTextAfterName(detail.resultText));
+      if (detail.displayMessage) setToolPlaceholder(volume, detail.displayMessage);
+      else setPlaceholder(volume, rowDetail?.quantityText || resultTextAfterName(detail.resultText));
     });
     setText(getElement(rootDocument, 'fixed-reaction-solvent-output'), result?.fill?.text || resultTextAfterName(result?.fill?.resultText || ''));
   }

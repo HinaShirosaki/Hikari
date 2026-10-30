@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../../lib/i18n/presentation.js";
+import "../../localization.js";
+const i18nUi = createPresentation("dna");
 import { computeSequenceLayoutMetrics } from '../../detail-layout.js';
 import {
   normalizeHighlightSegments,
@@ -34,16 +37,16 @@ function createVectorMapRendering({
       return;
     }
     if (!record?.sequence?.length) {
-      host.innerHTML = '<p class="small-note">Open a sequence record to build a vector.</p>';
+      i18nUi.setHtml(host, `<p class="small-note">${i18nUi.html("Open a sequence record to build a vector.")}</p>`);
       return;
     }
     const selection = getSelectionRange(record);
     const cursor = Number(vb().cursorBase);
-    host.innerHTML = buildSequenceMapSvg(record, {
+    i18nUi.setHtml(host, buildSequenceMapSvg(record, {
       features: getVisibleFeatures(record),
       selectedFeatureIndex: vb().selectedFeatureIndex,
       selection: selection || (Number.isFinite(cursor) ? { start: cursor, end: cursor } : null)
-    });
+    }));
     mapZoom.apply();
   }
 
@@ -70,7 +73,7 @@ function createVectorMapRendering({
       return;
     }
     if (!record?.sequence?.length) {
-      host.innerHTML = '<p class="small-note">No sequence loaded.</p>';
+      i18nUi.setHtml(host, `<p class="small-note">${i18nUi.html("No sequence loaded.")}</p>`);
       return;
     }
 
@@ -86,7 +89,7 @@ function createVectorMapRendering({
       ? [selection]
       : normalizeHighlightSegments(selectedFeature?.segments || [], record.sequence.length);
 
-    host.innerHTML = renderDualStrandSequenceLinesHtml(record.sequence, highlights, {
+    i18nUi.setHtml(host, renderDualStrandSequenceLinesHtml(record.sequence, highlights, {
       lineLength: layout.lineLength,
       charAdvancePx: layout.charAdvancePx,
       sequenceLineHeightPx: layout.lineHeightPx,
@@ -94,16 +97,14 @@ function createVectorMapRendering({
       features,
       selectedFeatureIndex: selectedIndex,
       cursorBaseIndex: vb().cursorBase
-    });
+    }));
     host.scrollTop = previousScrollTop;
   }
 
   function syncControls(record) {
     const hasRecord = Boolean(record?.sequence?.length);
     if (elements.vectorBuilderTitle) {
-      elements.vectorBuilderTitle.textContent = hasRecord
-        ? String(record.name || 'Vector')
-        : 'No sequence open';
+      i18nUi.setText(elements.vectorBuilderTitle, (hasRecord ? String(record.name || 'Vector') : i18nUi.message("No sequence open")));
     }
     if (elements.vectorBuilderCuttersToggle) {
       elements.vectorBuilderCuttersToggle.checked = Boolean(vb().showCutters);
@@ -143,7 +144,7 @@ function createVectorMapRendering({
   function open() {
     const record = getSelectedRecord();
     if (!record?.sequence?.length) {
-      setStatus('Open a sequence record before using Vector Builder.', true);
+      setStatus(i18nUi.text("Open a sequence record before using Vector Builder."), true);
       return false;
     }
     hideOverlays();

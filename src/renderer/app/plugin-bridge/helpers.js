@@ -1,3 +1,4 @@
+import { i18n } from '../../lib/i18n/index.js';
 import { getPluginLeftRailLayout } from '../plugin-left-rail.js';
 import { asArray } from '../../lib/normalize.js';
 import { isAgentAvailable } from '../../lib/agent-availability.js';
@@ -84,6 +85,7 @@ function buildPluginAppContext(state, changed = '', windowObject = globalThis.wi
   const requestedMode = text(appearance.mode, 20).toLowerCase();
   const mode = requestedMode === 'night' ? 'night' : 'day';
   const context = {
+    locale: i18n.getLocale(),
     appearance: {
       mode,
       fontSize: Math.max(10, Math.min(32, Number(appearance.fontSize) || 16))

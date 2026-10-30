@@ -6,6 +6,7 @@ import { installPersonalInventoryRendering } from './rendering.js';
 import { installSectionNavigation } from './section-navigation.js';
 import { installStructureActions } from './structure-actions.js';
 import { installStructureState } from './structure-state.js';
+import './localization.js';
 
 // Sample storage (freezers, boxes, plates). Data model:
 //   state.inventory[location]        -> containers { id, type, folderId, wells }

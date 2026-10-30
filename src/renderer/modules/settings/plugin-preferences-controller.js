@@ -1,3 +1,4 @@
+import { settingsMessage, settingsAttributes, setSettingsText } from './localization.js';
 import { getPluginSettingsSchema } from '../../../shared/plugin-settings.mjs';
 import { PLUGIN_SETTINGS_CHANGED, readPluginSettings, writePluginSettings } from '../../lib/plugin-settings.js';
 
@@ -26,7 +27,7 @@ export function createPluginPreferencesController({ state, persist, windowObject
     if (!form?.isConnected) return;
     form.querySelector('[type="submit"]').disabled = !dirty(entry);
     form.querySelector('[data-plugin-settings-discard]').disabled = !dirty(entry);
-    form.querySelector('[data-plugin-settings-status]').textContent = message || (dirty(entry) ? 'Unsaved changes' : 'All changes saved');
+    setSettingsText(form.querySelector('[data-plugin-settings-status]'), message?.key || (dirty(entry) ? 'plugins.unsaved' : 'plugins.saved'), message?.params);
   }
 
   function fill(entry) {
@@ -69,11 +70,11 @@ export function createPluginPreferencesController({ state, persist, windowObject
       return `<div class="settings-row"><div class="settings-row-copy"><label for="${escapeHtml(id)}">${escapeHtml(field.label)}</label>${field.description ? `<p id="${escapeHtml(descriptionId)}">${escapeHtml(field.description)}</p>` : ''}</div>${control}</div>`;
     }).join('');
     return `<details class="settings-disclosure plugin-preferences"${entry.open ? ' open' : ''}>
-      <summary>Preferences</summary>
-      <form class="settings-preference-form" data-plugin-settings="${escapeHtml(plugin.id)}" aria-label="${escapeHtml(plugin.name)} preferences">
+      <summary>${settingsMessage('plugins.preferences')}</summary>
+      <form class="settings-preference-form" data-plugin-settings="${escapeHtml(plugin.id)}" ${settingsAttributes({ 'aria-label': 'plugins.preferencesLabel' }, { name: plugin.name })}>
         ${fields}<div class="settings-save-bar"><span class="small-note" data-plugin-settings-status role="status"></span>
-          <div class="form-actions"><button type="button" class="ghost-btn" data-plugin-settings-reset>Reset defaults</button>
-            <button type="button" class="ghost-btn" data-plugin-settings-discard>Discard</button><button type="submit">Save</button></div>
+          <div class="form-actions"><button type="button" class="ghost-btn" data-plugin-settings-reset>${settingsMessage('plugins.reset')}</button>
+            <button type="button" class="ghost-btn" data-plugin-settings-discard>${settingsMessage('plugins.discard')}</button><button type="submit">${settingsMessage('plugins.save')}</button></div>
         </div>
       </form></details>`;
   }
@@ -114,9 +115,9 @@ export function createPluginPreferencesController({ state, persist, windowObject
           entry.baseline = rawValues(entry.schema, readPluginSettings(state, entry.plugin));
           entry.draft = { ...entry.baseline };
           fill(entry);
-          update(entry, 'Changes saved');
+          update(entry, { key: 'plugins.saveSuccess' });
         } catch (error) {
-          update(entry, `Could not save: ${error.message}`);
+          update(entry, { key: 'plugins.saveError', params: { error: error.message } });
         }
       });
       update(entry);

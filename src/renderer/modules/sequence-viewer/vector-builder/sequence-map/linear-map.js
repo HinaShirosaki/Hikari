@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../../lib/i18n/presentation.js";
+import "../../localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../../../lib/html.js';
 import { getContrastTextColor } from '../../feature-model.js';
 import { fixed, partitionFeatures, primerAnchors } from './geometry.js';
@@ -225,7 +228,7 @@ function buildLinearMapSvg(record, options = {}) {
       viewBox="0 0 ${LINEAR_VIEWBOX_WIDTH} ${LINEAR_VIEWBOX_HEIGHT}"
       preserveAspectRatio="xMidYMid meet"
       role="img"
-      aria-label="${escapeHtml(`${name} linear sequence map`)}"
+      ${i18nUi.attributeMessage("aria-label", i18nUi.message("{p0} linear sequence map", { p0: name }))}
     >
       <text class="vector-map__title" x="${LINEAR_VIEWBOX_WIDTH / 2}" y="20" text-anchor="middle">${escapeHtml(name)}</text>
       <text class="vector-map__subtitle" x="${LINEAR_VIEWBOX_WIDTH / 2}" y="${LINEAR_AXIS_Y + 46}" text-anchor="middle">${sequenceLength.toLocaleString()} bp linear</text>

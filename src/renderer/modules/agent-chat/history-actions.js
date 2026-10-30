@@ -2,6 +2,7 @@ import { createNotebookHistoryActions } from './history-notebook-actions.js';
 import { setNotebookAppendInFlight } from './review-overlay/review-status.js';
 import { trimText } from './shared.js';
 import { allowChatImage } from './markdown.js';
+import { agentUi, setAgentAttribute } from './localization.js';
 
 function getNotebookAppendFromMessage(message) {
   const meta = message?.meta && typeof message.meta === 'object' ? message.meta : {};
@@ -67,7 +68,7 @@ export function createHistoryActionController({
     const message = findMessage(messageId);
     const append = getNotebookAppendFromMessage(message);
     if (!append || append.save?.mode !== 'confirm_before_append') {
-      setStatus('Notebook append proposal is unavailable.');
+      setStatus(agentUi('status.appendUnavailable'));
       return { ok: false, error: 'Notebook append proposal is unavailable.' };
     }
     // Hides both the Append and Reject buttons while the save runs, so the flag
@@ -83,7 +84,7 @@ export function createHistoryActionController({
       setNotebookAppendInFlight(append, false);
     }
     if (result?.ok !== true) {
-      const error = trimText(result?.error, 500) || 'The notebook append could not be applied.';
+      const error = trimText(result?.error, 500) || agentUi('status.appendFailed');
       renderHistoryView({ forceScroll: true });
       setStatus(error);
       return result || { ok: false, error: 'The notebook append could not be applied.' };
@@ -99,7 +100,7 @@ export function createHistoryActionController({
     persist();
     renderContextSummary();
     renderHistoryView({ forceScroll: true });
-    setStatus(trimText(result?.summary, 320) || 'Content appended to notebook page.');
+    setStatus(trimText(result?.summary, 320) || agentUi('status.appended'));
     return result;
   }
 
@@ -107,13 +108,13 @@ export function createHistoryActionController({
     const message = findMessage(messageId);
     const append = getNotebookAppendFromMessage(message);
     if (!append || append.save?.mode !== 'confirm_before_append') {
-      setStatus('Notebook append proposal is unavailable.');
+      setStatus(agentUi('status.appendUnavailable'));
       return false;
     }
     markNotebookAppendMessage(message, 'rejected', 'Notebook append rejected by user.');
     persist();
     renderHistoryView({ forceScroll: true });
-    setStatus('Notebook append rejected.');
+    setStatus(agentUi('status.appendRejected'));
     return true;
   }
 
@@ -140,10 +141,10 @@ export function createHistoryActionController({
       try {
         const result = await api?.writeTextToClipboard?.(text);
         if (result?.ok !== true) throw new Error(result?.error || 'Text clipboard is unavailable.');
-        copyButton.setAttribute('aria-label', 'Response copied');
-        copyButton.setAttribute('title', 'Response copied');
+        setAgentAttribute(copyButton, 'aria-label', 'message.copied');
+        setAgentAttribute(copyButton, 'title', 'message.copied');
       } catch (error) {
-        setStatus(trimText(error?.message, 320) || 'Could not copy response.');
+        setStatus(trimText(error?.message, 320) || agentUi('status.copyFailed'));
       }
       return;
     }
@@ -213,11 +214,11 @@ export function createHistoryActionController({
         return;
       }
       if (!api?.openExternalUrl) {
-        setStatus('External link opening is unavailable in this build.');
+        setStatus(agentUi('status.externalUnavailable'));
         return;
       }
       const result = await api.openExternalUrl(url);
-      setStatus(result?.ok === true ? 'Opened product page.' : (trimText(result?.error, 320) || 'Failed to open product page.'));
+      setStatus(result?.ok === true ? agentUi('status.productOpened') : (trimText(result?.error, 320) || agentUi('status.productFailed')));
       return;
     }
 

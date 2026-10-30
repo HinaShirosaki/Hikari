@@ -1,3 +1,4 @@
+import { notebookText, notebookNotice } from '../localization.js';
 import {
   buildClarifiedNotebookNote,
   clarifyNotebookNote
@@ -114,7 +115,7 @@ function createNotebookSaveEntry({
         storeImportedFile: window.hikariApi?.storeImportedFile?.bind(window.hikariApi)
       });
     } catch (error) {
-      showTransientNotice(String(error?.message || error || 'Failed to store notebook files.'), { type: 'error' });
+      showTransientNotice(String(error?.message || error || notebookText('notice.storeError')), { type: 'error' });
       return null;
     }
 
@@ -192,7 +193,7 @@ function createNotebookSaveEntry({
   async function clarifyAndSaveEntry() {
     const source = String(notebookResult.value || '').trim();
     if (!source) {
-      showTransientNotice('Add notebook notes before clarifying them.', { type: 'error' });
+      notebookNotice('notice.notesRequired', {}, { type: 'error' });
       return;
     }
     setNotebookSaveBusy(true, { clarify: true });
@@ -207,12 +208,14 @@ function createNotebookSaveEntry({
         resultText: combinedNote
       });
       if (!savedEntry) {
-        throw new Error('Unable to save the clarified notebook entry.');
+        const error = new Error(notebookText('notice.unableSave'));
+        error.i18nKey = 'notebook.notice.unableSave';
+        throw error;
       }
-      showTransientNotice('Clarified note saved.');
+      notebookNotice('notice.clarified');
     } catch (error) {
-      showTransientNotice(String(error?.message || error || 'Failed to clarify the notebook entry.'), {
-        type: 'error'
+      showTransientNotice(String(error?.message || error || notebookText('notice.clarifyError')), {
+        type: 'error', ...(error?.i18nKey ? { i18nKey: error.i18nKey } : !error ? { i18nKey: 'notebook.notice.clarifyError' } : {})
       });
     } finally {
       setNotebookSaveBusy(false);

@@ -1,4 +1,6 @@
-import { getContainerLayout, getContainerTypeLabel } from './constants.js';
+import "./localization.js";
+import { getContainerLayout } from './constants.js';
+import { sampleAttributes, sampleContainerTypeMessage, sampleMessage } from './localization.js';
 
 export function createContainerDetailRenderer({
   safeText,
@@ -20,10 +22,10 @@ export function createContainerDetailRenderer({
     const linkedSamples = getLinkedSamples(section, container.id, null);
     const primarySample = linkedSamples.find((item) => item.id === uiState.editingSampleId) || linkedSamples[0] || null;
     const fillColor = primarySample ? getSampleTypeColor(primarySample.type) : '';
-    const fillLabel = primarySample ? `${getSampleTypeLabel(primarySample.type)} sample fill` : 'Empty tube';
+    const fillKey = primarySample ? 'container.sampleFill' : 'container.emptyTube';
     return `
       <div class="falcon-preview-shell">
-        <div class="falcon-preview" role="img" aria-label="${safeText(fillLabel)}">
+        <div class="falcon-preview" role="img" ${sampleAttributes({ 'aria-label': fillKey }, primarySample ? { type: getSampleTypeLabel(primarySample.type) } : {})}>
           <div class="falcon-cap" aria-hidden="true">
             <span class="falcon-cap-ridges"></span>
           </div>
@@ -54,7 +56,7 @@ export function createContainerDetailRenderer({
           <div class="container-detail-sticky">
             <div class="container-detail-header">
               <div class="container-detail-title">
-                <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container)})</h4>
+                <h4>${safeText(section)} / ${safeText(container.name)} (${sampleContainerTypeMessage(container)})</h4>
               </div>
             </div>
           </div>
@@ -70,7 +72,6 @@ export function createContainerDetailRenderer({
     }
 
     const layout = getContainerLayout(container);
-    const helperText = String(layout.helperText || '').trim();
     const wells = Array.isArray(container.wells) ? container.wells : [];
     const rowLabels = layout.className === 'plate96'
       ? Array.from({ length: layout.rows }, (_item, index) => String.fromCharCode(65 + index))
@@ -82,10 +83,14 @@ export function createContainerDetailRenderer({
       const well = getWellDataForType(container, rawWell, index);
       const linkedSamples = getLinkedSamples(section, container.id, index);
       const linkedTypeLabels = Array.from(new Set(linkedSamples.map((item) => getSampleTypeLabel(item.type))));
-      const linkedText = linkedSamples.length
-        ? ` | Samples: ${linkedSamples.map((item) => item.code || item.name || item.id).join(', ')}${linkedTypeLabels.length ? ` | Types: ${linkedTypeLabels.join(', ')}` : ''}`
-        : '';
-      const title = well.content ? `${well.name}: ${well.content}${linkedText}` : `${well.name}${linkedText}`;
+      const wellTitle = well.content ? `${well.name}: ${well.content}` : well.name;
+      const titleAttribute = linkedSamples.length
+        ? sampleAttributes({ title: linkedTypeLabels.length ? 'well.samplesAndTypes' : 'well.samples' }, {
+          well: wellTitle,
+          samples: linkedSamples.map((item) => item.code || item.name || item.id).join(', '),
+          ...(linkedTypeLabels.length ? { types: linkedTypeLabels.join(', ') } : {})
+        })
+        : `title="${safeText(wellTitle)}"`;
       const sampleDotFill = buildSampleDotFill(linkedSamples.map((item) => item.type));
       const hasSamples = linkedSamples.length > 0;
       const sampleCount = linkedSamples.length;
@@ -93,7 +98,7 @@ export function createContainerDetailRenderer({
         ? `${(index + 1) % layout.cols === 0 ? ' well-last-column' : ''}${index >= (layout.rows - 1) * layout.cols ? ' well-last-row' : ''}`
         : '';
       return `
-        <button type="button" class="well well-${safeText(layout.className)}${gridEdgeClasses}${uiState.editingWellIndex === index ? ' well-selected' : ''}${uiState.cloningSampleId ? ' well-clone-target' : ''}" data-well-index="${index}" data-section="${safeText(section)}" data-container-id="${safeText(container.id)}" title="${safeText(title)}">
+        <button type="button" class="well well-${safeText(layout.className)}${gridEdgeClasses}${uiState.editingWellIndex === index ? ' well-selected' : ''}${uiState.cloningSampleId ? ' well-clone-target' : ''}" data-well-index="${index}" data-section="${safeText(section)}" data-container-id="${safeText(container.id)}" ${titleAttribute}>
           <span class="well-number">${safeText(well.name)}</span>
           <span class="well-sample-dot${hasSamples ? ' has-sample' : ''}"${sampleDotFill ? ` style="--well-sample-fill:${sampleDotFill};"` : ''}></span>
           ${sampleCount > 1 ? `<span class="well-sample-count">${safeText(String(sampleCount))}</span>` : ''}
@@ -106,22 +111,20 @@ export function createContainerDetailRenderer({
       : [];
     const activeSample = activeWellSamples.find((item) => item.id === uiState.editingSampleId) || activeWellSamples[0] || null;
     const isFillingWells = activeSample && uiState.cloningSampleId === activeSample.id;
-    const fillWellsTitle = isFillingWells
-      ? 'Click to stop filling wells with this sample.'
-      : 'Fill more wells with the selected sample.';
+    const fillWellsKey = isFillingWells ? 'container.stopFilling' : 'container.startFilling';
 
     return `
       <div class="container-inline-detail">
         <div class="container-detail-sticky">
           <div class="container-detail-header">
             <div class="container-detail-title">
-              <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container)})</h4>
-              ${helperText ? `<p class="small-note">${safeText(helperText)}</p>` : ''}
+              <h4>${safeText(section)} / ${safeText(container.name)} (${sampleContainerTypeMessage(container)})</h4>
+              ${layout.className === 'plate96' ? `<p class="small-note">${sampleMessage('container.plateHint')}</p>` : ''}
             </div>
             <div class="container-detail-toolbar">
               ${activeSample
                 ? `
-                  <button type="button" class="ghost-btn inventory-fill-wells-btn${isFillingWells ? ' is-active' : ''}" data-well-sample-clone="${safeText(activeSample.id)}" aria-label="${safeText(fillWellsTitle)}" aria-pressed="${isFillingWells ? 'true' : 'false'}" data-hover-caption="${safeText(fillWellsTitle)}">
+                  <button type="button" class="ghost-btn inventory-fill-wells-btn${isFillingWells ? ' is-active' : ''}" data-well-sample-clone="${safeText(activeSample.id)}" ${sampleAttributes({ 'aria-label': fillWellsKey, 'data-hover-caption': fillWellsKey })} aria-pressed="${isFillingWells ? 'true' : 'false'}">
                     <svg class="inventory-fill-wells-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                       <rect x="8" y="8" width="11" height="11" rx="2"></rect>
                       <path d="M5 16V7a2 2 0 0 1 2-2h9"></path>
@@ -129,14 +132,14 @@ export function createContainerDetailRenderer({
                   </button>
                 `
                 : ''}
-              <button type="button" class="ghost-btn container-csv-icon-btn" data-container-import-csv="${safeText(container.id)}" data-section="${safeText(section)}" aria-label="Import CSV" data-hover-caption="Import CSV">
+              <button type="button" class="ghost-btn container-csv-icon-btn" data-container-import-csv="${safeText(container.id)}" data-section="${safeText(section)}" ${sampleAttributes({ 'aria-label': 'container.importCsv', 'data-hover-caption': 'container.importCsv' })}>
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                   <path d="M12 15V3"></path>
                   <path d="m7 8 5-5 5 5"></path>
                   <path d="M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"></path>
                 </svg>
               </button>
-              <button type="button" class="ghost-btn container-csv-icon-btn" data-container-export-csv="${safeText(container.id)}" data-section="${safeText(section)}" aria-label="Export CSV" data-hover-caption="Export CSV">
+              <button type="button" class="ghost-btn container-csv-icon-btn" data-container-export-csv="${safeText(container.id)}" data-section="${safeText(section)}" ${sampleAttributes({ 'aria-label': 'container.exportCsv', 'data-hover-caption': 'container.exportCsv' })}>
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                   <path d="M12 3v12"></path>
                   <path d="m7 10 5 5 5-5"></path>
@@ -150,8 +153,7 @@ export function createContainerDetailRenderer({
         <div class="well-editor-shell">
           <div class="well-grid-column">
             <div class="well-grid-panel well-grid-panel-${safeText(layout.className)}">
-              ${layout.className === 'plate96'
-                ? `
+              ${layout.className === 'plate96' ? `
                   <div class="plate96-shell">
                     <span class="plate96-corner" aria-hidden="true"></span>
                     <div class="plate96-col-labels" aria-hidden="true">${columnLabels.map((label) => `<span>${safeText(label)}</span>`).join('')}</div>
@@ -160,8 +162,7 @@ export function createContainerDetailRenderer({
                       <div class="well-grid well-grid-${safeText(layout.className)}" style="${gridStyle}">${grid}</div>
                     </div>
                   </div>
-                `
-                : `<div class="well-grid well-grid-${safeText(layout.className)}" style="${gridStyle}">${grid}</div>`
+                ` : `<div class="well-grid well-grid-${safeText(layout.className)}" style="${gridStyle}">${grid}</div>`
               }
               ${renderSampleLegendForContainer(section, container)}
             </div>

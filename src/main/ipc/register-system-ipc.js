@@ -1,9 +1,14 @@
 'use strict';
 
 const { LLM, SYSTEM } = require('../../shared/ipc/channels');
+const { setLocale } = require('../lib/i18n.js');
 
 function registerSystemIpc(deps = {}) {
   const ipcMain = deps.ipcMain;
+  ipcMain.handle(SYSTEM.SET_UI_LOCALE, (_event, payload) => ({
+    ok: true,
+    locale: setLocale(typeof payload?.locale === 'string' ? payload.locale.slice(0, 40) : 'en')
+  }));
   const shell = deps.shell || null;
   const launchCodexCliLogin = deps.launchCodexCliLogin;
   const clearCodexCliStoredLogin = deps.clearCodexCliStoredLogin;

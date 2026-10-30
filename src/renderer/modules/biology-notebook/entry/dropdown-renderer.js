@@ -1,3 +1,8 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("notebook");
+import { notebookText } from '../localization.js';
+
 // Most-used protocols first, most recently used breaking ties, then by name —
 // so the protocol a student runs every week is at the top of the list.
 export function rankProtocolsByUsage(protocols = [], entries = []) {
@@ -37,14 +42,14 @@ export function createDropdownRenderer({
     }
     const projects = getProjects() || [];
     const selected = projectSelect.value;
-    const options = ['<option value="">Select project</option>'];
+    const options = [`<option value="" data-i18n="notebook.experiment.selectProject">${notebookText('experiment.selectProject')}</option>`];
 
     projects.forEach((project) => {
       const isSelected = project.id === selected ? ' selected' : '';
       options.push(`<option value="${project.id}"${isSelected}>${safeText(project.name)}</option>`);
     });
 
-    projectSelect.innerHTML = options.join('');
+    i18nUi.setHtml(projectSelect, options.join(''));
 
     if (selected && projects.some((project) => project.id === selected)) {
       projectSelect.value = selected;
@@ -65,7 +70,7 @@ export function createDropdownRenderer({
     const selected = preferredProtocolId || protocolSelect.value;
     const hasProject = Boolean(projects.find((item) => item.id === projectId));
     const searchTerm = String(protocolSearchInput?.value || '').trim().toLowerCase();
-    const optionMarkup = ['<option value="">Select protocol</option>'];
+    const optionMarkup = [`<option value="" data-i18n="notebook.experiment.selectProtocol">${notebookText('experiment.selectProtocol')}</option>`];
     const selectedProtocol = protocols.find((item) => item.id === selected) || null;
     const filteredProtocols = hasProject
       ? rankProtocolsByUsage(protocols, getNotebookEntries() || [])
@@ -85,7 +90,7 @@ export function createDropdownRenderer({
       optionMarkup.push(`<option value="${protocol.id}"${isSelected}>${safeText(protocol.name)}</option>`);
     });
 
-    protocolSelect.innerHTML = optionMarkup.join('');
+    i18nUi.setHtml(protocolSelect, optionMarkup.join(''));
     protocolSelect.disabled = !hasProject;
 
     if (hasProject && selected && filteredProtocols.some((protocol) => protocol.id === selected)) {

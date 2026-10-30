@@ -1,3 +1,5 @@
+import { createPresentation } from "./i18n.mjs";
+const i18nUi = createPresentation("figura");
 // Keep the input outside the SVG so selection redraws do not interrupt typing.
 // Its screen transform follows the label through canvas zoom, pan and rotation.
 export function createCanvasTextEditor({ getContext, save, status }) {
@@ -83,8 +85,8 @@ export function createCanvasTextEditor({ getContext, save, status }) {
     close();
     const input = document.createElement('textarea');
     input.id = 'canvas-text-editor'; input.className = 'canvas-text-editor';
-    input.setAttribute('aria-label', 'Edit label text'); input.maxLength = 3000;
-    input.title = 'Enter to save · Shift+Enter for a new line · Escape to cancel';
+    i18nUi.setAttribute(input, "aria-label", i18nUi.message("Edit label text")); input.maxLength = 3000;
+    i18nUi.setAttribute(input, "title", i18nUi.message("Enter to save · Shift+Enter for a new line · Escape to cancel"));
     input.wrap = 'off'; input.value = object.text;
     session = { id, illustrationId, stage, input, original: object.text, saving: false };
     input.addEventListener('input', layout);

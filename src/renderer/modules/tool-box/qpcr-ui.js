@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("tools");
 import { toNumber } from './common.js';
 import { linearRegression } from './qpcr.js';
 
@@ -55,7 +58,7 @@ export function initQpcrTool(options = {}) {
     }
 
     if (!slope) {
-      qpcrResult.innerHTML = '<p class="small-note">Enter slope or at least two quantity/Ct points.</p>';
+      i18nUi.setHtml(qpcrResult, `<p class="small-note">${i18nUi.html("Enter slope or at least two quantity/Ct points.")}</p>`);
       return;
     }
 
@@ -67,21 +70,21 @@ export function initQpcrTool(options = {}) {
 
     const extra = [];
     if (pointCount >= 2) {
-      extra.push(`<p><strong>Points used:</strong> ${pointCount}</p>`);
+      extra.push(`<p><strong>${i18nUi.html("Points used:")}</strong> ${pointCount}</p>`);
     }
     if (intercept !== null) {
-      extra.push(`<p><strong>Intercept:</strong> ${intercept.toFixed(4)}</p>`);
+      extra.push(`<p><strong>${i18nUi.html("Intercept:")}</strong> ${intercept.toFixed(4)}</p>`);
     }
     if (rSquared !== null) {
       extra.push(`<p><strong>R^2:</strong> ${rSquared.toFixed(4)}</p>`);
     }
 
-    qpcrResult.innerHTML = `
-      <p><strong>Slope:</strong> ${slope.toFixed(6)}</p>
-      <p><strong>Efficiency:</strong> ${efficiencyPercent.toFixed(2)}%</p>
-      <p><strong>Status:</strong> ${status}</p>
+    i18nUi.setHtml(qpcrResult, `
+      <p><strong>${i18nUi.html("Slope:")}</strong> ${slope.toFixed(6)}</p>
+      <p><strong>${i18nUi.html("Efficiency:")}</strong> ${efficiencyPercent.toFixed(2)}%</p>
+      <p><strong>${i18nUi.html("Status:")}</strong> ${status}</p>
       ${extra.join('')}
-    `;
+    `);
   }
 
   qpcrForm.addEventListener('input', renderQpcr);

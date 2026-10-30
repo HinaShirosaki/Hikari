@@ -144,6 +144,7 @@ export function createCropController({ runtime, elements, deps }) {
       elements.gelCropModeBtn.setAttribute('aria-label', cropModeLabel);
       elements.gelCropModeBtn.setAttribute('aria-pressed', isCropping ? 'true' : 'false');
       elements.gelCropModeBtn.setAttribute('title', cropModeLabel);
+      deps.bindCropModeLabel?.(elements.gelCropModeBtn, cropModeLabel);
     }
     // While cropping, the crop bar takes over the viewer toolbar, as in photo editors.
     if (elements.gelCropBar) {

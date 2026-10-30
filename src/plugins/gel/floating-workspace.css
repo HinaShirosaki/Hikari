@@ -354,14 +354,37 @@ body.plugin-gel #gel-view.is-active {
   width: 100%;
   max-height: 42%;
   min-height: 0;
-  border-bottom: 1px solid var(--theme-border-soft);
 }
 
 #gel-view .gel-lane-table-panel[hidden] { display: none; }
-#gel-view .gel-lane-table-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; }
-#gel-view .gel-lane-table-head h3 { margin: 0; font-size: 0.8rem; }
-#gel-view #gel-close-lane-table-btn { min-height: 24px; padding: 0 6px; border: 0; }
-#gel-view .gel-lane-table-body { min-height: 0; overflow: auto; }
+#gel-view .gel-lane-table-head { padding: 6px 0; }
+#gel-view #gel-close-lane-table-btn { min-height: 24px; margin-left: auto; padding: 0 6px; border: 0; }
+/* The lane table bar and white-figure inputs, shared by a single gel's table
+ * strip and the Stack figure (rendering/table-inputs.js). --table-font is the
+ * type size in percent of the container width, like the export's own type. */
+#gel-view .gel-table-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+#gel-view .gel-table-bar :is(h3, h4) { margin: 0 4px 0 0; font-size: 0.8rem; }
+#gel-view .gel-table-bar [hidden] { display: none; }
+#gel-view .gel-table-bar .ghost-btn:not(#gel-close-lane-table-btn) { min-height: 28px; padding: 4px 8px; font-size: 0.75rem; }
+#gel-view .gel-table-bar .gel-lane-table-ladder-choice { display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; white-space: nowrap; }
+#gel-view .gel-table-bar .gel-lane-table-ladder-choice input { width: auto; margin: 0; }
+/* Each cell is inset by a transparent 3px border, so neighbours keep an even
+ * gap and never share an edge; empty or hovered cells show a soft tint, and
+ * focus an inset ring on that same box. */
+#gel-view .gel-table-input { position: absolute; box-sizing: border-box; min-width: 0; margin: 0; padding: 0 4px;
+  border: 3px solid transparent; border-radius: 7px; background: transparent; background-clip: padding-box; outline: none;
+  color: #000; font: calc(var(--table-font) * 1cqw) / 1.15 Arial, Helvetica, sans-serif; text-align: center; }
+#gel-view .gel-table-input.is-label { text-align: right; }
+#gel-view .gel-table-input.is-rotated { padding: 0 4px 0 2px; border-left-width: 0; text-align: left; transform: rotate(var(--caption-angle)); transform-origin: 0 50%; }
+#gel-view .gel-table-input:is(:hover, :placeholder-shown) { background-color: rgb(17 24 39 / 5%); }
+#gel-view .gel-table-input:is(:focus, :focus-visible) { border-color: transparent; background-color: #fff; box-shadow: inset 0 0 0 1.5px var(--theme-focus); }
+#gel-view .gel-table-input::placeholder { color: rgb(17 24 39 / 32%); }
+/* A single gel's strip: white over the label column and the image width. */
+#gel-view .gel-table-strip-label, #gel-view .gel-table-strip-lanes { background: #fff; }
+#gel-view .gel-table-strip-lanes { container-type: inline-size; }
+#gel-view .gel-table-strip-box { position: relative; height: var(--table-height); }
+/* A long table scrolls; the gutter is always reserved, so the strip keeps the image's width. */
+#gel-view .gel-lane-table-body { min-height: 0; overflow: hidden auto; scrollbar-gutter: stable; }
 #gel-view .gel-lane-table-body > p { margin: 0 0 8px; }
 
 #gel-view #gel-cell-table-copy-btn { flex-shrink: 0; }

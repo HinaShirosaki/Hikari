@@ -23,21 +23,26 @@ export function scaleTextObject(object, factor) {
   };
 }
 
-export function resizeObject(object, direction, dx, dy, box = object) {
+// keepRatio (Shift) scales artwork proportionally; text always does.
+export function resizeObject(object, direction, dx, dy, box = object, keepRatio = false) {
   const [horizontal, vertical] = RESIZE_HANDLES[direction];
   const angle = object.rotation * Math.PI / 180, cos = Math.cos(angle), sin = Math.sin(angle);
   const localX = dx * cos + dy * sin, localY = -dx * sin + dy * cos;
+  // Project a corner drag onto its original diagonal. Edge drags scale
+  // from their active axis, keeping the opposite edge midpoint fixed.
+  const factor = horizontal && vertical
+    ? 1 + (horizontal * localX * box.width + vertical * localY * box.height) / (box.width ** 2 + box.height ** 2)
+    : 1 + (horizontal ? horizontal * localX / box.width : vertical * localY / box.height);
   let size;
   if (object.type === 'text') {
-    // Project a corner drag onto its original diagonal. Edge drags scale
-    // from their active axis, keeping the opposite edge midpoint fixed.
-    const factor = horizontal && vertical
-      ? 1 + (horizontal * localX * box.width + vertical * localY * box.height) / (box.width ** 2 + box.height ** 2)
-      : 1 + (horizontal ? horizontal * localX / box.width : vertical * localY / box.height);
     size = scaleTextObject(object, factor);
     const scale = size.width / object.width;
     const anchor = resizeAnchor(box, direction);
     return { ...size, x: anchor.x + (object.x - anchor.x) * scale, y: anchor.y + (object.y - anchor.y) * scale };
+  } else if (keepRatio) {
+    // One clamped scale, so neither dimension can stop at a limit alone.
+    const scale = Math.min(8000 / object.width, 8000 / object.height, Math.max(1 / object.width, 1 / object.height, factor));
+    size = { width: object.width * scale, height: object.height * scale };
   } else {
     size = {
       width: horizontal ? Math.min(8000, Math.max(1, object.width + horizontal * localX)) : object.width,

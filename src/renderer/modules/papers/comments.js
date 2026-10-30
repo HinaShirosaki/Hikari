@@ -1,14 +1,11 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("papers");
 import { ensurePaperComments } from './model.js';
 import { getPaperDetailsMetadata } from './pdf-metadata.js';
+import { paperMessage } from './localization.js';
 
-const PAPER_SUMMARY_FIELDS = [
-  { key: 'title', label: 'Title' },
-  { key: 'author', label: 'Authors' },
-  { key: 'year', label: 'Year' },
-  { key: 'journal', label: 'Journal' },
-  { key: 'doi', label: 'DOI' },
-  { key: 'url', label: 'URL' }
-];
+const PAPER_SUMMARY_FIELDS = ['title', 'author', 'year', 'journal', 'doi', 'url'];
 
 export function createPapersCommentController(context) {
   const {
@@ -51,32 +48,32 @@ export function createPapersCommentController(context) {
       elements.paperSummaryToggleBtn.classList.toggle('is-collapsed', collapsed);
       elements.paperSummaryToggleBtn.setAttribute?.('aria-expanded', String(!collapsed));
       elements.paperSummaryToggleBtn.setAttribute?.('aria-label', label);
-      elements.paperSummaryToggleBtn.title = label;
+      i18nUi.setAttribute(elements.paperSummaryToggleBtn, "title", label);
     }
     if (!elements.paperSummaryList) {
       return;
     }
 
     if (!activePaper) {
-      elements.paperSummaryList.innerHTML = '<div class="papers-summary-row"><dt>Paper</dt><dd>Open a PDF to see its details.</dd></div>';
+      i18nUi.setHtml(elements.paperSummaryList, `<div class="papers-summary-row"><dt>${paperMessage('details.paper')}</dt><dd>${paperMessage('details.empty')}</dd></div>`);
       return;
     }
 
-    elements.paperSummaryList.innerHTML = PAPER_SUMMARY_FIELDS.map(({ key, label }) => {
+    i18nUi.setHtml(elements.paperSummaryList, PAPER_SUMMARY_FIELDS.map((key) => {
       const value = String(summary[key] || '').trim();
       return `
         <div class="papers-summary-row">
-          <dt>${safeText(label)}</dt>
-          <dd class="papers-summary-value${value ? '' : ' is-empty'}">${safeText(value || 'Not available')}</dd>
+          <dt>${paperMessage(`details.${key}`)}</dt>
+          <dd class="papers-summary-value${value ? '' : ' is-empty'}">${value ? safeText(value) : paperMessage('details.missing')}</dd>
         </div>
       `;
-    }).join('');
+    }).join(''));
   }
 
   function renderBookmarkItem(bookmark, level = 0) {
     const pageNumber = Math.max(0, Math.round(Number(bookmark?.pageNumber) || 0));
     const url = String(bookmark?.url || '').trim();
-    const title = String(bookmark?.title || '').trim() || 'Untitled bookmark';
+    const title = String(bookmark?.title || '').trim();
     const children = Array.isArray(bookmark?.items) ? bookmark.items : [];
     const actionAttrs = pageNumber
       ? `data-paper-bookmark-page="${safeText(String(pageNumber))}"`
@@ -90,8 +87,8 @@ export function createPapersCommentController(context) {
         style="padding-left: ${Math.min(Math.max(level, 0), 6) * 12 + 6}px"
         ${actionAttrs}
       >
-        <span class="papers-bookmark-title">${safeText(title)}</span>
-        <span class="papers-bookmark-page">${pageNumber ? safeText(`p. ${pageNumber}`) : (url ? 'link' : '')}</span>
+        <span class="papers-bookmark-title">${title ? safeText(title) : paperMessage('bookmarks.untitled')}</span>
+        <span class="papers-bookmark-page">${pageNumber ? paperMessage('bookmarks.page', { page: pageNumber }) : (url ? paperMessage('bookmarks.link') : '')}</span>
       </button>
       ${children.map((child) => renderBookmarkItem(child, level + 1)).join('')}
     `;
@@ -109,14 +106,14 @@ export function createPapersCommentController(context) {
     }
 
     if (!activePaper) {
-      elements.paperBookmarkList.innerHTML = '<p class="papers-bookmark-empty">Open a PDF to read its bookmarks.</p>';
+      i18nUi.setHtml(elements.paperBookmarkList, `<p class="papers-bookmark-empty">${paperMessage('bookmarks.empty')}</p>`);
       return;
     }
     if (!bookmarks.length) {
-      elements.paperBookmarkList.innerHTML = '<p class="papers-bookmark-empty">No PDF bookmarks found.</p>';
+      i18nUi.setHtml(elements.paperBookmarkList, `<p class="papers-bookmark-empty">${paperMessage('bookmarks.none')}</p>`);
       return;
     }
-    elements.paperBookmarkList.innerHTML = bookmarks.map((bookmark) => renderBookmarkItem(bookmark)).join('');
+    i18nUi.setHtml(elements.paperBookmarkList, bookmarks.map((bookmark) => renderBookmarkItem(bookmark)).join(''));
   }
 
   function renderCommentSidebar() {

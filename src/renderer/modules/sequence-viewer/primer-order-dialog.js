@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../lib/html.js';
 import { showTransientNotice } from '../../lib/notify.js';
 import { asArray } from '../../lib/normalize.js';
@@ -28,9 +31,9 @@ export function createPrimerOrderController(config = {}) {
     if (!select) {
       return;
     }
-    select.innerHTML = options
+    i18nUi.setHtml(select, options
       .map((option) => `<option value="${escapeHtml(option.value)}"${option.value === selected ? ' selected' : ''}>${escapeHtml(option.label)}</option>`)
-      .join('');
+      .join(''));
     select.value = selected;
   }
 
@@ -41,9 +44,9 @@ export function createPrimerOrderController(config = {}) {
     }
     if (elements.primerOrderWarnings) {
       const warnings = buildPrimerOrderWarnings(primers, options);
-      elements.primerOrderWarnings.innerHTML = warnings.length
+      i18nUi.setHtml(elements.primerOrderWarnings, warnings.length
         ? warnings.map((warning) => `<p class="small-note sequence-viewer-primer-order-warning">${escapeHtml(warning)}</p>`).join('')
-        : '';
+        : '');
     }
   }
 
@@ -54,7 +57,7 @@ export function createPrimerOrderController(config = {}) {
   function open(nextPrimers) {
     primers = asArray(nextPrimers).filter((primer) => String(primer?.primerSequence || primer?.sequence || '').trim());
     if (!primers.length) {
-      setStatus('Design primers before building an order form.', true);
+      setStatus(i18nUi.text("Design primers before building an order form."), true);
       return false;
     }
     rootDocument?.querySelectorAll?.('[data-sequence-hover-tooltip]').forEach(node => { node.hidden = true; });
@@ -77,7 +80,7 @@ export function createPrimerOrderController(config = {}) {
     if (typeof bridge?.writeTextToClipboard === 'function') {
       const result = await bridge.writeTextToClipboard(value);
       if (result?.ok) {
-        showTransientNotice(`Copied ${label}.`);
+        showTransientNotice(i18nUi.message("Copied {p0}.", { p0: label }));
         return;
       }
     }
@@ -85,13 +88,13 @@ export function createPrimerOrderController(config = {}) {
     if (typeof clipboard?.writeText === 'function') {
       try {
         await clipboard.writeText(value);
-        showTransientNotice(`Copied ${label}.`);
+        showTransientNotice(i18nUi.message("Copied {p0}.", { p0: label }));
         return;
       } catch {
         // fall through to the failure notice
       }
     }
-    showTransientNotice('Clipboard access is unavailable; copy from the preview box.', { type: 'error' });
+    showTransientNotice(i18nUi.message("Clipboard access is unavailable; copy from the preview box."), { type: 'error' });
   }
 
   function bindEvents() {

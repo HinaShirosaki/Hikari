@@ -12,7 +12,14 @@ module.exports = function registerEdgeSequenceViewerWorkspaceSuiteAnnotationAndA
   } = scope;
 test('[EDGE] sequence-viewer backbone recognition stores a Protein Builder artifact without annotating the original sequence', async () => {
   const ids = [
-    'sequence-viewer-recognize-backbone-btn',
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-home-status',
+    'sequence-viewer-library-filter-saved',
+    'sequence-viewer-library-filter-temporary',
+    'sequence-viewer-library-list',
+    'sequence-viewer-library-context-menu',
+    'sequence-viewer-preview-host',
     'sequence-viewer-backbone-dialog-overlay',
     'sequence-viewer-backbone-dialog-candidates',
     'sequence-viewer-backbone-dialog-summary',
@@ -47,9 +54,30 @@ test('[EDGE] sequence-viewer backbone recognition stores a Protein Builder artif
   ];
   const recognizeCalls = [];
   const upsertBackboneCalls = [];
+  const entry = {
+    id: 'entry_derived',
+    name: 'derived_vector',
+    status: 'saved',
+    sourceFormat: 'genbank',
+    topology: 'circular',
+    sequenceLength: 30,
+    featureCount: 0
+  };
   const document = createMockDocument(ids);
   const window = {
     hikariApi: {
+      sequenceLibraryList: async () => ({ ok: true, entries: [entry] }),
+      sequenceLibraryGet: async () => ({
+        ok: true,
+        entry,
+        gbkText: `LOCUS       derived_vector        30 bp    DNA     circular SYN 01-JAN-2026
+FEATURES             Location/Qualifiers
+ORIGIN
+        1 atgcgtacgc tagttaggaa ccccggatca
+//
+`,
+        alignments: []
+      }),
       sequenceLibraryUpsertBackbone: async (payload) => {
         upsertBackboneCalls.push(payload);
         return {
@@ -161,34 +189,53 @@ test('[EDGE] sequence-viewer backbone recognition stores a Protein Builder artif
     path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document, window, localStorage }
   );
-  const viewer = moduleWithDom.initSequenceViewer();
-  viewer.loadFromExternal({
-    name: 'derived_vector',
-    sequence: 'ATGCGTACGCTAGTTAGGAACCCCGGATCA',
-    source: 'external',
-    features: []
-  });
+  moduleWithDom.initSequenceViewer();
+  await flushAsync();
 
-  const recognizeBtn = document.getElementById('sequence-viewer-recognize-backbone-btn');
+  const libraryList = document.getElementById('sequence-viewer-library-list');
+  const contextMenu = document.getElementById('sequence-viewer-library-context-menu');
   const dialogOverlay = document.getElementById('sequence-viewer-backbone-dialog-overlay');
   const dialogCandidates = document.getElementById('sequence-viewer-backbone-dialog-candidates');
   const dialogApplyBtn = document.getElementById('sequence-viewer-backbone-dialog-apply-btn');
   const featureRailHost = document.getElementById('sequence-viewer-feature-rail-host');
   const featureDetail = document.getElementById('sequence-viewer-feature-detail');
   const statFeatures = document.getElementById('sequence-viewer-stat-features');
-  const initialFeatureCount = Number(statFeatures.textContent || 0);
 
-  trigger(recognizeBtn, 'click');
+  trigger(libraryList, 'contextmenu', {
+    target: {
+      dataset: { sequenceEntryId: entry.id },
+      closest(selector) {
+        return selector === '[data-sequence-entry-id]' ? this : null;
+      }
+    },
+    clientX: 44,
+    clientY: 72
+  });
+  assert.equal(contextMenu.hidden, false);
+  trigger(contextMenu, 'click', {
+    target: {
+      closest(selector) {
+        return selector === '[data-sequence-library-action]'
+          ? { dataset: { sequenceLibraryAction: 'recognize-backbone' } }
+          : null;
+      }
+    }
+  });
   await flushAsync();
   await flushAsync();
+  await flushAsync();
 
+  assert.equal(contextMenu.hidden, true);
   assert.equal(recognizeCalls.length, 1);
   assert.equal(recognizeCalls[0].sequence, 'ATGCGTACGCTAGTTAGGAACCCCGGATCA');
-  assert.equal(recognizeCalls[0].excludeEntryId, '');
+  assert.equal(recognizeCalls[0].excludeEntryId, entry.id);
   assert.equal(Boolean(dialogOverlay.hidden), false);
   assert.match(dialogCandidates.innerHTML, /T7 promoter/);
-  assert.equal(Number(statFeatures.textContent || 0), initialFeatureCount);
+  assert.equal(featureRailHost.innerHTML.includes('T7 promoter'), false);
   assert.match(document.querySelector('[data-hikari-transient-toast]').textContent, /Review promoter \/ ORF candidates/i);
+  // The menu opens the entry and recognizes in one step, so the baseline is
+  // the opened record's own count (its restriction sites).
+  const initialFeatureCount = Number(statFeatures.textContent || 0);
 
   trigger(dialogApplyBtn, 'click');
   await flushAsync();

@@ -1,9 +1,13 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("plate");
 import { buildMappedWellSet, layoutToMap, parseWellId, toRowLabel, wellIdFor } from '../plate-model.js';
 import { parseFirstNumericToken, parseNumericResult } from '../shared.js';
 import { applyPlateTransform, isTransformActive, normalizeTransformSpec } from '../derived-plate.js';
 import { createSpreadsheetFillHandle } from '../../../lib/spreadsheet-fill-handle.js';
 import { fillCellContent } from '../../../lib/notebook-table-formulas.js';
 import { createSpreadsheetReferencePicker } from '../../../lib/spreadsheet-reference-picker.js';
+import { plateMessage, setPlateAttribute } from '../localization.js';
 
 // The Transformed Plate grid (Table2) and the numeric observations analyses are
 // computed from. Holds the derived plate so no other module can write it.
@@ -74,7 +78,7 @@ function createDerivedPlateGrid({
     transformGrid = null;
     transformGridSignature = '';
     if (assayDerivedPlateTable) {
-      assayDerivedPlateTable.innerHTML = '';
+      i18nUi.setHtml(assayDerivedPlateTable, '');
     }
   }
 
@@ -129,8 +133,8 @@ function createDerivedPlateGrid({
     element.className = computed?.error
       ? 'assay-transform-cell assay-transform-cell--error'
       : 'assay-transform-cell assay-transform-cell--formula';
-    element.textContent = computed?.error ? '#ERROR' : (computed?.text ?? value);
-    element.title = computed?.error ? `${value} — ${computed.error}` : value;
+    i18nUi.setText(element, (computed?.error ? '#ERROR' : (computed?.text ?? value)));
+    i18nUi.setAttribute(element, "title", (computed?.error ? `${value} — ${computed.error}` : value));
     return element;
   }
 
@@ -155,7 +159,7 @@ function createDerivedPlateGrid({
       return false;
     }
     if (!TabulatorLib) {
-      assayDerivedPlateTable.innerHTML = '<p class="small-note">Spreadsheet component failed to load (Tabulator).</p>';
+      i18nUi.setHtml(assayDerivedPlateTable, `<p class="small-note">${plateMessage('grid.failed')}</p>`);
       return false;
     }
     const signature = buildResultGridSignature(def);
@@ -166,7 +170,7 @@ function createDerivedPlateGrid({
       host.dataset.resultTableHost = '0';
       host.tabIndex = 0;
       host.setAttribute('role', 'grid');
-      host.setAttribute('aria-label', 'Transformed assay plate spreadsheet');
+      setPlateAttribute(host, 'aria-label', 'grid.transformed');
       assayDerivedPlateTable.append(host);
       const options = {
         data: buildResultGridData(def, transformFormulas),
@@ -184,7 +188,8 @@ function createDerivedPlateGrid({
       };
       const height = getResultGridHeight(def);
       if (height) {
-        options.height = height;
+        // Match Table1: filtering unused rows must also shrink the container.
+        options.maxHeight = height;
       }
       transformGrid = new TabulatorLib(host, options);
       const createdGrid = transformGrid;

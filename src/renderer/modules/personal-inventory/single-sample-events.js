@@ -1,3 +1,4 @@
+import { sampleUi } from './localization.js';
 import { readTypeFieldsFrom } from './type-fields.js';
 
 export function bindSingleSampleEvents(ctx) {
@@ -38,14 +39,14 @@ export function bindSingleSampleEvents(ctx) {
       const notesInput = inventorySections.querySelector('[data-single-sample-notes]');
       const name = String(nameInput?.value || '').trim();
       if (!name) {
-        uiState.wellEditorStatus = 'Sample name is required.';
+        uiState.wellEditorStatus = sampleUi('status.nameRequired');
         renderSections();
         return;
       }
       const code = helpers.normalizeSampleCode(codeInput?.value) || sample.code || helpers.makeDefaultSampleCode();
       const duplicate = (state.samples || []).find((item) => item.code === code && item.id !== sample.id);
       if (duplicate) {
-        uiState.wellEditorStatus = `Sample code ${code} already exists.`;
+        uiState.wellEditorStatus = sampleUi('status.duplicateCode', { code });
         renderSections();
         return;
       }
@@ -63,7 +64,7 @@ export function bindSingleSampleEvents(ctx) {
       sample.location = helpers.isLocationEmpty(sample.location) ? helpers.buildAutoLocationFromLink(section, container, null) : sample.location;
       sample.updatedAt = new Date().toISOString();
       uiState.editingSampleId = sample.id;
-      uiState.wellEditorStatus = `Saved sample ${sample.code || sample.name}.`;
+      uiState.wellEditorStatus = sampleUi('status.saved', { name: sample.code || sample.name });
       persist();
       renderSections();
     });
@@ -79,7 +80,7 @@ export function bindSingleSampleEvents(ctx) {
       }
       state.samples = state.samples.filter((item) => item !== sample);
       uiState.editingSampleId = '';
-      uiState.wellEditorStatus = `Deleted sample ${sample.code || sample.name || sample.id}.`;
+      uiState.wellEditorStatus = sampleUi('status.deleted', { name: sample.code || sample.name || sample.id });
       persist();
       renderSections();
     });
@@ -105,14 +106,14 @@ export function bindSingleSampleEvents(ctx) {
       const notesInput = inventorySections.querySelector('[data-single-sample-new-notes]');
       const name = String(nameInput?.value || '').trim();
       if (!name) {
-        uiState.wellEditorStatus = 'Sample name is required.';
+        uiState.wellEditorStatus = sampleUi('status.nameRequired');
         renderSections();
         return;
       }
       const code = helpers.normalizeSampleCode(codeInput?.value) || helpers.makeDefaultSampleCode();
       const duplicate = (state.samples || []).find((item) => item.code === code);
       if (duplicate) {
-        uiState.wellEditorStatus = `Sample code ${code} already exists.`;
+        uiState.wellEditorStatus = sampleUi('status.duplicateCode', { code });
         renderSections();
         return;
       }
@@ -136,7 +137,7 @@ export function bindSingleSampleEvents(ctx) {
       pendingStructureDrafts.delete(getPendingStructureKey('single-new'));
       state.samples.push(sample);
       uiState.editingSampleId = sample.id;
-      uiState.wellEditorStatus = `Created sample ${sample.code}.`;
+      uiState.wellEditorStatus = sampleUi('status.created', { code: sample.code });
       persist();
       renderSections();
     });

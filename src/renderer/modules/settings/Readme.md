@@ -4,6 +4,7 @@
 
 - `dom.js`: typed DOM lookup bundle.
 - `form-presentation.js`: keeps each form's unsaved draft across navigation and background catalog refreshes, and drives the save/discard bar.
+- `localization.js`, `locales/en.js`: English messages and safe bindings for static panel copy, update states, journals, sample-location/type controls, and plugin management/preferences. Shared save/discard/status text lives in `renderer/lib/i18n/en.js`. Account/usage, file-access, and tool/skill runtime copy remain later batches. See [incremental i18n](../../../../docs/renderer/architecture/i18n.md).
 - `codex-account.js`: the **Codex** panel's account status polling, sign-in/sign-out, CLI install card, and the **Connect Codex Desktop** setup prompt.
 - `codex-usage.js`: account usage percentages and reset times, refresh state, and invalidation of pending usage reads when signing out.
 - `llm-model-catalog.js`: provider/Codex model and reasoning-option normalization.

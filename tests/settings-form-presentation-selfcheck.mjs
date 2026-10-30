@@ -12,7 +12,11 @@ function control(properties = {}) {
 function form(id, inputs) {
   const submit = control();
   const discard = control();
-  const status = control();
+  const status = control({
+    attributes: new Map(),
+    setAttribute(name, value) { this.attributes.set(name, value); },
+    removeAttribute(name) { this.attributes.delete(name); }
+  });
   const element = control({
     id,
     querySelectorAll: () => inputs,
@@ -74,6 +78,7 @@ await appearance.element.emit('input');
 rejectSave = true;
 await appearance.element.emit('submit');
 assert.match(appearance.status.textContent, /Could not save/);
+assert.equal(appearance.status.attributes.get('data-i18n'), 'common.status.saveError', 'the status keeps its binding for later language changes');
 assert.equal(appearance.submit.disabled, false, 'failure remains retryable');
 assert.equal(appearance.element.inert, false);
 await appearance.discard.emit('click');

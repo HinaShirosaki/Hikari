@@ -1,5 +1,9 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("agent");
 import { asArray, trimText } from './shared.js';
 import { renderAgentChatIcon } from './icons.js';
+import { agentAttributes, agentFailure, agentMessage, agentUi } from './localization.js';
 
 function sanitizeAttachmentName(fileName = '', fallback = 'attachment') {
   return trimText(String(fileName || '').replace(/\s+/g, ' ').trim(), 180) || fallback;
@@ -97,30 +101,30 @@ export function createComposerAttachmentsController({
     }
     const items = asArray(composerAttachments).filter((attachment) => trimText(attachment?.name, 180));
     if (!items.length) {
-      attachmentList.innerHTML = '';
+      i18nUi.setHtml(attachmentList, '');
       attachmentList.hidden = true;
       return;
     }
     attachmentList.hidden = false;
-    attachmentList.innerHTML = items.map((attachment) => {
-      const label = trimText(attachment?.kind, 20) === 'image' ? 'Image' : 'File';
+    i18nUi.setHtml(attachmentList, items.map((attachment) => {
+      const isImage = trimText(attachment?.kind, 20) === 'image';
       const size = formatAttachmentSize(attachment?.size);
       const dataUrl = trimText(attachment?.dataUrl, 500000);
-      const thumbnail = label === 'Image' && dataUrl.startsWith('data:image/')
+      const thumbnail = isImage && dataUrl.startsWith('data:image/')
         ? `<img class="agent-attachment-thumb" src="${safeText(dataUrl)}" alt="" aria-hidden="true" />`
         : '';
       return `
-        <span class="agent-attachment-pill${label === 'Image' ? ' is-image' : ''}">
+        <span class="agent-attachment-pill${isImage ? ' is-image' : ''}">
           ${thumbnail}
           <span class="agent-attachment-pill-meta">
-            <span>${safeText(label)}</span>
+            <span>${agentMessage(isImage ? 'attachment.image' : 'attachment.file')}</span>
             <span>${safeText(trimText(attachment?.name, 180))}</span>
             ${size ? `<span>${safeText(size)}</span>` : ''}
           </span>
-          <button type="button" data-agent-remove-attachment="${safeText(trimText(attachment?.id, 120))}" aria-label="${safeText(`Remove ${trimText(attachment?.name, 180)}`)}">${renderAgentChatIcon('close', { className: 'agent-attachment-remove-icon' })}</button>
+          <button type="button" data-agent-remove-attachment="${safeText(trimText(attachment?.id, 120))}" ${agentAttributes({ 'aria-label': 'attachment.remove' }, { name: trimText(attachment?.name, 180) })}>${renderAgentChatIcon('close', { className: 'agent-attachment-remove-icon' })}</button>
         </span>
       `;
-    }).join('');
+    }).join(''));
   }
 
   function reset() {
@@ -139,7 +143,7 @@ export function createComposerAttachmentsController({
     composerAttachments = [...composerAttachments, normalized].slice(-8);
     render();
     if (options.announce !== false) {
-      setStatus(`${composerAttachments.length} attachment${composerAttachments.length === 1 ? '' : 's'} ready.`);
+      setStatus(agentUi('status.attachmentsReady', { count: composerAttachments.length }));
     }
     return { ...normalized };
   }
@@ -153,9 +157,9 @@ export function createComposerAttachmentsController({
       const nextAttachments = await Promise.all(incomingFiles.map((file) => normalizeAttachmentFile(file)));
       composerAttachments = [...composerAttachments, ...nextAttachments].slice(-8);
         render();
-        setStatus(`${composerAttachments.length} attachment${composerAttachments.length === 1 ? '' : 's'} ready.`);
+        setStatus(agentUi('status.attachmentsReady', { count: composerAttachments.length }));
     } catch (error) {
-      setStatus(String(error?.message || error || 'Failed to load attachments.'));
+      setStatus(agentFailure(error, 'status.attachmentsFailed'));
     }
   }
 

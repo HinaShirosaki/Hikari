@@ -9,6 +9,8 @@
 // ponytail: file only. If a real error service is ever wanted, `report()` is the
 // single hook to forward from.
 
+const { nativeText } = require('./i18n.js');
+
 const MAX_TEXT = 4000;
 
 function trim(value, max = MAX_TEXT) {
@@ -98,10 +100,10 @@ function createErrorReporting({
       }
       const result = await dialog.showMessageBox(mainWindow, {
         type: 'error',
-        title: 'Hikari',
-        message: 'The Hikari window stopped unexpectedly.',
-        detail: `Reason: ${reason}. Your data in the storage folder is safe. A report was written to the logs folder.`,
-        buttons: ['Reload', 'Quit'],
+        title: nativeText("Hikari"),
+        message: nativeText("The Hikari window stopped unexpectedly."),
+        detail: nativeText("Reason: {p0}. Your data in the storage folder is safe. A report was written to the logs folder.", { p0: reason }),
+        buttons: [nativeText("Reload"), nativeText("Quit")],
         defaultId: 0,
         cancelId: 1,
         noLink: true

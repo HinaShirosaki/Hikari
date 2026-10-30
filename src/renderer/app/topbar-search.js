@@ -1,4 +1,5 @@
-import { showTransientNotice } from '../lib/notify.js';
+import { shellNotice, shellUi } from '../lib/i18n/shell.js';
+import { createSearchFeedback } from './topbar-search/localization.js';
 import { asArray } from '../lib/normalize.js';
 import { createSearchCandidates } from './topbar-search/candidates.js';
 import {
@@ -22,6 +23,7 @@ export function createTopbarSearchController({
   openItemHandlers = {},
   windowObject: _windowObject = window
 }) {
+  const feedback = createSearchFeedback(topbarSearchInput, apps);
   const itemHandlers = openItemHandlers && typeof openItemHandlers === 'object'
     ? openItemHandlers
     : {};
@@ -202,7 +204,7 @@ export function createTopbarSearchController({
     }
     const opened = applySearchTarget(suggestion.target, suggestion.applyQuery || '');
     if (!opened) {
-      showTransientNotice('Could not open that search result.', { type: 'error' });
+      shellNotice(shellUi('search.openFailed'), { type: 'error' });
     }
     return opened;
   }
@@ -211,7 +213,7 @@ export function createTopbarSearchController({
     const parsed = parseTopbarSearch(rawQuery);
     if (!parsed.raw) {
       if (topbarSearchInput) {
-        topbarSearchInput.title = 'Type a query and press Enter.';
+        feedback('search.typeQuery');
       }
       return false;
     }
@@ -220,11 +222,7 @@ export function createTopbarSearchController({
       const applied = applySearchTarget(parsed.target, parsed.query);
       if (topbarSearchInput) {
         const canFilter = Boolean(parsed.target.inputId && parsed.query);
-        topbarSearchInput.title = applied
-          ? (canFilter
-            ? `Opened ${parsed.target.label} and searched for "${parsed.query}".`
-            : `Opened ${parsed.target.label}.`)
-          : 'Search target unavailable.';
+        feedback(applied ? (canFilter ? 'search.openedFiltered' : 'search.opened') : 'search.unavailable', { query: parsed.query }, parsed.target);
       }
       return applied;
     }
@@ -240,9 +238,9 @@ export function createTopbarSearchController({
         }
       }
       if (topbarSearchInput) {
-        topbarSearchInput.title = appliedQuery
-          ? `Opened ${TITLES[parsed.openViewId] || 'view'} and searched for "${parsed.query}".`
-          : `Opened ${TITLES[parsed.openViewId] || 'view'}.`;
+        feedback(TITLES[parsed.openViewId] ? (appliedQuery ? 'search.openedFiltered' : 'search.opened')
+          : (appliedQuery ? 'search.openedViewFiltered' : 'search.openedView'), { query: parsed.query },
+        TITLES[parsed.openViewId] ? { viewId: parsed.openViewId, label: TITLES[parsed.openViewId], subtitle: true } : null);
       }
       return true;
     }
@@ -269,9 +267,7 @@ export function createTopbarSearchController({
       applySearchTarget(bestCandidate.target, parsed.query);
       if (topbarSearchInput) {
         const canFilter = Boolean(bestCandidate.target.inputId && parsed.query);
-        topbarSearchInput.title = canFilter
-          ? `Opened ${bestCandidate.target.label} and searched for "${parsed.query}".`
-          : `Opened ${bestCandidate.target.label}.`;
+        feedback(canFilter ? 'search.openedFiltered' : 'search.opened', { query: parsed.query }, bestCandidate.target);
       }
       return true;
     }
@@ -280,7 +276,7 @@ export function createTopbarSearchController({
     if (activeScopeTarget?.inputId) {
       applySearchTarget(activeScopeTarget, parsed.query);
       if (topbarSearchInput) {
-        topbarSearchInput.title = `Searched in current ${activeScopeTarget.label} view.`;
+        feedback('search.currentView', {}, activeScopeTarget);
       }
       return true;
     }
@@ -289,13 +285,14 @@ export function createTopbarSearchController({
     if (aliasViewId) {
       showView(aliasViewId);
       if (topbarSearchInput) {
-        topbarSearchInput.title = `Opened ${TITLES[aliasViewId] || 'view'}.`;
+        feedback(TITLES[aliasViewId] ? 'search.opened' : 'search.openedView', {},
+          TITLES[aliasViewId] ? { viewId: aliasViewId, label: TITLES[aliasViewId], subtitle: true } : null);
       }
       return true;
     }
 
     if (topbarSearchInput) {
-      topbarSearchInput.title = `No match found for "${parsed.query}". Try "assay: keyword" or "gel: keyword".`;
+      feedback('search.noMatch', { query: parsed.query });
     }
     return false;
   }

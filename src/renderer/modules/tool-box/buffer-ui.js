@@ -1,4 +1,9 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("tools");
 import { escapeHtml } from './common.js';
+import { setToolAttribute, setToolPlaceholder } from './localization.js';
+import { translateTree } from '../../lib/i18n/dom.js';
 import {
   bufferCandidateForm as resolveBufferCandidateForm,
   buildBufferCandidates as buildSharedBufferCandidates,
@@ -22,13 +27,19 @@ function addListener(element, eventName, handler, options) {
 
 function setText(element, value) {
   if (element) {
-    element.textContent = String(value || '');
+    i18nUi.setText(element, String(value || ''));
   }
 }
 
 function setPlaceholder(element, value) {
   if (element) {
-    element.placeholder = String(value || '');
+    if (value === 'auto') {
+      element.setAttribute?.('data-i18n-placeholder', 'tools.hint.auto');
+      setToolAttribute(element, 'placeholder', 'hint.auto');
+    } else {
+      element.removeAttribute?.('data-i18n-placeholder');
+      i18nUi.setAttribute(element, "placeholder", String(value || ''));
+    }
   }
 }
 
@@ -92,10 +103,13 @@ export function initBufferTool(options = {}) {
     row.querySelectorAll('[id]').forEach((element) => {
       element.id = `${element.id.replace(/-\d+$/, '')}-${index}`;
       element.value = '';
-      element.textContent = '';
+      i18nUi.setText(element, '');
       const label = element.getAttribute?.('aria-label');
       if (label) {
         element.setAttribute('aria-label', label.replace(/\d+/, String(index)));
+      }
+      if (element.hasAttribute?.('data-i18n-params')) {
+        element.setAttribute('data-i18n-params', JSON.stringify({ index }));
       }
       const controls = element.getAttribute?.('aria-controls');
       if (controls) {
@@ -106,6 +120,7 @@ export function initBufferTool(options = {}) {
       }
     });
     insertBufferRowBeforeAdjustment(row);
+    translateTree(row);
     rowTotal = index;
     bindBufferRow(index);
   }
@@ -163,7 +178,7 @@ export function initBufferTool(options = {}) {
       const menu = getElement(rootDocument, `buffer-suggestions-${rowIndex}`);
       if (menu) {
         menu.hidden = true;
-        menu.innerHTML = '';
+        i18nUi.setHtml(menu, '');
       }
       getElement(rootDocument, `buffer-name-${rowIndex}`)?.setAttribute?.('aria-expanded', 'false');
     }
@@ -252,7 +267,7 @@ export function initBufferTool(options = {}) {
       closeBufferSuggestions(index);
       return;
     }
-    menu.innerHTML = matches.map((candidate) => {
+    i18nUi.setHtml(menu, matches.map((candidate) => {
       const meta = [
         candidate.mw ? `${candidate.mw} g/mol` : '',
         candidate.category,
@@ -264,7 +279,7 @@ export function initBufferTool(options = {}) {
           <span>${escapeHtml(meta)}</span>
         </button>
       `;
-    }).join('');
+    }).join(''));
     menu.hidden = false;
     input.setAttribute?.('aria-expanded', 'true');
     positionBufferSuggestions(index);
@@ -332,8 +347,8 @@ export function initBufferTool(options = {}) {
         return;
       }
       const rowDetail = Array.isArray(detail.details) ? detail.details[0] : null;
-      const suffix = detail.resultText && /\bstock\./i.test(detail.resultText) ? ' stock' : '';
-      setPlaceholder(amount, rowDetail?.quantityText ? `${rowDetail.quantityText}${suffix}` : resultTextAfterName(detail.resultText));
+      if (detail.displayMessage) setToolPlaceholder(amount, detail.displayMessage);
+      else setPlaceholder(amount, rowDetail?.quantityText || resultTextAfterName(detail.resultText));
     });
     setText(getElement(rootDocument, 'buffer-solvent-output'), result?.solvent?.text || '');
   }
@@ -346,7 +361,7 @@ export function initBufferTool(options = {}) {
       rows: collectBufferRows()
     });
     renderBufferTableResult(result);
-    bufferTotalResult.textContent = result?.resultText || '';
+    i18nUi.setText(bufferTotalResult, (result?.resultText || ''));
     bufferTotalResult.hidden = true;
   }
 

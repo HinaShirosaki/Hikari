@@ -1,9 +1,13 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("papers");
 import { getTextLayerRangeInfo } from './pdf-viewer-selection.js';
 import {
   buildPdfSelectionSearchResultFromMatches,
   getPdfSelectionSearchTerms
 } from './pdf-viewer-search.js';
 import { renderPageTextLayerRecord } from './pdf-viewer-rendering.js';
+import { paperFailure, paperUi } from '../localization.js';
 
 export const installPdfViewerSearchExecutionController = (ctx) => {
   const { state } = ctx;
@@ -26,7 +30,7 @@ export const installPdfViewerSearchExecutionController = (ctx) => {
       if (record.renderedTextScale === scale && record.textLayer?.childElementCount > 0) {
         continue;
       }
-      ctx.setStatus(`Preparing PDF search... page ${record.pageNumber} of ${state.pageCount}`);
+      ctx.setStatus(i18nUi.text("Preparing PDF search... page {p0} of {p1}", { p0: record.pageNumber, p1: state.pageCount }));
       await renderPageTextLayerRecord({
         pdfDocument: state.pdfDocument,
         record,
@@ -113,7 +117,7 @@ export const installPdfViewerSearchExecutionController = (ctx) => {
     const match = ctx.getActiveSearchMatch();
     if (jump && match) {
       scrollToSearchMatch(match);
-      ctx.setStatus(`Showing match ${nextIndex + 1} of ${total} on page ${match.pageNumber}.`);
+      ctx.setStatus(i18nUi.text("Showing match {p0} of {p1} on page {p2}.", { p0: nextIndex + 1, p1: total, p2: match.pageNumber }));
     }
   }
 
@@ -121,7 +125,7 @@ export const installPdfViewerSearchExecutionController = (ctx) => {
     const selection = state.pendingSearchSelection || state.pendingSelection;
     const selectedText = String(selection?.text || '').trim();
     if (!selectedText) {
-      ctx.renderSelectionSearchMessage('Select text before searching.', true);
+      ctx.renderSelectionSearchMessage(paperUi('search.needsSelection'), true);
       return;
     }
     if (scope === 'pdf') {
@@ -132,10 +136,10 @@ export const installPdfViewerSearchExecutionController = (ctx) => {
         ctx.setPdfSearchMatches(result.matches, result.targetMatchIndex);
         if (result.targetMatchIndex >= 0) {
           activateSearchMatch(result.targetMatchIndex, { jump: true, cycleTone: false });
-          ctx.setStatus(`Found ${result.totalMatches} matched word${result.totalMatches === 1 ? '' : 's'} on ${result.pages.length} page${result.pages.length === 1 ? '' : 's'}.`);
+          ctx.setStatus(i18nUi.text((result.totalMatches === 1 ? (result.pages.length === 1 ? "Found {p0} matched word on {p2} page." : "Found {p0} matched word on {p2} pages.") : (result.pages.length === 1 ? "Found {p0} matched words on {p2} page." : "Found {p0} matched words on {p2} pages.")), { p0: result.totalMatches, p2: result.pages.length }));
         }
       } catch (error) {
-        ctx.renderSelectionSearchMessage(String(error?.message || error || 'PDF search failed.'), true);
+        ctx.renderSelectionSearchMessage(paperFailure(error, 'search.pdfFailed'), true);
       } finally {
         ctx.pruneRenderedPageRecords?.();
         ctx.scheduleVisiblePageRender?.();
@@ -143,10 +147,10 @@ export const installPdfViewerSearchExecutionController = (ctx) => {
       return;
     }
     if (typeof state.onSelectionSearch !== 'function') {
-      ctx.renderSelectionSearchMessage('Paper database search is unavailable in this build.', true);
+      ctx.renderSelectionSearchMessage(paperUi('search.libraryUnavailable'), true);
       return;
     }
-    ctx.renderSelectionSearchMessage('Searching paper database...');
+    ctx.renderSelectionSearchMessage(paperUi('search.searching'));
     try {
       const result = await state.onSelectionSearch({
         scope: 'library',
@@ -154,12 +158,12 @@ export const installPdfViewerSearchExecutionController = (ctx) => {
         paperId: state.paperId
       });
       if (result?.ok === false) {
-        ctx.renderSelectionSearchMessage(result.error || 'Paper database search failed.', true);
+        ctx.renderSelectionSearchMessage(result.error || paperUi('search.libraryFailed'), true);
         return;
       }
       ctx.renderPaperDatabaseSearchResults(result);
     } catch (error) {
-      ctx.renderSelectionSearchMessage(String(error?.message || error || 'Paper database search failed.'), true);
+      ctx.renderSelectionSearchMessage(paperFailure(error, 'search.libraryFailed'), true);
     }
   }
 

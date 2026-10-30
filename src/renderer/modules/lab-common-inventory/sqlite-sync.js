@@ -1,4 +1,4 @@
-import { showTransientNotice } from '../../lib/notify.js';
+import { chemicalUi, chemicalNotice } from './localization.js';
 
 export function installChemicalSqliteSync(ctx) {
   const { state } = ctx;
@@ -61,11 +61,11 @@ async function syncChemicalSqliteBundle(force = false) {
       ctx.lastChemicalSqliteSyncKey = syncKey;
     } else {
       console.warn('Failed to sync chemical sqlite bundle:', result?.error || 'unknown error');
-      showTransientNotice('Chemical inventory could not be written to the sqlite bundle.', { type: 'error' });
+      chemicalNotice(chemicalUi('notice.syncError'), { type: 'error' });
     }
   } catch (error) {
     console.warn('Failed to sync chemical sqlite bundle:', error);
-    showTransientNotice('Chemical inventory could not be written to the sqlite bundle.', { type: 'error' });
+    chemicalNotice(chemicalUi('notice.syncError'), { type: 'error' });
   }
 }
 

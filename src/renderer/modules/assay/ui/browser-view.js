@@ -1,4 +1,8 @@
-import { axisLabel, notebookLabel } from '../shared.js';
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("plate");
+import { axisLabel } from '../shared.js';
+import { notebookOptionMessage, plateAttributes, plateMessage, plateOption, setPlateText } from '../localization.js';
 
 // Renders the assay browser list and the project/notebook/results dropdowns.
 export function createAssayBrowserView({ elements, state, safeText, runtime, ensureState }) {
@@ -14,7 +18,7 @@ export function createAssayBrowserView({ elements, state, safeText, runtime, ens
     if (!Array.from(elements.assayNotebookEntryInput.options).some((option) => option.value === targetValue)) {
       const option = document.createElement('option');
       option.value = targetValue;
-      option.textContent = `${targetValue} (missing notebook page)`;
+      setPlateText(option, 'form.missingNotebook', { id: targetValue });
       elements.assayNotebookEntryInput.append(option);
     }
     elements.assayNotebookEntryInput.value = targetValue;
@@ -25,12 +29,12 @@ export function createAssayBrowserView({ elements, state, safeText, runtime, ens
       return;
     }
     const selected = elements.assayProjectInput.value;
-    const options = ['<option value="">Select project</option>'];
+    const options = [plateOption('', 'form.selectProject')];
     (state.projects || []).forEach((project) => {
       const isSelected = selected === project.id ? ' selected' : '';
       options.push(`<option value="${project.id}"${isSelected}>${safeText(project.name)}</option>`);
     });
-    elements.assayProjectInput.innerHTML = options.join('');
+    i18nUi.setHtml(elements.assayProjectInput, options.join(''));
     if (selected && (state.projects || []).some((project) => project.id === selected)) {
       elements.assayProjectInput.value = selected;
     }
@@ -45,11 +49,12 @@ export function createAssayBrowserView({ elements, state, safeText, runtime, ens
     const entries = (state.notebookEntries || [])
       .filter((entry) => !projectId || entry.projectId === projectId)
       .sort((a, b) => Date.parse(b.updatedAt || '') - Date.parse(a.updatedAt || ''));
-    const options = ['<option value="">Not linked</option>'];
+    const options = [plateOption('', 'form.notLinked')];
     entries.forEach((entry) => {
-      options.push(`<option value="${entry.id}">${safeText(notebookLabel(entry))}</option>`);
+      const { key, params } = notebookOptionMessage(entry);
+      options.push(plateOption(entry.id, key, params));
     });
-    elements.assayNotebookEntryInput.innerHTML = options.join('');
+    i18nUi.setHtml(elements.assayNotebookEntryInput, options.join(''));
 
     if (selected && entries.some((entry) => entry.id === selected)) {
       elements.assayNotebookEntryInput.value = selected;
@@ -57,7 +62,7 @@ export function createAssayBrowserView({ elements, state, safeText, runtime, ens
     }
 
     if (selected && !entries.some((entry) => entry.id === selected)) {
-      elements.assayNotebookEntryInput.innerHTML += `<option value="${safeText(selected)}">${safeText(`${selected} (missing notebook page)`)}</option>`;
+      elements.assayNotebookEntryInput.innerHTML += plateOption(selected, 'form.missingNotebook', { id: selected });
       elements.assayNotebookEntryInput.value = selected;
     }
   }
@@ -73,12 +78,12 @@ export function createAssayBrowserView({ elements, state, safeText, runtime, ens
       return;
     }
     const rows = sortedAssaysByUpdated();
-    const options = ['<option value="">Select assay plate</option>'];
+    const options = [plateOption('', 'analysis.selectAssay')];
     rows.forEach((assay) => {
       const label = assay.name || assay.id;
       options.push(`<option value="${assay.id}">${safeText(label)}</option>`);
     });
-    elements.assayResultsAssaySelect.innerHTML = options.join('');
+    i18nUi.setHtml(elements.assayResultsAssaySelect, options.join(''));
     const candidate = preferredId || runtime.activeResultsAssayId;
     if (candidate && rows.some((assay) => assay.id === candidate)) {
       elements.assayResultsAssaySelect.value = candidate;
@@ -120,16 +125,16 @@ export function createAssayBrowserView({ elements, state, safeText, runtime, ens
     return haystack.includes(term);
   }
 
-  function renderItemActions({ safeId, safeTitle }) {
+  function renderItemActions({ safeId, title }) {
     return `
       <div class="card-actions assay-browser-item-actions">
-        <button type="button" class="row-action-icon-btn" data-assay-edit="${safeId}" aria-label="Edit ${safeTitle}" data-hover-caption="Edit">
+        <button type="button" class="row-action-icon-btn" data-assay-edit="${safeId}" ${plateAttributes({ 'aria-label': 'action.editNamed', 'data-hover-caption': 'action.edit' }, { name: title })}>
           <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
             <path d="M12 20h9" />
             <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
           </svg>
         </button>
-        <button type="button" class="row-action-icon-btn row-action-icon-btn-danger" data-assay-delete="${safeId}" aria-label="Delete ${safeTitle}" data-hover-caption="Delete">
+        <button type="button" class="row-action-icon-btn row-action-icon-btn-danger" data-assay-delete="${safeId}" ${plateAttributes({ 'aria-label': 'action.deleteNamed', 'data-hover-caption': 'action.delete' }, { name: title })}>
           <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
             <path d="M3 6h18" />
             <path d="M8 6V4h8v2" />
@@ -154,7 +159,7 @@ export function createAssayBrowserView({ elements, state, safeText, runtime, ens
             type="button"
             class="assay-browser-item-copy assay-browser-item-select"
             data-assay-results-select="${safeId}"
-            aria-label="Analyze ${safeTitle}"
+            ${plateAttributes({ 'aria-label': 'action.analyzeNamed' }, { name: title })}
             aria-pressed="${isActive ? 'true' : 'false'}"
           >
             <span class="assay-browser-item-title">${safeTitle}</span>
@@ -168,7 +173,7 @@ export function createAssayBrowserView({ elements, state, safeText, runtime, ens
       return `
         <article class="assay-browser-item${isActive ? ' is-active' : ''}">
           ${copy}
-          ${renderItemActions({ safeId, safeTitle })}
+          ${renderItemActions({ safeId, title })}
         </article>
       `;
     }).join('');
@@ -187,11 +192,11 @@ export function createAssayBrowserView({ elements, state, safeText, runtime, ens
     const term = String(search?.value || '').trim().toLowerCase();
     const rows = assays.filter((item) => matchesSearch(item, term));
     if (count) {
-      count.textContent = term ? `${rows.length}/${assays.length}` : String(assays.length);
+      i18nUi.setText(count, (term ? `${rows.length}/${assays.length}` : String(assays.length)));
     }
-    list.innerHTML = rows.length
+    i18nUi.setHtml(list, rows.length
       ? renderListItems(rows, { selectable })
-      : '<p class="small-note assay-browser-empty">No assays found.</p>';
+      : `<p class="small-note assay-browser-empty">${plateMessage('browser.empty')}</p>`);
   }
 
   function renderList() {

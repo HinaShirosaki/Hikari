@@ -1,8 +1,14 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("workflow");
+import { workflowMessage, workflowText } from '../localization.js';
+import { translateTree } from '../../../lib/i18n/dom.js';
 import { BLOCK_TYPES } from '../constants.js';
 import {
   buildAssigneeOptions,
   buildDirectionMaps,
-  notebookEntryLabel
+  notebookEntryLabel,
+  notebookEntryDescriptor
 } from '../presentation.js';
 import { buildWorkflowExecutionLayout, computeEntryProgress } from '../execution.js';
 
@@ -18,7 +24,6 @@ function createWorkflowOptionLists({
   parseTimestamp,
   formatTimestamp,
   titleForBlock,
-  labelForBlockType,
   displayLabelForBlock,
   getVisibleTemplates,
   ensureActiveTemplate,
@@ -28,7 +33,7 @@ function createWorkflowOptionLists({
     if (!elements.workflowProjectInput) {
       return;
     }
-    const options = ['<option value="">Unlinked project</option>'];
+    const options = ['<option value="" data-i18n="workflow.option.unlinkedProject">Unlinked project</option>'];
     (state.projects || []).forEach((project) => {
       options.push(`<option value="${safeText(project.id)}">${safeText(project.name)}</option>`);
     });
@@ -36,9 +41,10 @@ function createWorkflowOptionLists({
       runtime.draft?.projectId
       && !(state.projects || []).some((project) => project.id === runtime.draft.projectId)
     ) {
-      options.push(`<option value="${safeText(runtime.draft.projectId)}">${safeText(`Missing project (${runtime.draft.projectId})`)}</option>`);
+      options.push(`<option value="${safeText(runtime.draft.projectId)}">${i18nUi.render(i18nUi.message("Missing project ({p0})", { p0: runtime.draft.projectId }))}</option>`);
     }
-    elements.workflowProjectInput.innerHTML = options.join('');
+    i18nUi.setHtml(elements.workflowProjectInput, options.join(''));
+    translateTree(elements.workflowProjectInput);
     elements.workflowProjectInput.value = runtime.draft?.projectId || '';
   }
 
@@ -47,11 +53,12 @@ function createWorkflowOptionLists({
       return;
     }
     const selected = elements.workflowTemplateCreateProjectInput.value;
-    const options = ['<option value="">Unlinked project</option>'];
+    const options = ['<option value="" data-i18n="workflow.option.unlinkedProject">Unlinked project</option>'];
     (state.projects || []).forEach((project) => {
       options.push(`<option value="${safeText(project.id)}">${safeText(project.name)}</option>`);
     });
-    elements.workflowTemplateCreateProjectInput.innerHTML = options.join('');
+    i18nUi.setHtml(elements.workflowTemplateCreateProjectInput, options.join(''));
+    translateTree(elements.workflowTemplateCreateProjectInput);
     if (selected && (state.projects || []).some((project) => project.id === selected)) {
       elements.workflowTemplateCreateProjectInput.value = selected;
     }
@@ -72,21 +79,23 @@ function createWorkflowOptionLists({
 
     const options = [];
     entries.forEach((entry) => {
-      options.push(`<option value="${safeText(entry.id)}">${safeText(notebookEntryLabel(entry, formatTimestamp))}</option>`);
+      const message = notebookEntryDescriptor(entry, formatTimestamp);
+      options.push(`<option value="${safeText(entry.id)}" data-i18n="workflow.${message.key}" data-i18n-params="${safeText(JSON.stringify(message.params))}">${safeText(notebookEntryLabel(entry, formatTimestamp))}</option>`);
     });
 
     selectedNotebookIds.forEach((entryId) => {
       if (entries.some((entry) => entry.id === entryId)) {
         return;
       }
-      options.push(`<option value="${safeText(entryId)}">${safeText(`Missing notebook page (${entryId})`)}</option>`);
+      options.push(`<option value="${safeText(entryId)}">${i18nUi.render(i18nUi.message("Missing notebook page ({p0})", { p0: entryId }))}</option>`);
     });
 
     if (!options.length) {
-      options.push('<option value="" disabled>No notebook pages available</option>');
+      options.push('<option value="" disabled data-i18n="workflow.option.noNotebooks">No notebook pages available</option>');
     }
 
-    elements.workflowNotebookPagesInput.innerHTML = options.join('');
+    i18nUi.setHtml(elements.workflowNotebookPagesInput, options.join(''));
+    translateTree(elements.workflowNotebookPagesInput);
     Array.from(elements.workflowNotebookPagesInput.options).forEach((option) => {
       option.selected = selectedSet.has(option.value);
     });
@@ -100,7 +109,7 @@ function createWorkflowOptionLists({
     const selectedProtocolId = elements.workflowBlockProtocolInput.value;
     const selectedProtocol = (state.protocols || []).find((protocol) => protocol.id === selectedProtocolId) || null;
     const searchTerm = String(elements.workflowBlockProtocolSearchInput?.value || '').trim().toLowerCase();
-    const options = ['<option value="">Select protocol</option>'];
+    const options = ['<option value="" data-i18n="workflow.option.protocol">Select protocol</option>'];
     const filteredProtocols = (state.protocols || []).filter((protocol) => (
       String(protocol.name || '').toLowerCase().includes(searchTerm)
     ));
@@ -112,7 +121,8 @@ function createWorkflowOptionLists({
       options.push(`<option value="${safeText(protocol.id)}">${safeText(protocol.name)}</option>`);
     });
 
-    elements.workflowBlockProtocolInput.innerHTML = options.join('');
+    i18nUi.setHtml(elements.workflowBlockProtocolInput, options.join(''));
+    translateTree(elements.workflowBlockProtocolInput);
     if (
       selectedProtocolId
       && Array.from(elements.workflowBlockProtocolInput.options).some((option) => option.value === selectedProtocolId)
@@ -133,15 +143,17 @@ function createWorkflowOptionLists({
       .slice(0, 60);
 
     if (!matches.length) {
-      elements.workflowBlockProtocolResults.innerHTML = '<p class="workflow-block-protocol-search-empty">No matching protocols.</p>';
+      i18nUi.setHtml(elements.workflowBlockProtocolResults, '<p class="workflow-block-protocol-search-empty" data-i18n="workflow.empty.protocols">No matching protocols.</p>');
+      translateTree(elements.workflowBlockProtocolResults);
       return;
     }
 
-    elements.workflowBlockProtocolResults.innerHTML = matches.map((protocol) => {
+    i18nUi.setHtml(elements.workflowBlockProtocolResults, matches.map((protocol) => {
       const id = String(protocol?.id || '').trim();
       const selected = id === selectedProtocolId ? ' is-selected' : '';
-      return `<button type="button" class="workflow-block-protocol-search-result${selected}" data-workflow-block-protocol-id="${safeText(id)}" role="option" aria-selected="${id === selectedProtocolId ? 'true' : 'false'}">${safeText(protocol?.name || 'Untitled protocol')}</button>`;
-    }).join('');
+      return `<button type="button" class="workflow-block-protocol-search-result${selected}" data-workflow-block-protocol-id="${safeText(id)}" role="option" aria-selected="${id === selectedProtocolId ? 'true' : 'false'}">${safeText(protocol?.name || workflowText('fallback.protocol'))}</button>`;
+    }).join(''));
+    translateTree(elements.workflowBlockProtocolResults);
   }
 
   function renderProtocolPicker() {
@@ -159,47 +171,48 @@ function createWorkflowOptionLists({
     const { upstream, downstream } = buildDirectionMaps(blocks, links);
 
     if (!blocks.length) {
-      elements.workflowBlockList.innerHTML = '<p class="small-note">No blocks yet. Add a protocol or plain-text block to start.</p>';
+      i18nUi.setHtml(elements.workflowBlockList, '<p class="small-note" data-i18n="workflow.empty.blocks">No blocks yet. Add a protocol or plain-text block to start.</p>');
+      translateTree(elements.workflowBlockList);
       return;
     }
 
-    elements.workflowBlockList.innerHTML = blocks.map((block, index) => {
+    i18nUi.setHtml(elements.workflowBlockList, blocks.map((block, index) => {
       const upstreamText = (upstream.get(block.id) || []).map((blockId) => displayLabelForBlock(blockId)).join(' | ') || '-';
       const downstreamText = (downstream.get(block.id) || []).map((blockId) => displayLabelForBlock(blockId)).join(' | ') || '-';
       const type = getBlockType(block);
       const title = titleForBlock(block);
-      const typeLabel = labelForBlockType(block);
       const plainTextEditor = type === BLOCK_TYPES.TEXT
         ? `
             <label class="workflow-text-block-field">
-              <span>Text</span>
+              <span data-i18n="workflow.field.text">Text</span>
               <input
                 data-workflow-block-text="${safeText(block.id)}"
                 value="${safeText(block.text)}"
-                placeholder="Plain text"
+                placeholder="Plain text" data-i18n-placeholder="workflow.hint.plainText"
               />
             </label>
           `
-        : `<p class="small-note">Protocol: ${safeText(title)}</p>`;
+        : `<p class="small-note">${workflowMessage('field.protocolPrefix')} ${safeText(title)}</p>`;
       return `
         <article class="list-row workflow-block-row">
           <div class="workflow-block-meta">
-            <strong>${safeText(`Block ${index + 1}: ${title}`)}</strong>
-            <p class="small-note">Type: ${safeText(typeLabel)}</p>
+            <strong>${workflowMessage('block.title', { index: index + 1, title })}</strong>
+            <p class="small-note">${workflowMessage('field.typePrefix')} ${workflowMessage(type === BLOCK_TYPES.TEXT ? 'type.text' : 'type.protocol')}</p>
             ${plainTextEditor}
-            <p class="small-note">Upstream: ${safeText(upstreamText)}</p>
-            <p class="small-note">Downstream: ${safeText(downstreamText)}</p>
+            <p class="small-note">${workflowMessage('field.upstream')} ${safeText(upstreamText)}</p>
+            <p class="small-note">${workflowMessage('field.downstream')} ${safeText(downstreamText)}</p>
           </div>
           <div class="workflow-assignee-field">
-            <span>Assignee</span>
+            <span data-i18n="workflow.field.assignee">Assignee</span>
             <select data-workflow-block-assignee="${safeText(block.id)}">${buildAssigneeOptions(state, safeText, block.assigneeId)}</select>
           </div>
           <div class="list-actions">
-            <button type="button" class="danger-btn" data-workflow-block-remove="${safeText(block.id)}">Remove</button>
+            <button type="button" class="danger-btn" data-workflow-block-remove="${safeText(block.id)}" data-i18n="workflow.action.remove">Remove</button>
           </div>
         </article>
       `;
-    }).join('');
+    }).join(''));
+    translateTree(elements.workflowBlockList);
   }
 
   function renderTemplateSourceOptions() {
@@ -207,15 +220,16 @@ function createWorkflowOptionLists({
       return;
     }
     const selected = elements.workflowTemplateSourceInput.value;
-    const options = ['<option value="">Select template</option>'];
+    const options = ['<option value="" data-i18n="workflow.option.template">Select template</option>'];
     const templates = [...(state.workflowTemplates || [])]
       .sort((a, b) => parseTimestamp(b.updatedAt) - parseTimestamp(a.updatedAt));
 
     templates.forEach((template) => {
-      options.push(`<option value="${safeText(template.id)}">${safeText(template.name || 'Untitled template')}</option>`);
+      options.push(`<option value="${safeText(template.id)}">${safeText(template.name || workflowText('fallback.template'))}</option>`);
     });
 
-    elements.workflowTemplateSourceInput.innerHTML = options.join('');
+    i18nUi.setHtml(elements.workflowTemplateSourceInput, options.join(''));
+    translateTree(elements.workflowTemplateSourceInput);
     if (selected && templates.some((template) => template.id === selected)) {
       elements.workflowTemplateSourceInput.value = selected;
     }
@@ -230,22 +244,24 @@ function createWorkflowOptionLists({
       .sort((a, b) => parseTimestamp(b.updatedAt) - parseTimestamp(a.updatedAt));
 
     if (!templates.length) {
-      elements.workflowTemplateList.innerHTML = '<p class="small-note">No workflow templates saved yet.</p>';
+      i18nUi.setHtml(elements.workflowTemplateList, '<p class="small-note" data-i18n="workflow.empty.templates">No workflow templates saved yet.</p>');
+      translateTree(elements.workflowTemplateList);
       return;
     }
 
-    elements.workflowTemplateList.innerHTML = templates.map((template) => `
+    i18nUi.setHtml(elements.workflowTemplateList, templates.map((template) => `
       <article class="workflow-card">
-        <h3>${safeText(template.name || 'Untitled template')}</h3>
-        <p>${safeText(template.description || 'No description')}</p>
-        <p><strong>Blocks:</strong> ${safeText(template.blocks.length)} | <strong>Connections:</strong> ${safeText(template.links.length)} | <strong>Workflows:</strong> ${safeText(getWorkflowsForTemplate(template.id).length)}</p>
-        <p><strong>Updated:</strong> ${safeText(formatTimestamp(template.updatedAt || template.createdAt))}</p>
+        <h3>${safeText(template.name || workflowText('fallback.template'))}</h3>
+        <p>${safeText(template.description || workflowText('fallback.description'))}</p>
+        <p><strong data-i18n="workflow.field.blocks">Blocks:</strong> ${safeText(template.blocks.length)} | <strong data-i18n="workflow.field.connections">Connections:</strong> ${safeText(template.links.length)} | <strong data-i18n="workflow.field.workflows">Workflows:</strong> ${safeText(getWorkflowsForTemplate(template.id).length)}</p>
+        <p><strong data-i18n="workflow.field.updated">Updated:</strong> ${safeText(formatTimestamp(template.updatedAt || template.createdAt))}</p>
         <div class="card-actions">
-          <button type="button" class="ghost-btn" data-workflow-template-use="${safeText(template.id)}">Select</button>
-          <button type="button" class="danger-btn" data-workflow-template-delete="${safeText(template.id)}">Delete</button>
+          <button type="button" class="ghost-btn" data-workflow-template-use="${safeText(template.id)}" data-i18n="workflow.action.select">Select</button>
+          <button type="button" class="danger-btn" data-workflow-template-delete="${safeText(template.id)}" data-i18n="workflow.action.delete">Delete</button>
         </div>
       </article>
-    `).join('');
+    `).join(''));
+    translateTree(elements.workflowTemplateList);
   }
 
   function renderWorkflowList() {
@@ -257,11 +273,12 @@ function createWorkflowOptionLists({
     const activeTemplate = ensureActiveTemplate(templates);
 
     if (!templates.length) {
-      elements.workflowList.innerHTML = '';
+      i18nUi.setHtml(elements.workflowList, '');
+      translateTree(elements.workflowList);
       return;
     }
 
-    elements.workflowList.innerHTML = `
+    i18nUi.setHtml(elements.workflowList, `
       <div class="workflow-template-name-list">
         ${templates.map((template) => {
           const runs = getWorkflowsForTemplate(template.id);
@@ -280,19 +297,20 @@ function createWorkflowOptionLists({
             class="workflow-template-name-item${template.id === activeTemplate?.id ? ' is-active' : ''}"
             data-workflow-template-open="${safeText(template.id)}"
           >
-            <span class="workflow-template-name-label">${safeText(template.name || 'Untitled template')}</span>
+            <span class="workflow-template-name-label">${safeText(template.name || workflowText('fallback.template'))}</span>
             <span class="workflow-template-name-summary">
-              <span>${runs.length} run${runs.length === 1 ? '' : 's'}</span>
-              <span>${active} active</span>
-              ${failed ? `<span class="is-failed">${failed} failed</span>` : ''}
-              <span class="workflow-template-name-steps">${buildWorkflowExecutionLayout(template).mainPathIds.length} steps</span>
+              <span>${workflowMessage('summary.runs', { count: runs.length })}</span>
+              <span>${workflowMessage('summary.active', { count: active })}</span>
+              ${failed ? `<span class="is-failed">${workflowMessage('summary.failed', { count: failed })}</span>` : ''}
+              <span class="workflow-template-name-steps">${workflowMessage('summary.steps', { count: buildWorkflowExecutionLayout(template).mainPathIds.length })}</span>
             </span>
             <span class="workflow-template-name-bar" aria-hidden="true"><i style="width: ${percent}%;"></i></span>
           </button>
         `;
         }).join('')}
       </div>
-    `;
+    `);
+    translateTree(elements.workflowList);
   }
   return {
     renderProjectOptions,

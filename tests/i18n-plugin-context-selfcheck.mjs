@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import { i18n } from '../src/renderer/lib/i18n/index.js';
+import { createPluginBridge } from '../src/renderer/app/plugin-bridge.js';
+import { buildPluginAppContext } from '../src/renderer/app/plugin-bridge/helpers.js';
+
+const state = { settings: { storagePath: '/fixture/workspace', appearance: { mode: 'night', fontSize: 18 } } };
+const original = structuredClone(state), messages = [];
+const frame = { postMessage: (message, origin) => messages.push({ message, origin }) };
+const bridge = createPluginBridge({ state, persist() { throw new Error('A locale event must not save records'); }, windowObject: { addEventListener() {} } });
+bridge.register(frame, { id: 'fixture', enabled: true, permissions: [] }, 'http://127.0.0.1:41234/');
+i18n.registerMessages('es', 'fixture', { label: 'Etiqueta' });
+i18n.setLocale('es-MX');
+assert.equal(messages.length, 1);
+assert.equal(messages[0].origin, 'http://127.0.0.1:41234');
+assert.equal(messages[0].message.event, 'app.context');
+assert.equal(messages[0].message.payload.changed, 'locale');
+assert.equal(messages[0].message.payload.locale, 'es');
+assert.deepEqual(messages[0].message.payload.appearance, { mode: 'night', fontSize: 18 });
+assert.equal(buildPluginAppContext(state).locale, 'es');
+assert.deepEqual(state, original, 'Locale propagation never mutates workspace data');
+bridge.disconnectLocale();
+i18n.setLocale('en');
+assert.equal(messages.length, 1, 'A disposed locale subscription stops broadcasting');
+console.log('Plugin locale context: origin grants, display locale, appearance, unchanged state, and cleanup passed.');

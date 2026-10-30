@@ -1,4 +1,8 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("samples");
 import { createDefaultWells, isSupportedContainerType, normalizeCustomGridDimensions } from './constants.js';
+import { sampleText, setSampleAttribute, setSampleText } from './localization.js';
 
 export function installContainerForm(ctx) {
   const { createId, helpers, persist, safeText, state, uiState } = ctx;
@@ -57,26 +61,25 @@ export function installContainerForm(ctx) {
   function renderAddContainerDialogMode() {
     const target = getAddItemTarget();
     const isFolderMode = uiState.addItemMode === 'folder';
-    const title = isFolderMode
-      ? (target?.folder ? 'New Folder Inside' : 'New Folder')
-      : (target?.folder ? 'Add Container to Folder' : 'Add Container');
-    const note = target?.folder
-      ? (isFolderMode
-        ? `Create a folder inside ${target.folder.name || 'this folder'}.`
-        : `Place this container in ${target.folder.name || 'this folder'}.`)
-      : '';
+    const titleKey = isFolderMode
+      ? (target?.folder ? 'dialog.folderInside' : 'dialog.folder')
+      : (target?.folder ? 'dialog.addToFolder' : 'dialog.add');
+    const noteKey = !target?.folder ? 'empty' : isFolderMode
+      ? (target.folder.name ? 'dialog.createInFolder' : 'dialog.createInUnnamedFolder')
+      : (target.folder.name ? 'dialog.placeInFolder' : 'dialog.placeInUnnamedFolder');
+    const noteParams = target?.folder?.name ? { folder: target.folder.name } : {};
     if (addContainerTitle) {
-      addContainerTitle.textContent = title;
+      setSampleText(addContainerTitle, titleKey);
     }
     if (addContainerNote) {
-      addContainerNote.hidden = !note;
-      addContainerNote.textContent = note;
+      addContainerNote.hidden = !target?.folder;
+      setSampleText(addContainerNote, noteKey, noteParams);
     }
     if (addItemNameLabel) {
-      addItemNameLabel.textContent = isFolderMode ? 'Folder Name' : 'Container Name';
+      setSampleText(addItemNameLabel, isFolderMode ? 'form.folderName' : 'form.containerName');
     }
     if (addContainerNameInput) {
-      addContainerNameInput.placeholder = isFolderMode ? 'e.g. Project Samples' : 'e.g. Box A';
+      setSampleAttribute(addContainerNameInput, 'placeholder', isFolderMode ? 'form.folderPlaceholder' : 'form.containerPlaceholder');
     }
     if (addContainerTypeField) {
       addContainerTypeField.hidden = isFolderMode;
@@ -85,7 +88,7 @@ export function installContainerForm(ctx) {
       addContainerTypeSelect.disabled = isFolderMode;
     }
     if (addContainerSubmit) {
-      addContainerSubmit.textContent = isFolderMode ? 'Create Folder' : 'Save Container';
+      setSampleText(addContainerSubmit, isFolderMode ? 'action.createFolder' : 'action.saveContainer');
     }
     if (addContainerLocationSelect) {
       addContainerLocationSelect.disabled = Boolean(target);
@@ -153,12 +156,12 @@ export function installContainerForm(ctx) {
       return;
     }
     const selectedLocation = addContainerLocationSelect.value;
-    const options = ['<option value="">Select location</option>'];
+    const options = [`<option value="" data-i18n="samples.form.selectLocation">${safeText(sampleText('form.selectLocation'))}</option>`];
     helpers.getSectionNames().forEach((section) => {
       const isSelected = selectedLocation === section ? ' selected' : '';
       options.push(`<option value="${safeText(section)}"${isSelected}>${safeText(section)}</option>`);
     });
-    addContainerLocationSelect.innerHTML = options.join('');
+    i18nUi.setHtml(addContainerLocationSelect, options.join(''));
     renderAddContainerDialogMode();
   }
 

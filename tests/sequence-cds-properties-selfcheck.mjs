@@ -1,3 +1,5 @@
+import markup from './support/i18n-markup.cjs';
+const { stripI18nMarkup } = markup;
 import assert from 'node:assert/strict';
 import { getCdsProteinProperties } from '../src/renderer/modules/sequence-viewer/protein-properties.js';
 import { formatProteinPropertySummary } from '../src/renderer/modules/sequence-viewer/rendering/protein-summary.js';
@@ -26,10 +28,10 @@ for (const [feature, sequence] of [
 }
 
 const unknown = formatProteinPropertySummary(getCdsProteinProperties(cds, 'ATGNNNTAA'));
-assert.match(unknown, /Monoisotopic MW n\/a/);
-assert.match(unknown, /pI n\/a/);
-assert.match(unknown, /unknown residue\(s\) X/);
-assert.doesNotMatch(unknown, /0\.00 Da|pI 0\.00/);
+assert.match(stripI18nMarkup(unknown), /Monoisotopic MW n\/a/);
+assert.match(stripI18nMarkup(unknown), /pI n\/a/);
+assert.match(stripI18nMarkup(unknown), /unknown residue\(s\) X/);
+assert.doesNotMatch(stripI18nMarkup(unknown), /0\.00 Da|pI 0\.00/);
 
 function makeDocument() {
   const document = createMockDocument();

@@ -4,8 +4,8 @@ import {
   getFolderById,
   resolveSessionFolderId
 } from './session-folders.js';
-import { showTransientNotice } from '../../lib/notify.js';
 import { normalizeScopeKey } from '../app-state/agent-chat-normalizer.js';
+import { agentNotice, agentUi } from './localization.js';
 
 // Reading chat sessions off disk and creating new ones. Owns the in-flight
 // promises so a second click cannot start a duplicate load or session.
@@ -58,7 +58,7 @@ function createSessionLoading({
     queuedSessionLoadId = '';
     const requestedSelectionRevision = sessionSelectionRevision;
     if (options.silent !== true) {
-      setStatus('Loading chat history...');
+      setStatus(agentUi('status.loadingHistory'));
     }
     sessionLoadPromise = api.agentChatLogGetSession({
       storagePath,
@@ -75,7 +75,7 @@ function createSessionLoading({
         renderSessionList();
         setSessionStatus('');
         if (options.silent !== true) {
-          setStatus('New chat ready.');
+          setStatus(agentUi('status.newChat'));
         }
         return;
       }
@@ -88,7 +88,7 @@ function createSessionLoading({
         renderSessionList();
         setSessionStatus('');
         if (options.silent !== true) {
-          setStatus('Ready.');
+          setStatus(agentUi('status.ready'));
         }
         return;
       }
@@ -108,13 +108,13 @@ function createSessionLoading({
       renderHistory({ forceScroll: true });
       setSessionStatus('');
       if (options.silent !== true) {
-        setStatus(readRunningSessionIds().has(targetSessionId) ? 'Working on this...' : 'Ready.');
+        setStatus(agentUi(readRunningSessionIds().has(targetSessionId) ? 'status.working' : 'status.ready'));
       }
     }).catch((error) => {
-      setSessionStatus(`Chat load failed: ${String(error?.message || error)}`);
-      showTransientNotice(`Chat load failed: ${String(error?.message || error)}`, { type: 'error' });
+      setSessionStatus(agentUi('session.loadFailed', { error: String(error?.message || error) }));
+      agentNotice(agentUi('session.loadFailed', { error: String(error?.message || error) }), { type: 'error' });
       if (options.silent !== true) {
-        setStatus('Error.');
+        setStatus(agentUi('status.error'));
       }
     }).finally(() => {
       const nextSessionId = queuedSessionLoadId;
@@ -143,13 +143,13 @@ function createSessionLoading({
     }
     if (!storagePath) {
       renderSessionList();
-      setSessionStatus('Set Storage Folder Path in Settings to save and browse agent chats.');
+      setSessionStatus(agentUi('session.noStorage'));
       return [];
     }
     if (!api?.agentChatLogListSessions || !api?.agentChatLogGetSession) {
       renderSessionList();
-      setSessionStatus('Persistent chat sessions are unavailable in this build.');
-      showTransientNotice('Persistent chat sessions are unavailable in this build.', { type: 'error' });
+      setSessionStatus(agentUi('session.unavailable'));
+      agentNotice(agentUi('session.unavailable'), { type: 'error' });
       return [];
     }
     if (!force && sessionsLoaded) {
@@ -159,7 +159,7 @@ function createSessionLoading({
     if (sessionListPromise) {
       return sessionListPromise;
     }
-    setSessionStatus('Loading saved chats...');
+    setSessionStatus(agentUi('session.loading'));
     sessionListPromise = api.agentChatLogListSessions({
       storagePath,
       limit: 200
@@ -190,8 +190,8 @@ function createSessionLoading({
     }).catch((error) => {
       state.agentChat.sessions = [];
       renderSessionList();
-      setSessionStatus(`Chat list failed: ${String(error?.message || error)}`);
-      showTransientNotice(`Chat list failed: ${String(error?.message || error)}`, { type: 'error' });
+      setSessionStatus(agentUi('session.listFailed', { error: String(error?.message || error) }));
+      agentNotice(agentUi('session.listFailed', { error: String(error?.message || error) }), { type: 'error' });
       return [];
     }).finally(() => {
       sessionListPromise = null;
@@ -267,9 +267,9 @@ function createSessionLoading({
     renderHistory({ forceScroll: true });
     const storagePath = getStoragePath();
     setSessionStatus(!storagePath
-      ? 'Started a new local chat draft. Set Storage Folder Path to persist it.'
-      : (!api?.agentChatLogCreateSession ? 'Persistent chat sessions are unavailable in this build.' : ''));
-    setStatus('New chat ready.');
+      ? agentUi('session.localDraft')
+      : (!api?.agentChatLogCreateSession ? agentUi('session.unavailable') : ''));
+    setStatus(agentUi('status.newChat'));
     return true;
   }
 

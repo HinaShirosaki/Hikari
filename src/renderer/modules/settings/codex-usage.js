@@ -1,3 +1,6 @@
+import "./localization.js";
+import { createPresentation } from "../../lib/i18n/presentation.js";
+const i18nUi = createPresentation("settings");
 function createCodexUsageSettings({ settingCodexUsage, settingCodexUsageStatus,
   refreshCodexUsageBtn, isConnected = () => false } = {}) {
   let revision = 0;
@@ -15,20 +18,18 @@ function createCodexUsageSettings({ settingCodexUsage, settingCodexUsageStatus,
     if (!row) return;
     row.hidden = hidden;
     const caption = row.querySelector('[data-codex-usage-label]');
-    if (caption) caption.textContent = label;
+    if (caption) i18nUi.setOwnedText(caption, label);
     const available = typeof window?.usedPercent === 'number' && Number.isFinite(window.usedPercent);
     const percent = available ? Math.max(0, Math.min(100, window.usedPercent)) : null;
-    row.querySelector('[data-codex-usage-value]').textContent = available
-      ? `${Number(percent.toFixed(1))}% used` : 'Unavailable';
+    i18nUi.setText(row.querySelector('[data-codex-usage-value]'), (available ? i18nUi.message("{p0}% used", { p0: Number(percent.toFixed(1)) }) : i18nUi.message("Unavailable")));
     const progress = row.querySelector('progress');
-    progress.setAttribute('aria-label', label);
+    i18nUi.setAttribute(progress, 'aria-label', i18nUi.owned(label));
     progress.hidden = !available;
     if (available) progress.value = percent;
     else progress.removeAttribute('value');
     const date = typeof window?.resetsAt === 'number' && window.resetsAt > 0
       ? new Date(window.resetsAt * 1000) : null;
-    row.querySelector('[data-codex-usage-reset]').textContent = available && date && Number.isFinite(date.getTime())
-      ? `Resets ${date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : '';
+    i18nUi.setText(row.querySelector('[data-codex-usage-reset]'), (available && date && Number.isFinite(date.getTime()) ? i18nUi.message("Resets {p0}", { p0: date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) }) : ''));
   }
 
   function clear(message = 'Sign in to view account usage.') {
@@ -36,7 +37,7 @@ function createCodexUsageSettings({ settingCodexUsage, settingCodexUsageStatus,
     pending = null;
     renderWindow('fiveHour', null);
     renderWindow('weekly', null);
-    if (settingCodexUsageStatus) settingCodexUsageStatus.textContent = message;
+    if (settingCodexUsageStatus) i18nUi.setOwnedText(settingCodexUsageStatus, message);
     if (settingCodexUsage) settingCodexUsage.setAttribute('aria-busy', 'false');
     if (refreshCodexUsageBtn) refreshCodexUsageBtn.disabled = !isConnected();
   }
@@ -54,7 +55,7 @@ function createCodexUsageSettings({ settingCodexUsage, settingCodexUsageStatus,
     }
     const requestRevision = ++revision;
     settingCodexUsage.setAttribute('aria-busy', 'true');
-    if (settingCodexUsageStatus) settingCodexUsageStatus.textContent = 'Checking account usage…';
+    if (settingCodexUsageStatus) i18nUi.setOwnedText(settingCodexUsageStatus, i18nUi.message("Checking account usage…"));
     if (refreshCodexUsageBtn) refreshCodexUsageBtn.disabled = true;
     pending = Promise.resolve().then(async () => {
       try {
@@ -67,9 +68,7 @@ function createCodexUsageSettings({ settingCodexUsage, settingCodexUsageStatus,
         const [first, second] = Array.isArray(result.windows) ? result.windows : [];
         renderWindow('fiveHour', first, first ? { label: windowLabel(first.windowDurationMins) } : {});
         renderWindow('weekly', second, second ? { label: windowLabel(second.windowDurationMins) } : { hidden: Boolean(first) });
-        if (settingCodexUsageStatus) settingCodexUsageStatus.textContent = first
-          ? `${result.planType ? `${result.planType} plan. ` : ''}Shared across Codex apps using this account.`
-          : 'Codex returned no usage windows for the connected account. Refresh or sign in again.';
+        if (settingCodexUsageStatus) i18nUi.setOwnedText(settingCodexUsageStatus, (first ? i18nUi.message("{p0}Shared across Codex apps using this account.", { p0: result.planType ? `${result.planType} plan. ` : '' }) : i18nUi.message("Codex returned no usage windows for the connected account. Refresh or sign in again.")));
       } catch {
         if (requestRevision === revision) clear('Failed to load account usage. Try refreshing.');
       } finally {

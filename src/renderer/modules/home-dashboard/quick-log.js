@@ -1,3 +1,7 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("home");
+import { homeText, homeMessage, setHomeText } from './localization.js';
 import { ensureDashboardState, formatDateLocal, quickLogId } from './utils.js';
 import { showTransientNotice } from '../../lib/notify.js';
 import { isAgentAvailable } from '../../lib/agent-availability.js';
@@ -6,20 +10,20 @@ const DRAFT_SAVE_DELAY_MS = 400;
 
 function handoffErrorMessage(result) {
   const reason = String(result?.reason || '').trim();
-  if (reason === 'request_error') return 'Notebook preparation failed. Your experiment draft was kept.';
+  if (reason === 'request_error') return 'log.requestError';
   if (reason === 'busy') {
-    return 'Assistant is busy in this chat. Your experiment draft was kept.';
+    return 'log.busy';
   }
   if (reason === 'composer_not_empty') {
-    return 'Assistant already has an unsent draft. Your experiment draft was kept.';
+    return 'log.unsent';
   }
   if (reason === 'too_long') {
-    return 'Assistant messages are limited to 3,000 characters. Your experiment draft was kept.';
+    return 'log.tooLong';
   }
   if (reason === 'session_error') {
-    return 'Assistant could not start a chat. Your experiment draft was kept.';
+    return 'log.sessionError';
   }
-  return 'Assistant handoff is unavailable. Your experiment draft was kept.';
+  return 'log.unavailable';
 }
 
 export function initQuickLogWidget({
@@ -42,10 +46,13 @@ export function initQuickLogWidget({
   } = elements;
   let draftPersistTimer = null;
   let handoffPending = false;
+  let statusErrorKey = '';
 
   function setStatus(message, isError = false) {
-    const text = String(message || '').trim();
-    quickLogStatus.textContent = text;
+    const key = message || 'empty';
+    statusErrorKey = isError ? key : '';
+    setHomeText(quickLogStatus, key);
+    const text = quickLogStatus.textContent;
     quickLogStatus.classList.toggle('is-error', Boolean(isError && text));
   }
 
@@ -70,13 +77,13 @@ export function initQuickLogWidget({
       .slice(-2)
       .reverse();
     quickLogRecent.hidden = !recent.length;
-    quickLogRecent.innerHTML = recent.length
-      ? `<p class="home-quicklog-recent-label">Saved today</p>${recent.map((entry) => {
+    i18nUi.setHtml(quickLogRecent, recent.length
+      ? `<p class="home-quicklog-recent-label">${homeMessage('log.savedToday')}</p>${recent.map((entry) => {
         const stamp = entryTime(entry);
         const time = stamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
         return `<p class="home-quicklog-recent-row"><time datetime="${safeText(stamp.toISOString())}">${safeText(time)}</time><span>${safeText(entry.text)}</span></p>`;
       }).join('')}`
-      : '';
+      : '');
   }
 
   function syncControls() {
@@ -93,15 +100,13 @@ export function initQuickLogWidget({
     }
     try {
       persist();
-      if (announce) {
-        setStatus(String(state.settings.dashboard.quickLogDraft || '').trim()
-          ? 'Draft saved locally.'
-          : '');
+      if (announce && !handoffPending) {
+        setStatus((((((String(state.settings.dashboard.quickLogDraft || '').trim() ? i18nUi.text("log.draftSaved") : ''))))));
       }
       return true;
     } catch (error) {
       console.warn('Experiment log draft could not be saved:', error);
-      setStatus('Experiment draft could not be saved.', true);
+      setStatus(i18nUi.text("log.draftError"), true);
       return false;
     }
   }
@@ -129,9 +134,11 @@ export function initQuickLogWidget({
     syncControls();
     renderRecentEntries();
     if (!handoffPending) {
-      setStatus(draftPersistTimer !== null
-        ? 'Saving draft…'
-        : (draft.trim() ? 'Draft saved locally.' : ''));
+      if (statusErrorKey) {
+        setStatus(statusErrorKey, true);
+      } else {
+        setStatus((((((draftPersistTimer !== null ? i18nUi.text("log.saving") : (draft.trim() ? i18nUi.text("log.draftSaved") : '')))))));
+      }
     }
   }
 
@@ -139,7 +146,7 @@ export function initQuickLogWidget({
     ensureDashboardState(state);
     state.settings.dashboard.quickLogDraft = quickLogInput.value;
     syncControls();
-    setStatus(quickLogInput.value.trim() ? 'Saving draft…' : '');
+    setStatus((((((quickLogInput.value.trim() ? i18nUi.text("log.saving") : ''))))));
     scheduleDraftSave();
   }
 
@@ -172,7 +179,7 @@ export function initQuickLogWidget({
       state.settings.dashboard.quickLogDraft = previousDraft;
       quickLogInput.value = previousDraft;
       syncControls();
-      setStatus('Experiment could not be saved.', true);
+      setStatus(i18nUi.text("log.saveError"), true);
       return null;
     }
     quickLogInput.value = '';
@@ -183,20 +190,20 @@ export function initQuickLogWidget({
   function onSave() {
     const value = quickLogInput.value.trim();
     if (!value) {
-      setStatus('Add an experiment or observation before saving it.', true);
+      setStatus(i18nUi.text("log.requiredSave"), true);
       return;
     }
     if (!commit(value)) {
       return;
     }
     render();
-    setStatus('Logged.');
+    setStatus(i18nUi.text("log.logged"));
   }
 
   async function onSendToAgent() {
     const value = quickLogInput.value.trim();
     if (!value) {
-      setStatus('Add an experiment or observation before sending it.', true);
+      setStatus(i18nUi.text("log.requiredSend"), true);
       return;
     }
     if (handoffPending) {
@@ -204,7 +211,7 @@ export function initQuickLogWidget({
     }
     handoffPending = true;
     syncControls();
-    setStatus('Preparing notebook page…');
+    setStatus(i18nUi.text("log.preparing"));
     let result;
     try {
       result = await onSendQuickLogToAgent(value);
@@ -220,15 +227,15 @@ export function initQuickLogWidget({
       return;
     }
     if (!commit(value)) {
-      showTransientNotice('Sent to Assistant, but the experiment could not be saved locally.', { type: 'error' });
+      showTransientNotice(homeText('log.localError'), { type: 'error', i18nKey: 'home.log.localError' });
       return;
     }
     render();
-    setStatus('Experiment logged. Continue notebook review in the Home conversation.');
+    setStatus(i18nUi.text("log.handoffDone"));
   }
 
   function onKeydown(event) {
-    if (event.key !== 'Enter' || !(event.metaKey || event.ctrlKey)) {
+    if (event.isComposing || event.key !== 'Enter' || !(event.metaKey || event.ctrlKey)) {
       return;
     }
     event.preventDefault();

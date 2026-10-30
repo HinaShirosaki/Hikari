@@ -1,4 +1,5 @@
 import { asArray, normalizeAgentUserQuestion, trimText } from './shared.js';
+import { agentUi } from './localization.js';
 
 export function createAssistantQuestionController({
   api,
@@ -71,17 +72,17 @@ export function createAssistantQuestionController({
       return;
     }
     if (!api?.agentChat) {
-      setStatus('Agent IPC is unavailable.');
+      setStatus(agentUi('status.ipcUnavailable'));
       return;
     }
     const answer = trimText(answerText, 3000);
     if (!answer) {
-      setStatus('Add an answer first.');
+      setStatus(agentUi('status.answerFirst'));
       return;
     }
     const question = markAssistantQuestionAnswered(messageId, answer);
     if (!question) {
-      setStatus('Question is unavailable.');
+      setStatus(agentUi('status.questionUnavailable'));
       return;
     }
     persist();

@@ -1,3 +1,4 @@
+const i18nUi = window.HikariUi.createPresentation("qpcr");
 (function startTool(root) {
   'use strict';
   const { hikari } = root.HikariPlugin;
@@ -30,7 +31,7 @@
   };
 
   function status(id, text, error = false) {
-    el(id).textContent = text;
+    i18nUi.setOwnedText(el(id), text);
     el(id).dataset.error = String(error);
   }
 
@@ -70,7 +71,7 @@
         unsavedSent = value;
       }
     } catch (error) {
-      status('save-status', `Could not update save status: ${error.message}`, true);
+      status('save-status', i18nUi.text("Could not update save status: {p0}", { p0: error.message }), true);
     } finally { unsavedSending = false; }
   }
 
@@ -90,10 +91,10 @@
     result = null;
     resultDraft = null;
     el('results').hidden = true;
-    status('analysis-status', 'Inputs changed. Analyze to update the results.');
-    if (storageReady) status('save-status', JSON.stringify(draft()) === savedSnapshot ? 'Inputs saved.' : 'Inputs not saved.');
+    status('analysis-status', i18nUi.text("Inputs changed. Analyze to update the results."));
+    if (storageReady) status('save-status', (((((JSON.stringify(draft()) === savedSnapshot ? i18nUi.text("Inputs saved.") : i18nUi.text("Inputs not saved.")))))));
     status('export-status', '');
-    status('notebook-status', 'Choose an existing page after analyzing.');
+    status('notebook-status', i18nUi.text("Choose an existing page after analyzing."));
     updateGroups();
     updateActions();
     void pushUnsaved();
@@ -109,6 +110,7 @@
   }
 
   function appearance(context) {
+    if (context?.locale) root.HikariUi.setLocale(context.locale);
     if (!context?.appearance) return;
     const { mode: hostMode, fontSize } = context.appearance;
     document.documentElement.dataset.mode = hostMode === 'night' ? 'night' : 'day';
@@ -119,13 +121,13 @@
     const head = document.createElement('thead');
     const heading = document.createElement('tr');
     for (const column of table.columns) {
-      const cell = document.createElement('th'); cell.scope = 'col'; cell.textContent = column.title; heading.append(cell);
+      const cell = document.createElement('th'); cell.scope = 'col'; i18nUi.setOwnedText(cell, column.title); heading.append(cell);
     }
     head.append(heading);
     const body = document.createElement('tbody');
     for (const row of table.rows) {
       const line = document.createElement('tr');
-      for (const column of table.columns) { const cell = document.createElement('td'); cell.textContent = row[column.field]; line.append(cell); }
+      for (const column of table.columns) { const cell = document.createElement('td'); i18nUi.setText(cell, row[column.field]); line.append(cell); }
       body.append(line);
     }
     el(id).replaceChildren(head, body);
@@ -133,8 +135,8 @@
 
   function metric(title, value) {
     const box = document.createElement('div'); box.className = 'metric';
-    const label = document.createElement('small'); label.textContent = title;
-    const number = document.createElement('strong'); number.textContent = value;
+    const label = document.createElement('small'); i18nUi.setOwnedText(label, title);
+    const number = document.createElement('strong'); i18nUi.setText(number, value);
     box.append(label, number); return box;
   }
 
@@ -142,11 +144,11 @@
     const ns = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(ns, 'svg');
     svg.setAttribute('viewBox', '0 0 640 320'); svg.setAttribute('role', 'img');
-    svg.setAttribute('aria-label', `Standard curve: Ct versus log10 quantity. Slope ${math.format(curve.slope)}, R squared ${math.format(curve.rSquared)}.`);
+    i18nUi.setAttribute(svg, "aria-label", i18nUi.message("Standard curve: Ct versus log10 quantity. Slope {p0}, R squared {p1}.", { p0: math.format(curve.slope), p1: math.format(curve.rSquared) }));
     const add = (tag, attrs, text) => {
       const node = document.createElementNS(ns, tag);
       for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, String(value));
-      if (text !== undefined) node.textContent = text;
+      if (text !== undefined) i18nUi.setOwnedText(node, text);
       svg.append(node); return node;
     };
     const xs = curve.points.map(point => point.x);
@@ -168,7 +170,7 @@
     add('line', { x1: x(first.x), y1: y(first.fittedCt), x2: x(last.x), y2: y(last.fittedCt), class: 'plot-fit' });
     for (const point of curve.points) {
       const circle = add('circle', { cx: x(point.x), cy: y(point.ct.mean), r: 4, class: 'plot-point' });
-      const title = document.createElementNS(ns, 'title'); title.textContent = `${math.format(point.quantity)}: Ct ${math.format(point.ct.mean)}`; circle.append(title);
+      const title = document.createElementNS(ns, 'title'); i18nUi.setText(title, `${math.format(point.quantity)}: Ct ${math.format(point.ct.mean)}`); circle.append(title);
     }
     el('curve-plot').replaceChildren(svg);
   }
@@ -183,7 +185,7 @@
       renderTable('result-table', math.resultTable(calculation));
       el('group-results').hidden = mode !== 'expression';
       el('curve-plot').hidden = mode !== 'curve';
-      el('result-heading').textContent = mode === 'expression' ? 'Results by sample' : 'Results by standard';
+      i18nUi.setText(el('result-heading'), (mode === 'expression' ? i18nUi.message("Results by sample") : i18nUi.message("Results by standard")));
       if (mode === 'expression') {
         el('metrics').replaceChildren(metric('Biological samples', String(calculation.samples.length)), metric('Calibrator samples', String(calculation.controlN)), metric('Mean calibrator ΔCt', math.format(calculation.calibratorDeltaCt)));
         renderTable('group-table', { columns: [
@@ -196,7 +198,7 @@
       }
       result = calculation; resultDraft = current;
       el('results').hidden = false;
-      status('analysis-status', mode === 'expression' ? 'Calculated. Technical wells are averaged within each sample; biological samples remain separate.' : 'Calculated. Each starting quantity has equal weight in the regression.');
+      status('analysis-status', (((((mode === 'expression' ? i18nUi.text("Calculated. Technical wells are averaged within each sample; biological samples remain separate.") : i18nUi.text("Calculated. Each starting quantity has equal weight in the regression.")))))));
     } catch (error) { status('analysis-status', error.message, true); }
     updateActions();
   }
@@ -211,14 +213,14 @@
     if (savePromise) return savePromise;
     if (!storageReady) return Promise.resolve();
     const snapshot = JSON.stringify(draft());
-    if (snapshot.length > storageLimit) { status('save-status', 'Inputs exceed the host storage limit. Reduce the pasted data.', true); return Promise.resolve(); }
-    status('save-status', 'Saving inputs…');
+    if (snapshot.length > storageLimit) { status('save-status', i18nUi.text("Inputs exceed the host storage limit. Reduce the pasted data."), true); return Promise.resolve(); }
+    status('save-status', i18nUi.text("Saving inputs…"));
     savePromise = (async () => {
       try {
         await hikari.call('storage.set', { value: JSON.parse(snapshot) });
         savedSnapshot = snapshot;
-        status('save-status', JSON.stringify(draft()) === snapshot ? 'Inputs saved.' : 'Earlier inputs saved; current edits are not saved.');
-      } catch (error) { status('save-status', `Save failed: ${error.message} Your inputs are kept here. Try Save inputs again.`, true); }
+        status('save-status', (((((JSON.stringify(draft()) === snapshot ? i18nUi.text("Inputs saved.") : i18nUi.text("Earlier inputs saved; current edits are not saved.")))))));
+      } catch (error) { status('save-status', i18nUi.text("Save failed: {p0} Your inputs are kept here. Try Save inputs again.", { p0: error.message }), true); }
       finally { savePromise = null; updateActions(); await pushUnsaved(true); }
     })();
     updateActions();
@@ -228,50 +230,50 @@
   async function refreshNotebooks() {
     if (loadingNotebooks || !connected || !permissions.has('notebook:read')) return;
     loadingNotebooks = true; updateActions();
-    status('notebook-status', 'Loading notebook pages…');
+    status('notebook-status', i18nUi.text("Loading notebook pages…"));
     try {
       const pages = await hikari.call('notebook.list');
       if (!Array.isArray(pages)) throw new Error('Hikari returned an invalid notebook list.');
       const selected = el('notebook-entry').value;
-      const placeholder = document.createElement('option'); placeholder.value = ''; placeholder.textContent = pages.length ? 'Choose a notebook page' : 'No notebook pages. Create one in Biology Notebook, then refresh.';
+      const placeholder = document.createElement('option'); placeholder.value = ''; i18nUi.setText(placeholder, (pages.length ? i18nUi.message("Choose a notebook page") : i18nUi.message("No notebook pages. Create one in Biology Notebook, then refresh.")));
       const options = pages.filter(page => typeof page.id === 'string' && page.id).map(page => {
         const option = document.createElement('option'); option.value = page.id;
-        option.textContent = `${page.experimentName || 'Untitled'} (${page.id})`; return option;
+        i18nUi.setText(option, `${page.experimentName || 'Untitled'} (${page.id})`); return option;
       });
       el('notebook-entry').replaceChildren(placeholder, ...options);
       if (options.some(option => option.value === selected)) el('notebook-entry').value = selected;
-      status('notebook-status', pages.length ? 'Choose a page. Append results adds the current analysis and table.' : 'Create a notebook page in Hikari, then click Refresh.');
-    } catch (error) { status('notebook-status', `Could not load pages: ${error.message} Click Refresh to try again.`, true); }
+      status('notebook-status', (((((pages.length ? i18nUi.text("Choose a page. Append results adds the current analysis and table.") : i18nUi.text("Create a notebook page in Hikari, then click Refresh.")))))));
+    } catch (error) { status('notebook-status', i18nUi.text("Could not load pages: {p0} Click Refresh to try again.", { p0: error.message }), true); }
     finally { loadingNotebooks = false; updateActions(); }
   }
 
   async function appendResults() {
     if (appending || !result || el('append-results').disabled) return;
     const calculation = result, inputs = resultDraft, entryId = el('notebook-entry').value;
-    appending = true; updateActions(); status('notebook-status', 'Appending results…');
+    appending = true; updateActions(); status('notebook-status', i18nUi.text("Appending results…"));
     try {
       await hikari.call('notebook.appendResult', { entryId, text: summary(calculation, inputs), table: math.resultTable(calculation) });
-      status('notebook-status', `Results appended to ${entryId}.${result !== calculation ? ' Analyze current inputs before appending again.' : ''}`);
-    } catch (error) { status('notebook-status', `Append failed: ${error.message} Your analysis is kept. Try again.`, true); }
+      status('notebook-status', i18nUi.text("Results appended to {p0}.{p1}", { p0: entryId, p1: result !== calculation ? ' Analyze current inputs before appending again.' : '' }));
+    } catch (error) { status('notebook-status', i18nUi.text("Append failed: {p0} Your analysis is kept. Try again.", { p0: error.message }), true); }
     finally { appending = false; updateActions(); }
   }
 
   async function exportResults() {
     if (exporting || !result || el('export-results').disabled) return;
-    exporting = true; updateActions(); status('export-status', 'Choose where to save…');
+    exporting = true; updateActions(); status('export-status', i18nUi.text("Choose where to save…"));
     const calculation = result, inputs = resultDraft;
     try {
       const metadata = summary(calculation, inputs).split('\n').map(line => `# ${line.replace(/[\t\r]/g, ' ')}`).join('\n');
       const bytes = new TextEncoder().encode(`${metadata}\n\n${math.toTsv(math.resultTable(calculation))}`);
       const response = await hikari.call('downloads.save', { fileName: `qpcr-${calculation.kind === 'expression' ? 'relative-expression' : 'standard-curve'}.tsv`, dataBase64: bytes.toBase64() });
-      status('export-status', response?.saved ? 'TSV exported.' : 'Export canceled.');
-    } catch (error) { status('export-status', `Export failed: ${error.message} Try again.`, true); }
+      status('export-status', (((((response?.saved ? i18nUi.text("TSV exported.") : i18nUi.text("Export canceled.")))))));
+    } catch (error) { status('export-status', i18nUi.text("Export failed: {p0} Try again.", { p0: error.message }), true); }
     finally { exporting = false; updateActions(); }
   }
 
   async function connect() {
     if (connecting) return;
-    connecting = true; el('connect').disabled = true; status('host-status', 'Connecting to Hikari…');
+    connecting = true; el('connect').disabled = true; status('host-status', i18nUi.text("Connecting to Hikari…"));
     const initialRevision = revision;
     try {
       const info = await hikari.call('app.info');
@@ -279,7 +281,7 @@
       connected = true;
       permissions = new Set(Array.isArray(info.permissions) ? info.permissions : []);
       appearance(info);
-      status('host-status', 'Connected to Hikari.'); el('connect').hidden = true;
+      status('host-status', i18nUi.text("Connected to Hikari.")); el('connect').hidden = true;
       if (!storageReady && permissions.has('storage')) {
         try {
           const stored = await hikari.call('storage.get');
@@ -294,20 +296,20 @@
           }
           savedSnapshot = restored ? JSON.stringify(restored) : bootSnapshot;
           storageReady = true;
-          status('save-status', restored && !canRestore ? 'Current edits kept. Save inputs to replace the saved draft.' : restored ? 'Saved inputs restored.' : 'Save inputs to remember this draft.');
+          status('save-status', (((((restored && !canRestore ? i18nUi.text("Current edits kept. Save inputs to replace the saved draft.") : (restored ? i18nUi.text("Saved inputs restored.") : i18nUi.text("Save inputs to remember this draft."))))))));
           await pushUnsaved();
         } catch (error) {
-          status('save-status', `Could not restore inputs: ${error.message} Click Try again.`, true);
+          status('save-status', i18nUi.text("Could not restore inputs: {p0} Click Try again.", { p0: error.message }), true);
           el('connect').hidden = false;
         }
-      } else if (!permissions.has('storage')) status('save-status', 'Saved inputs unavailable: storage permission is missing.');
+      } else if (!permissions.has('storage')) status('save-status', i18nUi.text("Saved inputs unavailable: storage permission is missing."));
       if (permissions.has('notebook:read')) await refreshNotebooks();
-      else status('notebook-status', 'Notebook pages unavailable: notebook:read permission is missing.');
-      if (!permissions.has('notebook:write')) status('notebook-status', 'Appending unavailable: notebook:write permission is missing.');
-      if (!permissions.has('downloads')) status('export-status', 'Export unavailable: downloads permission is missing.');
+      else status('notebook-status', i18nUi.text("Notebook pages unavailable: notebook:read permission is missing."));
+      if (!permissions.has('notebook:write')) status('notebook-status', i18nUi.text("Appending unavailable: notebook:write permission is missing."));
+      if (!permissions.has('downloads')) status('export-status', i18nUi.text("Export unavailable: downloads permission is missing."));
     } catch (error) {
       connected = false; permissions.clear();
-      status('host-status', `${error.message} Local calculations remain available.`, true); el('connect').hidden = false;
+      status('host-status', i18nUi.text("{p0} Local calculations remain available.", { p0: error.message }), true); el('connect').hidden = false;
     } finally { connecting = false; el('connect').disabled = false; updateActions(); }
   }
 
@@ -316,7 +318,7 @@
   for (const next of ['expression', 'curve']) el(`${next}-mode`).addEventListener('click', () => { if (mode !== next) { showMode(next); changed(); } });
   el('load-example').addEventListener('click', () => {
     const field = el(mode === 'expression' ? 'expression-data' : 'curve-data');
-    if (field.value.trim() && !root.confirm('Replace the current data in this analysis with example data?')) return;
+    if (field.value.trim() && !root.confirm(i18nUi.text("Replace the current data in this analysis with example data?"))) return;
     field.value = examples[mode];
     if (mode === 'expression') { el('calibrator').value = 'Control'; el('target-name').value = 'Target'; el('reference-name').value = 'Reference'; }
     changed(); analyze();

@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("agent");
 // Patch the conversation without resetting disclosure state, text selection,
 // or a tool output's sandboxed browsing context on every streamed update.
 function nodeKey(node) {
@@ -58,9 +61,9 @@ export function updateHistoryKeepingHtmlFrames(historyNode, markup) {
   const template = document?.createElement?.('template');
   // Lightweight test/embedded DOM hosts may only implement innerHTML.
   if (!template?.content || !historyNode.childNodes) {
-    historyNode.innerHTML = markup;
+    i18nUi.setHtml(historyNode, markup);
     return;
   }
-  template.innerHTML = markup;
+  i18nUi.setHtml(template, markup);
   patchChildren(historyNode, template.content);
 }

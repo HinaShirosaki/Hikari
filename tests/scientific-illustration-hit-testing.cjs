@@ -8,6 +8,7 @@ async function verifyArtworkHitTesting({ tool, evaluate, check, win, pause }) {
   check(created.ok, created.error || 'Create an isolated hit-testing figure');
   const apply = async operations => {
     const current = await read();
+    await tool({ action: 'asset_list' });
     const result = await tool({ action: 'apply', illustration_id: current.illustration_id,
       expected_revision: current.revision, request_id: randomUUID(), operations });
     check(result.ok, result.error || 'Save hit-testing fixture');

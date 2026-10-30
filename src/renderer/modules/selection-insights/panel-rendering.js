@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "../../lib/i18n/shell.js";
+const i18nUi = createPresentation("shell");
 import { ACTION_WHAT_IS_IT, ACTION_WHERE_TO_BUY } from './constants.js';
 import {
   asArray,
@@ -21,7 +24,7 @@ export function buildPanelPurchaseCards(answer) {
   }
   return `
     <section class="selection-insight-answer-block">
-      <section class="agent-purchase-group" aria-label="Purchase recommendations">
+      <section class="agent-purchase-group" data-i18n-aria-label="shell.full.6c9467ae" aria-label="Purchase recommendations">
         <div class="agent-purchase-grid">
           ${items.map((item) => {
             const url = cleanText(item.product_url, 2000);
@@ -70,7 +73,7 @@ export function buildPanelHtml(insight) {
   if (!insight) {
     return `
       <div class="selection-insight-panel-empty">
-        <p>No saved answer yet.</p>
+        <p>${i18nUi.html("No saved answer yet.")}</p>
       </div>
     `;
   }
@@ -82,13 +85,13 @@ export function buildPanelHtml(insight) {
 
   return `
     <div class="selection-insight-panel-head">
-      <span class="selection-insight-panel-kicker">Saved Answer</span>
+      <span class="selection-insight-panel-kicker">${i18nUi.html("Saved Answer")}</span>
       <h4>${escapeHtml(cleanText(insight.selectedText, 220) || 'Selected text')}</h4>
     </div>
     ${pendingAction ? `
       <div class="selection-insight-answer-block is-pending">
         <h5>${escapeHtml(normalizeActionLabel(pendingAction.actionType))}</h5>
-        <p>Thinking about this selection...</p>
+        <p>${i18nUi.html("Thinking about this selection...")}</p>
       </div>
     ` : ''}
     ${whatIsIt && cleanText(whatIsIt.status, 40) === 'completed' && cleanText(whatIsIt.text, 12000) ? `

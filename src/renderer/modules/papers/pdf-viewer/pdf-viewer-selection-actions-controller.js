@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("papers");
 import { copyPdfHighlightText } from './pdf-viewer-search.js';
 
 export const installPdfViewerSelectionActionsController = (ctx) => {
@@ -27,7 +30,7 @@ export const installPdfViewerSelectionActionsController = (ctx) => {
     ctx.clearSelection();
     state.pendingSelection = null;
     ctx.refreshToolbar();
-    ctx.setStatus(`Loaded selected text from page ${selection.pageNumber} into chat context.`);
+    ctx.setStatus(i18nUi.text("Loaded selected text from page {p0} into chat context.", { p0: selection.pageNumber }));
     return true;
   }
 
@@ -50,7 +53,7 @@ export const installPdfViewerSelectionActionsController = (ctx) => {
     ctx.clearSelection();
     state.pendingSelection = null;
     ctx.refreshToolbar();
-    ctx.setStatus(`${kind === 'underline' ? 'Underlined' : 'Highlighted'} selection on page ${selection.pageNumber}.`);
+    ctx.setStatus(i18nUi.text("{p0} selection on page {p1}.", { p0: kind === 'underline' ? 'Underlined' : 'Highlighted', p1: selection.pageNumber }));
     return true;
   }
 
@@ -60,7 +63,7 @@ export const installPdfViewerSelectionActionsController = (ctx) => {
       return false;
     }
     const copied = await copyPdfHighlightText(selection.text, ctx.getWindowRef()?.navigator);
-    ctx.setStatus(copied ? 'Copied selected text.' : 'Unable to copy selected text.');
+    ctx.setStatus((((((copied ? i18nUi.text("Copied selected text.") : i18nUi.text("Unable to copy selected text.")))))));
     return copied;
   }
 
@@ -100,7 +103,7 @@ export const installPdfViewerSelectionActionsController = (ctx) => {
     ctx.clearSelection();
     state.pendingSelection = null;
     ctx.refreshToolbar();
-    ctx.setStatus(`Saved comment on page ${selection.pageNumber}.`);
+    ctx.setStatus(i18nUi.text("Saved comment on page {p0}.", { p0: selection.pageNumber }));
   }
 
   Object.assign(ctx, {

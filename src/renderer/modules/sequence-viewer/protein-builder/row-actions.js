@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("dna");
 import { parseInputRecords } from '../parsing.js';
 import { cleanText } from '../shared.js';
 import { cloneLibraryRow, createFeatureRow } from './row-factory.js';
@@ -193,7 +196,7 @@ export function installProteinBuilderRowActions(ctx) {
       state.featureSearchResults = [];
       ctx.clearFeatureSelection();
       ctx.renderFeatureSearchResults();
-      ctx.setFeatureSearchStatus('Set Storage Folder Path in Settings to search stored features.', true);
+      ctx.setFeatureSearchStatus(i18nUi.text("Set Storage Folder Path in Settings to search stored features."), true);
       return;
     }
 
@@ -210,13 +213,13 @@ export function installProteinBuilderRowActions(ctx) {
       state.featureSearchResults = [];
       ctx.clearFeatureSelection();
       ctx.renderFeatureSearchResults();
-      ctx.setFeatureSearchStatus('Feature search API unavailable.', true);
+      ctx.setFeatureSearchStatus(i18nUi.text("Feature search API unavailable."), true);
       return;
     }
 
     state.isSearchingFeatures = true;
     ctx.syncFeatureSearchControls();
-    ctx.setFeatureSearchStatus(`Searching for "${query}"...`);
+    ctx.setFeatureSearchStatus(i18nUi.text("Searching for \"{p0}\"...", { p0: query }));
 
     try {
       const response = await bridge.sequenceLibrarySearchFeatures({ storagePath, query, limit: 24 });
@@ -234,7 +237,7 @@ export function installProteinBuilderRowActions(ctx) {
       state.featureSearchResults = [];
       ctx.clearFeatureSelection();
       ctx.renderFeatureSearchResults();
-      ctx.setFeatureSearchStatus(error?.message || 'Failed to search stored features.', true);
+      ctx.setFeatureSearchStatus((((((error?.message || i18nUi.text("Failed to search stored features.")))))), true);
     } finally {
       state.isSearchingFeatures = false;
       ctx.syncFeatureSearchControls();

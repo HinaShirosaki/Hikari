@@ -6,6 +6,7 @@ import {
 } from '../../lib/inventory-settings.js';
 import { DEFAULT_NOTEBOOK_PDF_SETTINGS } from '../../lib/notebook-pdf-settings.js';
 import { mergeBundledPluginEntries } from '../../lib/bundled-plugins.js';
+import { DEFAULT_LOCALE } from '../../lib/i18n/locale.js';
 
 export const STARTUP_DEFAULT_VIEW_IDS = new Set([
   VIEWS.HOME,
@@ -68,6 +69,7 @@ export const defaultState = {
     locationCodeNextByLocation: {}
   },
   settings: {
+    locale: DEFAULT_LOCALE,
     personalInfo: {
       name: '',
       position: '',

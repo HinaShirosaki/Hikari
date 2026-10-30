@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("papers");
 import { clamp } from './pdf-viewer-anchors.js';
 import {
   MAX_ZOOM,
@@ -13,6 +16,7 @@ import {
   renderPageRecord
 } from './pdf-viewer-rendering.js';
 import { isRenderingCancelled } from './pdf-viewer-loader.js';
+import { paperFailure } from '../localization.js';
 
 const ACTIVE_PAGE_RENDER_BUFFER = 4;
 const RETAINED_PAGE_RENDER_BUFFER = 8;
@@ -212,7 +216,7 @@ export const installPdfViewerRenderController = (ctx) => {
         if (isStale()) {
           return;
         }
-        ctx.setStatus(`Rendering page ${record.pageNumber} of ${state.pageCount}...`);
+        ctx.setStatus(i18nUi.text("Rendering page {p0} of {p1}...", { p0: record.pageNumber, p1: state.pageCount }));
         await renderPageRecord({
           pdfDocument: state.pdfDocument,
           record,
@@ -232,7 +236,7 @@ export const installPdfViewerRenderController = (ctx) => {
       ctx.setTitle(state.paperTitle || 'Paper Viewer');
       ctx.setMeta(state.paperMeta || 'PDF preview');
       ctx.updateCurrentPageFromScroll({ force: true });
-      ctx.setStatus(`Viewing page ${state.pageNumber} of ${state.pageCount}.`);
+      ctx.setStatus(i18nUi.text("Viewing page {p0} of {p1}.", { p0: state.pageNumber, p1: state.pageCount }));
       ctx.refreshToolbar();
       ctx.paintHighlights();
       ctx.paintPins();
@@ -240,7 +244,7 @@ export const installPdfViewerRenderController = (ctx) => {
       if (isRenderingCancelled(error)) {
         return;
       }
-      ctx.setStatus(String(error?.message || error || 'Failed to render PDF.'), true);
+      ctx.setStatus(paperFailure(error, 'viewer.renderFailed'), true);
     }
   }
 

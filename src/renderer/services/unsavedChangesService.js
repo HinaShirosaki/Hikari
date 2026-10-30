@@ -1,4 +1,7 @@
-import { showTransientNotice } from '../lib/notify.js';
+import { createPresentation } from "../lib/i18n/presentation.js";
+import "../lib/i18n/shell.js";
+const i18nUi = createPresentation("shell");
+import { bindShellMessage, setShellText, shellNotice, shellUi } from '../lib/i18n/shell.js';
 
 const EDITOR_SOURCES = Object.freeze([
   { key: 'protocol', label: 'Protocol' },
@@ -6,12 +9,24 @@ const EDITOR_SOURCES = Object.freeze([
   { key: 'biologyNotebook', label: 'Notebook' }
 ]);
 
+// External/plugin labels remain literal; built-in labels translate with the sentence.
+function builtInSource(source) {
+  return EDITOR_SOURCES.some(item => item.key === source.key);
+}
+function sourceMessage(kind, source, params = {}) {
+  return shellUi(`unsaved.${kind}${builtInSource(source) ? '.' + source.key : ''}`, { ...params, label: source.label });
+}
+function bindSourceLabel(element, source) {
+  if (builtInSource(source)) setShellText(element, `unsaved.source.${source.key}`);
+  else i18nUi.setText(element, source.label);
+}
+
 function safeHasUnsavedChanges(moduleApi) {
   try {
     return moduleApi?.hasUnsavedChanges?.() === true;
   } catch (error) {
     console.warn('Failed to inspect unsaved editor state:', error);
-    showTransientNotice('Could not check an editor for unsaved changes.', { type: 'error' });
+    shellNotice(shellUi('unsaved.inspectError'), { type: 'error' });
     return false;
   }
 }
@@ -49,7 +64,7 @@ export function createUnsavedChangesService({
       external = externalSources() || [];
     } catch (error) {
       console.warn('Failed to collect external unsaved sources:', error);
-      showTransientNotice('Could not check plugin panels for unsaved changes.', { type: 'error' });
+      shellNotice(shellUi('unsaved.pluginError'), { type: 'error' });
     }
     return [
       ...EDITOR_SOURCES.map((source) => ({
@@ -64,17 +79,16 @@ export function createUnsavedChangesService({
     if (!status) {
       return;
     }
-    status.textContent = String(message || '');
+    bindShellMessage(status, message);
     status.classList.toggle('is-error', isError);
   }
 
   function syncActions() {
-    const actionLabel = pendingAction === 'reload' ? 'Reload' : 'Quit';
+    const actionKey = pendingAction === 'reload' ? 'Reload' : 'Quit';
     if (saveButton) {
       saveButton.disabled = saveInProgress || (checkboxes.length > 0 && selectedKeys.size === 0);
-      saveButton.textContent = saveInProgress
-        ? 'Saving...'
-        : (selectedKeys.size > 1 ? `Save ${selectedKeys.size} & ${actionLabel}` : `Save & ${actionLabel}`);
+      setShellText(saveButton, saveInProgress ? 'unsaved.saving'
+        : `unsaved.${selectedKeys.size > 1 ? 'saveCount' : 'save'}${actionKey}`, { count: selectedKeys.size });
     }
     if (discardButton) {
       discardButton.disabled = saveInProgress;
@@ -110,7 +124,7 @@ export function createUnsavedChangesService({
       syncActions();
     });
     const text = documentObject.createElement('span');
-    text.textContent = source.label;
+    bindSourceLabel(text, source);
     option.appendChild(checkbox);
     option.appendChild(text);
     checkboxes.push(checkbox);
@@ -127,27 +141,23 @@ export function createUnsavedChangesService({
     // A single dirty editor needs no chooser: unchecking the only box would
     // just be "Discard & Quit", which is already a button.
     const selectable = sources.length > 1;
-    const actionLabel = pendingAction === 'reload' ? 'Reload' : 'Quit';
+    const actionKey = pendingAction === 'reload' ? 'Reload' : 'Quit';
     if (title) {
-      title.textContent = pendingAction === 'reload'
-        ? 'Save changes before reloading?'
-        : 'Save changes before quitting?';
+      setShellText(title, `unsaved.title${actionKey}`);
     }
     if (description) {
-      description.textContent = selectable
-        ? `Pick what to save. Anything left unchecked is discarded on ${pendingAction}.`
-        : (sources.length ? 'The following work has not been saved.' : 'Changes still need to be written to the storage folder.');
+      setShellText(description, selectable ? `unsaved.pick${actionKey}` : (sources.length ? 'unsaved.description' : 'unsaved.pending'));
     }
     if (discardButton) {
       // "Discard" has to own up to dropping the checked rows too.
-      discardButton.textContent = selectable ? `Discard All & ${actionLabel}` : `Discard & ${actionLabel}`;
+      setShellText(discardButton, `unsaved.${selectable ? 'discardAll' : 'discard'}${actionKey}`);
     }
     list.replaceChildren(...sources.map((source) => {
       const item = documentObject.createElement('li');
       if (selectable) {
         item.appendChild(renderOption(source));
       } else {
-        item.textContent = source.label;
+        bindSourceLabel(item, source);
       }
       return item;
     }));
@@ -215,22 +225,22 @@ export function createUnsavedChangesService({
       await finishClose();
     } else if (!showDialog(sources)) {
       respondToClose('cancel');
-      showTransientNotice('Could not check unsaved changes before reloading.', { type: 'error' });
+      shellNotice(shellUi('unsaved.reloadError'), { type: 'error' });
     }
   }
 
   async function finishClose() {
     if (overlay?.hidden !== false) showDialog([]);
     setBusy(true);
-    setStatus('Saving to the storage folder...');
+    setStatus(shellUi('unsaved.storageSaving'));
     try {
       await flushPendingSaves();
     } catch (error) {
       if (overlay?.hidden !== false) showDialog([]);
-      const message = `Could not save to the storage folder: ${String(error?.message || error || 'Unknown error')}`;
+      const message = shellUi('unsaved.storageError', { error: String(error?.message || error || 'Unknown error') });
       setStatus(message, true);
       setBusy(false);
-      if (!overlay) showTransientNotice(message, { type: 'error' });
+      if (!overlay) shellNotice(message, { type: 'error' });
       return;
     }
     hideDialog();
@@ -245,16 +255,16 @@ export function createUnsavedChangesService({
     const sources = getUnsavedSources().filter((source) => selectedKeys.has(source.key));
     setBusy(true);
     for (const source of sources) {
-      setStatus(`Saving ${source.label}...`);
+      setStatus(sourceMessage('savingSource', source));
       try {
         const saved = await source.moduleApi?.saveUnsavedChanges?.();
         if (saved === false || safeHasUnsavedChanges(source.moduleApi)) {
-          setStatus(`Could not save ${source.label}. Check the required fields and try again.`, true);
+          setStatus(sourceMessage('validation', source), true);
           setBusy(false);
           return;
         }
       } catch (error) {
-        setStatus(`Could not save ${source.label}: ${String(error?.message || error || 'Unknown error')}`, true);
+        setStatus(sourceMessage('saveError', source, { error: String(error?.message || error || 'Unknown error') }), true);
         setBusy(false);
         return;
       }

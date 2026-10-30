@@ -6,7 +6,7 @@ const definitions = [
   ['crop-raster', 'crop', 'edit'],
   ['group-selection', 'group', 'group'], ['ungroup-selection', 'ungroup', 'group'],
   ['align-menu', 'align', 'group'],
-  ['layers-tab', 'layers', 'panels'], ['assets-tab', 'assets', 'panels'],
+  ['layers-tab', 'layers', 'panels'],
   ['zoom-out', 'minus', 'zoom'], ['zoom-level', '', 'zoom'], ['zoom-in', 'plus', 'zoom'], ['zoom-fit', 'fit', 'zoom']
 ];
 const menuIds = ['add-menu', 'align-menu'];

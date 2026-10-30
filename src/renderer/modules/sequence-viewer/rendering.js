@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../lib/html.js';
 import { DEFAULT_SEQUENCE_LINE_LENGTH, DEFAULT_STRAND_COLUMN_GAP_PX, DEFAULT_STRAND_MARKER_COLUMN_PX, FALLBACK_CHAR_ADVANCE_PX, FALLBACK_SEQUENCE_LINE_HEIGHT_PX, STRAND_BLOCK_GAP_PX, STRAND_PAIR_ROW_GAP_PX } from './constants.js';
 import { buildFeatureLocationText } from './feature-model.js';
@@ -52,7 +55,7 @@ function indexFeaturesByLine(indexedFeatures, lineLength, sequenceLength) {
 export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments = [], options = {}) {
   const text = normalizeSequenceText(sequence);
   if (!text.length) {
-    return '<p class="small-note">No sequence loaded.</p>';
+    return `<p class="small-note">${i18nUi.html("No sequence loaded.")}</p>`;
   }
 
   const lineLength = clamp(
@@ -175,11 +178,7 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
         <div class="sequence-viewer-strand-block">
           ${lineFeatureButtons.forwardPrimers}
           <div class="sequence-viewer-strand-pair"${strandPairStyle}>
-            ${cursorBlockOnLine
-    ? `<span class="sequence-viewer-line-cursor sequence-viewer-line-cursor-block" style="left:${cursorLeftPx.toFixed(3)}px;top:${restrictionTopPaddingPx.toFixed(3)}px;height:${strandPairHeightPx.toFixed(3)}px;width:${charAdvancePx.toFixed(3)}px;" aria-hidden="true"></span>`
-    : (showThinCursor
-      ? `<span class="sequence-viewer-line-cursor" style="left:${cursorLeftPx.toFixed(3)}px;top:${restrictionTopPaddingPx.toFixed(3)}px;height:${strandPairHeightPx.toFixed(3)}px;" aria-hidden="true"></span>`
-      : '')}
+            ${cursorBlockOnLine ? `<span class="sequence-viewer-line-cursor sequence-viewer-line-cursor-block" style="left:${cursorLeftPx.toFixed(3)}px;top:${restrictionTopPaddingPx.toFixed(3)}px;height:${strandPairHeightPx.toFixed(3)}px;width:${charAdvancePx.toFixed(3)}px;" aria-hidden="true"></span>` : (showThinCursor ? `<span class="sequence-viewer-line-cursor" style="left:${cursorLeftPx.toFixed(3)}px;top:${restrictionTopPaddingPx.toFixed(3)}px;height:${strandPairHeightPx.toFixed(3)}px;" aria-hidden="true"></span>` : '')}
             <div class="sequence-viewer-strand-row sequence-viewer-strand-row-top">
               <span class="sequence-viewer-strand-end">5'</span>
               <span class="sequence-viewer-seq-text sequence-viewer-seq-text-top">
@@ -209,7 +208,7 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
 
 export function formatSelectedFeatureDetailHtml(feature, sequenceLength, options = {}) {
   if (!feature) {
-    return '<p class="small-note">Select a feature in the bottom track to view details.</p>';
+    return `<p class="small-note">${i18nUi.html("Select a feature in the bottom track to view details.")}</p>`;
   }
 
   const strand = feature.strand === -1 ? '-' : '+';
@@ -252,15 +251,15 @@ export function formatSelectedFeatureDetailHtml(feature, sequenceLength, options
 
   return `
     <p><strong>${escapeHtml(feature.name || '-')}</strong></p>
-    <p><strong>Type:</strong> ${escapeHtml(feature.type || '-')} · <strong>Strand:</strong> ${strand}</p>
-    <p><strong>Location:</strong> ${escapeHtml(location)}</p>
-    ${isOrf && orfSummaryParts.length ? `<p><strong>ORF:</strong> ${orfSummaryParts.join(' · ')}</p>` : ''}
+    <p><strong>${i18nUi.html("Type:")}</strong> ${escapeHtml(feature.type || '-')} · <strong>${i18nUi.html("Strand:")}</strong> ${strand}</p>
+    <p><strong>${i18nUi.html("Location:")}</strong> ${escapeHtml(location)}</p>
+    ${isOrf && orfSummaryParts.length ? `<p><strong>${i18nUi.html("ORF:")}</strong> ${orfSummaryParts.join(' · ')}</p>` : ''}
     ${formatProteinPropertySummary(proteinProperties)}
-    ${recognitionSite ? `<p><strong>Recognition Site:</strong> ${escapeHtml(recognitionSite)}</p>` : ''}
+    ${recognitionSite ? `<p><strong>${i18nUi.html("Recognition Site:")}</strong> ${escapeHtml(recognitionSite)}</p>` : ''}
     ${cutSummary ? `<p><strong>${escapeHtml(cutSummary.label)}:</strong> ${escapeHtml(cutSummary.text)}</p>` : ''}
-    ${enzymeNames.length ? `<p><strong>Enzymes:</strong> ${escapeHtml(enzymeNames.join(', '))}</p>` : ''}
-    ${vendors.length ? `<p><strong>Vendors:</strong> ${escapeHtml(vendors.join(', '))}</p>` : ''}
-    <p><strong>Identity:</strong> ${identity} · <strong>Coverage:</strong> ${coverage} · <strong>Source:</strong> ${escapeHtml(source)}</p>
+    ${enzymeNames.length ? `<p><strong>${i18nUi.html("Enzymes:")}</strong> ${escapeHtml(enzymeNames.join(', '))}</p>` : ''}
+    ${vendors.length ? `<p><strong>${i18nUi.html("Vendors:")}</strong> ${escapeHtml(vendors.join(', '))}</p>` : ''}
+    <p><strong>${i18nUi.html("Identity:")}</strong> ${identity} · <strong>${i18nUi.html("Coverage:")}</strong> ${coverage} · <strong>${i18nUi.html("Source:")}</strong> ${escapeHtml(source)}</p>
     ${description ? `<p class="small-note">${escapeHtml(description)}</p>` : ''}
   `;
 }

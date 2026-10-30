@@ -1,5 +1,9 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "../../lib/i18n/shell.js";
+const i18nUi = createPresentation('shell');
 import { renderAgentChatIcon } from '../../modules/agent-chat/icons.js';
 import { isAgentAvailable } from '../../lib/agent-availability.js';
+import { setAgentAttribute } from '../../modules/agent-chat/localization.js';
 
 export function isAgentChatRailAvailable(app, view) {
   return app?.agentChatRail === true && view?.dataset?.agentChatRail !== 'disabled';
@@ -50,13 +54,13 @@ export function createAgentChatRail({
     }
     if (toggleButton) {
       toggleButton.hidden = !chatEnabled;
-      toggleButton.innerHTML = toggleIcon(visibleExpanded);
+      i18nUi.setHtml(toggleButton, toggleIcon(visibleExpanded));
       toggleButton.setAttribute('aria-expanded', String(visibleExpanded));
       const label = isPapers
-        ? (visibleExpanded ? 'Close Hikari' : 'Ask Hikari')
-        : (visibleExpanded ? 'Fold agent chat rail' : 'Open agent chat rail');
-      toggleButton.setAttribute('aria-label', label);
-      toggleButton.title = isPapers ? label : (visibleExpanded ? 'Fold chat' : 'Open chat');
+        ? (visibleExpanded ? 'rail.close' : 'rail.ask')
+        : (visibleExpanded ? 'rail.fold' : 'rail.open');
+      setAgentAttribute(toggleButton, 'aria-label', label);
+      setAgentAttribute(toggleButton, 'title', isPapers ? label : (visibleExpanded ? 'rail.foldTitle' : 'rail.openTitle'));
     }
     if (paperOutlineToggle) paperOutlineToggle.hidden = !isPapers || !enabled;
     if (paperBriefToggle) paperBriefToggle.hidden = !isPapers || !enabled;

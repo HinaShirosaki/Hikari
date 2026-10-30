@@ -1,3 +1,5 @@
+import { createPresentation } from "../i18n.mjs";
+const i18nUi = createPresentation("gel");
 const CATEGORIES = [
   ['image', 'Image', 'M4 4h16v16H4zM4 15l5-5 4 4 3-3 4 4M8 8h.01'],
   ['lanes', 'Lanes', 'M4 4v16M9 4v16M15 4v16M20 4v16M4 8h16M4 16h16'],
@@ -30,27 +32,27 @@ export function createGelToolDock({ documentObject: doc, onProcess, onSelect }) 
   panel.id = 'gel-tools-panel'; panel.setAttribute('aria-labelledby', 'gel-tool-panel-title');
   panel.removeAttribute('aria-label');
   const header = doc.createElement('header'); header.className = 'gel-tool-panel-head';
-  header.innerHTML = `<h3 id="gel-tool-panel-title">Image</h3><button type="button" class="gel-tool-panel-close" aria-label="Hide tools" title="Hide tools">${svg('m6 6 12 12M18 6 6 18')}</button>`;
+  i18nUi.setHtml(header, `<h3 id="gel-tool-panel-title">${i18nUi.html("Image")}</h3><button type="button" class="gel-tool-panel-close" data-i18n-aria-label="gel.full.ba68f196" aria-label="Hide tools" data-i18n-title="gel.full.ba68f196" title="Hide tools">${svg('m6 6 12 12M18 6 6 18')}</button>`);
   panel.prepend(header);
   const context = doc.createElement('div'); context.className = 'gel-tool-context';
   header.after(context);
   for (const id of ['crop-bar', 'finish-dividers-btn']) context.append(get(id));
 
   const categoryGroup = doc.createElement('div'); categoryGroup.className = 'gel-tool-categories';
-  categoryGroup.setAttribute('role', 'group'); categoryGroup.setAttribute('aria-label', 'Tool categories');
+  categoryGroup.setAttribute('role', 'group'); i18nUi.setAttribute(categoryGroup, "aria-label", i18nUi.message("Tool categories"));
   const pages = new Map(), buttons = new Map();
   for (const [key, label, path] of CATEGORIES) {
-    const old = [...doc.querySelectorAll('.gel-tool-group')].find(node => node.querySelector('summary')?.textContent.trim() === label);
+    const old = [...doc.querySelectorAll('.gel-tool-group')].find(node => node.dataset.gelSourceCategory === key);
     const page = doc.createElement('section'); page.className = 'gel-tool-group'; page.id = `gel-tool-page-${key}`;
-    page.dataset.gelToolPanel = key; page.setAttribute('aria-label', `${label} tools`);
+    page.dataset.gelToolPanel = key; i18nUi.setAttribute(page, "aria-label", i18nUi.message("{p0} tools", { p0: label }));
     page.append(old.querySelector('.gel-tool-body')); old.replaceWith(page); pages.set(key, page);
     const button = key === 'processed' ? get('process-image-btn') : doc.createElement('button');
     button.type = 'button'; if (key !== 'processed') button.id = `gel-tool-${key}-btn`;
     button.className = 'gel-tool-icon-btn'; button.dataset.gelToolCategory = key;
-    button.setAttribute('aria-label', label); button.title = label;
+    i18nUi.setAttribute(button, 'aria-label', i18nUi.owned(label)); i18nUi.setAttribute(button, "title", i18nUi.owned(label));
     button.setAttribute('aria-controls', 'gel-tools-panel');
     if (key !== 'processed') {
-      button.innerHTML = `${svg(path)}<span class="gel-card-label">${label}</span>`;
+      i18nUi.setHtml(button, `${svg(path)}<span class="gel-card-label">${i18nUi.renderOwned(label)}</span>`);
       categoryGroup.append(button);
     }
     buttons.set(key, button);
@@ -59,12 +61,12 @@ export function createGelToolDock({ documentObject: doc, onProcess, onSelect }) 
   const crop = get('crop-mode-btn');
   buttons.get('image').after(crop);
   categoryGroup.append(layout); toolbar.prepend(categoryGroup); buttons.set('layout', layout);
-  layout.title = 'Layout'; layout.setAttribute('aria-label', 'Layout'); layout.setAttribute('aria-controls', 'gel-tools-panel');
+  i18nUi.setAttribute(layout, "title", i18nUi.message("Layout")); i18nUi.setAttribute(layout, "aria-label", i18nUi.message("Layout")); layout.setAttribute('aria-controls', 'gel-tools-panel');
   for (const [id, label] of [['export-menu-btn', 'Export']]) {
-    get(id).setAttribute('aria-label', label); get(id).title = label;
+    i18nUi.setAttribute(get(id), 'aria-label', i18nUi.owned(label)); i18nUi.setAttribute(get(id), "title", i18nUi.owned(label));
   }
   const actions = doc.querySelector('.gel-record-actions');
-  actions.setAttribute('role', 'group'); actions.setAttribute('aria-label', 'Save');
+  actions.setAttribute('role', 'group'); i18nUi.setAttribute(actions, "aria-label", i18nUi.message("Save"));
   get('save-btn').setAttribute('form', 'gel-form'); toolbar.append(actions);
   const form = get('form'), name = form.querySelector('.gel-name-field');
   let active = 'image', processing = 'image', open = true, wasLayout = false, lastStep = '';
@@ -75,7 +77,7 @@ export function createGelToolDock({ documentObject: doc, onProcess, onSelect }) 
     viewer.classList.toggle('is-tools-collapsed', !open);
     panel.hidden = !open;
     const cropping = isCropping();
-    header.querySelector('h3').textContent = cropping ? 'Crop' : active === 'layout' ? 'Layout' : CATEGORIES.find(([key]) => key === active)[1];
+    i18nUi.setOwnedText(header.querySelector('h3'), (cropping ? i18nUi.message("Crop") : (active === 'layout' ? i18nUi.message("Layout") : CATEGORIES.find(([key]) => key === active)[1])));
     // Layout is the Stack's view, so its icon shows only there; gel tools wait for a gel.
     const stack = isLayout();
     layout.hidden = !stack;
@@ -89,11 +91,11 @@ export function createGelToolDock({ documentObject: doc, onProcess, onSelect }) 
       button.classList.toggle('is-active', selected);
       if (key !== 'layout') {
         button.disabled = stack || cropping;
-        button.title = stack ? `${button.getAttribute('aria-label')} — select a gel` : button.getAttribute('aria-label');
+        i18nUi.setAttribute(button, "title", (stack ? i18nUi.message("{p0} — select a gel", { p0: button.getAttribute('aria-label') }) : button.getAttribute('aria-label')));
       }
     }
-    get('save-btn').setAttribute('aria-label', isLayout() ? 'Save project' : 'Save gel');
-    get('save-btn').title = isLayout() ? 'Save project' : 'Save gel';
+    i18nUi.setAttribute(get('save-btn'), "aria-label", (isLayout() ? i18nUi.message("Save project") : i18nUi.message("Save gel")));
+    i18nUi.setAttribute(get('save-btn'), "title", (isLayout() ? i18nUi.message("Save project") : i18nUi.message("Save gel")));
     const reset = get('reset-overrides-btn');
     reset.hidden = isLayout();
     reset.disabled = crop.disabled || stack || cropping;

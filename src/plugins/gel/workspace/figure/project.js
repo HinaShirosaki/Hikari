@@ -1,6 +1,6 @@
 import { bytesToBase64 } from '../export.js';
 import { decodeImageSource } from '../images/image-io.js';
-import { normalizeManualOverrides } from '../shared.js';
+import { normalizeLaneTable, normalizeManualOverrides } from '../shared.js';
 import { MAX_BLOTS, validatePlacement } from './model.js';
 import { normalizeStackTrim } from './trim.js';
 
@@ -27,7 +27,7 @@ export function serializeBlotProject(rows, title, imageDataToDataUrl, {
   const current = groups[activeStack];
   return JSON.stringify({ format: 'hikari-blot-figure', version: 4, title,
     stacks: groups.map(stack => ({ id: stack.id, name: stack.name, layoutName: stack.layoutName, layers: indices(stack.layerIds),
-      trim: normalizeStackTrim(stack.trim) })), activeStack,
+      trim: normalizeStackTrim(stack.trim), table: normalizeLaneTable(stack.table) })), activeStack,
     // Keep the active-stack fields readable by older project tools.
     stack: indices(current?.layerIds ?? stackIds), hasStack: groups.length > 0, stackName: current?.name ?? stackName,
     layoutName: current?.layoutName ?? layoutName, checked: indices(checkedIds), nextLayerNumber,
@@ -73,7 +73,7 @@ export async function parseBlotProject(content, createId, { local = false } = {}
     const layers = layerIndices(stack.layers, []);
     if (layers.some(index => assigned.has(index))) throw new Error('A gel cannot belong to more than one stack.');
     layers.forEach(index => assigned.add(index));
-    return { ...stack, layers, trim: normalizeStackTrim(stack.trim) };
+    return { ...stack, layers, trim: normalizeStackTrim(stack.trim), table: normalizeLaneTable(stack.table) };
   });
   const checkedIndices = layerIndices(project.checked, allIndices);
   async function unpackImage(value) {
@@ -123,7 +123,7 @@ export async function parseBlotProject(content, createId, { local = false } = {}
   }
   const stacks = packedStacks.map((stack, index) => ({ id: identity(stack.id, fileKey ? `project:${fileKey}:stack:${index}` : `stack-${createId()}`), name: String(stack.name || '').trim().slice(0, 120) || (index ? `Stack ${index + 1}` : 'Stack'),
     layoutName: String(stack.layoutName || '').trim().slice(0, 120) || 'Layout', layerIds: stack.layers.map(index => rows[index].id),
-    trim: stack.trim }));
+    trim: stack.trim, table: stack.table }));
   const active = stacks[Number.isInteger(project.activeStack) ? project.activeStack : 0] || stacks[0];
   const hasStack = stacks.length > 0;
   const stackTrim = active?.trim ?? normalizeStackTrim(project.stackTrim);

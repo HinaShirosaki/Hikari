@@ -1,3 +1,6 @@
+import { createPresentation } from "../lib/i18n/presentation.js";
+import "../lib/i18n/shell.js";
+const i18nUi = createPresentation("shell");
 import { VIEWS, TITLES } from '../modules/views.js';
 import { createId, safeText, cssEscape } from '../lib/app-utils.js';
 import {
@@ -37,6 +40,7 @@ import {
 } from '../app/topbar-search.js';
 import { createTopbarOpenItemHandlers } from '../app/topbar-open-handlers.js';
 import { showTransientNotice } from '../lib/notify.js';
+import { createAppLocalization } from '../app/localization.js';
 
 const APP_READY_EVENT = 'hikari:app-ready';
 
@@ -112,6 +116,7 @@ export function startHikariCore({
   windowObject = window
 } = {}) {
   const state = loadState();
+  const localization = createAppLocalization({ state, documentObject, windowObject });
   // Plugin views and registry entries must exist before the navigation shell
   // and search maps below snapshot APP_REGISTRY and the `.view` sections.
   // The bridge is built here too so each frame can be registered as it mounts;
@@ -216,10 +221,12 @@ export function startHikariCore({
   }
 
   function renderAll() {
+    localization.sync();
     moduleRuntime?.renderAll();
   }
 
   function renderRestoredState(change) {
+    localization.sync();
     if (change.owner === 'settings') navigationShell?.applyAppearanceSnapshot(state.settings?.appearance);
     moduleRuntime?.restoreHistory(change);
   }
@@ -401,7 +408,7 @@ export function startHikariCore({
         rendererServices.protocol.handleExternalProtocolRecordSaved(payload);
       } catch (error) {
         console.error('Failed to apply queued protocol record:', error);
-        showTransientNotice('A protocol saved outside the app could not be applied.', { type: 'error' });
+        showTransientNotice(i18nUi.message("A protocol saved outside the app could not be applied."), { type: 'error' });
       }
     }
     undoService.reset();

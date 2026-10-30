@@ -1,3 +1,4 @@
+import './localization.js';
 // Biology notebook controller.
 //
 // Responsibilities:

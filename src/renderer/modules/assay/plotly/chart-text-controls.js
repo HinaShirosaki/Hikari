@@ -1,3 +1,6 @@
+import { createPresentation } from "../../../lib/i18n/presentation.js";
+import "../localization.js";
+const i18nUi = createPresentation("plate");
 import { createChartStylePicker } from './chart-style-pickers.js';
 import { getCachedFonts, loadSystemFonts } from './chart-font-source.js';
 
@@ -22,7 +25,7 @@ const ICONS = {
       x: '8', y: '12', 'text-anchor': 'middle',
       'font-family': 'sans-serif', 'font-weight': '900', 'font-size': '13', fill: 'currentColor'
     });
-    t.textContent = 'B';
+    i18nUi.setText(t, 'B');
     svg.appendChild(t);
   }),
   italic: () => makeIcon('0 0 16 16', (svg) => {
@@ -30,7 +33,7 @@ const ICONS = {
       x: '8', y: '12', 'text-anchor': 'middle',
       'font-family': 'sans-serif', 'font-style': 'italic', 'font-size': '13', fill: 'currentColor'
     });
-    t.textContent = 'I';
+    i18nUi.setText(t, 'I');
     svg.appendChild(t);
   }),
   underline: () => makeIcon('0 0 16 16', (svg) => {
@@ -38,7 +41,7 @@ const ICONS = {
       x: '8', y: '11', 'text-anchor': 'middle',
       'font-family': 'sans-serif', 'font-size': '12', fill: 'currentColor'
     });
-    t.textContent = 'U';
+    i18nUi.setText(t, 'U');
     svg.appendChild(t);
     svg.appendChild(svgEl('line', {
       x1: '3', y1: '14', x2: '13', y2: '14',
@@ -49,24 +52,24 @@ const ICONS = {
     const t = svgEl('text', {
       x: '4', y: '13', 'font-size': '11', fill: 'currentColor'
     });
-    t.textContent = 'x';
+    i18nUi.setText(t, 'x');
     svg.appendChild(t);
     const sup = svgEl('text', {
       x: '10', y: '7', 'font-size': '7', fill: 'currentColor'
     });
-    sup.textContent = '2';
+    i18nUi.setText(sup, '2');
     svg.appendChild(sup);
   }),
   subscript: () => makeIcon('0 0 16 16', (svg) => {
     const t = svgEl('text', {
       x: '4', y: '12', 'font-size': '11', fill: 'currentColor'
     });
-    t.textContent = 'x';
+    i18nUi.setText(t, 'x');
     svg.appendChild(t);
     const sub = svgEl('text', {
       x: '10', y: '15', 'font-size': '7', fill: 'currentColor'
     });
-    sub.textContent = '2';
+    i18nUi.setText(sub, '2');
     svg.appendChild(sub);
   }),
   alignLeft: () => makeIcon('0 0 16 16', (svg) => {
@@ -119,7 +122,7 @@ function buildFontOption(family) {
   const span = document.createElement('span');
   span.className = 'assay-chart-text-font-option';
   span.style.fontFamily = fontFamilyCss(family);
-  span.textContent = family;
+  i18nUi.setText(span, family);
   return span;
 }
 
@@ -129,7 +132,7 @@ export function createChartTextControls(mount, config) {
   let value = { ...config?.value };
   let destroyed = false;
 
-  mount.innerHTML = '';
+  i18nUi.setHtml(mount, '');
   mount.classList.add('assay-chart-text-bar');
 
   // One wrapping toolbar: font, size and the formatting controls share a line when the panel allows it.
@@ -147,10 +150,10 @@ export function createChartTextControls(mount, config) {
 
   const colorWrap = document.createElement('label');
   colorWrap.className = 'assay-chart-text-bar__color';
-  colorWrap.title = 'Text color';
+  i18nUi.setAttribute(colorWrap, "title", i18nUi.message("Text color"));
   const colorInput = document.createElement('input');
   colorInput.type = 'color';
-  colorInput.setAttribute('aria-label', 'Text color');
+  i18nUi.setAttribute(colorInput, "aria-label", i18nUi.message("Text color"));
   colorWrap.appendChild(colorInput);
   bar.appendChild(colorWrap);
 
@@ -172,7 +175,7 @@ export function createChartTextControls(mount, config) {
     }
   });
   fontMount.classList.add('assay-chart-text-bar__font');
-  fontMount.querySelector('button').setAttribute('aria-label', 'Font family');
+  i18nUi.setAttribute(fontMount.querySelector('button'), "aria-label", i18nUi.message("Font family"));
 
   function updateTriggerFont() {
     const trigger = fontMount.querySelector('.assay-chart-picker__label');
@@ -190,12 +193,12 @@ export function createChartTextControls(mount, config) {
   sizeInput.min = '4.5';
   sizeInput.max = '72';
   sizeInput.step = 'any';
-  sizeInput.setAttribute('aria-label', 'Font size (pt)');
-  sizeInput.title = 'Font size (pt)';
+  i18nUi.setAttribute(sizeInput, "aria-label", i18nUi.message("Font size (pt)"));
+  i18nUi.setAttribute(sizeInput, "title", i18nUi.message("Font size (pt)"));
   sizeMount.appendChild(sizeInput);
   const sizeUnit = document.createElement('span');
   sizeUnit.className = 'assay-chart-text-bar__unit';
-  sizeUnit.textContent = 'pt';
+  i18nUi.setText(sizeUnit, 'pt');
   sizeMount.appendChild(sizeUnit);
   sizeInput.addEventListener('change', () => {
     if (!sizeInput.value || !sizeInput.validity.valid) return;
@@ -331,7 +334,7 @@ export function createChartTextControls(mount, config) {
     destroy() {
       destroyed = true;
       if (fontPicker) fontPicker.destroy();
-      mount.innerHTML = '';
+      i18nUi.setHtml(mount, '');
       mount.classList.remove('assay-chart-text-bar');
     }
   };

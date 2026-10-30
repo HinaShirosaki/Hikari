@@ -1,7 +1,7 @@
-import { showTransientNotice } from '../../../lib/notify.js';
 import { rowLabelToIndex } from '../plate-model.js';
 import { parseDimensionGroupSpec } from '../analysis/shared.js';
 import { resultFieldToColumnIndex } from './result-fields.js';
+import { plateNotice, plateUi } from '../localization.js';
 
 // Row/column analysis groups over the result grid: the current range selection,
 // the group specs the inputs hold, and the colour highlighting that shows them.
@@ -180,7 +180,7 @@ function createAssayAnalysisGroups({
     // The selection itself is visible in the result grid, so only a blocked action
     // has anything to say -- and it says it in the shared transient notice.
     if (!members.length) {
-      showTransientNotice(`Select at least one ${dimension === 'row' ? 'row' : 'column'} before adding a group.`, { type: 'error' });
+      plateNotice(plateUi(dimension === 'row' ? 'groups.selectRow' : 'groups.selectColumn'), { type: 'error' });
       return;
     }
 

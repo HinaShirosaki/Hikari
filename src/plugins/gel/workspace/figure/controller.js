@@ -1,7 +1,11 @@
+import { createPresentation } from "../../i18n.mjs";
+const i18nUi = createPresentation("gel");
 import { decodeImageFile } from '../images/image-io.js';
 import { downloadBinaryFile, downloadDataUrlFile, downloadTextFile } from '../export.js';
 import { createEmptyManualOverrides, safeFilePart } from '../shared.js';
-import { MAX_BLOTS, buildBlotFigurePlan, dragPlacement, inferBlotPlacement, validatePlacement } from './model.js';
+import { FIGURE_FONT_SIZE, FIGURE_MARGIN, LABEL_WIDTH, MAX_BLOTS, buildBlotFigurePlan, dragPlacement, inferBlotPlacement, stackTableReference } from './model.js';
+import { CAPTION_ANGLE } from '../shared.js';
+import { syncTableInputs, tableInputsMarkup, tableInputsShape, writeTableInput } from '../rendering/table-inputs.js';
 import { createBlotFigureCanvas } from './render.js';
 import { createBlotFigurePowerPoint } from './powerpoint.js';
 import { DRAFT_CONTROL_IDS, parseBlotProject, serializeBlotProject } from './project.js';
@@ -33,12 +37,16 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
   const launcher = documentObject.getElementById('gel-open-figure-btn');
   const hoverBox = documentObject.createElement('div');
   hoverBox.className = 'gel-figure-hover-box'; hoverBox.hidden = true;
+  // The Stack table is typed on the figure: inputs over the canvas at figure
+  // coordinates (percentages, type in container units), kept across redraws.
+  // Folded Stacks in the rail are view state for this session, outside undo and saving.
+  const foldedStacks = new Set();
+  const tableLayer = documentObject.createElement('div');
+  tableLayer.className = 'gel-figure-table-layer'; tableLayer.hidden = true;
   let rows = [];
   let navigationOrder = [];
   const savedLayerCache = new Map();
   let selectedId = '';
-  // The blot last clicked in the Stack preview; its placement fields show in Layout.
-  let focusedId = '';
   let stacks = [];
   let activeStackId = '';
   const emptyStack = { layerIds: [], name: 'Stack', layoutName: 'Layout', trim: { ...DEFAULT_STACK_TRIM } };
@@ -66,11 +74,10 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
   const selected = () => rows.find(row => row.id === selectedId);
   // Layout composes the Stack; a single gel has no layout of its own.
   const previewRows = () => rowsInStack(rows, currentStack().layerIds);
-  const previewOptions = () => ({ trim: currentStack().trim });
-  const focused = () => previewRows().find(row => row.id === focusedId);
+  const previewOptions = () => ({ trim: currentStack().trim, table: currentStack().table });
   const isOpen = () => !panel.hidden;
   const ownsHistory = () => isOpen() || navigation.contains(documentObject.activeElement);
-  const status = (message, options) => { get('status').textContent = message; get('status').hidden = true; deps.notify?.(message, options); };
+  const status = (message, options) => { i18nUi.setText(get('status'), message); get('status').hidden = true; deps.notify?.(message, options); };
   const savedGels = createSavedGelNavigation({
     getRecords: () => runtime.state.gelAnalyses || [], getRows: () => rows,
     restoreImage: deps.restoreRecordImage, createId: runtime.createId
@@ -90,8 +97,8 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
   const trimEditor = createCanvasTrimEditor({
     container: get('preview'), getPlan: () => previewPlan, onRender: renderFocusedView,
     onApply(trim) {
-      buildBlotFigurePlan(previewRows(), { trim });
-      currentStack().trim = trim; commit(); status('Stack trimmed to the two canvas edges.');
+      buildBlotFigurePlan(previewRows(), { trim, table: currentStack().table });
+      currentStack().trim = trim; commit(); status(i18nUi.text("Stack trimmed to the two canvas edges."));
     }
   });
   function editorSignature() {
@@ -199,54 +206,85 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
     const visibleRows = previewRows();
     visibleRows.forEach(prepareProcessedRow);
     get('preview').setAttribute('aria-busy', String(visibleRows.some(row => row.processingTask)));
-    get('preview-title').textContent = currentStack().name;
-    get('preview-detail').textContent = `${visibleRows.length} gel${visibleRows.length === 1 ? '' : 's'}`;
-    preview.replaceChildren();
+    i18nUi.setText(get('preview-title'), currentStack().name);
+    [...preview.childNodes].forEach(node => { if (node !== tableLayer) node.remove(); });
+    tableLayer.hidden = true;
     if (!visibleRows.length) {
-      if (!rows.length) preview.insertAdjacentHTML('beforeend', '<div class="gel-figure-empty"><button type="button" class="ghost-btn" data-figure-action="import">Choose images…</button></div>');
+      if (!rows.length) preview.insertAdjacentHTML('beforeend', `<div class="gel-figure-empty"><button type="button" class="ghost-btn" data-figure-action="import">${i18nUi.html("Choose images…")}</button></div>`);
       return;
     }
     try {
       const { canvas, plan } = createBlotFigureCanvas(visibleRows, documentObject, {
         trim: trimEditor.isActive() ? undefined : currentStack().trim,
-        rasterScale: 1
+        table: currentStack().table, stackTableText: false, rasterScale: 1
       });
       previewPlan = plan;
-      canvas.setAttribute('role', 'img'); canvas.setAttribute('aria-label', 'Stack of selected gel layers with antibody labels');
-      canvas.title = 'Drag a blot to move it, or up and down to reorder the Stack. Drag its top or bottom edge to crop, or a side grip to resize with proportions locked.';
+      canvas.setAttribute('role', 'img'); i18nUi.setAttribute(canvas, "aria-label", i18nUi.message("Stack of selected gel layers with antibody labels"));
+      i18nUi.setAttribute(canvas, "title", i18nUi.message("Drag a blot to move it, or up and down to reorder the Stack. Drag its top or bottom edge to crop, or a side grip to resize with proportions locked."));
       preview.append(canvas, hoverBox);
+      renderTableLayer(plan, canvas);
       if (trimEditor.isActive()) {
-        hoverBox.hidden = true; canvas.title = 'Drag the left and right trim edges, or click near an edge to place it.';
+        hoverBox.hidden = true; i18nUi.setAttribute(canvas, "title", i18nUi.message("Drag the left and right trim edges, or click near an edge to place it."));
         trimEditor.render();
       }
     } catch (error) { status(error.message, { type: 'error' }); }
   }
+  function renderTableLayer(plan, canvas) {
+    const table = !trimEditor.isActive() && plan.tables.find(item => item.stack);
+    tableLayer.hidden = !table;
+    if (!table) return;
+    if (!tableLayer.isConnected) get('preview').append(tableLayer);
+    Object.assign(tableLayer.style, { left: `${canvas.offsetLeft}px`, right: `${canvas.offsetLeft}px`, top: `${canvas.offsetTop}px`,
+      aspectRatio: `${plan.width} / ${plan.height}` });
+    tableLayer.style.setProperty('--table-font', String(FIGURE_FONT_SIZE / plan.width * 100));
+    tableLayer.style.setProperty('--caption-angle', `-${CAPTION_ANGLE}deg`);
+    const line = FIGURE_FONT_SIZE * 1.6;
+    const box = (x, y, width, height) => `left:${x / plan.width * 100}%;top:${y / plan.height * 100}%;width:${width / plan.width * 100}%;height:${height / plan.height * 100}%`;
+    const cells = table.rows.flatMap((row, index) => {
+      const height = table.rotated ? line : row.height;
+      return [
+        { row: index, lane: 0, style: box(FIGURE_MARGIN, (table.rotated ? row.captionY : row.y + row.height / 2) - height / 2, LABEL_WIDTH - 20, height) },
+        ...table.columns.map((column, columnIndex) => (table.rotated
+          // Same anchor as the drawn caption: its left end on the lane center.
+          ? { row: index, lane: column.laneIndex, rotated: true, style: box(plan.imageLeft + column.center, row.captionY - line / 2,
+            Math.max(row.widths[columnIndex], FIGURE_FONT_SIZE * 2) + FIGURE_FONT_SIZE, line) }
+          : { row: index, lane: column.laneIndex, style: box(plan.imageLeft + column.x, row.y, column.width, row.height) }))
+      ];
+    });
+    const rows = currentStack().table.rows;
+    const shape = tableInputsShape(cells);
+    if (tableLayer.dataset.shape !== shape) {
+      tableLayer.dataset.shape = shape;
+      i18nUi.setHtml(tableLayer, tableInputsMarkup(cells, rows));
+    }
+    syncTableInputs(tableLayer, cells, rows);
+  }
   function renderStackTrim() {
     const available = previewRows().length > 0;
     get('stack-trim').hidden = !available;
+    // One row at a time: set or reset the trim, or, while its edges are out, apply or cancel it.
     const editing = trimEditor.isActive();
-    const button = workspace.querySelector('[data-figure-action="trim"]');
-    button.setAttribute('aria-pressed', String(editing));
-    button.textContent = editing ? 'Adjusting trim edges' : currentStack().trim.mode === 'none' ? 'Set trim edges' : 'Adjust trim edges';
-    button.disabled = !available || editing;
+    const trimmed = currentStack().trim.mode !== 'none';
+    get('trim-start').hidden = editing;
     get('trim-actions').hidden = !editing;
-    workspace.querySelector('[data-figure-action="reset-trim"]').disabled = !available || editing || currentStack().trim.mode === 'none';
+    i18nUi.setText(workspace.querySelector('[data-figure-action="trim"]'), trimmed ? i18nUi.message("Adjust trim edges") : i18nUi.message("Set trim edges"));
+    workspace.querySelector('[data-figure-action="reset-trim"]').hidden = !trimmed;
+  }
+  // The same table bar as a single gel's, above the figure the table is typed on.
+  function renderTableBar() {
+    const hasTable = Boolean(currentStack().table?.rows?.length);
+    get('table-bar').hidden = !previewRows().length || trimEditor.isActive();
+    workspace.querySelector('[data-figure-action="add-table"]').hidden = hasTable;
+    workspace.querySelectorAll('[data-figure-action="add-table-row"],[data-figure-action="remove-table-row"]').forEach(button => { button.hidden = !hasTable; });
   }
   function renderList() {
     // Keep row nodes stable when a click only changes selection, so the browser
     // can recognize the second click as a double-click on the same entry.
     const available = navigationRows();
-    const key = JSON.stringify([available.map(row => [row.id, row.label]), stacks.map(stack => [stack.id, stack.name, stack.layoutName, stack.layerIds])]);
+    const key = JSON.stringify([available.map(row => [row.id, row.label]), stacks.map(stack => [stack.id, stack.name, stack.layoutName, stack.layerIds]), [...foldedStacks]]);
     if (key === renderedListKey) { renderNavigationSelection(); return; }
     renderedListKey = key;
-    renderGelLayers({ list: get('rows'), rows: available, focusedId: selectedId, stacks, activeStackId, documentObject });
-  }
-  function renderSelection() {
-    const row = focused();
-    get('placement').hidden = !row;
-    if (!row) return;
-    get('placement-title').textContent = row.label;
-    workspace.querySelectorAll('[data-figure-field]').forEach(input => { input.value = String(Math.round(row.placement[input.dataset.figureField] * 10) / 10); });
+    renderGelLayers({ list: get('rows'), rows: available, focusedId: selectedId, stacks, activeStackId, foldedIds: foldedStacks, documentObject });
   }
   function renderNavigationSelection() {
     get('rows').querySelectorAll('[data-figure-row],[data-figure-stack-view],[data-figure-layout-view]').forEach(button => {
@@ -258,7 +296,7 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
   }
   function renderFocusedView() {
     renderNavigationSelection();
-    renderSelection(); renderPreview(); renderStackTrim();
+    renderPreview(); renderStackTrim(); renderTableBar();
     if (isOpen()) [elements.gelExportImageBtn, elements.gelExportPptxBtn].filter(Boolean).forEach(button => { button.disabled = !previewRows().length || busy; });
     workspace.querySelector('[data-figure-action="add"]').disabled = !runtime.currentImage || rows.length >= MAX_BLOTS;
     workspace.querySelector('[data-figure-action="import"]').disabled = rows.length >= MAX_BLOTS;
@@ -270,12 +308,11 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
     if (typeof stackId !== 'string' || !stacks.some(stack => stack.id === stackId)) stackId = currentStack().id;
     trimEditor.cancel(false);
     activeStackId = stackId;
-    selectedId = STACK_VIEW; focusedId = '';
+    selectedId = STACK_VIEW;
     syncActive(); deps.leaveCropMode(); deps.hideWindows();
     panel.hidden = false; inspector.hidden = false; workspace.classList.add('is-showing-layout'); stage.classList.add('is-showing-layers'); launcher.setAttribute('aria-expanded', 'true');
     [elements.gelImageRow, elements.gelLaneTablePanel].filter(Boolean).forEach(node => { node.inert = true; });
     render(); announceHistory();
-    workspace.querySelector('[data-figure-action="back"]').focus();
   }
   function close() {
     trimEditor.cancel(false);
@@ -356,7 +393,7 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
     const stack = { id: `stack-${runtime.createId()}`, name, layoutName: 'Layout', layerIds: [],
       trim: { ...DEFAULT_STACK_TRIM } };
     stacks.push(stack); activeStackId = stack.id; selectedId = STACK_VIEW;
-    commit(); show(); status('Created an empty Stack.');
+    commit(); show(); status(i18nUi.text("Created an empty Stack."));
   }
   function moveLayer(id, destination, beforeId = null) {
     if (busy || elements.gelForm?.getAttribute('aria-busy') === 'true' || beforeId === id) return;
@@ -390,7 +427,7 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
     }
     if (targetStack) activeStackId = targetStack.id;
     commit(); if (stacks.length) show(); else render();
-    status(previousStack === targetStack ? `Reordered ${row.label}.` : `Moved ${row.label} ${intoStack ? `into ${targetStack.name}` : 'outside the stacks'}.`);
+    status(((previousStack === targetStack ? i18nUi.text("Reordered {p0}.", { p0: row.label }) : i18nUi.text("Moved {p0} {p1}.", { p0: row.label, p1: intoStack ? `into ${targetStack.name}` : 'outside the stacks' }))));
     [...get('rows').querySelectorAll('[data-figure-row]')].find(button => button.dataset.figureRow === id)?.focus({ preventScroll: true });
   }
   async function runBusy(action) {
@@ -400,7 +437,7 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
     locked.forEach(({ node }) => { node.disabled = true; });
     launcher.disabled = true;
     try { return await action(); }
-    catch (error) { status(error?.message || 'The figure operation failed.', { type: 'error' }); return false; }
+    catch (error) { status(((error?.message || i18nUi.text("The figure operation failed."))), { type: 'error' }); return false; }
     finally {
       busy = false; panel.setAttribute('aria-busy', 'false');
       locked.forEach(({ node, disabled }) => { node.disabled = disabled; });
@@ -427,21 +464,21 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
     if (!rows.length && !stacks.length) { savedFingerprint = fingerprint(); return true; }
     return runBusy(async () => {
       const key = fingerprint();
-      status('Saving figure project…');
+      status(i18nUi.text("Saving figure project…"));
       const result = await downloadTextFile({
         content: serializeBlotProject(rows, get('name').value, deps.imageDataToDataUrl, {
           stacks, activeStackId, checkedIds: [], selectedId, nextLayerNumber
         }),
         fileName: `${safeFilePart(get('name').value || 'Gel layers')}.gel-figure.json`, mimeType: 'application/json'
       });
-      if (result?.saved) { if (!deps.workspacePersistence) savedFingerprint = key; status('Figure project saved.'); return true; }
-      status('Save canceled.'); return false;
+      if (result?.saved) { if (!deps.workspacePersistence) savedFingerprint = key; status(i18nUi.text("Figure project saved.")); return true; }
+      status(i18nUi.text("Save canceled.")); return false;
     });
   }
   async function exportFigure(format) {
     trimEditor.apply();
     return runBusy(async () => {
-      status(`Preparing ${format.toUpperCase()}…`);
+      status(i18nUi.text("Preparing {p0}…", { p0: format.toUpperCase() }));
       const visibleRows = previewRows();
       await Promise.all(visibleRows.map(prepareProcessedRow));
       if (disposed || visibleRows.some(row => row.draft.viewerMode === 'processed' && row.displayKey !== JSON.stringify(normalizeEnhancementSettings({ denoiseStrength: row.draft.controls['gel-denoise-strength'], contrastBoost: row.draft.controls['gel-contrast-strength'] })))) throw new Error('Image processing is incomplete. Try exporting again.');
@@ -453,7 +490,7 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
         ? await downloadDataUrlFile({ dataUrl: output.canvas.toDataURL('image/png'), fileName })
         : await downloadBinaryFile({ bytes: await createBlotFigurePowerPoint({ ...output, title }),
           fileName, mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
-      status(result?.saved ? `${format.toUpperCase()} exported.` : 'Export canceled.');
+      status(((result?.saved ? i18nUi.text("{p0} exported.", { p0: format.toUpperCase() }) : i18nUi.text("Export canceled."))));
       return Boolean(result?.saved);
     });
   }
@@ -466,7 +503,7 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
       const importControls = { ...controls(), 'gel-id': '', 'gel-type': openEditor ? controls()['gel-type'] : 'western' };
       for (const file of files) {
         if (rows.length >= MAX_BLOTS) { errors.push(`Layer limit: ${MAX_BLOTS} gels.`); break; }
-        status(`Loading ${file.name}…`);
+        status(i18nUi.text("Loading {p0}…", { p0: file.name }));
         try {
           const image = await decodeImageFile(file);
           if (disposed) return;
@@ -486,7 +523,7 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
       }
       if (openEditor && firstId) selectedId = firstId;
       const error = errors.join(' ');
-      commit(); status(error || `${rows.length} gel layers. Create a stack and drag gels into it.`);
+      commit(); status(((error || i18nUi.text("{p0} gel layers. Create a stack and drag gels into it.", { p0: rows.length }))));
       return { firstId, error };
     });
     if (openEditor && !disposed && imported) {
@@ -500,8 +537,8 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
     if (!busy && elements.gelForm?.getAttribute('aria-busy') !== 'true') {
       if (files.length) void importFiles(files, { openEditor: !isOpen() });
       else {
-        status('Drop image files to add gel layers.');
-        if (!isOpen()) deps.setStatus('Drop image files to add gel layers.');
+        status(i18nUi.text("Drop image files to add gel layers."));
+        if (!isOpen()) deps.setStatus(i18nUi.text("Drop image files to add gel layers."));
       }
     }
     return true;
@@ -552,7 +589,7 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
       if (merged.activeStackId) activeStackId = merged.activeStackId;
       nextLayerNumber = Math.max(nextLayerNumber, project.nextLayerNumber);
       commit(); if (wasEmpty && !deps.workspacePersistence) savedFingerprint = fingerprint();
-      status('Figure project opened.');
+      status(i18nUi.text("Figure project opened."));
       return merged.firstId;
     }).then(firstId => {
       // A project with a Stack opens its Layout; otherwise its first gel opens for editing.
@@ -564,6 +601,13 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
   listen(workspace, 'click', event => {
     if (busy) return;
     const target = event.target.closest('button'); if (!target) return;
+    if (target.dataset.figureFold) {
+      const id = target.dataset.figureFold;
+      if (!foldedStacks.delete(id)) foldedStacks.add(id);
+      renderList();
+      get('rows').querySelector(`[data-figure-fold="${documentObject.defaultView.CSS.escape(id)}"]`)?.focus();
+      return;
+    }
     if (target.dataset.figureRow) {
       if (!rows.some(row => row.id === target.dataset.figureRow)) { openSavedLayer(target.dataset.figureRow); return; }
       if (activeId === target.dataset.figureRow && !isOpen()) return;
@@ -572,27 +616,33 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
     if (target.hasAttribute('data-figure-stack-view') || target.hasAttribute('data-figure-layout-view')) {
       status(''); show(target.dataset.figureStackView || target.dataset.figureLayoutView); return;
     }
-    const action = target.dataset.figureAction; const row = focused();
+    const action = target.dataset.figureAction;
     try {
-      if (action === 'back') close();
-      else if (action === 'stack') createStack();
+      if (action === 'stack') createStack();
       else if (action === 'trim' && previewRows().length) trimEditor.start(previewPlan.crop);
       else if (action === 'apply-trim') trimEditor.apply();
       else if (action === 'cancel-trim') trimEditor.cancel();
       else if (action === 'reset-trim' && previewRows().length) {
         currentStack().trim = { ...DEFAULT_STACK_TRIM };
-        commit(); render(); status('Stack trim reset.');
+        commit(); render(); status(i18nUi.text("Stack trim reset."));
+      }
+      else if (action === 'add-table' && !stackTableReference(previewRows())) {
+        status(i18nUi.text("Set lane dividers on a gel in this Stack to add a table."), { type: 'warning' });
+      }
+      else if (action === 'add-table' || action === 'add-table-row') {
+        const stack = currentStack();
+        stack.table = { rows: [...(stack.table?.rows || []), { label: '', values: [] }] };
+        commit(); render();
+        tableLayer.querySelector(`[data-table-row="${stack.table.rows.length - 1}"]${action === 'add-table' ? '[data-table-lane]' : ''}`)?.focus();
+      }
+      else if (action === 'remove-table-row') {
+        currentStack().table.rows.pop();
+        commit(); render();
       }
       else if (action === 'add') addCurrent();
       else if (action === 'import') get('files').click();
       else if (action === 'open') get('project-file').click();
       else if (action === 'recover' && elements.gelForm?.getAttribute('aria-busy') !== 'true') void deps.recoverSavedGels?.();
-      else if (action === 'edit' && row) { selectedId = row.id; editSelected(); }
-      else if (action === 'detect' && row) {
-        const inferred = inferBlotPlacement(row.draft);
-        row.placement = { ...row.placement, first: inferred.first, last: inferred.last };
-        status(''); commit(); render();
-      }
     } catch (error) { status(error.message, { type: 'error' }); }
   });
   function renameNavigationEntry(button) {
@@ -633,20 +683,16 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
     if (!button) return;
     event.preventDefault(); event.stopPropagation(); renameNavigationEntry(button);
   });
+  listen(tableLayer, 'input', event => {
+    if (currentStack().table && writeTableInput(currentStack().table.rows, event.target)) renderPreview();
+  });
+  listen(tableLayer, 'change', commit);
   listen(navigation, 'focusin', announceHistory);
   listen(get('name'), 'change', commit);
-  listen(workspace, 'change', event => {
-    const key = event.target.dataset.figureField; if (!key || !focused()) return;
-    const value = event.target.value === '' ? NaN : Number(event.target.value);
-    try {
-      focused().placement = validatePlacement({ ...focused().placement, [key]: value });
-      status(''); commit(); renderPreview();
-    } catch (error) { status(error.message, { type: 'error' }); renderSelection(); }
-  });
   // Direct manipulation in the preview, as with placed images in slide and
   // design tools: drag a blot to slide it, a side to stretch it, the top or
-  // bottom edge to crop it. Each drag rewrites the anchors and crop that
-  // Exact values shows, so exports, projects and undo are unchanged.
+  // bottom edge to crop it. Each drag rewrites the saved lane anchors and
+  // crop, so exports, projects and undo are unchanged.
   const EDGE_PX = 7;
   const CURSORS = { move: 'grab', left: 'ew-resize', right: 'ew-resize', top: 'ns-resize', bottom: 'ns-resize' };
   const view = documentObject.defaultView;
@@ -727,13 +773,12 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
     if (dragFrame) { view.cancelAnimationFrame(dragFrame); applyDrag(); }
     const { changed } = drag; drag = null;
     get('preview').style.cursor = '';
-    if (changed) { status(''); commit(); renderSelection(); renderStackTrim(); }
+    if (changed) { status(''); commit(); renderStackTrim(); }
   }
   listen(get('preview'), 'pointerdown', event => {
     if (busy || event.button !== 0) return;
     const hit = hitBlot(event); if (!hit) return;
     event.preventDefault();
-    focusedId = hit.row.id; renderSelection();
     try { get('preview').setPointerCapture(event.pointerId); } catch { /* a synthetic pointer has nothing to capture */ }
     drag = { ...hit, pointerId: event.pointerId, x: event.clientX, y: event.clientY, clientY: event.clientY, dx: 0, dy: 0,
       start: { ...hit.row.placement }, changed: false };
@@ -804,7 +849,7 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
   render(); commit(); savedFingerprint = fingerprint();
   if (deps.workspacePersistence) autosave = createWorkspaceAutosave({
     getKey: fingerprint, getContent: projectContent, save: deps.workspacePersistence.save,
-    onError: error => status(`Could not automatically save the Gel workspace: ${error.message}`, { type: 'error' })
+    onError: error => status(i18nUi.text("Could not automatically save the Gel workspace: {p0}", { p0: error.message }), { type: 'error' })
   });
   const ready = (async () => {
     if (!deps.workspacePersistence) return;
@@ -825,7 +870,7 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
         nextLayerNumber = project.nextLayerNumber; get('name').value = project.title;
         selectedId = project.selectedId;
         restored.accept?.();
-        if (restored.previous) status('Restored the previous Gel workspace because the latest save was unavailable.', { type: 'warning' });
+        if (restored.previous) status(i18nUi.text("Restored the previous Gel workspace because the latest save was unavailable."), { type: 'warning' });
       }
       history = []; historyIndex = -1; render(); commit(); savedFingerprint = fingerprint();
       restoring = false; autosave.enable();
@@ -833,7 +878,7 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
       else if (selectedId) editSelected();
     } catch (error) {
       restoring = false; restoreFailed = true;
-      status(`Could not restore the Gel workspace: ${error.message} Your saved workspace has been kept.`, { type: 'error' });
+      status(i18nUi.text("Could not restore the Gel workspace: {p0} Your saved workspace has been kept.", { p0: error.message }), { type: 'error' });
     }
   })();
   return {

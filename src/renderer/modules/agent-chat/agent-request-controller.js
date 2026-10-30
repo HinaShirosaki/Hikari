@@ -16,9 +16,9 @@ import {
   buildAssistantErrorMessage,
   buildAssistantResponseMessage
 } from './assistant-message-meta.js';
-import { showTransientNotice } from '../../lib/notify.js';
 import { normalizeScopeKey } from '../app-state/agent-chat-normalizer.js';
 import { createScopedAgentChatState } from './scoped-state.js';
+import { agentFailure, agentNotice, agentUi, setAgentText } from './localization.js';
 
 // Sends chat turns to the main-process agent and folds the reply back in.
 // Several sessions can have a request running at once (runtime.activeRequests,
@@ -162,7 +162,7 @@ export function createAgentRequestController(deps) {
       return { ok: false, reason: 'empty' };
     }
     if (!api?.agentChat) {
-      setStatus('Agent IPC is unavailable.');
+      setStatus(agentUi('status.ipcUnavailable'));
       return { ok: false, reason: 'unavailable' };
     }
 
@@ -230,15 +230,15 @@ export function createAgentRequestController(deps) {
     } catch (error) {
       runtime.sendPending = false;
       syncRequestUiState();
-      setStatus('Error.');
-      showTransientNotice(String(error?.message || error || 'Failed to create chat session.'), { type: 'error' });
+      setStatus(agentUi('status.error'));
+      agentNotice(agentFailure(error, 'notice.createFailed'), { type: 'error' });
       return { ok: false, reason: 'session_error' };
     }
     onAccepted?.({ clientRequestId, sessionId: requestSessionId });
     runtime.sendPending = false;
     syncRequestUiState();
     renderHistoryView({ forceScroll: true });
-    setStatus('Working on this...');
+    setStatus(agentUi('status.working'));
 
     try {
       const stateSnapshot = await buildSyncedStateSnapshot(projectId);
@@ -263,7 +263,7 @@ export function createAgentRequestController(deps) {
       if (!result?.ok) {
         if (result?.canceled === true) {
           appendStoppedAssistantMessage(request, messageText, result?.error || 'Agent request stopped.');
-          setRequestStatus(request, 'Stopped.');
+          setRequestStatus(request, agentUi('status.stopped'));
           return;
         }
         throw new Error(result?.error || 'Agent request failed.');
@@ -298,21 +298,21 @@ export function createAgentRequestController(deps) {
       if (request.sessionId && deps.refreshPersistentSessionsOnReply !== false && isRequestVisible(request)) {
         void sessionManager.refreshPersistentSessions({ force: true, loadCurrent: false });
       }
-      setRequestStatus(request, response.userQuestion?.question ? 'Waiting for your answer.' : 'Complete.');
+      setRequestStatus(request, agentUi(response.userQuestion?.question ? 'status.waiting' : 'status.complete'));
     } catch (error) {
       if (wasRequestCanceled(clientRequestId)) {
         return;
       }
       if (isLocalStopError(error)) {
         appendStoppedAssistantMessage(request, messageText, error?.message || 'Agent request stopped.');
-        setRequestStatus(request, 'Stopped.');
+        setRequestStatus(request, agentUi('status.stopped'));
         return;
       }
       const traceRows = collectTraceRows(request);
       clearLiveAssistantState(request);
       persistAssistantMessage(request, buildAssistantErrorMessage({ createId, error, traceRows, messageText }));
-      setRequestStatus(request, 'Error.');
-      showTransientNotice(String(error?.message || error || 'Agent request failed.'), { type: 'error' });
+      setRequestStatus(request, agentUi('status.error'));
+      agentNotice(agentFailure(error, 'notice.requestFailed'), { type: 'error' });
       return { ok: false, reason: 'request_error' };
     } finally {
       const requestWasVisible = isRequestVisible(request);
@@ -351,9 +351,9 @@ export function createAgentRequestController(deps) {
     runtime.stopInProgress = true;
     if (deps.dom?.stopBtn) {
       deps.dom.stopBtn.disabled = true;
-      deps.dom.stopBtn.textContent = 'Stopping...';
+      setAgentText(deps.dom.stopBtn, 'composer.stopping');
     }
-    setStatus('Stopping...');
+    setStatus(agentUi('status.stopping'));
     if (!api?.agentChatCancel || !clientRequestId) {
       return;
     }
@@ -365,7 +365,7 @@ export function createAgentRequestController(deps) {
         appendStoppedAssistantMessage(request, requestText, 'Agent request stopped by user.');
         getActiveRequests().delete(clientRequestId);
         syncRequestUiState();
-        setStatus('Stopped.');
+        setStatus(agentUi('status.stopped'));
       }
     } catch {
       // The active request will still unwind locally once the current step completes.

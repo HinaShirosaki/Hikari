@@ -1,4 +1,7 @@
-import { getContainerTypeLabel } from './constants.js';
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("samples");
+import { sampleAttributes, sampleContainerType, sampleContainerTypeMessage, sampleMessage, sampleText } from './localization.js';
 import {
   renderFolderTreeLeaf,
   renderFolderTreeNode
@@ -50,6 +53,7 @@ export function installSectionNavigation(ctx) {
       && uiState.selectedContainer.containerId === container.id;
     const sampleCount = helpers.getContainerSampleCount(section, container.id);
     const glyphType = getContainerGlyphType(container);
+    const typeMessage = sampleContainerType(container);
     return renderFolderTreeLeaf({
       active: Boolean(isActive),
       wrapperClass: 'inventory-container-tree-node',
@@ -58,13 +62,15 @@ export function installSectionNavigation(ctx) {
       controlAttributes: {
         'data-container-open': container.id,
         'data-section': section,
-        title: getContainerTypeLabel(container)
+        title: sampleText(typeMessage.key, typeMessage.params),
+        'data-i18n-title': `samples.${typeMessage.key}`,
+        'data-i18n-params': JSON.stringify(typeMessage.params)
       },
       contentHtml: `
           <span class="inventory-container-glyph inventory-container-glyph-${safeText(glyphType)}" aria-hidden="true"></span>
           <span class="inventory-container-copy">
             <span class="inventory-container-name">${safeText(container.name)}</span>
-            <span class="inventory-container-type">${safeText(getContainerTypeLabel(container))}</span>
+            <span class="inventory-container-type">${sampleContainerTypeMessage(container)}</span>
           </span>
           <span class="inventory-container-count">${safeText(String(sampleCount))}</span>
       `
@@ -82,6 +88,10 @@ export function installSectionNavigation(ctx) {
     const hasChildren = childFolders.length + childContainers.length > 0;
     const treeKey = getFolderTreeKey(section, folder.id);
     const isExpanded = ctx.folderTree.isExpanded(treeKey, hasChildren);
+    const disclosureKey = folder.name
+      ? (isExpanded ? 'tree.collapse' : 'tree.expand')
+      : (isExpanded ? 'tree.collapseUnnamed' : 'tree.expandUnnamed');
+    const disclosureParams = folder.name ? { name: folder.name } : {};
     const childMarkup = [
       ...childFolders.map((child) => renderFolderNode(section, child, renderedFolderIds)),
       ...childContainers.map((container) => renderContainerLeaf(section, container))
@@ -91,6 +101,7 @@ export function installSectionNavigation(ctx) {
       expanded: isExpanded,
       expandable: hasChildren,
       label: folder.name,
+      disclosureLabel: sampleText(disclosureKey, disclosureParams),
       meta: String(childContainers.length),
       childrenHtml: childMarkup,
       nodeClass: 'inventory-folder-tree-node',
@@ -103,7 +114,9 @@ export function installSectionNavigation(ctx) {
       nodeAttributes: { 'data-inventory-folder-node': folder.id },
       disclosureAttributes: {
         'data-inventory-folder-toggle': folder.id,
-        'data-section': section
+        'data-section': section,
+        'data-i18n-aria-label': `samples.${disclosureKey}`,
+        'data-i18n-params': JSON.stringify(disclosureParams)
       },
       mainAttributes: {
         'data-folder-tree-toggle': treeKey,
@@ -118,8 +131,7 @@ export function installSectionNavigation(ctx) {
           class="inventory-folder-add-container-btn folder-tree-template__action"
           data-folder-add-container="${safeText(folder.id)}"
           data-section="${safeText(section)}"
-          aria-label="Add a physical container to ${safeText(folder.name)}"
-          title="Add container here"
+          ${sampleAttributes({ 'aria-label': 'tree.addPhysicalContainer', title: 'tree.addContainer' }, { name: folder.name })}
         ><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
       `
     });
@@ -130,7 +142,7 @@ export function installSectionNavigation(ctx) {
       return;
     }
 
-    inventoryLocationNav.innerHTML = helpers.getSectionNames().map((section) => {
+    i18nUi.setHtml(inventoryLocationNav, helpers.getSectionNames().map((section) => {
       const display = helpers.getSectionDisplay(section);
       const containerCount = helpers.getSectionContainerCount(section);
       const folderCount = helpers.getSectionFolderCount?.(section) || 0;
@@ -156,7 +168,7 @@ export function installSectionNavigation(ctx) {
           </div>
         `
         : '';
-      const folderMeta = folderCount ? ` · ${folderCount} folder${folderCount === 1 ? '' : 's'}` : '';
+      const folderMeta = folderCount ? ` · ${sampleMessage('tree.folders', { count: folderCount })}` : '';
       return `
         <div class="inventory-location-group">
           <div class="inventory-location-row">
@@ -164,7 +176,7 @@ export function installSectionNavigation(ctx) {
               <span class="inventory-location-icon">${safeText(display.short)}</span>
               <span class="inventory-location-copy">
                 <span class="inventory-location-title">${safeText(display.title)}</span>
-                <span class="inventory-location-meta">${safeText(`${containerCount} container${containerCount === 1 ? '' : 's'}${folderMeta}`)}</span>
+                <span class="inventory-location-meta">${sampleMessage('tree.containers', { count: containerCount })}${folderMeta}</span>
               </span>
               <span class="inventory-location-count">${safeText(String(sampleCount))}</span>
             </button>
@@ -172,14 +184,13 @@ export function installSectionNavigation(ctx) {
               type="button"
               class="inventory-location-add-container-btn folder-tree-template__action"
               data-location-add-container="${safeText(section)}"
-              aria-label="Add a physical container to ${safeText(display.title)}"
-              title="Add container here"
+              ${sampleAttributes({ 'aria-label': 'tree.addPhysicalContainer', title: 'tree.addContainer' }, { name: display.title })}
             ><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></button>
           </div>
           ${containerMarkup}
         </div>
       `;
-    }).join('');
+    }).join(''));
 
     inventoryLocationNav.querySelectorAll('[data-inventory-section]').forEach((button) => {
       button.addEventListener('click', () => {
@@ -277,17 +288,17 @@ export function installSectionNavigation(ctx) {
     const plasmidLabel = helpers.getSampleTypeLabel('plasmid');
     const cellLineLabel = helpers.getSampleTypeLabel('cell_line');
     const proteinLabel = helpers.getSampleTypeLabel('protein');
-    inventorySummaryCard.innerHTML = `
+    i18nUi.setHtml(inventorySummaryCard, `
       <div class="inventory-summary-head">
-        <h3>Inventory Summary</h3>
+        <h3>${sampleMessage('summary.title')}</h3>
       </div>
       <div class="inventory-summary-stats">
-        <div class="inventory-summary-row"><span class="inventory-summary-label"><span class="inventory-summary-dot inventory-summary-dot-total"></span>Total Samples</span><strong>${safeText(String(summary.total))}</strong></div>
+        <div class="inventory-summary-row"><span class="inventory-summary-label"><span class="inventory-summary-dot inventory-summary-dot-total"></span>${sampleMessage('summary.total')}</span><strong>${safeText(String(summary.total))}</strong></div>
         <div class="inventory-summary-row"><span class="inventory-summary-label"><span class="inventory-summary-dot inventory-summary-dot-plasmid"></span>${safeText(plasmidLabel)}</span><strong>${safeText(String(summary.plasmid))}</strong></div>
         <div class="inventory-summary-row"><span class="inventory-summary-label"><span class="inventory-summary-dot inventory-summary-dot-cell"></span>${safeText(cellLineLabel)}</span><strong>${safeText(String(summary.cell_line))}</strong></div>
         <div class="inventory-summary-row"><span class="inventory-summary-label"><span class="inventory-summary-dot inventory-summary-dot-protein"></span>${safeText(proteinLabel)}</span><strong>${safeText(String(summary.protein))}</strong></div>
       </div>
-    `;
+    `);
   }
 
   Object.assign(ctx, {

@@ -38,15 +38,18 @@ export function validateAssetRequest(args) {
     return;
   }
   fields(args, ['action', 'expected_assets_revision', 'request_id', ...(args.action === 'asset_save'
-    ? ['illustration_id', 'expected_revision', 'name', 'id', 'ids', 'raster_asset', 'textFree'] : ['asset_id'])]);
+    ? ['illustration_id', 'expected_revision', 'name', 'id', 'ids', 'raster_asset', 'textFree', 'objects'] : ['asset_id'])]);
   if (!validId(args.expected_assets_revision) || !validId(args.request_id)) throw new Error('Supply expected_assets_revision from asset_list/read and a unique request_id.');
   if (args.action === 'asset_delete') {
     if (!validId(args.asset_id)) throw new Error('Choose an asset_id from asset_list.');
     return;
   }
-  if (!validId(args.illustration_id) || !validId(args.expected_revision)) throw new Error('Asset save requires illustration_id and expected_revision from read.');
+  // Generated components never touch a figure, so only canvas saves need one.
+  if (args.objects === undefined && (!validId(args.illustration_id) || !validId(args.expected_revision))) throw new Error('Asset save requires illustration_id and expected_revision from read.');
   if (!validName(args.name)) throw new Error('Give the asset a name of 1–200 characters.');
-  if ([args.id, args.ids, args.raster_asset].filter(value => value !== undefined).length !== 1) throw new Error('Save takes a component/group id, component ids, or raster_asset.');
+  if ([args.id, args.ids, args.raster_asset, args.objects].filter(value => value !== undefined).length !== 1) throw new Error('Save takes a component/group id, component ids, raster_asset, or objects.');
+  if (args.objects !== undefined && (!Array.isArray(args.objects) || !args.objects.length || args.objects.length > 200
+    || args.objects.some(object => object?.type !== 'vector'))) throw new Error('objects takes 1–200 type:"vector" SVG components. Save image_gen output with raster_asset.');
   if (args.raster_asset !== undefined && (!validId(args.raster_asset) || args.textFree !== true)) throw new Error('Raster asset save requires raster_asset and textFree: true.');
   if (args.raster_asset === undefined && args.textFree !== undefined) throw new Error('textFree is only supported with raster_asset.');
   if (args.id !== undefined && !validId(args.id)) throw new Error('Invalid component/group id.');
@@ -78,8 +81,15 @@ export function snapshotAsset(document, args, validateSvg) {
   const ids = args.ids || group?.ids || [args.id];
   const objects = document.objects.filter(object => ids.includes(object.id));
   if (objects.length !== ids.length) throw new Error('Every selected component must exist.');
+  return originAsset(args.name.trim(), objects, validateSvg);
+}
+// An agent-built component: its objects share one coordinate space, in paint order.
+export function componentAsset(name, objects, validateSvg) {
+  return originAsset(name, objects.map(object => normalizeObject(object, validateSvg)), validateSvg);
+}
+function originAsset(name, objects, validateSvg) {
   const bounds = selectionBounds(objects);
-  return normalizeAsset({ version: 1, name: args.name.trim(), objects: objects.map(object => ({ ...object,
+  return normalizeAsset({ version: 1, name, objects: objects.map(object => ({ ...object,
     canvas: 'main', x: object.x - bounds.x, y: object.y - bounds.y })) }, validateSvg);
 }
 export function normalizeAsset(raw, validateSvg) {

@@ -1,3 +1,5 @@
+import { createPresentation } from "./i18n.mjs";
+const i18nUi = createPresentation("figura");
 import { validateSvg } from './artwork.mjs';
 import { encodeText } from './workspace.mjs';
 import { prepareRaster, fitRasterBox } from './raster.mjs';
@@ -32,14 +34,14 @@ export function initArtworkImport({ workspace, getCanvas, getIllustrationId, get
   async function present(next) {
     session = { ...next, token: ++generation }; const current = session;
     setBusy(false);
-    $('raster-title').textContent = next.target === 'asset' ? 'Import asset' : next.replaceId ? 'Replace artwork' : 'Import artwork';
-    $('confirm-raster').textContent = next.target === 'asset' ? 'Import asset' : next.replaceId ? 'Replace artwork' : 'Add artwork';
+    i18nUi.setText($('raster-title'), (next.target === 'asset' ? i18nUi.message("Import asset") : (next.replaceId ? i18nUi.message("Replace artwork") : i18nUi.message("Import artwork"))));
+    i18nUi.setText($('confirm-raster'), (next.target === 'asset' ? i18nUi.message("Import asset") : (next.replaceId ? i18nUi.message("Replace artwork") : i18nUi.message("Add artwork"))));
     $('import-asset-name-field').hidden = next.target !== 'asset';
     $('import-asset-name').required = next.target === 'asset'; $('import-asset-name').value = next.name;
     $('text-free-review').hidden = next.type === 'vector';
     $('text-free').required = next.type === 'raster'; $('text-free').checked = false;
-    $('raster-dimensions').textContent = `${next.width} × ${next.height} px`;
-    $('raster-error').textContent = ''; preview.src = next.dataUrl;
+    i18nUi.setText($('raster-dimensions'), `${next.width} × ${next.height} px`);
+    i18nUi.setText($('raster-error'), ''); preview.src = next.dataUrl;
     if (!dialog.open) dialog.showModal();
     $('confirm-raster').disabled = true;
     try {
@@ -47,11 +49,11 @@ export function initArtworkImport({ workspace, getCanvas, getIllustrationId, get
       if (session !== current) return;
       $('confirm-raster').disabled = false;
       if (next.target === 'asset') $('import-asset-name').focus();
-    } catch { if (session === current) $('raster-error').textContent = 'Could not load the artwork preview.'; }
+    } catch { if (session === current) i18nUi.setText($('raster-error'), i18nUi.message("Could not load the artwork preview.")); }
   }
   function chooseFile(target, replaceId = '') {
     close();
-    const document = workspace.getDocument(); if (!document) return status('The illustration is still opening.');
+    const document = workspace.getDocument(); if (!document) return status(i18nUi.text("The illustration is still opening."));
     picker = { target, illustrationId: getIllustrationId(), revision: document.revision, canvas: getCanvas(), replaceId,
       object: replaceId ? document.objects.find(object => object.id === replaceId) : null };
     $('asset-input').click();
@@ -79,7 +81,7 @@ export function initArtworkImport({ workspace, getCanvas, getIllustrationId, get
   });
   $('raster-form').addEventListener('submit', async event => {
     event.preventDefault(); if (!session || busy || !event.target.reportValidity()) return;
-    const current = session; setBusy(true); $('raster-error').textContent = '';
+    const current = session; setBusy(true); i18nUi.setText($('raster-error'), '');
     try {
       const dataUrl = current.dataUrl;
       let result, id;
@@ -98,9 +100,9 @@ export function initArtworkImport({ workspace, getCanvas, getIllustrationId, get
       if (!result.ok) throw new Error(result.error);
       if (session !== current) return;
       close();
-      if (current.target === 'asset') { $('asset-search').value = ''; showAssets(); status(result.reused ? 'This asset is already saved' : 'Asset imported'); }
-      else { select(id); status('Artwork imported'); }
-    } catch (error) { if (session === current) $('raster-error').textContent = error.message; }
+      if (current.target === 'asset') { $('asset-search').value = ''; showAssets(); status((result.reused ? i18nUi.text("This asset is already saved") : i18nUi.text("Asset imported"))); }
+      else { select(id); status(i18nUi.text("Artwork imported")); }
+    } catch (error) { if (session === current) i18nUi.setText($('raster-error'), error.message); }
     finally { if (session === current) setBusy(false); }
   });
   return { close };

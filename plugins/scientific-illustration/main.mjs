@@ -1,3 +1,5 @@
+import { createPresentation, i18n } from "./i18n.mjs";
+const i18nUi = createPresentation("figura");
 import { createWorkspace, encodeText } from './workspace.mjs';
 import { scene, renderPreview, objectGroup, element, stretchSvg, interactionBox, clearTextBounds, validateSvg } from './artwork.mjs';
 import { initPluginLeftRailResizer } from './left-rail.mjs';
@@ -29,7 +31,6 @@ const properties = $('properties');
 const artworkHitTester = createArtworkHitTester();
 let assetsPanel, workspaceTools, artworkImport, canvasCrop, canvasContextMenu, textEditor;
 const componentRail = createComponentRail({ document, focusTab: name => workspaceTools?.focus(`${name}-tab`), onChange: name => {
-  if (name === 'assets') assetsPanel?.render();
   if (name && workspaceTools?.isHosted()) void hikari.call('app.setAgentChatExpanded', { expanded: false }).catch(() => {});
   workspaceTools?.sync();
 } });
@@ -40,14 +41,14 @@ let chatExpanded = false, canDraw = true;
 let imagePreferenceSave = Promise.resolve(), pendingImagePreference = null;
 let imageStyleSaveTimer = null;
 let areaDrag = null;
-const status = text => { $('status').textContent = text; };
+const status = text => { i18nUi.setOwnedText($('status'), text); };
 let chatContextKey = '';
 function syncChatContext(id, title) {
   const key = JSON.stringify([id, title]);
   if (!id || chatContextKey === key) return;
   chatContextKey = key;
   void hikari.call('agent.setContext', { id, title, canvasIllustrationId: id }).catch(error => {
-    chatContextKey = ''; status(`Chat could not follow this illustration: ${error.message}`);
+    chatContextKey = ''; status(i18nUi.text("Chat could not follow this illustration: {p0}", { p0: error.message }));
   });
 }
 const workspace = createWorkspace({ hikari, onChange: render, onLibraryChange: renderIllustrations,
@@ -59,9 +60,11 @@ const selected = () => selectedIds.length === 1 ? state?.objects.find(obj => obj
 const selectedObjects = () => state?.objects.filter(object => selectedIds.includes(object.id)) || [];
 const selectedGroup = () => state?.groups.find(group => group.ids.length === selectedIds.length && group.ids.every(id => selectedIds.includes(id)));
 assetsPanel = initAssetsPanel({ workspace, getSelection: () => ({ ids: selectedIds, name: selectionTarget()?.name || 'Component' }),
-  getCanvas: () => activeCanvas, getIllustrationId: () => illustrationId, selectCopies: ids => select(ids, { reveal: false }), showAssets: () => componentRail.open('assets'), status });
+  getCanvas: () => activeCanvas, getIllustrationId: () => illustrationId, selectCopies: ids => select(ids, { reveal: false }), showAssets: () => showLibrary('assets'),
+  // Save a just-changed image generation setting first; Codex reads it to pick SVG or image generation.
+  sendToChat: async message => { await flushImagePreferences(); return sendToChat(message, { illustration_id: illustrationId, title: state?.title || '' }); }, status });
 artworkImport = initArtworkImport({ workspace, getCanvas: () => activeCanvas, getIllustrationId: () => illustrationId,
-  getSelected: selected, select, showAssets: () => componentRail.open('assets'), status });
+  getSelected: selected, select, showAssets: () => showLibrary('assets'), status });
 canvasCrop = initCanvasCrop({ workspace, getSelected: selected, getCanvas: () => activeCanvas, getIllustrationId: () => illustrationId,
   onStart: () => { artworkImport.close(); componentRail.close(); },
   onActiveChange: (active, focus) => { $('crop-raster').setAttribute('aria-pressed', String(active)); workspaceTools?.sync(); if (focus) workspaceTools?.focus('crop-raster'); },
@@ -153,8 +156,8 @@ function syncSelectionSize(stage) {
 }
 function renderZoom() {
   const view = viewport.get($(`${activeCanvas}-canvas`));
-  $('canvas-zoom').setAttribute('aria-label', 'Canvas zoom');
-  $('zoom-level').textContent = `${Math.round(view.scale * 100)}%`;
+  i18nUi.setAttribute($('canvas-zoom'), "aria-label", i18nUi.message("Canvas zoom"));
+  i18nUi.setText($('zoom-level'), `${Math.round(view.scale * 100)}%`);
   $('zoom-out').disabled = view.scale <= 0.1;
   $('zoom-in').disabled = view.scale >= 8;
   $('zoom-fit').setAttribute('aria-pressed', String(view.zoom === null));
@@ -219,7 +222,7 @@ canvasObserver.observe($('main-canvas'));
 $('main-canvas').addEventListener('scroll', () => syncSelectionSize($('main-canvas')), { passive: true });
 
 async function edit(operations, revision = state?.revision) {
-  if (!revision) return status('The illustration is still opening.');
+  if (!revision) return status(i18nUi.text("The illustration is still opening."));
   const result = await workspace.request({ action: 'apply', illustration_id: illustrationId, expected_revision: revision, request_id: crypto.randomUUID(), operations });
   if (!result.ok) { status(result.error); if (state) render(state); }
   return result;
@@ -245,13 +248,13 @@ function render(next, id = illustrationId) {
   renderCanvas('main');
   $('figure-title').value = state.title;
   $('complexity').value = state.complexity;
-  $('complexity').title = COMPLEXITY_PROFILES[state.complexity].summary;
+  i18nUi.setAttribute($('complexity'), "title", i18nUi.owned(COMPLEXITY_PROFILES[state.complexity].summary));
   renderImagePreference(pendingImagePreference?.id === id ? pendingImagePreference.percent : state.imageGenerationPercent);
   renderImageStyle(pendingImagePreference?.id === id ? pendingImagePreference.style : state.imageGenerationStyle);
   $('canvas-empty').hidden = state.objects.some(object => object.canvas === 'main');
   syncComposer();
   renderLayers(); renderProperties();
-  if (componentRail.getActive() === 'assets') assetsPanel?.render();
+  if (!$('assets-panel').hidden) assetsPanel?.render();
   renderCanvasProperties();
   renderZoom();
 }
@@ -259,12 +262,12 @@ function renderCanvasProperties() {
   const canvas = state.canvases.main, name = 'Canvas';
   const size = $('canvas-size'), value = `${canvas.width}x${canvas.height}`;
   const preset = [...size.options].some(option => option.value === value);
-  size.querySelector('[value="custom"]').textContent = preset ? 'Custom…' : `Custom · ${canvas.width} × ${canvas.height}`;
+  i18nUi.setText(size.querySelector('[value="custom"]'), (preset ? i18nUi.message("Custom…") : i18nUi.message("Custom · {p0} × {p1}", { p0: canvas.width, p1: canvas.height })));
   size.value = preset ? value : 'custom';
-  size.setAttribute('aria-label', `${name} size`); size.title = `${name} size: ${canvas.width} × ${canvas.height}`;
-  $('canvas-settings-title').textContent = name;
-  $('canvas-settings').setAttribute('aria-label', `${name} custom size`);
-  $('canvas-settings').title = `${name} custom size`;
+  i18nUi.setAttribute(size, "aria-label", i18nUi.message("{p0} size", { p0: name })); i18nUi.setAttribute(size, "title", i18nUi.message("{p0} size: {p1} × {p2}", { p0: name, p1: canvas.width, p2: canvas.height }));
+  i18nUi.setText($('canvas-settings-title'), name);
+  i18nUi.setAttribute($('canvas-settings'), "aria-label", i18nUi.message("{p0} custom size", { p0: name }));
+  i18nUi.setAttribute($('canvas-settings'), "title", i18nUi.message("{p0} custom size", { p0: name }));
   const canvasForm = $('canvas-properties');
   for (const key of ['width', 'height']) canvasForm.elements[key].value = canvas[key];
 }
@@ -279,19 +282,18 @@ function renderIllustrations(library = workspace.getLibrary()) {
     const button = document.createElement('button'); button.type = 'button';
     button.className = `illustration-row${entry.id === library.active_illustration_id ? ' is-active' : ''}`;
     button.dataset.illustrationId = entry.id; button.setAttribute('aria-pressed', String(entry.id === library.active_illustration_id));
-    button.title = entry.title || 'Untitled figure';
+    i18nUi.setAttribute(button, "title", (entry.title || i18nUi.message("Untitled figure")));
     const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); icon.setAttribute('viewBox', '0 0 24 24'); icon.setAttribute('aria-hidden', 'true');
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path'); path.setAttribute('d', 'M5 3h14v18H5zM8 16l3-4 3 3 2-2'); icon.append(path);
-    const title = document.createElement('span'); title.textContent = entry.title || 'Untitled figure';
+    const title = document.createElement('span'); i18nUi.setText(title, (entry.title || i18nUi.message("Untitled figure")));
     button.append(icon, title); button.addEventListener('click', () => {
       if (workspace.getLibrary().active_illustration_id !== entry.id) void manageIllustration('open', entry.id);
     });
     rows.append(button);
   }
-  if (!entries.length) { const empty = document.createElement('p'); empty.className = 'rail-note'; empty.textContent = 'No illustrations match your search.'; rows.append(empty); }
+  if (!entries.length) { const empty = document.createElement('p'); empty.className = 'rail-note'; i18nUi.setText(empty, i18nUi.message("No illustrations match your search.")); rows.append(empty); }
   list.replaceChildren(rows);
   list.scrollTop = scrollTop;
-  $('illustration-count').textContent = `${library.illustrations.length} illustration${library.illustrations.length === 1 ? '' : 's'}`;
   if (focusedId) [...list.children].find(button => button.dataset.illustrationId === focusedId)?.focus({ preventScroll: true });
 }
 async function manageIllustration(action, id) {
@@ -302,6 +304,14 @@ async function manageIllustration(action, id) {
     else if (action !== 'open') { $('illustration-search').value = ''; renderIllustrations(); }
   } catch (error) { status(error.message); }
 }
+// The left rail switches between the figure library and the shared assets.
+function showLibrary(view) {
+  for (const node of document.querySelectorAll('[data-library-view]')) node.hidden = node.dataset.libraryView !== view;
+  $('illustrations-view-tab').setAttribute('aria-pressed', String(view !== 'assets')); $('assets-view-tab').setAttribute('aria-pressed', String(view === 'assets'));
+  if (view === 'assets') assetsPanel?.render();
+}
+$('illustrations-view-tab').addEventListener('click', () => showLibrary('illustrations'));
+$('assets-view-tab').addEventListener('click', () => showLibrary('assets'));
 $('illustration-search').addEventListener('input', () => { $('illustrations').scrollTop = 0; renderIllustrations(); });
 $('new-illustration').addEventListener('click', () => void manageIllustration('create'));
 let lastLayerClick = null;
@@ -309,7 +319,7 @@ function renderLayers() {
   const focusedRow = document.activeElement?.closest('[data-layer-id]');
   const focusedId = focusedRow?.dataset.layerId, focusedAction = document.activeElement?.dataset.layerAction;
   $('layers').replaceChildren();
-  $('layer-count').textContent = state.objects.length || '';
+  i18nUi.setText($('layer-count'), (state.objects.length || ''));
   const canvasObjects = [...state.objects].reverse(), listedGroups = new Set();
   const objects = canvasObjects.flatMap(object => {
     const group = state.groups.find(group => group.ids.includes(object.id));
@@ -326,23 +336,23 @@ function renderLayers() {
     const row = document.createElement('div'); row.className = `layer grouped-layer${group.ids.every(id => selectedIds.includes(id)) ? ' is-selected' : ''}`;
     row.setAttribute('role', 'listitem'); row.dataset.layerId = group.id;
     const button = document.createElement('button'); button.type = 'button'; button.className = 'layer-select'; button.dataset.layerAction = 'select';
-    button.setAttribute('aria-label', `Select group ${group.name}`); button.setAttribute('aria-pressed', String(group.ids.every(id => selectedIds.includes(id))));
+    i18nUi.setAttribute(button, "aria-label", i18nUi.message("Select group {p0}", { p0: group.name })); button.setAttribute('aria-pressed', String(group.ids.every(id => selectedIds.includes(id))));
     const preview = document.createElement('span'); preview.className = 'layer-preview'; preview.setAttribute('aria-hidden', 'true'); preview.append(icon('layers'));
-    const name = document.createElement('span'); name.className = 'layer-name'; name.textContent = group.name;
-    const count = document.createElement('small'); count.className = 'group-count'; count.textContent = group.ids.length;
+    const name = document.createElement('span'); name.className = 'layer-name'; i18nUi.setText(name, group.name);
+    const count = document.createElement('small'); count.className = 'group-count'; i18nUi.setText(count, group.ids.length);
     button.append(preview, name, count); button.addEventListener('click', event => select(group.ids, { additive: event.shiftKey }));
     row.append(button); $('layers').append(row);
   }
   const row = document.createElement('div'); row.className = `layer${selectedIds.includes(object.id) ? ' is-selected' : ''}${object.visible ? '' : ' is-hidden'}${group ? ' group-child' : ''}`; row.setAttribute('role', 'listitem'); row.dataset.layerId = object.id;
   const button = document.createElement('button'); button.type = 'button'; button.className = 'layer-select'; button.dataset.layerAction = 'select';
-  button.setAttribute('aria-label', `Select ${object.name}`); button.title = object.name;
+  i18nUi.setAttribute(button, "aria-label", i18nUi.message("Select {p0}", { p0: object.name })); i18nUi.setAttribute(button, "title", object.name);
   const preview = document.createElement('span'); preview.className = `layer-preview ${object.type}`; preview.setAttribute('aria-hidden', 'true');
-  if (object.type === 'text') preview.textContent = 'T';
+  if (object.type === 'text') i18nUi.setText(preview, 'T');
   else {
     const thumbnail = element('svg', { viewBox: `0 0 ${object.width} ${object.height}`, 'aria-hidden': 'true' });
     thumbnail.append(objectGroup({ ...object, x: 0, y: 0, rotation: 0, opacity: 1 })); preview.append(thumbnail);
   }
-  const name = document.createElement('span'); name.className = 'layer-name'; name.textContent = object.name;
+  const name = document.createElement('span'); name.className = 'layer-name'; i18nUi.setText(name, object.name);
   button.append(preview, name);
   button.setAttribute('aria-pressed', String(selectedIds.includes(object.id)));
   button.addEventListener('click', event => {
@@ -357,13 +367,13 @@ function renderLayers() {
   });
   if (object.type === 'text') button.addEventListener('dblclick', () => editLabel(object.id));
   const visibility = document.createElement('button'); visibility.type = 'button'; visibility.className = 'layer-visibility icon-button'; visibility.dataset.layerAction = 'visibility';
-  visibility.title = `${object.visible ? 'Hide' : 'Show'} ${object.name}`; visibility.setAttribute('aria-label', visibility.title); visibility.setAttribute('aria-pressed', String(object.visible));
+  i18nUi.setAttribute(visibility, "title", i18nUi.message(object.visible ? 'Hide {name}' : 'Show {name}', { name: object.name })); i18nUi.setAttribute(visibility, 'aria-label', i18nUi.message(object.visible ? 'Hide {name}' : 'Show {name}', { name: object.name })); visibility.setAttribute('aria-pressed', String(object.visible));
   visibility.append(icon(object.visible ? 'eye' : 'hidden'));
   visibility.addEventListener('click', () => void edit([{ op: 'update', id: object.id, patch: { visible: !object.visible } }]));
   row.append(button, visibility); $('layers').append(row);
   }
   if (!state.objects.length) {
-    const empty = document.createElement('p'); empty.className = 'layers-empty'; empty.textContent = 'Your components and labels will appear here.'; $('layers').append(empty);
+    const empty = document.createElement('p'); empty.className = 'layers-empty'; i18nUi.setText(empty, i18nUi.message("Your components and labels will appear here.")); $('layers').append(empty);
   }
   if (focusedId && focusedAction) $('layers').querySelector(`[data-layer-id="${focusedId}"] [data-layer-action="${focusedAction}"]`)?.focus({ preventScroll: true });
 }
@@ -379,18 +389,18 @@ function renderProperties() {
   $('crop-raster').disabled = object?.type !== 'raster';
   workspaceTools?.sync();
   if (!object) return;
-  $('selection-type').textContent = object.type === 'group' ? `${selectedIds.length} layers` : object.type === 'text' ? 'Text' : object.type === 'vector' ? 'Vector' : object.type === 'plot' ? 'Plot' : 'Image';
+  i18nUi.setText($('selection-type'), (object.type === 'group' ? i18nUi.message("{p0} layers", { p0: selectedIds.length }) : (object.type === 'text' ? i18nUi.message("Text") : (object.type === 'vector' ? i18nUi.message("Vector") : (object.type === 'plot' ? i18nUi.message("Plot") : i18nUi.message("Image"))))));
   properties.elements.name.disabled = object.type === 'group' && !group;
   properties.querySelector('.object-basics').hidden = object.type === 'group';
   const weights = properties.elements.fontWeight;
   weights.querySelector('[data-custom-weight]')?.remove();
   if (object.type === 'text' && ![...weights.options].some(option => Number(option.value) === object.fontWeight)) {
-    const option = document.createElement('option'); option.value = object.fontWeight; option.textContent = object.fontWeight; option.dataset.customWeight = ''; weights.append(option);
+    const option = document.createElement('option'); option.value = object.fontWeight; i18nUi.setText(option, object.fontWeight); option.dataset.customWeight = ''; weights.append(option);
   }
   for (const input of properties.elements) {
     if (!input.name) continue;
     if (['width', 'height'].includes(input.name)) {
-      input.title = object.type === 'group' ? 'Resize selected layers proportionally' : object.type === 'text' ? 'Resize text proportionally' : `${input.name === 'width' ? 'Width' : 'Height'} in pixels`;
+      i18nUi.setAttribute(input, "title", (object.type === 'group' ? i18nUi.message("Resize selected layers proportionally") : (object.type === 'text' ? i18nUi.message("Resize text proportionally") : i18nUi.message("{p0} in pixels", { p0: input.name === 'width' ? 'Width' : 'Height' }))));
       input.max = object.type === 'group' ? '64000' : '8000';
     }
     if (input.type === 'checkbox') input.checked = Boolean(object[input.name]);
@@ -516,13 +526,13 @@ function reorder(offset) {
 $('raise').addEventListener('click', () => reorder(1)); $('lower').addEventListener('click', () => reorder(-1));
 $('edit-artwork').addEventListener('click', () => {
   const object = selected(); if (object?.type !== 'vector') return;
-  sourceTarget = { id: object.id, revision: state.revision }; $('svg-source').value = object.svg; $('source-error').textContent = ''; $('source-dialog').showModal();
+  sourceTarget = { id: object.id, revision: state.revision }; $('svg-source').value = object.svg; i18nUi.setText($('source-error'), ''); $('source-dialog').showModal();
 });
 $('cancel-source').addEventListener('click', () => $('source-dialog').close());
 $('source-form').addEventListener('submit', async event => {
   event.preventDefault();
   const result = await edit([{ op: 'update', id: sourceTarget.id, patch: { svg: $('svg-source').value } }], sourceTarget.revision);
-  if (result?.ok) $('source-dialog').close(); else $('source-error').textContent = result?.error || 'Could not update the artwork.';
+  if (result?.ok) $('source-dialog').close(); else i18nUi.setOwnedText($('source-error'), (result?.error || i18nUi.message("Could not update the artwork.")));
 });
 
 // Drag previews are transient. The final edit uses the revision captured on
@@ -640,7 +650,7 @@ setSelectionTool('pointer');
     }
     let patch;
     if (drag.resizing) {
-      patch = drag.objects.length > 1 ? resizeSelection(drag.objects, drag.resizing, dx, dy, drag.bounds) : resizeObject(drag.object, drag.resizing, dx, dy, drag.bounds);
+      patch = drag.objects.length > 1 ? resizeSelection(drag.objects, drag.resizing, dx, dy, drag.bounds) : resizeObject(drag.object, drag.resizing, dx, dy, drag.bounds, event.shiftKey);
       if (drag.objects.some(object => object.type === 'text')) {
         // Browser glyph metrics can round at fractional font sizes. Measure
         // the resized label again so its actual opposite handle stays fixed.
@@ -649,7 +659,8 @@ setSelectionTool('pointer');
         const before = resizeAnchor(drag.bounds, drag.resizing), after = resizeAnchor(box, drag.resizing);
         patch.x += before.x - after.x; patch.y += before.y - after.y;
       }
-      if (drag.resizeSvg && (patch.width !== drag.object.width || patch.height !== drag.object.height)) patch.svg = drag.resizeSvg;
+      // A proportional resize keeps the artwork's fit; only free stretching changes it.
+      if (drag.resizeSvg && !event.shiftKey && (patch.width !== drag.object.width || patch.height !== drag.object.height)) patch.svg = drag.resizeSvg;
     }
     else patch = { x: Math.max(-16000, Math.min(16000, drag.object.x + dx)), y: Math.max(-16000, Math.min(16000, drag.object.y + dy)) };
     drag.preview = patch;
@@ -762,7 +773,7 @@ const canvasClipboard = installCanvasClipboard({ document, validateSvg, status,
     const result = await workspace.paste(snapshot, { illustrationId: id, canvas, offset });
     if (!result.ok) { status(result.error); return; }
     if (id === illustrationId && canvas === activeCanvas) select(result.pasted_ids, { reveal: false });
-    status('Components pasted');
+    status(i18nUi.text("Components pasted"));
   }
 });
 canvasContextMenu = installCanvasContextMenu({ document, status,
@@ -842,19 +853,19 @@ async function exportFigure(format) {
   try {
     await workspace.ready;
     const documentState = workspace.getDocument();
-    if (format === 'pptx') status('Preparing PowerPoint…');
+    if (format === 'pptx') status(i18nUi.text("Preparing PowerPoint…"));
     const dataBase64 = format === 'pptx' ? await exportPowerPoint(documentState)
       : format === 'svg' ? encodeText(await workspace.exportSvg('main'))
       : (await renderPreview(documentState, 'main', 8000)).data_url.split(',')[1];
     const result = await hikari.call('downloads.save', { fileName: `${documentState.title || 'figure'}.${format}`, dataBase64 });
-    status(result.saved ? `Exported ${format.toUpperCase()}` : 'Export canceled');
+    status((result.saved ? i18nUi.text("Exported {p0}", { p0: format.toUpperCase() }) : i18nUi.text("Export canceled")));
   } catch (error) { status(error.message); }
   finally { exporting = false; buttons.forEach(button => { button.disabled = false; }); }
 }
 $('export-svg').addEventListener('click', () => void exportFigure('svg')); $('export-png').addEventListener('click', () => void exportFigure('png'));
 $('export-pptx').addEventListener('click', () => void exportFigure('pptx'));
 $('complexity').addEventListener('change', event => void edit([{ op: 'complexity', complexity: event.target.value }]));
-for (const [value, { label }] of Object.entries(IMAGE_STYLE_PRESETS)) $('image-generation-style').add(new Option(label, value));
+for (const [value, { label }] of Object.entries(IMAGE_STYLE_PRESETS)) { const option = new Option(label, value); i18nUi.setOwnedText(option, label); $('image-generation-style').add(option); };
 function boundImagePreferences() {
   if (!$('figure-menu').open) return;
   const panel = $('figure-menu').querySelector('.popover-panel');
@@ -872,8 +883,8 @@ function renderImagePreference(percent) {
   $('image-generation-percent').disabled = !enabled;
   $('image-generation-percent').value = enabled ? percent : 50;
   $('image-generation-percent').dataset.percent = enabled ? percent : 50;
-  $('image-generation-value').textContent = enabled ? `${percent}%` : 'Auto';
-  $('image-generation-summary').textContent = imageGenerationSummary(percent);
+  i18nUi.setText($('image-generation-value'), (enabled ? `${percent}%` : i18nUi.message("Auto")));
+  i18nUi.setOwnedText($('image-generation-summary'), imageGenerationSummary(percent));
 }
 function chosenImageStyle() {
   return { preset: $('image-generation-style').value, prompt: $('image-generation-style-prompt').value };
@@ -924,8 +935,8 @@ $('image-generation-enabled').addEventListener('change', () => {
 function showImageSliderPercent() {
   const slider = $('image-generation-percent');
   slider.dataset.percent = slider.value;
-  $('image-generation-value').textContent = `${slider.value}%`;
-  $('image-generation-summary').textContent = imageGenerationSummary(Number(slider.value));
+  i18nUi.setText($('image-generation-value'), `${slider.value}%`);
+  i18nUi.setOwnedText($('image-generation-summary'), imageGenerationSummary(Number(slider.value)));
 }
 $('image-generation-percent').addEventListener('input', showImageSliderPercent);
 $('image-generation-percent').addEventListener('change', () => { showImageSliderPercent(); saveImagePreference(); });
@@ -934,7 +945,7 @@ $('prompt').addEventListener('keydown', event => {
   if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) { event.preventDefault(); $('prompt-form').requestSubmit(); }
 });
 $('prompt-form').addEventListener('submit', async event => {
-  event.preventDefault(); if (!state) return status('The illustration is still opening.');
+  event.preventDefault(); if (!state) return status(i18nUi.text("The illustration is still opening."));
   $('generate').disabled = true;
   try {
     const prompt = $('prompt').value.trim();
@@ -949,20 +960,23 @@ $('prompt-form').addEventListener('submit', async event => {
     if (current.complexity !== complexity) throw new Error('The complexity changed or could not be saved. Check the selected level and try again.');
     if (current.imageGenerationPercent !== imageGenerationPercent) throw new Error('The image generation preference changed or could not be saved. Check Figure options and try again.');
     if (JSON.stringify(current.imageGenerationStyle) !== JSON.stringify(imageGenerationStyle)) throw new Error('The image style changed or could not be saved. Check Figure options and try again.');
-    // Hikari's item-scoped agent context directs Codex to read the canvas contract.
-    // Keep that context out of the user message and its visible chat history.
-    const result = await hikari.call('agent.chat', { message: prompt,
-      context: { id: current.illustration_id, title: current.title, canvasIllustrationId: current.illustration_id } });
-    if (!result.ok) throw new Error(result.error || (result.reason === 'composer_not_empty'
-      ? 'The chat rail has a draft or attachments. Send or clear that draft before drawing.'
-      : result.reason === 'busy' ? 'Codex is busy in this chat. Wait for it to finish or stop the current request.' : `Codex could not start: ${result.reason}`));
+    await sendToChat(prompt, current);
     if (illustrationId === current.illustration_id && $('prompt').value.trim() === prompt) {
       $('prompt').value = ''; $('prompt').style.height = '';
     }
-    status('Codex is drawing. Follow its progress in the chat rail.');
+    status(i18nUi.text("Codex is drawing. Follow its progress in the chat rail."));
   } catch (error) { status(error.message); }
   finally { $('generate').disabled = false; }
 });
+// Hikari's item-scoped agent context directs Codex to read the canvas contract.
+// Keep that context out of the user message and its visible chat history.
+async function sendToChat(message, current) {
+  const result = await hikari.call('agent.chat', { message,
+    context: { id: current.illustration_id, title: current.title, canvasIllustrationId: current.illustration_id } });
+  if (!result.ok) throw new Error(result.error || (result.reason === 'composer_not_empty'
+    ? 'The chat rail has a draft or attachments. Send or clear that draft first.'
+    : result.reason === 'busy' ? 'Codex is busy in this chat. Wait for it to finish or stop the current request.' : `Codex could not start: ${result.reason}`));
+}
 hikari.on('agent.canvas', async ({ id, request, assets, deadline, inspectionRunId }) => {
   const result = await workspace.request(request, deadline, assets, { inspectionRunId, agentRequest: true });
   await hikari.call('agent.respond', { id, result }).catch(error => status(error.message));
@@ -970,22 +984,23 @@ hikari.on('agent.canvas', async ({ id, request, assets, deadline, inspectionRunI
 function syncComposer() {
   const hasComponents = Boolean(state?.objects.length);
   $('prompt-form').hidden = !state || hasComponents || chatExpanded || !canDraw;
-  $('canvas-empty-hint').textContent = !canDraw ? 'Add a layer to start your figure.'
-    : hasComponents ? 'Continue your figure in the agent chat, or add a layer.'
-      : chatExpanded ? 'Describe your figure in the agent chat, or add a layer.' : 'Describe your figure below, or add a layer.';
+  i18nUi.setText($('canvas-empty-hint'), (!canDraw ? i18nUi.message("Add a layer to start your figure.") : (hasComponents ? i18nUi.message("Continue your figure in the agent chat, or add a layer.") : (chatExpanded ? i18nUi.message("Describe your figure in the agent chat, or add a layer.") : i18nUi.message("Describe your figure below, or add a layer.")))));
 }
 function theme(info) {
+  if (info?.locale) i18n.setLocale(info.locale);
   chatExpanded = info?.layout?.agentChatRail?.expanded === true;
   if (chatExpanded) componentRail.close();
   workspaceTools.connect(info);
   // Hosts without Codex report available:false; older hosts omit the field.
   canDraw = info?.layout?.agentChatRail?.available !== false;
+  $('generate-asset').hidden = !canDraw;
   syncComposer();
   document.body.classList.toggle('theme-night', info?.appearance?.mode === 'night');
   document.documentElement.style.setProperty('--app-font-size', `${info?.appearance?.fontSize || 16}px`);
   leftRail.applyContext(info?.layout?.leftRail || {});
   if (Array.isArray(info?.permissions) && !info.permissions.includes('layout')) leftRail.destroy();
 }
+i18n.subscribe(() => workspaceTools?.sync());
 workspaceTools = createWorkspaceTools({ hikari, document, onHosted: () => { if (state) renderCanvas('main'); } });
 hikari.on('app.context', info => { theme(info); if (info.changed === 'storage') location.reload(); });
 void hikari.call('app.info').then(theme).catch(() => {});

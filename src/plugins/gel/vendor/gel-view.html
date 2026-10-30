@@ -1,6 +1,6 @@
 <section id="gel-view" class="view">
       <div class="gel-workspace left-rail-template">
-        <nav id="gel-navigation" class="gel-setup-panel gel-figure-navigation app-left-rail left-rail-template__rail left-rail-template__rail--pinned" aria-label="Gel project" data-sync-left-rail></nav>
+        <nav id="gel-navigation" class="gel-setup-panel gel-figure-navigation app-left-rail left-rail-template__rail left-rail-template__rail--pinned" aria-label="Gel project" data-sync-left-rail data-i18n-aria-label="gel.full.77c3eb86"></nav>
 
         <div class="gel-main left-rail-template__main">
           <div class="gel-main-stack">
@@ -9,12 +9,15 @@
                 <p id="gel-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
                 <div id="gel-viewer-stage" class="gel-viewer-stage">
                   <section id="gel-lane-table-panel" class="gel-lane-table-panel" aria-labelledby="gel-lane-table-title" hidden>
-                    <header class="gel-lane-table-head">
-                      <h3 id="gel-lane-table-title">Lane table</h3>
-                      <button type="button" id="gel-close-lane-table-btn" class="ghost-btn" aria-label="Hide lane table">×</button>
+                    <header class="gel-lane-table-head gel-table-bar">
+                      <h3 id="gel-lane-table-title"><span data-i18n="gel.full.ce603a37">Lane table</span></h3>
+                      <button type="button" id="gel-add-table-btn" class="ghost-btn" disabled><span data-i18n="gel.full.3e07b230">Add table</span></button>
+                      <button type="button" class="ghost-btn" data-gel-table-add-row hidden><span data-i18n="gel.full.9e623ff8">Add row</span></button>
+                      <button type="button" class="ghost-btn" data-gel-table-remove-row hidden><span data-i18n="gel.full.5944b415">Remove row</span></button>
+                      <label class="gel-lane-table-ladder-choice" data-gel-table-ladder hidden><input type="checkbox" data-gel-table-include-ladder checked /><span data-i18n="gel.full.5fb2df59">Include ladder lane</span></label>
+                      <button type="button" id="gel-close-lane-table-btn" class="ghost-btn" aria-label="Hide lane table" data-i18n-aria-label="gel.full.b02762b9">×</button>
                     </header>
                     <div class="gel-lane-table-body">
-                      <button type="button" id="gel-add-table-btn" class="ghost-btn" disabled>Add table</button>
                       <div id="gel-lane-table-shell" class="gel-lane-table-shell" hidden></div>
                     </div>
                   </section>
@@ -22,171 +25,171 @@
                     <div id="gel-lane-table-label-spacer" class="gel-lane-table-label-spacer" hidden aria-hidden="true"></div>
                     <div class="gel-canvas-shell">
                       <canvas id="gel-canvas"></canvas>
-                      <img id="gel-cropper-image" alt="Gel cropper" />
+                      <img id="gel-cropper-image" alt="Gel cropper"  data-i18n-alt="gel.full.fa21cdee"/>
                     </div>
                   </div>
                 </div>
-                <aside class="gel-inspector" aria-label="Gel tools">
-                <div class="gel-viewer-card" aria-label="Viewer">
-                  <div class="gel-viewer-toolbar" role="toolbar" aria-label="Gel viewer tools" aria-orientation="vertical">
-                    <button type="button" id="gel-crop-mode-btn" class="gel-tool-icon-btn" aria-label="Start crop" title="Start crop" aria-pressed="false" disabled><svg class="gel-card-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 3v13a2 2 0 0 0 2 2h13"></path><path d="M18 21V8a2 2 0 0 0-2-2H3"></path></svg><span class="gel-card-label">Crop</span></button>
-                    <div id="gel-crop-bar" class="gel-crop-bar" role="group" aria-label="Crop" hidden>
+                <aside class="gel-inspector" aria-label="Gel tools" data-i18n-aria-label="gel.full.45dc4f94">
+                <div class="gel-viewer-card" aria-label="Viewer" data-i18n-aria-label="gel.full.8d4262ef">
+                  <div class="gel-viewer-toolbar" role="toolbar" aria-label="Gel viewer tools" aria-orientation="vertical" data-i18n-aria-label="gel.full.a27df7ec">
+                    <button type="button" id="gel-crop-mode-btn" class="gel-tool-icon-btn" aria-label="Start crop" title="Start crop" aria-pressed="false" disabled data-i18n-title="gel.full.b97551cf" data-i18n-aria-label="gel.full.b97551cf"><svg class="gel-card-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 3v13a2 2 0 0 0 2 2h13"></path><path d="M18 21V8a2 2 0 0 0-2-2H3"></path></svg><span class="gel-card-label"><span data-i18n="gel.full.1909c537">Crop</span></span></button>
+                    <div id="gel-crop-bar" class="gel-crop-bar" role="group" aria-label="Crop" hidden data-i18n-aria-label="gel.full.1909c537">
                       <label class="gel-crop-angle">
-                        <span class="gel-crop-angle-head">Straighten <output id="gel-crop-angle-value" for="gel-crop-angle">0°</output></span>
+                        <span class="gel-crop-angle-head"><span data-i18n="gel.full.56690358">Straighten</span> <output id="gel-crop-angle-value" for="gel-crop-angle">0°</output></span>
                         <input id="gel-crop-angle" type="range" min="-45" max="45" step="0.1" value="0" />
                       </label>
                       <div class="gel-crop-actions">
-                        <button type="button" id="gel-crop-rotate-btn" class="gel-card-btn" aria-label="Rotate 90° left" title="Rotate 90° left"><svg class="gel-card-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 9V7a2 2 0 0 0-2-2h-6"></path><path d="m15 2-3 3 3 3"></path><path d="M20 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"></path></svg>90°</button>
-                        <button type="button" id="gel-reset-crop-btn" class="gel-card-btn" title="Back to the full image with no rotation">Reset</button>
-                        <button type="button" id="gel-cancel-crop-btn" class="gel-card-btn" title="Esc">Cancel</button>
-                        <button type="button" id="gel-apply-crop-btn" class="gel-card-btn gel-step-btn" title="Enter" disabled>Done</button>
+                        <button type="button" id="gel-crop-rotate-btn" class="gel-card-btn" aria-label="Rotate 90° left" title="Rotate 90° left" data-i18n-title="gel.full.f788b05e" data-i18n-aria-label="gel.full.f788b05e"><svg class="gel-card-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 9V7a2 2 0 0 0-2-2h-6"></path><path d="m15 2-3 3 3 3"></path><path d="M20 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"></path></svg>90°</button>
+                        <button type="button" id="gel-reset-crop-btn" class="gel-card-btn" title="Back to the full image with no rotation" data-i18n-title="gel.full.a9aab73"><span data-i18n="gel.full.ac8a560">Reset</span></button>
+                        <button type="button" id="gel-cancel-crop-btn" class="gel-card-btn" title="Esc" data-i18n-title="gel.full.caa03a5e"><span data-i18n="gel.full.35afca3b">Cancel</span></button>
+                        <button type="button" id="gel-apply-crop-btn" class="gel-card-btn gel-step-btn" title="Enter" disabled data-i18n-title="gel.full.aff863ad"><span data-i18n="gel.full.8dd31791">Done</span></button>
                       </div>
                     </div>
-                    <button type="button" id="gel-finish-dividers-btn" class="gel-card-row gel-step-btn" hidden title="Finish placing lane dividers (same as clicking Dividers again)">Finish dividers</button>
-                    <button type="button" id="gel-process-image-btn" class="gel-card-row" aria-pressed="false" title="Show the image with denoise and contrast applied">
+                    <button type="button" id="gel-finish-dividers-btn" class="gel-card-row gel-step-btn" hidden title="Finish placing lane dividers (same as clicking Dividers again)" data-i18n-title="gel.full.8fa4d85"><span data-i18n="gel.full.4bf76370">Finish dividers</span></button>
+                    <button type="button" id="gel-process-image-btn" class="gel-card-row" aria-pressed="false" title="Show the image with denoise and contrast applied" data-i18n-title="gel.full.25822abf">
                       <svg class="gel-card-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="10"></circle><path d="M12 18a6 6 0 0 0 0-12v12z"></path></svg>
-                      <span class="gel-card-label">Processed</span>
+                      <span class="gel-card-label"><span data-i18n="gel.full.ca5dd1ab">Processed</span></span>
                       <span class="gel-switch" aria-hidden="true"></span>
                     </button>
-                    <button type="button" id="gel-reset-overrides-btn" class="gel-card-row" aria-label="Reset lanes and bands" title="Reset lanes and bands" disabled>
+                    <button type="button" id="gel-reset-overrides-btn" class="gel-card-row" aria-label="Reset lanes and bands" title="Reset lanes and bands" disabled data-i18n-title="gel.full.e7a6beaa" data-i18n-aria-label="gel.full.e7a6beaa">
                       <svg class="gel-card-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 11a9 9 0 1 1 2.6 6.4M3 4v7h7"></path></svg>
-                      <span class="gel-card-label">Reset</span>
+                      <span class="gel-card-label"><span data-i18n="gel.full.ac8a560">Reset</span></span>
                     </button>
                     <button type="button" id="gel-export-menu-btn" class="gel-card-row" popovertarget="gel-export-menu" aria-haspopup="menu">
                       <svg class="gel-card-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path><path d="M12 15V3"></path></svg>
-                      <span class="gel-card-label">Export</span>
+                      <span class="gel-card-label"><span data-i18n="gel.full.e86349d3">Export</span></span>
                       <svg class="gel-card-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 18 6-6-6-6"></path></svg>
                     </button>
-                    <div id="gel-export-menu" class="gel-menu" popover role="menu" aria-label="Export">
-                      <label class="gel-export-option" title="Add marked ladder sizes beside PNG and PowerPoint clips.">
-                        <span>Ladder labels</span><input id="gel-export-ladder-labels" type="checkbox" role="switch" />
+                    <div id="gel-export-menu" class="gel-menu" popover role="menu" aria-label="Export" data-i18n-aria-label="gel.full.e86349d3">
+                      <label class="gel-export-option" title="Add marked ladder sizes beside PNG and PowerPoint clips." data-i18n-title="gel.full.8fe5ad0a">
+                        <span><span data-i18n="gel.full.34d30fb0">Ladder labels</span></span><input id="gel-export-ladder-labels" type="checkbox" role="switch" />
                       </label>
-                      <button type="button" id="gel-export-image-btn" role="menuitem" disabled title="Export the gel lanes (and the table, if present) as a PNG">Image (PNG)</button>
-                      <button type="button" id="gel-export-pptx-btn" role="menuitem" disabled title="Export the gel lanes (and the table, if present) as an editable PowerPoint">PowerPoint (PPTX)</button>
-                      <button type="button" id="gel-export-csv-btn" role="menuitem" title="Export the measured bands as CSV">Bands (CSV)</button>
+                      <button type="button" id="gel-export-image-btn" role="menuitem" disabled title="Export the gel lanes (and the table, if present) as a PNG" data-i18n-title="gel.full.9f128842"><span data-i18n="gel.full.6873394c">Image (PNG)</span></button>
+                      <button type="button" id="gel-export-pptx-btn" role="menuitem" disabled title="Export the gel lanes (and the table, if present) as an editable PowerPoint" data-i18n-title="gel.full.5abc712c"><span data-i18n="gel.full.ffefe8df">PowerPoint (PPTX)</span></button>
+                      <button type="button" id="gel-export-csv-btn" role="menuitem" title="Export the measured bands as CSV" data-i18n-title="gel.full.a947fb0"><span data-i18n="gel.full.a1089df0">Bands (CSV)</span></button>
                     </div>
                     <button type="button" id="gel-open-figure-btn" class="gel-card-row" aria-controls="gel-blot-figure" aria-expanded="false">
                       <svg class="gel-card-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"></path><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"></path><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"></path></svg>
-                      <span class="gel-card-label">Layout</span>
+                      <span class="gel-card-label"><span data-i18n="gel.full.f788421f">Layout</span></span>
                       <span class="gel-card-value" data-layer-count></span>
                     </button>
                   </div>
                 </div>
-                <section class="gel-tools-panel" aria-label="Editing tools">
+                <section class="gel-tools-panel" aria-label="Editing tools" data-i18n-aria-label="gel.full.e361ddb4">
                   <div id="gel-figure-inspector" hidden></div>
                   <form id="gel-form" class="form-grid">
                     <input type="hidden" id="gel-id" />
                     <input id="gel-image-file" type="file" accept="image/*,.tif,.tiff" hidden />
                     <div class="gel-form-fields">
                       <label class="gel-name-field">
-                        Gel Name
-                        <input id="gel-name" required placeholder="e.g. WB_RUN_2026_02_19" />
+                        <span data-i18n="gel.full.bbe9105e">Gel Name</span>
+                        <input id="gel-name" required placeholder="e.g. WB_RUN_2026_02_19"  data-i18n-placeholder="gel.full.90a9741b"/>
                       </label>
                       <div class="gel-tool-groups">
-                        <details class="gel-tool-group" open>
-                          <summary>Image</summary>
+                        <details class="gel-tool-group" data-gel-source-category="image" open>
+                          <summary><span data-i18n="gel.full.590ca79a">Image</span></summary>
                           <div class="gel-tool-body">
                             <label>
-                              Analysis Type
+                              <span data-i18n="gel.full.a8b1e2f1">Analysis Type</span>
                               <select id="gel-type">
-                                <option value="sds-page">SDS-PAGE</option>
-                                <option value="western">Western Blot</option>
-                                <option value="agarose">DNA/RNA Agarose</option>
+                                <option value="sds-page" data-i18n="gel.full.c4a968c1">SDS-PAGE</option>
+                                <option value="western" data-i18n="gel.full.a45533a">Western Blot</option>
+                                <option value="agarose" data-i18n="gel.full.60903662">DNA/RNA Agarose</option>
                               </select>
                             </label>
                           </div>
                         </details>
 
-                        <details class="gel-tool-group" open>
-                          <summary>Processed</summary>
+                        <details class="gel-tool-group" data-gel-source-category="processed" open>
+                          <summary><span data-i18n="gel.full.ca5dd1ab">Processed</span></summary>
                           <div class="gel-tool-body">
                             <label class="gel-lane-table-ladder-choice">
                               <input id="gel-processed-preview" type="checkbox" />
-                              Processed view
+                              <span data-i18n="gel.full.76d5a4ec">Processed view</span>
                             </label>
                             <label class="gel-slider-field">
-                              <span class="gel-slider-label">Denoise Strength</span>
+                              <span class="gel-slider-label"><span data-i18n="gel.full.1ef2cc4d">Denoise Strength</span></span>
                               <span id="gel-denoise-strength-value" class="small-note">35%</span>
                               <input id="gel-denoise-strength" type="range" min="0" max="100" step="1" value="35" />
                             </label>
                             <label class="gel-slider-field">
-                              <span class="gel-slider-label">Contrast Boost</span>
+                              <span class="gel-slider-label"><span data-i18n="gel.full.a89a32e0">Contrast Boost</span></span>
                               <span id="gel-contrast-strength-value" class="small-note">100%</span>
                               <input id="gel-contrast-strength" type="range" min="0" max="220" step="1" value="100" />
                             </label>
                           </div>
                         </details>
 
-                        <details class="gel-tool-group" open>
-                          <summary>Lanes</summary>
+                        <details class="gel-tool-group" data-gel-source-category="lanes" open>
+                          <summary><span data-i18n="gel.full.9c722a74">Lanes</span></summary>
                           <div class="gel-tool-body">
                             <div class="gel-tool-actions gel-tool-actions--three">
                               <div class="gel-tool-control-row">
                                 <label class="small-note gel-tool-field">
-                                  Lanes
-                                  <input type="number" id="gel-expected-lane-count" min="2" max="40" step="1" placeholder="auto" />
+                                  <span data-i18n="gel.full.9c722a74">Lanes</span>
+                                  <input type="number" id="gel-expected-lane-count" min="2" max="40" step="1" placeholder="auto"  data-i18n-placeholder="gel.full.923fa396"/>
                                 </label>
-                                <button type="button" id="gel-auto-detect-lanes-btn" class="ghost-btn">Auto-detect</button>
+                                <button type="button" id="gel-auto-detect-lanes-btn" class="ghost-btn"><span data-i18n="gel.full.65f366e6">Auto-detect</span></button>
                               </div>
-                              <button type="button" id="gel-tool-dividers-btn" class="ghost-btn" aria-pressed="false" aria-label="Lane dividers" title="Click to add lane boundaries; drag an existing divider to move it. The outermost dividers define the gel edges.">Dividers</button>
-                              <button type="button" id="gel-tool-lane-vertices-btn" class="ghost-btn" aria-label="Lane vertices" title="Drag a lane's corners to correct tilt">Vertices</button>
-                              <button type="button" id="gel-open-lane-table-btn" class="ghost-btn" aria-controls="gel-lane-table-panel" aria-expanded="false" aria-label="Lane table" title="Sample labels above the lanes, included in exports">Table</button>
+                              <button type="button" id="gel-tool-dividers-btn" class="ghost-btn" aria-pressed="false" aria-label="Lane dividers" title="Click to add lane boundaries; drag an existing divider to move it. The outermost dividers define the gel edges." data-i18n-title="gel.full.47e913bf" data-i18n-aria-label="gel.full.5391a987"><span data-i18n="gel.full.406336ef">Dividers</span></button>
+                              <button type="button" id="gel-tool-lane-vertices-btn" class="ghost-btn" aria-label="Lane vertices" title="Drag a lane's corners to correct tilt" data-i18n-title="gel.full.b1429b3c" data-i18n-aria-label="gel.full.8fa2fd36"><span data-i18n="gel.full.75f221ae">Vertices</span></button>
+                              <button type="button" id="gel-open-lane-table-btn" class="ghost-btn" aria-controls="gel-lane-table-panel" aria-expanded="false" aria-label="Lane table" title="Sample labels above the lanes, included in exports" data-i18n-title="gel.full.20ca14e1" data-i18n-aria-label="gel.full.ce603a37"><span data-i18n="gel.full.d70ceb7f">Table</span></button>
                             </div>
                           </div>
                         </details>
 
-                        <details class="gel-tool-group" open>
-                          <summary>Ladder</summary>
+                        <details class="gel-tool-group" data-gel-source-category="ladder" open>
+                          <summary><span data-i18n="gel.full.467435c9">Ladder</span></summary>
                           <div class="gel-tool-body">
                             <label>
-                              Ladder Preset
+                              <span data-i18n="gel.full.5070ceec">Ladder Preset</span>
                               <select id="gel-ladder-preset"></select>
                             </label>
                             <div class="gel-tool-actions gel-tool-actions--three">
-                              <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn" title="Click the ladder lane on the gel">Pick lane</button>
-                              <button type="button" id="gel-detect-ladder-btn" class="ghost-btn" aria-label="Detect ladder" title="Detect the bands in the ladder lane (pick it first) and label them from the selected preset">Detect</button>
-                              <button type="button" id="gel-tool-ladder-mw-btn" class="ghost-btn" aria-pressed="false" aria-controls="gel-ladder-mw-editor" title="Toggle MW labeling: click a band in the ladder lane to enter its MW; drag a label to move it">Set MW</button>
+                              <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn" title="Click the ladder lane on the gel" data-i18n-title="gel.full.47f5d8b0"><span data-i18n="gel.full.9f931bba">Pick lane</span></button>
+                              <button type="button" id="gel-detect-ladder-btn" class="ghost-btn" aria-label="Detect ladder" title="Detect the bands in the ladder lane (pick it first) and label them from the selected preset" data-i18n-title="gel.full.eeff9588" data-i18n-aria-label="gel.full.aa8e211e"><span data-i18n="gel.full.d49618b2">Detect</span></button>
+                              <button type="button" id="gel-tool-ladder-mw-btn" class="ghost-btn" aria-pressed="false" aria-controls="gel-ladder-mw-editor" title="Toggle MW labeling: click a band in the ladder lane to enter its MW; drag a label to move it" data-i18n-title="gel.full.59324dcb"><span data-i18n="gel.full.33238991">Set MW</span></button>
                             </div>
                           </div>
                         </details>
 
-                        <details class="gel-tool-group" open>
-                          <summary>Bands</summary>
+                        <details class="gel-tool-group" data-gel-source-category="bands" open>
+                          <summary><span data-i18n="gel.full.81b77d0f">Bands</span></summary>
                           <div class="gel-tool-body">
                             <div class="gel-tool-actions gel-tool-actions--three">
-                              <button type="button" id="gel-tool-band-top-btn" class="ghost-btn" aria-label="Band top" title="Click the top edge of the band">Top</button>
-                              <button type="button" id="gel-tool-band-bottom-btn" class="ghost-btn" aria-label="Band bottom" title="Click the bottom edge of the band">Bottom</button>
-                              <button type="button" id="gel-lane-band-mode-btn" class="ghost-btn" aria-pressed="false" aria-label="Per-lane band" title="Set a separate band window in each lane">Per lane</button>
+                              <button type="button" id="gel-tool-band-top-btn" class="ghost-btn" aria-label="Band top" title="Click the top edge of the band" data-i18n-title="gel.full.a80d6dd" data-i18n-aria-label="gel.full.9f954635"><span data-i18n="gel.full.99b73dc">Top</span></button>
+                              <button type="button" id="gel-tool-band-bottom-btn" class="ghost-btn" aria-label="Band bottom" title="Click the bottom edge of the band" data-i18n-title="gel.full.6f7a16b5" data-i18n-aria-label="gel.full.23c00241"><span data-i18n="gel.full.22b5f34a">Bottom</span></button>
+                              <button type="button" id="gel-lane-band-mode-btn" class="ghost-btn" aria-pressed="false" aria-label="Per-lane band" title="Set a separate band window in each lane" data-i18n-title="gel.full.3d93f2e" data-i18n-aria-label="gel.full.530ff24c"><span data-i18n="gel.full.1a3cfca6">Per lane</span></button>
                             </div>
                           </div>
                         </details>
 
-                        <details class="gel-tool-group" open>
-                          <summary>Results</summary>
+                        <details class="gel-tool-group" data-gel-source-category="results" open>
+                          <summary><span data-i18n="gel.full.9cf82695">Results</span></summary>
                           <div class="gel-tool-body">
-                            <div class="gel-results-actions" role="group" aria-label="Result windows">
+                            <div class="gel-results-actions" role="group" aria-label="Result windows" data-i18n-aria-label="gel.full.c8d598b9">
                               <button type="button" id="gel-open-band-intensity-btn" class="ghost-btn" aria-controls="gel-cell-table-panel" aria-expanded="false" aria-haspopup="dialog" disabled>
                                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3v17h17M8 16v-5M13 16V7M18 16V4"/></svg>
-                                <span>Band intensity</span>
+                                <span><span data-i18n="gel.full.a59df2a3">Band intensity</span></span>
                                 <svg class="gel-result-launch-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
                               </button>
                               <button type="button" id="gel-open-peak-editor-btn" class="ghost-btn" aria-controls="gel-peak-editor-overlay" aria-expanded="false" aria-haspopup="dialog">
                                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h18M3 16c4 0 4-11 7-11s3 11 6 11 3-7 5-7"/></svg>
-                                <span>Band integration</span>
+                                <span><span data-i18n="gel.full.57a06184">Band integration</span></span>
                                 <svg class="gel-result-launch-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
                               </button>
                             </div>
                             <section id="gel-lane-profile-panel" class="gel-result-block gel-lane-profile-panel" aria-labelledby="gel-profile-title">
                               <div class="gel-result-head">
-                                <h4 id="gel-profile-title">Lane intensity</h4>
+                                <h4 id="gel-profile-title"><span data-i18n="gel.full.66356c42">Lane intensity</span></h4>
                               </div>
                               <label class="gel-lane-profile-picker">
-                                <span class="sr-only">Lane</span>
+                                <span class="sr-only"><span data-i18n="gel.full.ef16844f">Lane</span></span>
                                 <select id="gel-lane-profile-select" disabled>
-                                  <option value="">Select lane</option>
+                                  <option value="" data-i18n="gel.full.b7ad7d1d">Select lane</option>
                                 </select>
                               </label>
-                              <p id="gel-lane-profile-empty" class="small-note">Finish lane dividers to view the profile.</p>
+                              <p id="gel-lane-profile-empty" class="small-note"><span data-i18n="gel.full.daaa1d90">Finish lane dividers to view the profile.</span></p>
                               <div id="gel-lane-profile-chart-shell" class="gel-lane-profile-chart-shell" hidden>
                                 <svg id="gel-lane-profile-chart" class="gel-lane-profile-chart" viewBox="0 0 320 190" role="img" aria-label="Lane intensity profile"></svg>
                               </div>
@@ -194,19 +197,19 @@
                           </div>
                         </details>
                       </div>
-                      <span id="gel-override-status" class="small-note" hidden>Manual overrides: none</span>
+                      <span id="gel-override-status" class="small-note" hidden><span data-i18n="gel.full.69e065c6">Manual overrides: none</span></span>
                     </div>
                     <div class="form-actions gel-record-actions">
-                      <button type="submit" id="gel-save-btn" class="primary-btn gel-save-btn" aria-label="Save" title="Save">
+                      <button type="submit" id="gel-save-btn" class="primary-btn gel-save-btn" aria-label="Save" title="Save" data-i18n-title="gel.full.4d2d5d68" data-i18n-aria-label="gel.full.4d2d5d68">
                         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h12l4 4v12a2 2 0 0 1-2 2Z"></path><path d="M7 3v6h10V3M7 21v-8h10v8"></path></svg>
-                        <span data-gel-action-label>Save</span>
+                        <span data-gel-action-label><span data-i18n="gel.full.4d2d5d68">Save</span></span>
                       </button>
                     </div>
                   </form>
                 </section>
                 </aside>
-                <form id="gel-ladder-mw-editor" class="gel-ladder-mw-editor" aria-label="Set ladder MW" hidden>
-                  <input id="gel-ladder-band-mw" type="number" min="0" step="any" placeholder="MW" aria-label="Ladder MW (kDa)" required />
+                <form id="gel-ladder-mw-editor" class="gel-ladder-mw-editor" aria-label="Set ladder MW" hidden data-i18n-aria-label="gel.full.a4e411eb">
+                  <input id="gel-ladder-band-mw" type="number" min="0" step="any" placeholder="MW" aria-label="Ladder MW (kDa)" required  data-i18n-aria-label="gel.full.ecd596e6"/>
                 </form>
               </div>
             </div>
@@ -214,17 +217,17 @@
 
           <section id="gel-cell-table-panel" class="gel-band-intensity-window" data-gel-window="intensity" role="dialog" aria-modal="false" aria-labelledby="gel-cell-table-title" hidden>
             <header class="gel-floating-head" data-gel-window-handle>
-              <h3 id="gel-cell-table-title">Band intensity</h3>
-              <button type="button" class="app-dialog-close-btn" data-gel-window-close aria-label="Close band intensity" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+              <h3 id="gel-cell-table-title"><span data-i18n="gel.full.a59df2a3">Band intensity</span></h3>
+              <button type="button" class="app-dialog-close-btn" data-gel-window-close aria-label="Close band intensity" title="Close" data-i18n-title="gel.full.cd86acc3" data-i18n-aria-label="gel.full.36a5c24f"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
             </header>
             <div class="gel-band-intensity-body">
-              <p id="gel-band-intensity-empty" class="small-note">Set a band’s top and bottom edges to measure intensity.</p>
+              <p id="gel-band-intensity-empty" class="small-note"><span data-i18n="gel.full.fdd36894">Set a band’s top and bottom edges to measure intensity.</span></p>
               <div class="gel-band-intensity-chart-shell">
                 <svg id="gel-band-intensity-chart" class="gel-band-intensity-chart" viewBox="0 0 560 240" role="img" aria-label="Background-corrected band intensity by lane" hidden></svg>
               </div>
               <div class="gel-result-head">
-                <h4>Measurements</h4>
-                <button type="button" id="gel-cell-table-copy-btn" class="ghost-btn" title="Copy all rows and headers for pasting into a spreadsheet" disabled>Copy table</button>
+                <h4><span data-i18n="gel.full.40e02810">Measurements</span></h4>
+                <button type="button" id="gel-cell-table-copy-btn" class="ghost-btn" title="Copy all rows and headers for pasting into a spreadsheet" disabled data-i18n-title="gel.full.a0b3d06b"><span data-i18n="gel.full.d9740420">Copy table</span></button>
               </div>
               <span id="gel-cell-table-copy-status" class="small-note" role="status" aria-live="polite"></span>
               <div id="gel-cell-table-host" class="gel-cell-table-host"></div>
@@ -235,22 +238,22 @@
             <section class="gel-peak-editor-dialog" role="dialog" aria-modal="false" aria-labelledby="gel-peak-editor-title">
               <header class="gel-peak-editor-header gel-floating-head" data-gel-window-handle>
                 <div>
-                  <h3 id="gel-peak-editor-title">Band integration</h3>
+                  <h3 id="gel-peak-editor-title"><span data-i18n="gel.full.57a06184">Band integration</span></h3>
                   <div id="gel-peak-editor-summary" class="small-note" hidden></div>
                 </div>
-                <button type="button" id="gel-peak-editor-close-btn" class="app-dialog-close-btn" aria-label="Close Band integration" title="Close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                <button type="button" id="gel-peak-editor-close-btn" class="app-dialog-close-btn" aria-label="Close Band integration" title="Close" data-i18n-title="gel.full.cd86acc3" data-i18n-aria-label="gel.full.f1fc03a0"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
               </header>
-              <div class="gel-peak-editor-toolbar" role="toolbar" aria-label="Band integration tools">
+              <div class="gel-peak-editor-toolbar" role="toolbar" aria-label="Band integration tools" data-i18n-aria-label="gel.full.971fe9bf">
                 <label class="gel-peak-editor-lane-picker small-note">
-                  Lane
+                  <span data-i18n="gel.full.ef16844f">Lane</span>
                   <select id="gel-peak-editor-lane-select"></select>
                 </label>
                 <div class="gel-peak-editor-modes">
-                  <button type="button" id="gel-peak-editor-baseline-mode-btn" class="ghost-btn is-active" aria-pressed="true">Baseline</button>
-                  <button type="button" id="gel-peak-editor-divider-mode-btn" class="ghost-btn" aria-pressed="false">Divider</button>
+                  <button type="button" id="gel-peak-editor-baseline-mode-btn" class="ghost-btn is-active" aria-pressed="true"><span data-i18n="gel.full.fda19a62">Baseline</span></button>
+                  <button type="button" id="gel-peak-editor-divider-mode-btn" class="ghost-btn" aria-pressed="false"><span data-i18n="gel.full.4b4dbec6">Divider</span></button>
                 </div>
-                <button type="button" id="gel-peak-editor-clear-lane-btn" class="ghost-btn">Clear lane</button>
-                <button type="button" id="gel-peak-editor-clear-all-btn" class="ghost-btn">Clear all</button>
+                <button type="button" id="gel-peak-editor-clear-lane-btn" class="ghost-btn"><span data-i18n="gel.full.1f82a854">Clear lane</span></button>
+                <button type="button" id="gel-peak-editor-clear-all-btn" class="ghost-btn"><span data-i18n="gel.full.797a9445">Clear all</span></button>
               </div>
               <div class="gel-peak-editor-chart-shell">
                 <svg id="gel-peak-editor-chart" class="gel-peak-editor-chart" viewBox="0 0 920 440" preserveAspectRatio="none" role="img" aria-label="Band integration profile"></svg>

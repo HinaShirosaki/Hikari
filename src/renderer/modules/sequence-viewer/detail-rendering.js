@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../lib/html.js';
 import { DUAL_STRAND_SCROLL_STEP } from './constants.js';
 import {
@@ -73,7 +76,7 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
     const features = getVisibleFeaturesForRecord(record);
     const sequenceLength = Math.max(1, record?.sequence?.length || 1);
     if (!features.length) {
-      elements.featureRailHost.innerHTML = '<p class="small-note">No features to display.</p>';
+      i18nUi.setHtml(elements.featureRailHost, `<p class="small-note">${i18nUi.html("No features to display.")}</p>`);
       return;
     }
 
@@ -123,7 +126,7 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
         .join('');
     }).join('');
 
-    elements.featureRailHost.innerHTML = `
+    i18nUi.setHtml(elements.featureRailHost, `
       <div class="sequence-viewer-feature-rail" style="height:${railHeight}px;">
         ${bars}
       </div>
@@ -134,7 +137,7 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
         <span style="left:75%;">${Math.max(1, Math.round(sequenceLength * 0.75)).toLocaleString()}</span>
         <span style="left:100%;">${sequenceLength.toLocaleString()}</span>
       </div>
-    `;
+    `);
   }
 
   function renderSelectedFeatureDetail(record) {
@@ -144,14 +147,14 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
 
     const features = getVisibleFeaturesForRecord(record);
     if (!features.length || state.selectedFeatureIndex < 0) {
-      elements.featureDetail.innerHTML = buildSelectionDetailHtml(record);
+      i18nUi.setHtml(elements.featureDetail, buildSelectionDetailHtml(record));
       return;
     }
 
     const selected = features[state.selectedFeatureIndex] || null;
-    elements.featureDetail.innerHTML = formatSelectedFeatureDetailHtml(selected, record.sequence.length, {
+    i18nUi.setHtml(elements.featureDetail, formatSelectedFeatureDetailHtml(selected, record.sequence.length, {
       sequence: record.sequence
-    });
+    }));
   }
 
   function renderSequence(record, options = {}) {
@@ -165,7 +168,7 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
     const previousScrollTop = preserveScroll ? Math.max(0, Number(elements.sequenceHost.scrollTop) || 0) : 0;
 
     if (!record) {
-      elements.sequenceHost.innerHTML = '<p class="small-note">Load sequence data to begin.</p>';
+      i18nUi.setHtml(elements.sequenceHost, `<p class="small-note">${i18nUi.html("Load sequence data to begin.")}</p>`);
       return;
     }
 
@@ -203,7 +206,7 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
         ? alignmentHighlights
         : normalizeHighlightSegments(selectedFeature?.segments || [], record.sequence.length));
 
-    elements.sequenceHost.innerHTML = renderDualStrandSequenceLinesHtml(record.sequence, highlights, {
+    i18nUi.setHtml(elements.sequenceHost, renderDualStrandSequenceLinesHtml(record.sequence, highlights, {
       lineLength,
       charAdvancePx,
       sequenceLineHeightPx: lineHeightPx,
@@ -213,7 +216,7 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
       cursorBaseIndex: state.sequenceCursorBase,
       alignmentSequenceTrack,
       orfTranslationContext
-    });
+    }));
 
     if (preserveScroll) {
       if (!restoreScrollAnchor(elements.sequenceHost, scrollAnchor)) {
@@ -230,14 +233,14 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
 
   function renderStats(record) {
     if (!record) {
-      if (elements.statFormat) elements.statFormat.textContent = '-';
-      if (elements.statLength) elements.statLength.textContent = '0';
-      if (elements.statTopology) elements.statTopology.textContent = '-';
-      if (elements.statGc) elements.statGc.textContent = '-';
-      if (elements.statAmbiguous) elements.statAmbiguous.textContent = '-';
-      if (elements.statQuality) elements.statQuality.textContent = '-';
-      if (elements.statFeatures) elements.statFeatures.textContent = '0';
-      if (elements.statRestrictionSites) elements.statRestrictionSites.textContent = '0';
+      if (elements.statFormat) i18nUi.setText(elements.statFormat, '-');
+      if (elements.statLength) i18nUi.setText(elements.statLength, '0');
+      if (elements.statTopology) i18nUi.setText(elements.statTopology, '-');
+      if (elements.statGc) i18nUi.setText(elements.statGc, '-');
+      if (elements.statAmbiguous) i18nUi.setText(elements.statAmbiguous, '-');
+      if (elements.statQuality) i18nUi.setText(elements.statQuality, '-');
+      if (elements.statFeatures) i18nUi.setText(elements.statFeatures, '0');
+      if (elements.statRestrictionSites) i18nUi.setText(elements.statRestrictionSites, '0');
       return;
     }
 
@@ -250,30 +253,28 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
     );
 
     if (elements.statFormat) {
-      elements.statFormat.textContent = String(record.sourceFormat || '-').toUpperCase();
+      i18nUi.setText(elements.statFormat, String(record.sourceFormat || '-').toUpperCase());
     }
     if (elements.statLength) {
-      elements.statLength.textContent = record.sequence.length.toLocaleString();
+      i18nUi.setText(elements.statLength, record.sequence.length.toLocaleString());
     }
     if (elements.statTopology) {
-      elements.statTopology.textContent = String(record.topology || 'linear');
+      i18nUi.setText(elements.statTopology, String(record.topology || 'linear'));
     }
     if (elements.statGc) {
-      elements.statGc.textContent = `${gc.toFixed(2)}%`;
+      i18nUi.setText(elements.statGc, `${gc.toFixed(2)}%`);
     }
     if (elements.statAmbiguous) {
-      elements.statAmbiguous.textContent = ambiguous.toLocaleString();
+      i18nUi.setText(elements.statAmbiguous, ambiguous.toLocaleString());
     }
     if (elements.statFeatures) {
-      elements.statFeatures.textContent = allFeatures.length.toLocaleString();
+      i18nUi.setText(elements.statFeatures, allFeatures.length.toLocaleString());
     }
     if (elements.statRestrictionSites) {
-      elements.statRestrictionSites.textContent = restrictionFeatures.length.toLocaleString();
+      i18nUi.setText(elements.statRestrictionSites, restrictionFeatures.length.toLocaleString());
     }
     if (elements.statQuality) {
-      elements.statQuality.textContent = qualitySummary
-        ? `Q${qualitySummary.min.toFixed(1)} / ${qualitySummary.mean.toFixed(1)} / ${qualitySummary.max.toFixed(1)}`
-        : 'n/a';
+      i18nUi.setText(elements.statQuality, (qualitySummary ? `Q${qualitySummary.min.toFixed(1)} / ${qualitySummary.mean.toFixed(1)} / ${qualitySummary.max.toFixed(1)}` : 'n/a'));
     }
   }
 

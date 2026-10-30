@@ -1,3 +1,4 @@
+import { toolUi } from '../localization.js';
 import { clampNumber } from '../common.js';
 import { EMPTY_MASK, clearCanvas, getCanvasPointerPosition } from './canvas-utils.js';
 
@@ -48,7 +49,7 @@ function createColonyPointerInteractions({
     }
 
     if (!isSourcePointInsideMask(sourcePoint)) {
-      setColonyStatus('That point is outside the active mask. Clear or redraw the mask to count it.');
+      setColonyStatus(toolUi('colony.outsideMask'));
       return;
     }
 
@@ -64,7 +65,7 @@ function createColonyPointerInteractions({
     });
 
     if (hasNearbyMarker) {
-      setColonyStatus('Marker already exists near that colony. Right-click to remove if needed.');
+      setColonyStatus(toolUi('colony.nearbyMarker'));
       return;
     }
 
@@ -76,7 +77,7 @@ function createColonyPointerInteractions({
     colonyState.lastModelStats = null;
     renderPreviewCanvas();
     renderColonySummary();
-    setColonyStatus(`Count: ${getCountedMarkers().length}`);
+    setColonyStatus(toolUi('colony.count', { count: getCountedMarkers().length }));
     updateControlState();
   }
 
@@ -109,7 +110,7 @@ function createColonyPointerInteractions({
 
     const removalThresholdPx = 16;
     if (nearestDistanceSq > (removalThresholdPx * removalThresholdPx)) {
-      setColonyStatus('No marker near that point. Right-click closer to the marker to remove it.');
+      setColonyStatus(toolUi('colony.noNearbyMarker'));
       return;
     }
 
@@ -118,7 +119,7 @@ function createColonyPointerInteractions({
     colonyState.lastModelStats = null;
     renderPreviewCanvas();
     renderColonySummary();
-    setColonyStatus(`Count: ${getCountedMarkers().length}`);
+    setColonyStatus(toolUi('colony.count', { count: getCountedMarkers().length }));
     updateControlState();
   }
 
@@ -186,12 +187,12 @@ function createColonyPointerInteractions({
   // Finalize the current count into the status and summary display.
   function renderManualCountResult() {
     if (!colonyState.hasImage) {
-      setColonyStatus('Load a plate image first.', true);
+      setColonyStatus(toolUi('colony.loadFirst'), true);
       return;
     }
 
     const count = getCountedMarkers().length;
-    setColonyStatus(`Colony count saved: ${count}`);
+    setColonyStatus(toolUi('colony.saved', { count }));
     renderColonySummary();
   }
 
@@ -229,7 +230,7 @@ function createColonyPointerInteractions({
 
     clearCanvas(colonyPreviewCanvas);
     resetColonySummary();
-    setColonyStatus('Choose or drop an image, then run auto count or click colonies manually.');
+    setColonyStatus(toolUi('colony.initial'));
     updateControlState();
   }
 
@@ -264,7 +265,7 @@ function createColonyPointerInteractions({
 
     if (!hasActiveMask(draft)) {
       renderPreviewCanvas();
-      setColonyStatus('Mask was too small. Drag a wider region to count under a mask.', true);
+      setColonyStatus(toolUi('colony.smallMask'), true);
       updateControlState();
       return true;
     }
@@ -272,7 +273,7 @@ function createColonyPointerInteractions({
     colonyState.mask = normalizeMask(draft);
     renderPreviewCanvas();
     renderColonySummary();
-    setColonyStatus('Mask applied. Counts now include colonies inside the mask only.');
+    setColonyStatus(toolUi('colony.maskApplied'));
     updateControlState();
     return true;
   }
@@ -284,11 +285,11 @@ function createColonyPointerInteractions({
       return;
     }
     if (!colonyState.hasImage) {
-      setColonyStatus('Load an image before counting.', true);
+      setColonyStatus(toolUi('colony.loadBeforeCount'), true);
       return;
     }
     if (isCropModeActive()) {
-      setColonyStatus('Apply or cancel crop mode before counting.', true);
+      setColonyStatus(toolUi('colony.cropBeforeCount'), true);
       return;
     }
     if (colonyState.isDrawingMask) {

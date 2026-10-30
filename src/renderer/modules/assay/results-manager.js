@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("plate");
 import { wellIdFor } from './plate-model.js';
 import { bindFileDropTarget } from '../../lib/file-drop.js';
 import { escapeHtml } from '../../lib/html.js';
@@ -10,7 +13,7 @@ export {
   detectAssayResultMatrixCandidates,
   getAssayResultImportTarget
 } from './result-import-detector.js';
-import { showTransientNotice } from '../../lib/notify.js';
+import { plateFailure, plateMessage, plateNotice, plateUi, setPlateAttribute } from './localization.js';
 
 export function createAssayResultsManager({
   runtime,
@@ -104,7 +107,7 @@ export function createAssayResultsManager({
     const updated = setResultValue(rowIndex, columnIndex, cell.getValue());
     if (!updated) {
       renderResultTable();
-      setResultStatus(`Only mapped wells accept result values. ${wellIdFor(rowIndex, columnIndex)} is not mapped.`, true);
+      setResultStatus(plateUi('results.unmappedWell', { well: wellIdFor(rowIndex, columnIndex) }), true);
       return;
     }
     runtime.resultPasteAnchor = { rowIndex, columnIndex };
@@ -129,20 +132,20 @@ export function createAssayResultsManager({
       return false;
     }
     if (!TabulatorLib) {
-      assayResultTable.innerHTML = '<p class="small-note">Spreadsheet component failed to load (Tabulator).</p>';
-      showTransientNotice('Spreadsheet component failed to load (Tabulator).', { type: 'error' });
+      i18nUi.setHtml(assayResultTable, `<p class="small-note">${plateMessage('grid.failed')}</p>`);
+      plateNotice(plateUi('grid.failed'), { type: 'error' });
       return false;
     }
     const signature = buildResultGridSignature(def);
     if (!resultGrid || resultGridSignature !== signature) {
       clearResultGrid();
-      assayResultTable.innerHTML = '';
+      i18nUi.setHtml(assayResultTable, '');
       const host = document.createElement('div');
       host.className = 'assay-tabulator assay-result-paste-target';
       host.dataset.resultPasteTarget = 'true';
       host.tabIndex = 0;
       host.setAttribute('role', 'grid');
-      host.setAttribute('aria-label', 'Assay result spreadsheet');
+      setPlateAttribute(host, 'aria-label', 'grid.results');
       assayResultTable.append(host);
       const gridOptions = {
         data: buildResultGridData(def),
@@ -157,7 +160,8 @@ export function createAssayResultsManager({
       };
       const gridHeight = getResultGridHeight(def);
       if (gridHeight) {
-        gridOptions.height = gridHeight;
+        // Cap large plates while letting filtered rows release their space.
+        gridOptions.maxHeight = gridHeight;
       }
       resultGrid = new TabulatorLib(host, gridOptions);
       if (typeof resultGrid.on === 'function') {
@@ -347,7 +351,7 @@ export function createAssayResultsManager({
       replaceAll: start.fromTableSelection
     });
     renderResultTable();
-    setResultStatus(`Pasted ${pastedCount} value(s). Skipped ${skippedCount} unmapped cell(s).`);
+    setResultStatus(plateUi('results.pasted', { pasted: pastedCount, skipped: skippedCount }));
     notifyResultsChanged();
   }
 
@@ -357,7 +361,7 @@ export function createAssayResultsManager({
     if (typeof clearAnalysisOutput === 'function') {
       clearAnalysisOutput();
     }
-    setResultStatus('Cleared all result values.');
+    setResultStatus(plateUi('results.cleared'));
     notifyResultsChanged();
   }
 
@@ -367,10 +371,10 @@ export function createAssayResultsManager({
     disabled: () => Boolean(elements.assayResultsLayout?.hidden),
     onFiles: ([file]) => importResultFile(file),
     onRejected: () => {
-      setResultStatus('Drop a CSV or Excel result file to attach it.');
+      setResultStatus(plateUi('import.dropHint'));
     },
     onError: (error) => {
-      setResultStatus(String(error?.message || error || 'Unable to import the dropped result file.'), true);
+      setResultStatus(plateFailure(error, 'import.dropFailed'), true);
     }
   });
 

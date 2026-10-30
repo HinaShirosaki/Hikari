@@ -6,9 +6,9 @@ import {
   getAgentChatFolders,
   getFolderById
 } from './session-folders.js';
-import { showTransientNotice } from '../../lib/notify.js';
 import { startInlineRename } from '../../lib/folder-tree.js';
 import { positionContextMenu } from '../../lib/context-menu.js';
+import { agentNotice, agentText, agentUi, setAgentAttribute } from './localization.js';
 
 // Right-click menu and inline rename for the agent chat session folders, plus
 // the drop-target bookkeeping shared with the drag handlers.
@@ -76,11 +76,12 @@ function createSessionFolderMenu({
     hideContextMenu();
     selectFolder(folder.id, { persistState: false });
     renderSessionList();
-    startInlineRename(findFolderMain(folder.id), {
+    const input = startInlineRename(findFolderMain(folder.id), {
       value: folder.name,
-      label: 'Rename chat folder',
+      label: agentText('menu.renameLabel'),
       onCommit: (nextName) => commitFolderRename(folder.id, nextName)
     });
+    setAgentAttribute(input, 'aria-label', 'menu.renameLabel');
   }
 
   function commitFolderRename(folderId, rawName) {
@@ -93,7 +94,7 @@ function createSessionFolderMenu({
       item.id !== folder.id && item.name.toLowerCase() === nextName.toLowerCase()
     ));
     if (duplicate) {
-      showTransientNotice('A chat folder with this name already exists.', { type: 'error' });
+      agentNotice(agentUi('menu.duplicate'), { type: 'error' });
       return;
     }
     const storedFolder = asArray(state.agentChat.folders)
@@ -126,7 +127,7 @@ function createSessionFolderMenu({
       return;
     }
     const windowRef = sessionList?.ownerDocument?.defaultView;
-    if (typeof windowRef?.confirm === 'function' && !windowRef.confirm(`Delete the "${folder.name}" chat folder? Chats will move to General.`)) {
+    if (typeof windowRef?.confirm === 'function' && !windowRef.confirm(agentText('menu.confirmDelete', { name: folder.name }))) {
       return;
     }
     state.agentChat.folders = asArray(state.agentChat.folders)

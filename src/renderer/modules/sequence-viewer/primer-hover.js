@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../lib/html.js';
 import { isPrimerBindingFeature } from './feature-types.js';
 import { renderPrimerCopyButton } from './primer-copy.js';
@@ -42,7 +45,7 @@ export function renderPrimerNameCopyButton(feature) {
 }
 
 function renderLibrarySaveButton(feature, sequence) {
-  return `<button type="button" class="sequence-viewer-primer-library-save-btn" data-sequence-primer-library-save data-primer-name="${escapeHtml(feature?.name || 'Primer')}" data-primer-sequence="${escapeHtml(sequence)}" title="Save to Primer Library" aria-label="Save to Primer Library">
+  return `<button type="button" class="sequence-viewer-primer-library-save-btn" data-sequence-primer-library-save data-primer-name="${escapeHtml(feature?.name || 'Primer')}" data-primer-sequence="${escapeHtml(sequence)}" title="Save to Primer Library" aria-label="Save to Primer Library" data-i18n-aria-label="dna.full.fb552537" data-i18n-title="dna.full.fb552537">
     <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
       <path d="M5 5.5h11L19 8.5v10h-14Z"></path>
       <path d="M8.5 5.5h7v4h-7Z"></path>
@@ -63,7 +66,7 @@ export function renderPrimerHoverSection(feature, recordSequence = '', { allowLi
   return `
     <div class="sequence-viewer-primer-hover-card">
       <div class="sequence-viewer-primer-hover-head">
-        <div class="sequence-viewer-primer-hover-title">${escapeHtml(feature?.name || 'Primer')}</div>
+        <div class="sequence-viewer-primer-hover-title">${i18nUi.render((feature?.name || i18nUi.message("Primer")))}</div>
         <div class="sequence-viewer-primer-hover-buttons">
           ${renderPrimerNameCopyButton(feature)}
           ${allowLibrarySave ? renderLibrarySaveButton(feature, sequence) : ''}

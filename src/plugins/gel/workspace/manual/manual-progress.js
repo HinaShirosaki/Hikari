@@ -1,3 +1,5 @@
+import { createPresentation } from "../../i18n.mjs";
+const i18nUi = createPresentation("gel");
 import {
   countCompleteLaneBandWindows,
   hasCompleteLaneBandWindow,
@@ -44,7 +46,7 @@ function createManualProgress({
       `ladderMW ${summary.ladderBands?.length || 0}`,
       `ladder ${summary.ladderLane || '-'}`
     ];
-    elements.gelOverrideStatus.textContent = `Manual overrides: ${parts.join(' | ')}`;
+    i18nUi.setText(elements.gelOverrideStatus, i18nUi.message("Manual overrides: {p0}", { p0: parts.join(' | ') }));
     renderManualProgress();
     deps.renderLaneTable?.();
   }

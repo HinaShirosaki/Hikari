@@ -26,6 +26,13 @@
 - `shared.js`: small text, CSV, axis, numeric, and filename helpers.
 - `concentration-utils.js`: concentration parsing and volume formatting helpers.
 - `constants.js`: shared assay constants.
+- `locales/en.js`, `locales/es.js`, `localization.js`: the `plate` UI catalog, bound markup/status helpers
+  (`plateUi()` descriptors for statuses and notices), and `notebookOptionMessage()`.
+  Stored records, CSV templates, saved dilution summaries, search text and agent
+  context keep their canonical English. The bundled Spanish preview has
+  interaction checks in `tests/fixtures/i18n/plate-checks.mjs`.
+  Chart Format controls, grid headers, analysis tables and formula errors are a
+  later batch.
 
 Maintenance notes:
 

@@ -545,10 +545,9 @@ body.theme-night .sequence-viewer-line-feature:not(.sequence-viewer-line-feature
   color: inherit;
 }
 
-body.theme-night .sequence-viewer-line-feature-active {
-  border-color: var(--theme-text-strong);
-  box-shadow: 0 0 0 1px var(--theme-accent-line);
-  color: inherit;
+body.theme-night .sequence-viewer-line-feature-bar.sequence-viewer-line-feature-active {
+  border-color: var(--sequence-viewer-feature-color);
+  background: color-mix(in srgb, var(--sequence-viewer-feature-color) 38%, var(--theme-surface-elevated));
 }
 
 body.theme-night .sequence-viewer-line-feature-primer.sequence-viewer-line-feature-active {

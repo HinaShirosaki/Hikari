@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../lib/html.js';
 import { normalizeHighlightSegments } from './rendering.js';
 import { buildSequenceSignature, cleanText, normalizeSequenceText } from './shared.js';
@@ -144,19 +147,19 @@ export function syncAlignmentControlsState({ elements = {}, state = {}, record =
   const hasAppliedAlignment = Boolean(state.activeAlignmentResult && state.activeAlignmentQueryRecord);
   if (elements.alignmentSessionSelect) {
     if (!savedSessions.length) {
-      elements.alignmentSessionSelect.innerHTML = '<option value="">No saved alignments</option>';
+      i18nUi.setHtml(elements.alignmentSessionSelect, `<option value="" data-i18n="dna.full.8e56f479">${i18nUi.text("No saved alignments")}</option>`);
       elements.alignmentSessionSelect.value = '';
       elements.alignmentSessionSelect.disabled = true;
     } else {
       elements.alignmentSessionSelect.disabled = false;
-      elements.alignmentSessionSelect.innerHTML = savedSessions
+      i18nUi.setHtml(elements.alignmentSessionSelect, savedSessions
         .map((session) => {
           const sessionId = cleanText(session?.id, 200);
           const label = cleanText(session?.name || session?.queryRecord?.name || 'alignment', 120) || 'alignment';
           const selected = sessionId === String(state.activeAlignmentSessionId || '') ? ' selected' : '';
           return `<option value="${escapeHtml(sessionId)}"${selected}>${escapeHtml(label)}</option>`;
         })
-        .join('');
+        .join(''));
       if (!savedSessions.some((session) => String(session?.id || '') === String(state.activeAlignmentSessionId || ''))) {
         elements.alignmentSessionSelect.value = cleanText(savedSessions[0]?.id, 200);
       }
@@ -168,11 +171,7 @@ export function syncAlignmentControlsState({ elements = {}, state = {}, record =
     elements.alignmentToggle.disabled = !hasRecord || !hasAppliedAlignment;
   }
   if (elements.alignmentActiveNote) {
-    elements.alignmentActiveNote.textContent = hasAppliedAlignment
-      ? ''
-      : (savedSessions.length
-        ? `${savedSessions.length.toLocaleString()} saved alignment${savedSessions.length === 1 ? '' : 's'} ready for this reference.`
-        : 'No alignment selected.');
+    i18nUi.setText(elements.alignmentActiveNote, (hasAppliedAlignment ? '' : (savedSessions.length ? i18nUi.message((savedSessions.length === 1 ? "{p0} saved alignment ready for this reference." : "{p0} saved alignments ready for this reference."), { p0: savedSessions.length.toLocaleString() }) : i18nUi.message("No alignment selected."))));
   }
   if (elements.alignmentActiveNote?.style) {
     elements.alignmentActiveNote.style.color = hasAppliedAlignment || savedSessions.length ? '' : 'var(--theme-text-muted)';

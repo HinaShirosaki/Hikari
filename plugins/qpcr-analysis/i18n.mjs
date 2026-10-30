@@ -1,0 +1,11 @@
+import * as engine from './i18n.js';
+import * as english from './locales/en.js';
+import * as spanish from './locales/es.js';
+const root = typeof window === 'object' ? window : globalThis;
+const runtime = root.HikariUi || engine.default || engine;
+const catalogs = root.HikariUiEnglish || english.default || english;
+for (const [namespace, messages] of Object.entries(catalogs)) runtime.registerMessages('en', namespace, messages);
+const spanishCatalogs = root.HikariUiSpanish || spanish.default || spanish;
+for (const [namespace, messages] of Object.entries(spanishCatalogs)) runtime.registerMessages('es', namespace, messages);
+export const createPresentation = runtime.createPresentation;
+export const i18n = runtime;

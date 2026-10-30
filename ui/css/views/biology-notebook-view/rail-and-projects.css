@@ -376,7 +376,8 @@
   border-radius: 0.25rem;
 }
 
-.biology-notebook-project-details summary span {
+/* The "Optional" hint; the first span is the translated summary label. */
+.biology-notebook-project-details summary span + span {
   margin-left: var(--space-8);
   font-size: var(--text-xs);
 }

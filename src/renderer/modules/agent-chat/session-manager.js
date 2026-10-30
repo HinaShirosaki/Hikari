@@ -1,3 +1,6 @@
+import { createPresentation } from "../../lib/i18n/presentation.js";
+import "./localization.js";
+const i18nUi = createPresentation("agent");
 import { asArray, trimText } from './shared.js';
 import { renderAgentChatIcon } from './icons.js';
 import {
@@ -13,6 +16,7 @@ import {
   renderFolderTreeLeaf,
   renderFolderTreeNode
 } from '../../lib/folder-tree.js';
+import { agentAttributes, agentFolderDisclosure, agentMessage, agentText } from './localization.js';
 
 const CHAT_SESSION_DRAG_MIME = 'application/x-hikari-agent-chat-session-id';
 
@@ -177,12 +181,14 @@ export function createAgentChatSessionManager(deps = {}) {
     const folders = syncSelectedFolder();
     const expandedFolderIds = getExpandedFolderIds();
     const activeSessionId = trimText(state.agentChat.currentSessionId, 120);
-    sessionList.innerHTML = folders.map((folder) => {
+    i18nUi.setHtml(sessionList, folders.map((folder) => {
       const folderSessions = sessions.filter((session) => resolveSessionFolderId(state, session) === folder.id);
       const isExpanded = expandedFolderIds.has(folder.id);
       const isSelected = state.agentChat.selectedFolderId === folder.id;
       const folderClasses = `agent-session-folder${isSelected ? ' is-active' : ''}${isExpanded ? ' is-expanded' : ''}`;
-      const folderLabel = folder.type === 'project' ? `${folder.name} project chats` : `${folder.name} chats`;
+      const isGeneral = folder.type === 'general';
+      const folderLabelKey = isGeneral ? 'folders.generalChats' : (folder.type === 'project' ? 'folders.projectChats' : 'folders.chats');
+      const newChatKey = isGeneral ? 'folders.newChatGeneral' : 'folders.newChat';
       const children = folderSessions.length
         ? folderSessions.map((session) => {
           const sessionId = trimText(session?.id, 120);
@@ -203,15 +209,17 @@ export function createAgentChatSessionManager(deps = {}) {
             contentHtml: `<strong class="folder-tree-template__leaf-label">${safeText(title)}</strong>`
           });
         }).join('')
-        : '<p class="agent-session-folder-empty">No chats yet.</p>';
+        : `<p class="agent-session-folder-empty">${agentMessage('folders.empty')}</p>`;
       return renderFolderTreeNode({
         key: folder.id,
         expanded: isExpanded,
         active: isSelected,
         label: folder.name,
+        ...(isGeneral ? { labelHtml: agentMessage('folders.general') } : {}),
+        ...agentFolderDisclosure(folder.name, isExpanded, isGeneral),
         meta: String(folderSessions.length),
         childrenHtml: children,
-        actionHtml: `<button type="button" class="ghost-btn agent-new-chat-btn" data-agent-new-chat-folder="${safeText(folder.id)}" aria-label="${safeText(`New chat in ${folder.name}`)}" title="${safeText(`New chat in ${folder.name}`)}"${isNewChatDisabled() ? ' disabled' : ''}>${renderAgentChatIcon('new-chat', { className: 'agent-new-chat-icon' })}</button>`,
+        actionHtml: `<button type="button" class="ghost-btn agent-new-chat-btn" data-agent-new-chat-folder="${safeText(folder.id)}" ${agentAttributes({ 'aria-label': newChatKey, title: newChatKey }, { name: folder.name })}${isNewChatDisabled() ? ' disabled' : ''}>${renderAgentChatIcon('new-chat', { className: 'agent-new-chat-icon' })}</button>`,
         nodeClass: folderClasses,
         rowClass: 'agent-session-folder-row',
         disclosureClass: 'agent-session-folder-toggle',
@@ -227,10 +235,12 @@ export function createAgentChatSessionManager(deps = {}) {
         mainAttributes: {
           'data-agent-folder-id': folder.id,
           'data-agent-folder-context': folder.id,
-          'aria-label': folderLabel
+          'aria-label': agentText(folderLabelKey, { name: folder.name }),
+          'data-i18n-aria-label': `agent.${folderLabelKey}`,
+          'data-i18n-params': JSON.stringify({ name: folder.name })
         }
       });
-    }).join('');
+    }).join(''));
   }
 
 

@@ -1,5 +1,6 @@
 import { layoutToMap, toRowLabel, wellIdFor } from './plate-model.js';
 import { parseConcentrationMagnitude } from './concentration-utils.js';
+import { plateAttributes, plateMessage } from './localization.js';
 
 function hashSampleId(sampleId) {
   let hash = 2166136261;
@@ -88,21 +89,22 @@ export function buildPlatePreviewHtml({
 
   const rowAxisRole = sampleAxis === 'row' ? 'sample' : 'concentration';
   const columnAxisRole = sampleAxis === 'row' ? 'concentration' : 'sample';
-  const unitSuffix = String(concentrationUnit || '').trim() ? ` (${String(concentrationUnit).trim()})` : '';
-  const concentrationAxisLabel = `Conc.${unitSuffix}`;
-  const rowAxisLabel = rowAxisRole === 'sample' ? 'Sample ID' : concentrationAxisLabel;
-  const columnAxisLabel = columnAxisRole === 'sample' ? 'Sample ID' : concentrationAxisLabel;
+  const unit = String(concentrationUnit || '').trim();
+  const concentrationAxisLabel = unit ? plateMessage('grid.concentrationUnit', { unit }) : plateMessage('grid.concentration');
+  const rowAxisLabel = rowAxisRole === 'sample' ? plateMessage('field.sampleId') : concentrationAxisLabel;
+  const columnAxisLabel = columnAxisRole === 'sample' ? plateMessage('field.sampleId') : concentrationAxisLabel;
+  const axisPlaceholder = role => plateAttributes({ placeholder: role === 'sample' ? 'grid.samplePlaceholder' : 'grid.concentrationPlaceholder' });
   const rowAxisValues = rowAxisRole === 'sample' ? sampleValues : concentrationValues;
   const columnAxisValues = columnAxisRole === 'sample' ? sampleValues : concentrationValues;
   const filledLayouts = Object.values(cellMap).filter((item) => item && (item.sampleId || item.concentration));
   const rankedConcentrations = buildRankedConcentrations(filledLayouts);
 
-  const headers = ['<th></th>', `<th>${safeText(rowAxisLabel)}</th>`];
+  const headers = ['<th></th>', `<th>${rowAxisLabel}</th>`];
   for (let col = 0; col < maxColumns; col += 1) {
     headers.push(`<th>${col + 1}</th>`);
   }
 
-  const axisRowCells = [`<th>${safeText(columnAxisLabel)}</th>`, '<td></td>'];
+  const axisRowCells = [`<th>${columnAxisLabel}</th>`, '<td></td>'];
   for (let col = 0; col < maxColumns; col += 1) {
     const value = String(columnAxisValues[col] || '');
     axisRowCells.push(`
@@ -113,7 +115,7 @@ export function buildPlatePreviewHtml({
           data-axis-dimension="column"
           data-axis-index="${col}"
           value="${safeText(value)}"
-          placeholder="${columnAxisRole === 'sample' ? 'Sample' : 'Conc'}"
+          ${axisPlaceholder(columnAxisRole)}
         />
       </td>
     `);
@@ -133,7 +135,7 @@ export function buildPlatePreviewHtml({
             data-axis-dimension="row"
             data-axis-index="${row}"
             value="${safeText(rowAxisValue)}"
-            placeholder="${rowAxisRole === 'sample' ? 'Sample' : 'Conc'}"
+            ${axisPlaceholder(rowAxisRole)}
           />
         </td>
       `
@@ -147,14 +149,14 @@ export function buildPlatePreviewHtml({
       const concentrationValue = String(cellLayout?.concentration || '').trim();
       const sampleLabel = sampleValue || '-';
       const concentrationLabel = concentrationValue || '-';
-      const editable = plateEditField === 'concentration' ? 'Conc.' : 'Sample ID';
-      const editableValue = plateEditField === 'concentration' ? concentrationValue : sampleValue;
-      const secondaryMeta = plateEditField === 'concentration'
-        ? `S: ${safeText(sampleLabel)}`
-        : `C: ${safeText(concentrationLabel)}`;
-      const meta = cellLayout
-        ? `Sample ID: ${cellLayout.sampleId || '-'} | Conc.: ${cellLayout.concentration || '-'}`
-        : 'Sample ID: - | Conc.: -';
+      const editsConcentration = plateEditField === 'concentration';
+      const editableValue = editsConcentration ? concentrationValue : sampleValue;
+      const secondaryMeta = editsConcentration
+        ? plateMessage('grid.sampleShort', { value: sampleLabel })
+        : plateMessage('grid.concentrationShort', { value: concentrationLabel });
+      const wellTitle = plateAttributes({ title: editsConcentration ? 'grid.wellConcentration' : 'grid.wellSample' }, {
+        well, sample: cellLayout?.sampleId || '-', concentration: cellLayout?.concentration || '-'
+      });
       const color = sampleValue
         ? sampleColor(sampleValue)
         : { hue: 210, saturation: 72 };
@@ -167,7 +169,7 @@ export function buildPlatePreviewHtml({
         ? ` style="background-color: hsl(${color.hue} ${saturation}% ${lightness}%); color: ${wellTextColor(color.hue, saturation, lightness)};"`
         : '';
       cells.push(`
-        <td class="assay-well${filled}${active}" data-well="${well}" title="${safeText(`${well} • ${meta} • Click to edit ${editable}`)}"${cellStyle}>
+        <td class="assay-well${filled}${active}" data-well="${well}" ${wellTitle}${cellStyle}>
           <div class="assay-well-id">${safeText(well)}</div>
           <input
             type="text"
@@ -175,7 +177,7 @@ export function buildPlatePreviewHtml({
             data-well-inline-field="${plateEditField}"
             data-well="${well}"
             value="${safeText(editableValue)}"
-            placeholder="${plateEditField === 'concentration' ? 'Conc' : 'Sample'}"
+            ${axisPlaceholder(editsConcentration ? 'concentration' : 'sample')}
           />
           <div class="assay-well-meta">${secondaryMeta}</div>
         </td>
@@ -185,7 +187,7 @@ export function buildPlatePreviewHtml({
   }
 
   const note = totalWells > 384
-    ? `<p class="small-note">Previewing first ${maxRows} rows x ${maxColumns} columns for ${def.label} plate.</p>`
+    ? `<p class="small-note">${plateMessage('grid.previewNote', { rows: maxRows, columns: maxColumns, count: def.value })}</p>`
     : '';
 
   return `
