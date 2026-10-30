@@ -9,8 +9,7 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
       readLocalSource('src', 'main', 'core', 'main-services.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js'),
-      readLocalSource('src', 'main', 'core', 'services', 'create-agent-services.js'),
-      readLocalSource('src', 'main', 'core', 'services', 'create-agent-log-service.js')
+      readLocalSource('src', 'main', 'core', 'services', 'create-agent-services.js')
     ].join('\n');
     const readRendererStorageSource = () => [
       readLocalSource('src', 'renderer', 'renderer.js'),
@@ -303,14 +302,7 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
       assert.ok(journalControllerIndex >= 0);
       assert.ok(journalListenerIndex > journalControllerIndex);
     });
-    test('main agent chat logging records request/result/error with redacted API key metadata', async () => {
-      const mainSource = readMainProcessSource();
-      const appPathsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'lib', 'app-paths.js'), 'utf8');
-      assert.match(mainSource, /AGENT_CHAT_LOG_FILE_NAME = 'agent-chat\.log'/);
-      assert.match(mainSource, /agentLogService\.ensureAgentChatLogFile\([^)]*getAgentChatLogPath\(\)\)/);
-      assert.match(mainSource, /createMainAppPaths/);
-      assert.match(appPathsSource, /HIKARI_AGENT_CHAT_LOG_PATH/);
-
+    test('each chat log records its request, result and error without the API key', async () => {
       // Drive the real chat handler and read back everything it writes.
       const os = require('node:os');
       const { AGENT } = require(path.join(__dirname, 'src', 'shared', 'ipc', 'channels.js'));
@@ -323,7 +315,6 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
       const cleanText = (value, max = 2000) => String(value || '').trim().slice(0, max);
       const apiKey = 'sk-live-must-not-be-logged';
       const storagePath = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-agent-log-'));
-      const logLines = [];
       const handlers = new Map();
       let failNext = false;
       let persistedText = '';
@@ -334,10 +325,8 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
           controllerUtils: createAgentControllerUtils({ cleanText }),
           observability,
           agentChatLogRuntime: createAgentChatLogRuntime(),
-          getAgentChatLogPath: () => path.join(storagePath, 'agent-chat.log'),
           getAgentChatSessionStoragePath: () => storagePath,
-          appendAgentChatLogEntry: async (_logPath, line) => { logLines.push(String(line)); },
-          lifecycleService: { ...createAgentLifecycleService({ cleanText }), flushLifecycleRecorderEvents: async () => {} },
+          lifecycleService: createAgentLifecycleService({ cleanText }),
           runAgentController: async () => {
             if (failNext) {
               throw new Error('Model unavailable.');
@@ -357,15 +346,9 @@ module.exports = function registerStorageAndImportContractsStartupHydrationAndRe
         fs.rmSync(storagePath, { recursive: true, force: true });
       }
 
-      const entries = logLines.map((line) => JSON.parse(line));
-      assert.deepEqual(
-        entries.map((entry) => entry.type),
-        ['agent-chat-request', 'agent-chat-result', 'agent-chat-request', 'agent-chat-error']
-      );
-      assert.equal(entries[0].llm.apiKeyProvided, true);
-      assert.equal(entries[0].llm.model, 'gpt-test');
-      assert.equal(logLines.some((line) => line.includes(apiKey)), false, 'the request log must not carry the key');
-      assert.notEqual(persistedText, '', 'the chat sessions were persisted');
+      assert.match(persistedText, /"apiKeyProvided":\s*true/);
+      assert.match(persistedText, /agent-chat-result/);
+      assert.match(persistedText, /agent-chat-error/);
       assert.equal(persistedText.includes(apiKey), false, 'saved chat sessions must not carry the key');
     });
 };

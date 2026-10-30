@@ -69,7 +69,6 @@ const {
 const { buildCompactIndexedSnapshot } = require('../data/data-snapshot-utils');
 const { createChatLogTransformMonitor } = require('../lib/llm/chat-log-transformer.js');
 const { createBioinformaticsService } = require('../bioinformatics');
-const { createAgentLogService } = require('./services/create-agent-log-service');
 const { createNpmUpdaterService } = require('../updater/create-npm-updater-service');
 const { createCodexCliUpdater } = require('../lib/codex-cli-provider/cli-updater');
 const { setCodexCliUpdater } = require('../lib/codex-cli-provider/cli-maintenance');
@@ -94,7 +93,6 @@ const {
   registerHtmlPreviewScheme
 } = require('../agent/html-output/preview-service.js');
 
-const AGENT_CHAT_LOG_FILE_NAME = 'agent-chat.log';
 const DEFAULT_DATA_FILE_NAME = 'hikari-data.json';
 
 // Constructs every main-process service in dependency order and registers all
@@ -126,8 +124,7 @@ function createMainServices(context = {}) {
     processObject,
     projectRoot,
     cleanText,
-    defaultDataFileName: DEFAULT_DATA_FILE_NAME,
-    agentChatLogFileName: AGENT_CHAT_LOG_FILE_NAME
+    defaultDataFileName: DEFAULT_DATA_FILE_NAME
   });
   // Windows gets the multi-size .ico (tile-filling); macOS dev runs get the Dock-grid PNG.
   const appIconPath = path.join(projectRoot, 'assets', processObject.platform === 'win32' ? 'icon.ico' : 'icon.png');
@@ -163,9 +160,8 @@ function createMainServices(context = {}) {
     getDefaultDataFilePath: appPaths.getDefaultDataFilePath
   });
 
-  // Agent logging and chat-log monitoring.
+  // Chat-log monitoring.
   const chatLogTransformMonitor = createChatLogTransformMonitor({ fs, path, cleanText });
-  const agentLogService = createAgentLogService({ fs, path, appendLogWithRotation });
   const getAgentChatSessionStoragePath = (payload) => {
     const storagePath = appPaths.getAgentChatSessionStoragePath(payload);
     if (storagePath) {
@@ -190,7 +186,6 @@ function createMainServices(context = {}) {
     defaultLlmEndpointForProvider,
     defaultAgentModelForProvider,
     cleanText,
-    appendAgentChatLogEntry: agentLogService.appendAgentChatLogEntry,
     requestCodexCliText,
     getCodexCliWorkingDirectory: appPaths.getCodexCliWorkingDirectory,
     getStorageRoot: appPaths.getStorageRoot,
@@ -384,9 +379,7 @@ function createMainServices(context = {}) {
     protocolGenerationRuntime: agents.protocolGenerationRuntime,
     getDefaultDataFilePath: appPaths.getDefaultDataFilePath,
     getStorageRoot: appPaths.getStorageRoot,
-    getAgentChatLogPath: appPaths.getAgentChatLogPath,
-    getAgentChatSessionStoragePath,
-    appendAgentChatLogEntry: agentLogService.appendAgentChatLogEntry
+    getAgentChatSessionStoragePath
   });
 
   registerGenomeIpc({
@@ -455,8 +448,7 @@ function createMainServices(context = {}) {
     await bestEffort('html-preview', async () => {
       installHtmlPreviewService({ protocol: context.protocol, ipcMain, getMainWindow });
     });
-    await bestEffort('agent-logging', async () => {
-      await agentLogService.ensureAgentChatLogFile(appPaths.getAgentChatLogPath());
+    await bestEffort('chat-log-monitor', async () => {
       const storageRoot = appPaths.getStorageRoot();
       chatLogTransformMonitor.start({
         storagePaths: storageRoot ? [storageRoot] : []
@@ -490,7 +482,7 @@ function createMainServices(context = {}) {
       ['scheduled-tasks', () => scheduledTasks.stop()],
       ['mcp', () => mcp.stop()],
       ['npm-updater', () => npmUpdater.stop()],
-      ['agent-logging', () => chatLogTransformMonitor.stop()]
+      ['chat-log-monitor', () => chatLogTransformMonitor.stop()]
     ];
     for (const [name, stop] of stops) {
       try {

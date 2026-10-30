@@ -44,7 +44,7 @@ This map covers the live files under `src/main/agent`. Main composition is under
 | `runtime/tool-artifacts/plotly-graph.js` | provider-neutral Plotly artifact normalization and extraction |
 | `runtime/artifact-recovery/protocol-generation.js` | prose-to-protocol recovery and direct-tool retry orchestration |
 | `shared/agent-controller-utils.js` | provider/model settings and trace helpers |
-| `shared/agent-observability.js` | lifecycle logging and replay |
+| `shared/agent-observability.js` | lifecycle recording, failure classification, log rotation |
 | `shared/agent-runtime-registry.js` | small runtime-factory registry |
 | `shared/agent-llm-provider-bridge.js`, `shared/llm-providers/` | Codex CLI requests used by deterministic sub-tools |
 | `shared/controller-utils/` | provider settings, result summaries, and tracing helpers behind `agent-controller-utils.js` |

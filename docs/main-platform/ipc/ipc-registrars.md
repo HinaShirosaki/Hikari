@@ -86,7 +86,6 @@ A folder (`src/main/ipc/register-agent-ipc/`), not a single file. Its internal l
 - `agent:chat`, `agent:chat:cancel`
 - `agent:list-skills`, `agent:generate-protocol`, `agent:suggest-experiment`
 - `agent:chat-log:create-session`, `:list-sessions`, `:get-session`
-- `agent:logs:list-requests`, `agent:logs:replay`
 - plus the `agent-progress` one-way broadcast (main → renderer), sent from `src/main/agent/runtime/agent-chat-request.js`
 
 `index.js` composes the handlers from `agent-lifecycle-service.js`, `agent-controller-core.js`, `agent-chat-handler.js`, and `agent-log-handlers.js`. Use the dedicated walkthrough at [agent/architecture/request-lifecycle.md](../../agent/architecture/request-lifecycle.md) for the request flow.
@@ -136,7 +135,7 @@ When adding a renderer-facing capability, the first question is “which registr
 
 - data / storage / import parsers → `register-data-ipc.js`; sequence endpoints → its `register-data-ipc/` child package
 - plugin folders and plugin file access → `register-plugin-ipc.js`
-- chat / assistant / log replay → `register-agent-ipc/`
+- chat / assistant → `register-agent-ipc/`
 - scheduled Codex tasks or paper finding → `register-scheduled-task-ipc.js`
 - reference genomes → `register-genome-ipc.js`; remote BLAST/UniProt → `register-bioinformatics-ipc.js`
 - Codex CLI, direct LLM, error reporting, or OS integrations → `register-system-ipc.js`

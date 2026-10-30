@@ -13,16 +13,13 @@ function createAgentChatRequestHandler({
   controllerUtils,
   observability,
   agentChatLogRuntime,
-  getAgentChatLogPath,
   getAgentChatSessionStoragePath,
-  appendAgentChatLogEntry,
   lifecycleService,
   runAgentController
 } = {}) {
   const {
     normalizeJsonPayload,
     buildAgentProgressPayload,
-    flushLifecycleRecorderEvents,
     asArray
   } = lifecycleService;
   const {
@@ -50,7 +47,6 @@ function createAgentChatRequestHandler({
       normalizedPayload?.clientRequestId || normalizedPayload?.client_request_id,
       120
     );
-    const logPath = getAgentChatLogPath();
     const chatSessionStoragePath = getAgentChatSessionStoragePath(normalizedPayload);
     const sessionService = createAgentSessionService({
       cleanText,
@@ -142,7 +138,6 @@ function createAgentChatRequestHandler({
         conversation: controllerUtils.extractConversation(normalizedPayload?.conversation),
         llm: controllerUtils.summarizeLlmForAgentLog(normalizedPayload?.llm)
       };
-      await appendAgentChatLogEntry(logPath, controllerUtils.formatAgentChatLogEntry(requestLogEntry));
       if (sessionService.getSession()?.id) {
         await sessionService.appendRows([
           {
@@ -219,8 +214,6 @@ function createAgentChatRequestHandler({
           failure_reasons: failureReasons,
           ...controllerUtils.summarizeAgentResultForLog(result)
         };
-        await flushLifecycleRecorderEvents(logPath, lifecycleRecorder);
-        await appendAgentChatLogEntry(logPath, controllerUtils.formatAgentChatLogEntry(resultLogEntry));
         if (sessionService.getSession()?.id) {
           const assistantMessage = agentChatLogRuntime.buildAssistantMessageFromResult({
             result,
@@ -308,8 +301,6 @@ function createAgentChatRequestHandler({
           failure_reasons: failureReasons,
           error: cleanText(errorMessage, 2000)
         };
-        await flushLifecycleRecorderEvents(logPath, lifecycleRecorder);
-        await appendAgentChatLogEntry(logPath, controllerUtils.formatAgentChatLogEntry(errorLogEntry));
         if (sessionService.getSession()?.id) {
           const assistantMessage = canceled
             ? agentChatLogRuntime.buildAssistantMessageFromCancellation({

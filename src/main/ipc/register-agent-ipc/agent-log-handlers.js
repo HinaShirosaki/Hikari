@@ -6,15 +6,13 @@ function registerAgentLogHandlers({
   ipcMain,
   cleanText,
   getStorageRoot = () => '',
-  observability,
   agentChatLogRuntime,
-  getAgentChatLogPath,
   getAgentChatSessionStoragePath,
   agentToolRuntime,
   runAgentController,
   lifecycleService
 } = {}) {
-  const { normalizeJsonPayload, asArray } = lifecycleService;
+  const { normalizeJsonPayload } = lifecycleService;
 
   function resolveExternalSkillsEnabled(normalizedPayload = {}, rawSnapshot = {}) {
     const agentSettings = rawSnapshot?.settings?.agent && typeof rawSnapshot.settings.agent === 'object'
@@ -219,107 +217,6 @@ function registerAgentLogHandlers({
       return {
         ok: false,
         error: cleanText(error?.message || error, 1200) || 'Protocol generation failed.'
-      };
-    }
-  });
-
-  ipcMain.handle(AGENT.LOGS_LIST_REQUESTS, async () => {
-    try {
-      const rows = await observability.readLifecycleLogs({
-        logPath: getAgentChatLogPath(),
-        limit: 8000
-      });
-      const byRequest = new Map();
-
-      rows.forEach((row) => {
-        const requestId = cleanText(row?.requestId, 80);
-        if (!requestId) {
-          return;
-        }
-        const existing = byRequest.get(requestId) || {
-          requestId,
-          message: '',
-          projectId: '',
-          projectName: '',
-          provider: '',
-          model: '',
-          response_type: '',
-          ok: null,
-          failure_reasons: [],
-          started_at: '',
-          ended_at: '',
-          stages: []
-        };
-        const type = cleanText(row?.type, 80);
-        const timestamp = cleanText(row?.timestamp, 80);
-        if (!existing.started_at && timestamp) {
-          existing.started_at = timestamp;
-        }
-        if (timestamp) {
-          existing.ended_at = timestamp;
-        }
-
-        if (type === 'agent-chat-request') {
-          existing.message = cleanText(row?.message, 320);
-          existing.projectId = cleanText(row?.projectId, 80);
-          existing.projectName = cleanText(row?.projectName, 180);
-          existing.provider = cleanText(row?.llm?.provider, 80);
-        } else if (type === 'agent-chat-result') {
-          existing.ok = row?.ok === true;
-          existing.model = cleanText(row?.model, 120);
-          existing.response_type = cleanText(row?.response_type, 80);
-          existing.failure_reasons = Array.from(new Set([...asArray(existing.failure_reasons), ...asArray(row?.failure_reasons)])).slice(0, 20);
-        } else if (type === 'agent-chat-error') {
-          existing.ok = false;
-          existing.failure_reasons = Array.from(new Set([...asArray(existing.failure_reasons), ...asArray(row?.failure_reasons)])).slice(0, 20);
-        } else if (type === 'agent-lifecycle') {
-          const stage = cleanText(row?.stage, 40);
-          if (stage && !existing.stages.includes(stage)) {
-            existing.stages.push(stage);
-          }
-          existing.failure_reasons = Array.from(new Set([...asArray(existing.failure_reasons), ...asArray(row?.failure_reasons)])).slice(0, 20);
-        }
-        byRequest.set(requestId, existing);
-      });
-
-      const items = Array.from(byRequest.values())
-        .sort((a, b) => {
-          const left = Date.parse(a.ended_at || a.started_at || '') || 0;
-          const right = Date.parse(b.ended_at || b.started_at || '') || 0;
-          return right - left;
-        })
-        .slice(0, 200);
-
-      return {
-        ok: true,
-        items
-      };
-    } catch (error) {
-      return {
-        ok: false,
-        error: cleanText(error?.message || error, 2400)
-      };
-    }
-  });
-
-  ipcMain.handle(AGENT.LOGS_REPLAY, async (_event, payload) => {
-    const requestId = cleanText(payload?.requestId, 80);
-    if (!requestId) {
-      return {
-        ok: false,
-        error: 'requestId is required.'
-      };
-    }
-    try {
-      return await observability.replayRequestLifecycle({
-        requestId,
-        logPath: getAgentChatLogPath()
-      });
-    } catch (error) {
-      return {
-        ok: false,
-        requestId,
-        error: cleanText(error?.message || error, 2400)
       };
     }
   });

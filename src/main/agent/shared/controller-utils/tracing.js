@@ -100,13 +100,6 @@ function createAgentTracing({ asArray, cleanText } = {}) {
     };
   }
 
-  function formatAgentChatLogEntry(entry) {
-    return JSON.stringify({
-      timestamp: new Date().toISOString(),
-      ...entry
-    });
-  }
-
   function recordAgentLlmTrace(traceContext, event = {}) {
     const trace = traceContext && typeof traceContext === 'object' ? traceContext : null;
     if (!trace) {
@@ -153,7 +146,6 @@ function createAgentTracing({ asArray, cleanText } = {}) {
     isSensitiveTraceKey,
     redactTracePayload,
     createAgentLlmTraceContext,
-    formatAgentChatLogEntry,
     recordAgentLlmTrace
   };
 }

@@ -389,7 +389,7 @@ Most records are plain JSON files, one per record, so the folder is readable wit
 | `Config/scheduled-tasks.json`, `Config/genome-library.json` | Scheduled paper-finder tasks and connected genome files |
 | `.hikari/agent-memory.json`, `Project/<project>/.hikari/` | Agent memory, and each project's cached notebook summaries |
 
-App-owned files that are not part of your lab record live in the OS app-data folder (`~/Library/Application Support/Hikari` on macOS, `%APPDATA%\Hikari` on Windows): `Config/last-storage-root.json` (so Hikari can find your workspace again), `Config/codex-cli-home/` (the private Codex runtime home), `Logs/` (`errors.log`, `agent-chat.log`), and `Tmp/`. `Settings > Storage & data > Diagnostics & app information > Open Logs Folder` opens the logs.
+App-owned files that are not part of your lab record live in the OS app-data folder (`~/Library/Application Support/Hikari` on macOS, `%APPDATA%\Hikari` on Windows): `Config/last-storage-root.json` (so Hikari can find your workspace again), `Config/codex-cli-home/` (the private Codex runtime home), `Logs/errors.log`, and `Tmp/`. `Settings > Storage & data > Diagnostics & app information > Open Logs Folder` opens the logs.
 
 Notes:
 

@@ -78,10 +78,9 @@ async function main() {
       controllerUtils: {
         buildAgentLogRequestId: () => failed ? 'failed-request' : 'image-request',
         extractConversation: () => [], summarizeLlmForAgentLog: () => ({}),
-        formatAgentChatLogEntry: JSON.stringify, summarizeAgentResultForLog: () => ({ ok: true })
+        summarizeAgentResultForLog: () => ({ ok: true })
       }, observability, agentChatLogRuntime: createAgentChatLogRuntime(),
-      getAgentChatLogPath: () => path.join(temp, 'agent.log'), getAgentChatSessionStoragePath: () => storagePath,
-      appendAgentChatLogEntry: async () => {}, lifecycleService: { ...lifecycleService, flushLifecycleRecorderEvents: async () => {} },
+      getAgentChatSessionStoragePath: () => storagePath, lifecycleService,
       runAgentController: async (_payload, runtime) => {
         const stream = createCodexStreamProgressHandler({ cleanText, emitAgentProgress: runtime.emitAgentProgress, lifecycleRecorder: runtime.lifecycleRecorder, recordLifecycleEvent: observability.recordLifecycleEvent });
         stream.emitStreamProgress(toolEvent);

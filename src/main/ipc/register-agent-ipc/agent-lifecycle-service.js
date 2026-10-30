@@ -11,9 +11,7 @@ const {
 function createAgentLifecycleService({
   cleanText,
   observability,
-  controllerUtils,
-  agentToolRuntime,
-  appendAgentChatLogEntry
+  agentToolRuntime
 } = {}) {
   function asArray(value) {
     return Array.isArray(value) ? value : [];
@@ -149,29 +147,11 @@ function createAgentLifecycleService({
     };
   }
 
-  async function flushLifecycleRecorderEvents(logPath, lifecycleRecorder) {
-    const recorder = lifecycleRecorder && typeof lifecycleRecorder === 'object'
-      ? lifecycleRecorder
-      : null;
-    if (!recorder) {
-      return;
-    }
-    const start = Number.isFinite(Number(recorder.flushed_count))
-      ? Number(recorder.flushed_count)
-      : 0;
-    const events = asArray(recorder.events);
-    for (let index = start; index < events.length; index += 1) {
-      await appendAgentChatLogEntry(logPath, controllerUtils.formatAgentChatLogEntry(events[index]));
-    }
-    recorder.flushed_count = events.length;
-  }
-
   return {
     asArray,
     normalizeJsonPayload,
     buildAgentProgressPayload,
-    createLifecycleToolRunner,
-    flushLifecycleRecorderEvents
+    createLifecycleToolRunner
   };
 }
 
