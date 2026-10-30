@@ -1,0 +1,140 @@
+{
+  "source": "Fictional Hikari browser demo fixtures",
+  "logicalSize": [
+    1280,
+    800
+  ],
+  "renderScale": 3,
+  "images": [
+    {
+      "file": "suggest.webp",
+      "feature": "experiments",
+      "size": [
+        3840,
+        2400
+      ],
+      "sha256": "4c92d2cf0fb55a8174a456557b2797f4b529c57160079f167e0a465d3048548a"
+    },
+    {
+      "file": "clone.webp",
+      "feature": "cloning",
+      "size": [
+        3840,
+        2400
+      ],
+      "sha256": "4c6d277184c70eaa26bb3e9902188f03c8cb05a0a5a7f114c648e4c841a47be9"
+    },
+    {
+      "file": "protocol.webp",
+      "feature": "protocols",
+      "size": [
+        3840,
+        2400
+      ],
+      "sha256": "7872afe9876be6eef849feba48da015b5d1e89ef59c720794b7d9f91af313f02"
+    },
+    {
+      "file": "agent-insights.webp",
+      "feature": "agent-insights",
+      "size": [
+        3840,
+        2400
+      ],
+      "sha256": "4de7d4e826d6b0c0f07a1f47f680ec3b9be2f046146bea7d3ce755c85e2fd041"
+    },
+    {
+      "file": "agent-papers.webp",
+      "feature": "agent-papers",
+      "size": [
+        3840,
+        2400
+      ],
+      "sha256": "6939fd9d6f33b141a92a943e71a7d4718c7fefbef92d970c7a972e0a1e426855"
+    },
+    {
+      "file": "agent-review.webp",
+      "feature": "agent-review",
+      "size": [
+        3840,
+        2400
+      ],
+      "sha256": "9584f9d8e4d4b475b0656cf060d766b859001d18722ada9ffb7f4f45c6c9651c"
+    },
+    {
+      "file": "workflow.webp",
+      "feature": "workflows",
+      "size": [
+        3840,
+        2400
+      ],
+      "sha256": "9a8ec03e3eee654c9a8b7b6489f4b28ca84c4a9330c00ca93acf9015739a5256",
+      "source": "Current desktop Workflow renderer, HTML, and styles; fictional fixture records only"
+    },
+    {
+      "file": "protein-builder.webp",
+      "feature": "protein-builder",
+      "size": [
+        3840,
+        2400
+      ],
+      "sha256": "6ab2ccab5e054081cb26a7bc5abef5d1815366433723d058c8ec3c3d37bebc30",
+      "logicalSize": [
+        1600,
+        1000
+      ],
+      "renderScale": 2.4,
+      "source": "Current desktop Protein Builder renderer, HTML, and styles; illustrative 614-aa VH\u2013VL\u2013Fc\u2013VHH fusion with three (GGGGS)3 linkers and matching 1,842-nt coding DNA using Human codon usage; 1600 \u00d7 1000 logical window at 2.4\u00d7"
+    },
+    {
+      "file": "agent-plot.webp",
+      "feature": "agent-plot",
+      "size": [
+        3840,
+        2400
+      ],
+      "sha256": "73f2b407c33403f419507596ff1b9a85035b3b8877946a74d9c5762f272b727c"
+    },
+    {
+      "file": "calc.webp",
+      "feature": "calculations",
+      "size": [
+        3840,
+        2400
+      ],
+      "sha256": "30fc1dc762771b9f98c33d01c522ade8da4991f799f52edddb015e818b760ec3"
+    },
+    {
+      "file": "samples.webp",
+      "feature": "samples",
+      "size": [
+        3840,
+        2400
+      ],
+      "sha256": "6efc4f4be329fdf10aab382092f1aa8401bba3c61c129a0a0cfdf4b06076b12c"
+    },
+    {
+      "file": "agent-protocols.webp",
+      "feature": "agent-protocols",
+      "size": [
+        3840,
+        2400
+      ],
+      "sha256": "db4556ce4a4a2ab24512be22778a0e4947b8e935657de094e9f7ebd13742bf3f"
+    },
+    {
+      "file": "plugins.webp",
+      "feature": "plugins",
+      "size": [
+        3840,
+        2400
+      ],
+      "sha256": "15c5efece152ff4c56b5c83a459879ddb92d9e7a30a8bfb45cc9c0058c4a1e4b",
+      "logicalSize": [
+        1600,
+        1000
+      ],
+      "renderScale": 2.4,
+      "source": "Current Figura plugin; five-panel fictional receptor-response case, 104 editable layers, 64 independent labels, 5 groups; synthetic measurements"
+    }
+  ]
+}

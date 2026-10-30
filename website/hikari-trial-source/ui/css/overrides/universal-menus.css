@@ -1,0 +1,203 @@
+/* Universal context and searchable dropdown menu styling. */
+
+:root {
+  --hikari-menu-radius: 10px;
+  --hikari-menu-item-radius: 8px;
+  --hikari-menu-surface: color-mix(in srgb, var(--theme-surface-elevated) 96%, var(--theme-surface-subtle) 4%);
+  --hikari-menu-border: var(--theme-border-soft);
+  --hikari-menu-separator: color-mix(in srgb, var(--theme-border-soft) 88%, transparent);
+  --hikari-menu-hover: color-mix(in srgb, var(--theme-surface-subtle) 74%, var(--theme-surface-elevated) 26%);
+  --hikari-menu-pressed: color-mix(in srgb, var(--theme-surface-subtle) 88%, var(--theme-surface-elevated) 12%);
+  --hikari-menu-search: color-mix(in srgb, var(--theme-surface-subtle) 64%, var(--theme-surface-elevated) 36%);
+  --hikari-menu-shadow: 0 16px 34px var(--theme-shadow-color), 0 2px 8px var(--theme-shadow-color-subtle);
+}
+
+body.theme-night {
+  --hikari-menu-surface: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-background) 8%);
+  --hikari-menu-border: color-mix(in srgb, var(--theme-border) 84%, var(--theme-surface-elevated) 8%);
+  --hikari-menu-separator: color-mix(in srgb, var(--theme-border-soft) 86%, var(--theme-surface-elevated) 8%);
+  --hikari-menu-hover: color-mix(in srgb, var(--theme-surface-subtle) 82%, var(--theme-surface-elevated) 8%);
+  --hikari-menu-pressed: color-mix(in srgb, var(--theme-surface-subtle) 92%, var(--theme-surface-elevated) 10%);
+  --hikari-menu-search: color-mix(in srgb, var(--theme-surface-subtle) 84%, var(--theme-surface-elevated) 4%);
+  --hikari-menu-shadow: 0 18px 40px var(--theme-shadow-color), 0 2px 10px var(--theme-shadow-color);
+}
+
+.app-more-menu,
+.protocol-action-menu {
+  padding: var(--space-8) !important;
+  border: 1px solid var(--hikari-menu-border) !important;
+  border-radius: var(--hikari-menu-radius) !important;
+  background: var(--hikari-menu-surface) !important;
+  box-shadow: var(--hikari-menu-shadow) !important;
+  backdrop-filter: blur(18px) saturate(1.04);
+}
+
+/*
+ * Right-click menus are intentionally flatter than searchable/action menus.
+ * Keep this as the single visual owner so module-local menu shells do not
+ * drift back into rounded cards with stacked shadows.
+ */
+.papers-context-menu,
+.biology-notebook-context-menu,
+.biology-notebook-sample-link-menu,
+.workflow-context-menu,
+.sequence-viewer-context-menu:not(.sequence-viewer-toolbar-menu),
+.personal-inventory-context-menu,
+.agent-session-context-menu,
+.selection-insight-menu {
+  gap: 0;
+  padding: var(--space-4) 0 !important;
+  border: 1px solid var(--hikari-menu-border) !important;
+  border-radius: 0 !important;
+  background: var(--hikari-menu-surface) !important;
+  box-shadow: none !important;
+  backdrop-filter: none;
+}
+
+.app-more-item,
+.protocol-action-item {
+  min-height: 40px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-12);
+  padding: 9px var(--space-10);
+  border: 0 !important;
+  border-radius: var(--hikari-menu-item-radius);
+  background: transparent !important;
+  color: var(--theme-text-strong);
+  font: inherit;
+  font-size: var(--text-md);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.papers-context-item,
+.biology-notebook-context-item,
+.biology-notebook-placeholder-table-action,
+.workflow-context-item,
+.sequence-viewer-context-menu:not(.sequence-viewer-toolbar-menu) .sequence-viewer-context-item,
+.personal-inventory-context-item,
+.agent-session-context-item,
+.selection-insight-menu-item {
+  min-height: 36px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-10);
+  padding: var(--space-8) var(--space-12);
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--theme-text-strong);
+  font: inherit;
+  font-size: var(--text-base);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.app-more-item:hover,
+.app-more-item:focus-visible,
+.app-more-item.is-active,
+.protocol-action-item:hover,
+.protocol-action-item:focus-visible {
+  background: var(--hikari-menu-hover) !important;
+  color: var(--theme-text-strong);
+  outline: none;
+}
+
+.papers-context-item:hover,
+.papers-context-item:focus-visible,
+.biology-notebook-context-item:hover,
+.biology-notebook-context-item:focus-visible,
+.biology-notebook-placeholder-table-action:hover,
+.biology-notebook-placeholder-table-action:focus-visible,
+.workflow-context-item:hover,
+.workflow-context-item:focus-visible,
+.sequence-viewer-context-menu:not(.sequence-viewer-toolbar-menu) .sequence-viewer-context-item:hover:not(:disabled),
+.sequence-viewer-context-menu:not(.sequence-viewer-toolbar-menu) .sequence-viewer-context-item:focus-visible:not(:disabled),
+.personal-inventory-context-item:hover:not(:disabled),
+.personal-inventory-context-item:focus-visible:not(:disabled),
+.agent-session-context-item:hover,
+.agent-session-context-item:focus-visible,
+.selection-insight-menu-item:hover,
+.selection-insight-menu-item:focus-visible {
+  background: var(--hikari-menu-hover) !important;
+  color: var(--theme-text-strong);
+  outline: none;
+}
+
+.app-more-item:active,
+.protocol-action-item:active {
+  background: var(--hikari-menu-pressed) !important;
+}
+
+.papers-context-item:active,
+.biology-notebook-context-item:active,
+.biology-notebook-placeholder-table-action:active,
+.workflow-context-item:active,
+.sequence-viewer-context-menu:not(.sequence-viewer-toolbar-menu) .sequence-viewer-context-item:active:not(:disabled),
+.personal-inventory-context-item:active:not(:disabled),
+.agent-session-context-item:active,
+.selection-insight-menu-item:active {
+  background: var(--hikari-menu-pressed) !important;
+}
+
+.sequence-viewer-context-menu:not(.sequence-viewer-toolbar-menu) .sequence-viewer-context-item:disabled,
+.personal-inventory-context-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.papers-context-item-danger,
+.personal-inventory-context-item-danger,
+.agent-session-context-item-danger,
+.protocol-action-item-danger {
+  color: var(--theme-danger);
+}
+
+.papers-context-item-danger:hover,
+.papers-context-item-danger:focus-visible,
+.personal-inventory-context-item-danger:hover:not(:disabled),
+.personal-inventory-context-item-danger:focus-visible:not(:disabled),
+.agent-session-context-item-danger:hover,
+.agent-session-context-item-danger:focus-visible,
+.protocol-action-item-danger:hover,
+.protocol-action-item-danger:focus-visible {
+  color: var(--theme-danger);
+  background: var(--theme-danger-wash) !important;
+}
+
+body.theme-night .app-more-item,
+body.theme-night .selection-insight-menu-item,
+body.theme-night .papers-context-item,
+body.theme-night .workflow-context-item,
+body.theme-night .sequence-viewer-context-item,
+body.theme-night .protocol-action-item {
+  background: transparent !important;
+  color: var(--theme-text);
+}
+
+body.theme-night .app-more-item:hover,
+body.theme-night .app-more-item:focus-visible,
+body.theme-night .selection-insight-menu-item:hover,
+body.theme-night .selection-insight-menu-item:focus-visible,
+body.theme-night .papers-context-item:hover,
+body.theme-night .papers-context-item:focus-visible,
+body.theme-night .workflow-context-item:hover,
+body.theme-night .workflow-context-item:focus-visible,
+body.theme-night .sequence-viewer-context-item:hover:not(:disabled),
+body.theme-night .sequence-viewer-context-item:focus-visible:not(:disabled),
+body.theme-night .protocol-action-item:hover,
+body.theme-night .protocol-action-item:focus-visible {
+  background: var(--hikari-menu-hover) !important;
+  color: var(--theme-text-strong);
+}

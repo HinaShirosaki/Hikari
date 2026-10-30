@@ -1,0 +1,26 @@
+.trial-guide-layer { position: absolute; inset: 0; z-index: 30; overflow: hidden; border-radius: inherit; pointer-events: none; }
+.trial-guide-layer[hidden] { display: none; }
+.trial-guide-art { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; color: var(--accent); }
+.trial-guide-mask { fill: #0c0a18a8; pointer-events: none; }
+.trial-guide-spotlight { fill: none; stroke: var(--accent); stroke-width: 2; pointer-events: none; }
+.trial-guide-arrow { fill: none; stroke: var(--accent); stroke-width: 2.5; pointer-events: none; }
+.trial-guide-caption { position: absolute; display: flex; flex-direction: column; box-sizing: border-box; width: clamp(236px, 34cqw, 286px); max-width: calc(100% - 24px); max-height: calc(100% - 24px); overflow: hidden; padding: clamp(12px, 1.8cqw, 18px);
+  border: 1px solid #f6c17770; border-radius: 12px; background: var(--bg); color: var(--fg);
+  box-shadow: 0 12px 40px #0005; pointer-events: auto; font: clamp(12px, min(1.7cqw, 2.8cqh), 14px)/1.45 var(--sans); }
+.trial-guide-caption-head { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.trial-guide-caption-body { min-height: 0; overflow: auto; }
+#trial-guide-step { color: var(--accent); font: 11px/1.3 var(--mono); }
+.trial-guide-caption h3 { margin: 0 0 10px; font: 500 clamp(16px, min(2.3cqw, 3.4cqh), 19px)/1.25 var(--sans); }
+.trial-guide-caption p { margin: 0; color: var(--fg); }
+.trial-guide-caption .trial-guide-wait { margin-top: 12px; color: var(--muted); font-size: 12px; }
+.trial-guide-actions { display: flex; flex: 0 0 auto; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 16px; }
+.trial-guide-actions:has(button:not([hidden])) { min-height: 30px; }
+.trial-guide-back { margin-right: auto; }
+.trial-guide-caption button { border: 0; border-radius: 5px; padding: 7px 10px; cursor: pointer; font: 500 12px/1.3 var(--sans); }
+.trial-guide-caption :is(.trial-guide-skip,.trial-guide-back) { padding-inline: 0; color: var(--muted); background: transparent; }
+.trial-guide-caption :is(.trial-guide-skip,.trial-guide-back):hover { color: var(--fg); }
+.trial-guide-next { color: var(--bg); background: var(--accent); }
+.trial-guide-next:disabled { color: var(--muted); background: transparent; box-shadow: inset 0 0 0 1px var(--muted); cursor: default; }
+.trial-guide-caption button:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.trial-guide-start { padding: 4px 6px; color: var(--accent); background: transparent; border: 0; font: 12px/1.3 var(--sans); cursor: pointer; white-space: nowrap; }
+.trial-guide-start:hover { color: var(--fg); }

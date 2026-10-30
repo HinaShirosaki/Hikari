@@ -1,0 +1,130 @@
+export function fileToBytes(file) {
+  if (file && typeof file.arrayBuffer === 'function') {
+    return file.arrayBuffer().then((buffer) => new Uint8Array(buffer));
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const bytes = normalizePdfBytePayload(reader.result);
+      if (bytes?.byteLength) {
+        resolve(bytes);
+      } else {
+        reject(new Error('Failed to read PDF file.'));
+      }
+    };
+    reader.onerror = () => reject(new Error('Failed to read PDF file.'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+export function sanitizeFolderName(value) {
+  return String(value || '')
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+export function buildPaperStorageFolder({ rootPath, linkedType, linkedName }) {
+  const normalizedType = String(linkedType || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_]+/g, '-');
+  const safeLinkedName = sanitizeFolderName(linkedName) || 'Uncategorized';
+  if (normalizedType === 'journal-club' || normalizedType === 'literature-search') {
+    return `${String(rootPath || '').trim()}/Papers/${safeLinkedName}`;
+  }
+  return `${String(rootPath || '').trim()}/Project/${safeLinkedName}/Papers`;
+}
+
+export function resolveStoredPaperPath(paper, storagePath = '') {
+  const directPath = String(paper?.storedFilePath || '').trim();
+  if (directPath) {
+    return directPath;
+  }
+
+  const relativePath = String(paper?.storedRelativePath || '').trim();
+  const storageRoot = String(storagePath || '').trim();
+  if (!relativePath || !storageRoot) {
+    return '';
+  }
+
+  const rootClean = storageRoot.replace(/[\\/]+$/, '');
+  const relativeParts = relativePath.split(/[\\/]+/).filter(Boolean);
+  if (!rootClean || !relativeParts.length) {
+    return '';
+  }
+  const separator = rootClean.includes('\\') ? '\\' : '/';
+  return [rootClean, ...relativeParts].join(separator);
+}
+
+export function openPdfDataUrl(pdfDataUrl, targetWindow = window) {
+  const source = String(pdfDataUrl || '').trim();
+  if (!source) {
+    return false;
+  }
+
+  const base64Match = source.match(/^data:application\/pdf(?:;charset=[^;,]+)?;base64,(.+)$/i);
+  if (base64Match?.[1]) {
+    try {
+      const binary = atob(base64Match[1]);
+      const bytes = new Uint8Array(binary.length);
+      for (let index = 0; index < binary.length; index += 1) {
+        bytes[index] = binary.charCodeAt(index);
+      }
+      const blobUrl = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+      const popup = targetWindow?.open?.(blobUrl, '_blank', 'noopener,noreferrer');
+      targetWindow?.setTimeout?.(() => {
+        URL.revokeObjectURL(blobUrl);
+      }, 60_000);
+      return Boolean(popup);
+    } catch {
+      // Fall through to direct open below.
+    }
+  }
+
+  const popup = targetWindow?.open?.(source, '_blank', 'noopener,noreferrer');
+  return Boolean(popup);
+}
+
+export function parsePdfDataUrl(pdfDataUrl) {
+  const value = String(pdfDataUrl || '').trim();
+  const match = value.match(/^data:application\/pdf(?:;charset=[^;,]+)?;base64,(.+)$/i);
+  if (!match?.[1]) {
+    return '';
+  }
+  return match[1];
+}
+
+export function decodeBase64Pdf(base64) {
+  const binary = atob(String(base64 || '').trim());
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+}
+
+export function normalizePdfBytePayload(value) {
+  if (!value) {
+    return null;
+  }
+  if (value instanceof Uint8Array) {
+    return value;
+  }
+  if (value instanceof ArrayBuffer) {
+    return new Uint8Array(value);
+  }
+  if (ArrayBuffer.isView(value)) {
+    return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  }
+  if (Array.isArray(value?.data)) {
+    return Uint8Array.from(value.data);
+  }
+  return null;
+}
+
+export function buildPdfDataUrlFromBase64(base64) {
+  const payload = String(base64 || '').trim();
+  return payload ? `data:application/pdf;base64,${payload}` : '';
+}

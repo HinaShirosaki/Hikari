@@ -1,0 +1,16 @@
+.shot-viewport { position: relative; width: 100%; aspect-ratio: 16 / 10; overflow: hidden; background: #fcfbf8; }
+.shot .shot-viewport img { width: 100%; height: 100%; object-fit: contain; }
+/* All feature media share one canvas, including the interactive protocol diagram. */
+@media (min-width: 761px) {
+  .shot .shot-viewport { max-height: calc(100svh - 320px); }
+}
+.shot[data-focus="true"] .shot-viewport img {
+  position: absolute; left: 50%; top: 50%; width: calc(100% * var(--focus-scale)); height: auto;
+  max-height: none; transform: translate(calc(-100% * var(--focus-x)), calc(-100% * var(--focus-y)));
+}
+.shot .bar { position: relative; }
+.shot .bar i:nth-child(1) { background: #ff5f57; }
+.shot .bar i:nth-child(2) { background: #febc2e; }
+.shot .bar i:nth-child(3) { background: #28c840; }
+.shot-title { position: absolute; left: 50%; transform: translateX(-50%); max-width: calc(100% - 168px);
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: #777268; font: 11px/1.2 var(--sans); }

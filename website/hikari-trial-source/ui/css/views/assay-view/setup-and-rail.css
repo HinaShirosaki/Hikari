@@ -1,0 +1,604 @@
+/* assay-view */
+
+/* Match the Notebook's visible hover/focus captions while keeping each Assay
+   action's existing accessible name and compact geometry. */
+#assay-view button[data-hover-caption] {
+  position: relative;
+}
+
+#assay-view button[data-hover-caption]::after {
+  content: attr(data-hover-caption);
+  position: absolute;
+  z-index: 3200;
+  top: calc(100% + 7px);
+  left: 50%;
+  width: max-content;
+  max-width: 180px;
+  padding: var(--space-4) 7px;
+  border: 1px solid var(--theme-border);
+  border-radius: 6px;
+  background: var(--theme-surface-elevated);
+  box-shadow: 0 6px 16px var(--theme-shadow-color);
+  color: var(--theme-text-strong);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: left;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%);
+  transition: opacity 90ms ease, visibility 0s linear 90ms;
+}
+
+#assay-view button[data-hover-caption]:hover::after,
+#assay-view button[data-hover-caption]:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 180ms;
+}
+
+#assay-view .assay-form-actions > button[data-hover-caption]:first-of-type::after,
+#assay-view .assay-results-actions > button[data-hover-caption]:first-of-type::after,
+#assay-view .assay-analysis-group-actions > button[data-hover-caption]:first-of-type::after,
+#assay-view .assay-chart-text-bar__row > button[data-hover-caption]:first-of-type::after {
+  right: auto;
+  left: 0;
+  transform: none;
+}
+
+#assay-view .assay-form-actions > button[data-hover-caption]:last-of-type::after,
+#assay-view .assay-results-actions > button[data-hover-caption]:last-of-type::after,
+#assay-view .assay-analysis-group-actions > button[data-hover-caption]:last-of-type::after,
+#assay-view .assay-browser-item-actions > button[data-hover-caption]:last-of-type::after,
+#assay-view .assay-result-table-panel > .foldable-section__summary > button[data-hover-caption]::after,
+#assay-view .app-dialog-head > button[data-hover-caption]::after,
+#assay-view .assay-chart-text-bar__row > button[data-hover-caption]:last-of-type::after {
+  right: 0;
+  left: auto;
+  transform: none;
+}
+
+/* Extracted from ui/css/base/core.css */
+.assay-results-actions {
+  margin-top: var(--space-8);
+}
+
+.assay-results-actions > .ghost-btn {
+  border-color: transparent;
+  background: transparent;
+}
+
+.assay-results-actions > .ghost-btn:hover,
+.assay-results-actions > .ghost-btn:focus-visible {
+  border-color: transparent;
+  background: var(--theme-surface-subtle);
+}
+
+.assay-results-actions > .primary-btn {
+  border-color: transparent;
+}
+
+.assay-results-actions > .assay-results-icon-btn {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+}
+
+.assay-results-actions > .assay-results-icon-btn svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.assay-results-actions > .assay-results-save-icon-btn.primary-btn {
+  border-color: transparent;
+  background: var(--theme-accent);
+  color: var(--theme-text-on-accent);
+}
+
+.assay-results-actions > .assay-results-save-icon-btn.primary-btn:hover,
+.assay-results-actions > .assay-results-save-icon-btn.primary-btn:focus-visible {
+  background: var(--theme-accent-hover);
+}
+
+.assay-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-16);
+  flex-wrap: wrap;
+}
+
+.assay-header-row h2 {
+  margin: 0;
+}
+
+.assay-create-sidebar {
+  align-self: stretch;
+}
+
+.left-rail-template.assay-create-layout > .assay-create-sidebar.left-rail-template__rail--pinned {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  align-content: stretch;
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  padding: 0 !important;
+  overflow: hidden !important;
+  scrollbar-gutter: auto !important;
+  background: var(--app-left-rail-surface, var(--theme-surface)) !important;
+}
+
+.assay-rail-mode-switch {
+  padding: var(--space-12) calc(var(--app-left-rail-padding-inline, 16px) + var(--theme-scrollbar-size, 8px)) var(--space-12) var(--app-left-rail-padding-inline, 16px);
+  border-bottom: 1px solid var(--app-left-rail-divider);
+}
+
+.assay-create-sidebar > .assay-create-sidebar-pinned.left-rail-template__pinned {
+  padding: var(--space-14) calc(var(--app-left-rail-padding-inline, 16px) + var(--theme-scrollbar-size, 8px)) var(--space-12) var(--app-left-rail-padding-inline, 16px);
+  border-bottom: 1px solid var(--app-left-rail-divider);
+}
+
+.assay-create-sidebar > .assay-create-sidebar-scroll.left-rail-template__scroll {
+  padding: var(--space-8) var(--app-left-rail-padding-inline, 16px) var(--space-16);
+  scrollbar-gutter: stable;
+}
+
+.left-rail-template.assay-create-layout {
+  --left-rail-main-gap: var(--space-20);
+  display: grid;
+  grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
+  gap: var(--space-20);
+  align-items: stretch;
+  min-height: var(--shared-left-rail-layout-height);
+}
+
+.assay-create-layout > * {
+  min-width: 0;
+}
+
+.left-rail-template.assay-results-layout {
+  --left-rail-main-gap: var(--space-20);
+  display: grid;
+  grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
+  gap: var(--space-20);
+  align-items: stretch;
+  /* Bounded to the (height:100%) view so the workspace __main scrolls instead of
+     overflowing the clip; matches the sequence-viewer detail layout. */
+  min-height: 0;
+  height: 100%;
+}
+
+.assay-results-layout > * {
+  min-width: 0;
+}
+
+.assay-results-sheet-panel,
+.assay-results-analysis-panel {
+  display: grid;
+  gap: var(--space-10);
+}
+
+.assay-browser-panel {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.assay-browser-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding: 0 0 var(--space-10);
+  cursor: pointer;
+  color: var(--theme-text-strong);
+  font-weight: 650;
+}
+
+.assay-browser-summary::-webkit-details-marker {
+  display: none;
+}
+
+.assay-browser-summary::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 140ms ease;
+}
+
+.assay-browser-panel[open] .assay-browser-summary::after {
+  transform: translateY(2px) rotate(225deg);
+}
+
+.assay-browser-body {
+  display: grid;
+  gap: var(--space-12);
+  padding: 0 0 var(--space-8);
+}
+
+#assay-search,
+#assay-results-search {
+  height: var(--left-rail-item-min-height, 36px);
+  min-height: var(--left-rail-item-min-height, 36px);
+}
+
+.assay-browser-list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.assay-browser-empty {
+  padding: var(--space-6) 0 var(--space-2);
+}
+
+.assay-browser-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-10);
+  padding: var(--space-12) 72px var(--space-12) var(--space-8);
+}
+
+.assay-browser-item-copy {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: var(--space-4);
+}
+
+/* The row carries hover/selection; without the :hover copy, global button:hover
+   paints an opaque pill inside the row and the highlight reads as two layers. */
+.assay-browser-item-select,
+.assay-browser-item-select:hover {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.assay-browser-item-title {
+  margin: 0;
+  color: var(--theme-text-strong);
+  font-size: var(--text-base);
+  font-weight: 650;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assay-results-browser-list .assay-browser-item {
+  padding-inline: var(--space-8);
+  border-radius: 8px;
+}
+
+.assay-results-browser-list .assay-browser-item.is-active {
+  background: var(--theme-surface-subtle);
+  box-shadow: inset 3px 0 0 var(--theme-accent);
+}
+
+.assay-results-browser-list .assay-browser-item-select:hover .assay-browser-item-title,
+.assay-results-browser-list .assay-browser-item-select:focus-visible .assay-browser-item-title {
+  color: var(--theme-accent);
+}
+
+.assay-browser-item-actions {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.assay-results-controls-panel {
+  gap: 0;
+}
+
+/* Analyze rail: the pinned mode switch over a single scroller of foldable sections. */
+.left-rail-template.assay-results-layout > .assay-results-controls-panel.app-left-rail {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: stretch;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  padding: 0 !important;
+  overflow: hidden !important;
+  scrollbar-gutter: auto !important;
+  background: var(--app-left-rail-surface, var(--theme-surface)) !important;
+}
+
+/* The scroller spans the rail's full width so its scrollbar rides the rail border
+   instead of floating in a padding gutter. */
+.assay-results-controls-panel > .assay-results-rail-scroll.left-rail-template__scroll {
+  display: grid;
+  align-content: start;
+  gap: 0;
+  min-height: 0;
+  padding: var(--space-8) var(--space-6) var(--space-16) var(--app-left-rail-padding-inline, 16px);
+  overflow-y: auto !important;
+  scrollbar-gutter: stable;
+}
+
+.assay-results-workspace {
+  display: grid;
+  gap: var(--space-18);
+  align-content: start;
+  min-height: 0;
+  /* This panel is a scroll container with a definite height, so `auto` rows are shrunk to
+     share it -- and `min-height: 0` on the stages lets them shrink past their content.
+     A tall plate then spilled out of its stage and painted over the chart below it.
+     Content-sized rows overflow into the panel's own scroll instead of overlapping. */
+  grid-auto-rows: max-content;
+}
+
+.assay-results-table-stage,
+.assay-results-output-stage {
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Folding the plate away hands its vertical space to the chart below it. */
+.assay-result-table-panel:not([open]) > .foldable-section__summary {
+  color: var(--theme-text-muted);
+}
+
+/* The last visible plate table flows directly into the output stage. Keep a divider
+   between Table1 and a shown Table2, but do not stack one above the graph. */
+.assay-results-table-stage > .assay-result-table-panel:not(:has(~ .assay-result-table-panel:not([hidden]))) {
+  border-bottom: 0;
+}
+
+.assay-results-output-stage {
+  display: none;
+}
+
+.assay-results-output-stage:has(#assay-analysis-table:not(:empty)) {
+  display: grid;
+  padding-top: var(--space-14);
+  border-top: 0;
+}
+
+.assay-results-workspace #assay-result-table,
+.assay-results-workspace #assay-derived-plate-table,
+.assay-results-workspace #assay-analysis-table {
+  margin-top: 0;
+}
+
+.assay-results-workspace #assay-analysis-table {
+  border-top: 0;
+}
+
+.assay-form-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end;
+}
+
+.assay-form-grid > * {
+  min-width: 0;
+}
+
+.assay-display-field {
+  display: grid;
+  gap: var(--space-6);
+  align-content: start;
+}
+
+.assay-display-label {
+  color: var(--theme-text-strong);
+  font-size: var(--text-md);
+  font-weight: 500;
+}
+
+.assay-conc-unit-field {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-6);
+  color: var(--theme-text-strong);
+  font-size: var(--text-base);
+  font-weight: 500;
+}
+
+.assay-conc-unit-input {
+  width: 72px;
+  padding: var(--space-6) var(--space-8);
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text-strong);
+  font-size: var(--text-base);
+}
+
+.assay-fill-mode-select {
+  padding: var(--space-6) var(--space-8);
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text-strong);
+  font-size: var(--text-base);
+}
+
+.assay-display-value {
+  min-height: 41px;
+  display: flex;
+  align-items: center;
+  color: var(--theme-text-strong);
+  font-size: var(--text-lg);
+  font-weight: 650;
+  padding: 9px 11px;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface);
+}
+
+.assay-form-note,
+.assay-form-actions {
+  grid-column: 1 / -1;
+}
+
+.assay-create-sidebar .assay-form-grid {
+  grid-template-columns: 1fr;
+}
+
+.assay-create-sidebar .assay-form-actions {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.assay-form-actions > .assay-form-icon-btn {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+}
+
+.assay-form-actions > .assay-form-icon-btn svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.assay-form-actions > .ghost-btn.assay-form-icon-btn {
+  border-color: transparent;
+  background: transparent;
+}
+
+.assay-form-actions > .ghost-btn.assay-form-icon-btn:hover,
+.assay-form-actions > .ghost-btn.assay-form-icon-btn:focus-visible {
+  border-color: transparent;
+  background: var(--theme-surface-subtle);
+}
+
+.assay-form-actions > .assay-form-save-icon-btn.primary-btn {
+  width: auto;
+  min-width: 72px;
+  padding: 0 var(--space-10);
+  display: inline-flex;
+  gap: var(--space-6);
+  border-color: transparent;
+}
+
+.assay-form-button-caption {
+  font-size: var(--text-xs);
+  font-weight: 650;
+  line-height: 1;
+}
+
+.assay-form-actions > .assay-plate-type-field {
+  display: block;
+  flex: 0 0 104px;
+  width: 104px;
+  margin: 0 0 0 var(--space-4);
+}
+
+.assay-form-actions > .assay-plate-type-field select {
+  width: 100%;
+  min-height: 34px;
+  padding: var(--space-6) 26px var(--space-6) 9px;
+  font-size: var(--text-base);
+}
+
+.assay-create-preview-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  align-self: stretch;
+}
+
+.assay-create-preview-panel > .assay-plate-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8) var(--space-12);
+  margin: 0 0 var(--space-12);
+  padding-bottom: var(--space-12);
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.assay-plate-toolbar .assay-mode-switch {
+  gap: var(--space-2);
+  padding: 3px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--theme-surface-subtle);
+}
+
+.assay-plate-toolbar .ghost-btn,
+.assay-plate-toolbar .assay-fill-mode-select,
+.assay-plate-toolbar .assay-conc-unit-input {
+  box-sizing: border-box;
+  min-height: 32px;
+  margin: 0;
+  padding: 5px var(--space-10);
+  border-radius: 6px;
+  font-size: var(--text-sm);
+  line-height: 20px;
+}
+
+.assay-plate-toolbar .ghost-btn {
+  white-space: nowrap;
+}
+
+.assay-plate-toolbar .assay-plate-fill-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.assay-plate-toolbar .assay-conc-unit-field {
+  margin: 0;
+}
+
+.assay-plate-toolbar .assay-conc-unit-input {
+  width: 84px;
+}
+
+.assay-plate-toolbar .assay-plate-clear-btn {
+  margin-inline-start: auto;
+  border-color: transparent;
+  color: var(--theme-text-muted);
+  background: transparent;
+}
+
+.assay-plate-toolbar .assay-plate-clear-btn:hover {
+  color: var(--theme-text-strong);
+  background: var(--theme-surface-subtle);
+}
+
+.assay-plate-toolbar .assay-mode-switch > .calendar-view-active {
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text-strong);
+  box-shadow: 0 1px 2px var(--theme-border);
+}

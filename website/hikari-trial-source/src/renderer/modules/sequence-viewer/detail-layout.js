@@ -1,0 +1,161 @@
+import {
+  DEFAULT_SEQUENCE_LINE_LENGTH,
+  FALLBACK_CHAR_ADVANCE_PX,
+  FALLBACK_SEQUENCE_LINE_HEIGHT_PX,
+  DEFAULT_STRAND_MARKER_COLUMN_PX,
+  DEFAULT_STRAND_COLUMN_GAP_PX
+} from './constants.js';
+import { clamp, parseCssPixels } from './shared.js';
+
+function measureSequenceTypography(rootDocument, sequenceHost) {
+  let charAdvancePx = FALLBACK_CHAR_ADVANCE_PX;
+  let lineHeightPx = FALLBACK_SEQUENCE_LINE_HEIGHT_PX;
+
+  if (rootDocument && sequenceHost && typeof sequenceHost.appendChild === 'function') {
+    let probe = null;
+    try {
+      probe = rootDocument.createElement('span');
+      probe.className = 'sequence-viewer-seq-text';
+      probe.style.position = 'absolute';
+      probe.style.visibility = 'hidden';
+      probe.style.pointerEvents = 'none';
+      probe.style.whiteSpace = 'nowrap';
+      probe.style.display = 'inline-block';
+      probe.style.width = 'auto';
+      const sampleLength = 40;
+      const content = rootDocument.createElement('span');
+      content.className = 'sequence-viewer-seq-text-content';
+      for (let index = 0; index < sampleLength; index += 1) {
+        const base = rootDocument.createElement('span');
+        base.className = 'sequence-viewer-seq-base';
+        base.textContent = 'A';
+        content.appendChild(base);
+      }
+      probe.appendChild(content);
+      sequenceHost.appendChild(probe);
+
+      const measuredAdvance = probe.getBoundingClientRect().width / sampleLength;
+      if (Number.isFinite(measuredAdvance) && measuredAdvance > 0) {
+        charAdvancePx = measuredAdvance;
+      }
+
+      if (typeof globalThis.getComputedStyle === 'function') {
+        const computed = globalThis.getComputedStyle(probe);
+        const measuredLineHeight = parseCssPixels(computed?.lineHeight);
+        if (Number.isFinite(measuredLineHeight) && measuredLineHeight > 0) {
+          lineHeightPx = measuredLineHeight;
+        } else {
+          const measuredFontSize = parseCssPixels(computed?.fontSize);
+          if (Number.isFinite(measuredFontSize) && measuredFontSize > 0) {
+            lineHeightPx = measuredFontSize * 1.35;
+          }
+        }
+      }
+    } catch {
+      // Keep fallback typography metrics.
+    } finally {
+      probe?.remove?.();
+    }
+  }
+
+  return {
+    charAdvancePx: Math.max(1, charAdvancePx),
+    lineHeightPx: Math.max(8, lineHeightPx)
+  };
+}
+
+export function computeSequenceLayoutMetrics(rootDocument, sequenceHost) {
+  const typography = measureSequenceTypography(rootDocument, sequenceHost);
+  const fallbackFeatureOffsetPx = DEFAULT_STRAND_MARKER_COLUMN_PX + DEFAULT_STRAND_COLUMN_GAP_PX;
+  if (!sequenceHost || typeof sequenceHost.clientWidth !== 'number') {
+    return {
+      lineLength: DEFAULT_SEQUENCE_LINE_LENGTH,
+      charAdvancePx: typography.charAdvancePx,
+      lineHeightPx: typography.lineHeightPx,
+      lineFeatureOffsetPx: fallbackFeatureOffsetPx
+    };
+  }
+
+  const hostWidth = Math.max(0, sequenceHost.clientWidth);
+  if (!hostWidth) {
+    return {
+      lineLength: DEFAULT_SEQUENCE_LINE_LENGTH,
+      charAdvancePx: typography.charAdvancePx,
+      lineHeightPx: typography.lineHeightPx,
+      lineFeatureOffsetPx: fallbackFeatureOffsetPx
+    };
+  }
+
+  const compact = hostWidth <= 640;
+  const coordColumn = compact ? 58 : 74;
+  const dualGap = compact ? 8 : 10;
+  const strandEndColumn = compact ? 24 : 28;
+  const strandEndGap = DEFAULT_STRAND_COLUMN_GAP_PX;
+  const lineFeatureOffsetPx = strandEndColumn + strandEndGap;
+
+  let hostPadding = 0;
+  if (typeof globalThis.getComputedStyle === 'function') {
+    const computed = globalThis.getComputedStyle(sequenceHost);
+    hostPadding = parseCssPixels(computed?.paddingLeft) + parseCssPixels(computed?.paddingRight);
+  }
+
+  const usableWidth = Math.max(
+    120,
+    hostWidth - hostPadding - coordColumn - dualGap - (strandEndColumn * 2) - (strandEndGap * 2) - 12
+  );
+  const lineLength = clamp(Math.floor(usableWidth / Math.max(4.2, typography.charAdvancePx)), 24, 280);
+
+  return {
+    lineLength,
+    charAdvancePx: typography.charAdvancePx,
+    lineHeightPx: typography.lineHeightPx,
+    lineFeatureOffsetPx
+  };
+}
+
+// Map a pointer event over a rendered dual-strand sequence onto a base
+// boundary. Shared by the detail workspace and the Vector Builder so both
+// resolve clicks against the same geometry.
+export function resolveSequenceBoundaryFromEvent(event, record, charAdvancePx) {
+  const sequenceLength = Math.max(0, Number(record?.sequence?.length) || 0);
+  if (!sequenceLength) {
+    return null;
+  }
+
+  const lineElement = event?.target?.closest?.('.sequence-viewer-dual-line') || null;
+  if (!lineElement) {
+    return null;
+  }
+
+  const lineStart = Number(lineElement?.dataset?.lineStart);
+  const lineEnd = Number(lineElement?.dataset?.lineEnd);
+  if (!Number.isFinite(lineStart) || !Number.isFinite(lineEnd) || lineEnd <= lineStart) {
+    return null;
+  }
+
+  const lineSpan = lineEnd - lineStart;
+  const seqTextElement = lineElement.querySelector?.('.sequence-viewer-strand-row-top .sequence-viewer-seq-text');
+  const rawX = Number(event?.clientX);
+  const safeAdvance = Math.max(1, Number(charAdvancePx) || FALLBACK_CHAR_ADVANCE_PX);
+
+  let relativeX = null;
+  if (seqTextElement && Number.isFinite(rawX) && typeof seqTextElement.getBoundingClientRect === 'function') {
+    const rect = seqTextElement.getBoundingClientRect();
+    if (Number.isFinite(rect?.left) && Number.isFinite(rect?.width) && rect.width > 0) {
+      relativeX = clamp(rawX - rect.left, 0, rect.width);
+    }
+  }
+
+  if (!Number.isFinite(relativeX)) {
+    const fallbackOffsetX = Number(event?.offsetX);
+    if (Number.isFinite(fallbackOffsetX)) {
+      relativeX = Math.max(0, fallbackOffsetX);
+    }
+  }
+  if (!Number.isFinite(relativeX)) {
+    return null;
+  }
+
+  const localBoundary = clamp(Math.round(relativeX / safeAdvance), 0, lineSpan);
+  return clamp(lineStart + localBoundary, 0, sequenceLength);
+}

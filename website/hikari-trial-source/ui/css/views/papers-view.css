@@ -1,0 +1,5 @@
+/* Papers stylesheet manifest.
+ * Keep the library, viewer, and detail-rail imports ordered. */
+@import url("./papers-view/layout-and-library.css");
+@import url("./papers-view/viewer-and-annotations.css");
+@import url("./papers-view/comments-and-responsive.css");

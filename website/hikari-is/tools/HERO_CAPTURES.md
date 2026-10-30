@@ -1,0 +1,17 @@
+# Opening module previews
+
+The hero uses static captures of the current Hikari renderer, at 1600 × 940 CSS pixels and 4× density (6400 × 3760 pixels). The dock, module controls, tables, and chart are rendered by the app. Module captures use a 380 px left rail so record names have more room. Research records are fictional and share an enzyme-stability study across Home, Notebook, Samples, Plate, Protocols, and Workflows. These scripts use disposable profiles and stubbed storage; they do not open a research workspace.
+
+Run `node website/hikari-is/tools/capture-hero.cjs` for Home and `node website/hikari-is/tools/capture-hero-modules.cjs` for the other modules. Optional module arguments (for example `workflows`) limit recapture. The Plate chart is prepared through the app’s Plotly renderer using the same fictional table values; no live AI is called.
+
+After recapturing, run `electron website/hikari-is/tools/build-hero-variants.cjs` to generate 1280, 2560, and 3840 px WebP variants. The opening image and both slideshow layers share responsive source selection; phones use smaller images while the 6400 px PNG remains available. Across the eight captures, the 1280 px versions total about 377 KB versus 6.87 MB for the original PNGs. The animation still decodes the hidden layer before starting its fade.
+
+Run `electron website/hikari-is/tools/mobile-browsing-electron.cjs` to check phone and desktop navigation, tap targets, all feature highlights, and whether text can scroll into view. The mobile presentation keeps its animation and uses a horizontal feature menu beneath the header. Its section height uses the stable small viewport height so browser toolbars do not change the feature's scroll interval.
+
+Papers uses verified real citations: [Jumper et al., Nature (2021), AlphaFold](https://www.nature.com/articles/s41586-021-03819-2), and [Baskin et al., PNAS (2007), copper-free click chemistry](https://doi.org/10.1073/pnas.0707090104). The AlphaFold PDF is reproduced in the reader screenshot under CC BY 4.0, with visible attribution on the website. The chemistry citation appears in the library. Source PDFs are temporary capture inputs and are not shipped with the website. Put `alphafold.pdf` in `/tmp/hikari-hero-papers/`, or set `HIKARI_HERO_PAPERS` to another folder. An optional `click-chemistry.pdf` adds a chemistry-reader capture when available.
+
+Playback follows the dock from left to right: Home → Protocols → Notebook → Papers → Samples → Workflows → DNA → Plate. The hero cycles automatically with two persistent image layers. It decodes the hidden layer before crossfading and never replaces the visible layer’s source. It preserves image dimensions, and pauses while out of view or on another tab. Reduced motion uses instant transitions. The default Home visual remains visible if JavaScript is unavailable.
+
+DNA shows only the native Sequence Map Preview, with a fictional annotated 6,120 bp circular expression plasmid. It does not open the sequence editor, cloning tools, or Protein Builder.
+
+The progress row has one accessible dot per module. The current dot expands into a timed pill; its shape changes alongside the screenshot crossfade with the same 1.1-second duration and easing. The dwell fill starts once that transition finishes. Clicking a dot jumps to that capture and restarts autoplay. Rapid clicks queue the latest choice without replacing a visible image. Arrow keys and Home/End support keyboard navigation.

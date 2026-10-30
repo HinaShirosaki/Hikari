@@ -1,0 +1,17 @@
+# Cloudflare Pages headers: these support files are not search landing pages.
+# Crawling stays allowed so search engines can read the noindex header and
+# still load the scripts, styles, and images needed by the browser trial.
+/trial-app.html
+  X-Robots-Tag: noindex
+
+/trial-app
+  X-Robots-Tag: noindex
+
+/fixtures/*
+  X-Robots-Tag: noindex
+
+/runtime/*
+  X-Robots-Tag: noindex
+
+/tools/*
+  X-Robots-Tag: noindex

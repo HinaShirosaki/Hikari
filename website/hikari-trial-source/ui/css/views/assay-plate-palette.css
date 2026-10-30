@@ -1,0 +1,70 @@
+/* Assay plate, assay chart, and labware preview colors.
+   Keep these here so the shared app palette can stay intentionally small. */
+
+:root {
+  --assay-plate-highlight-faint: rgba(255, 255, 255, 0.12);
+  --assay-plate-highlight: rgba(255, 255, 255, 0.7);
+  --assay-plate-shadow: rgba(27, 20, 14, 0.14);
+  --assay-plate-pure-white: #ffffff;
+  --assay-plate-danger: #9f1c1c;
+  --assay-plate-line-soft: rgba(53, 99, 153, 0.14);
+  --assay-plate-line: rgba(53, 99, 153, 0.22);
+  --assay-plate-header-soft: rgba(222, 237, 255, 0.72);
+  --assay-plate-header: rgba(222, 237, 255, 0.95);
+  --assay-plate-header-solid: rgb(222, 237, 255);
+  --assay-plate-surface-soft: rgba(255, 255, 255, 0.74);
+  --assay-plate-surface: rgba(255, 255, 255, 0.9);
+  --assay-plate-surface-strong: rgba(255, 255, 255, 0.98);
+  --assay-plate-disabled-bg: rgba(232, 236, 242, 0.75);
+  --assay-plate-overlay: rgba(18, 34, 55, 0.18);
+  --assay-plate-sample-fallback: #718096;
+  --assay-plate-sample-count-bg: rgba(18, 49, 73, 0.88);
+  --assay-plate-labware-cap-start: #3f8ecb;
+  --assay-plate-labware-cap-end: #1f5f95;
+  --assay-plate-labware-shadow: rgba(10, 27, 48, 0.16);
+  --assay-plate-labware-glass-border: rgba(108, 121, 137, 0.92);
+  --assay-plate-labware-glass-start: rgba(252, 253, 255, 0.96);
+  --assay-plate-labware-glass-end: rgba(236, 241, 247, 0.92);
+  --assay-plate-labware-mark: rgba(102, 115, 130, 0.5);
+}
+
+/*
+ * Declared on `body`, not `:root`: a custom property is substituted where it is
+ * DECLARED, so reading --theme-* from :root freezes the day palette and leaks
+ * those light colors into night mode. The theme class lives on body.
+ */
+body {
+  --assay-plate-analysis-surface: var(--theme-surface-elevated);
+  --assay-plate-analysis-header: var(--theme-surface-hover);
+  --assay-plate-analysis-line: var(--theme-border-soft);
+  --assay-plate-analysis-ink: var(--theme-text);
+  --assay-plate-analysis-muted: var(--theme-text-muted);
+  --assay-plate-analysis-selection: var(--theme-surface-active);
+  --assay-plate-analysis-focus: var(--theme-focus);
+  --assay-plate-meta: var(--theme-text-muted);
+  --assay-plate-analysis-group-1: var(--theme-accent);
+  --assay-plate-analysis-group-2: var(--theme-success);
+  --assay-plate-analysis-group-3: var(--theme-warning);
+  --assay-plate-analysis-group-4: var(--theme-danger);
+}
+
+body.theme-night {
+  /*
+   * Plate/table CHROME follows the theme. The labware illustration below it
+   * (cap, glass, highlight, pure white) is a drawing of a physical tube and
+   * stays light in every theme, as do the fixed sample colors.
+   */
+  --assay-plate-danger: var(--theme-danger);
+  --assay-plate-line: var(--theme-border-soft);
+  --assay-plate-line-soft: color-mix(in srgb, var(--theme-border-soft) 60%, transparent);
+  --assay-plate-header-soft: var(--theme-surface-muted);
+  --assay-plate-header: var(--theme-surface-subtle);
+  --assay-plate-header-solid: var(--theme-surface-subtle);
+  --assay-plate-surface-soft: var(--theme-surface);
+  --assay-plate-surface: var(--theme-surface-elevated);
+  --assay-plate-surface-strong: var(--theme-surface-subtle);
+  --assay-plate-disabled-bg: var(--theme-surface-muted);
+  --assay-plate-overlay: var(--theme-overlay);
+  --assay-plate-sample-count-bg: var(--theme-surface-subtle);
+  --assay-plate-shadow: var(--theme-shadow-color);
+}

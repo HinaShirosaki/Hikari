@@ -1,0 +1,10 @@
+/* Gentle spectrum for agent suggestions, independent of the active theme. */
+:root {
+  --biology-notebook-suggestion-ink: #50545a;
+  --biology-notebook-suggestion-violet: #eee8f4;
+  --biology-notebook-suggestion-blue: #e5edf4;
+  --biology-notebook-suggestion-green: #e7f0eb;
+  --biology-notebook-suggestion-yellow: #f3f0e5;
+  --biology-notebook-suggestion-orange: #f3ebe4;
+  --biology-notebook-suggestion-red: #f1e6e8;
+}

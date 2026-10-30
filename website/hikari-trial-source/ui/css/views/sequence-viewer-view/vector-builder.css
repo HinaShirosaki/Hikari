@@ -1,0 +1,715 @@
+/* ---------- Vector Builder ---------- */
+
+.sequence-viewer-vector-builder-workspace {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--space-12);
+  min-height: 0;
+}
+
+.sequence-viewer-vector-builder-workspace[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-vector-builder-toolbar {
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+  padding: var(--space-12);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12) var(--space-16);
+}
+
+.sequence-viewer-vector-builder-toolbar-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-width: 0;
+}
+
+.sequence-viewer-vector-builder-toolbar-nav h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+  color: var(--theme-text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sequence-viewer-vector-builder-toolbar-actions {
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.sequence-viewer-vector-builder-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: var(--space-12);
+  min-height: 0;
+  align-items: stretch;
+}
+
+.sequence-viewer-vector-builder-map-card,
+.sequence-viewer-vector-builder-sequence-card {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+  gap: var(--space-10);
+  border-color: var(--theme-border-soft);
+  background: var(--theme-surface-elevated);
+}
+
+.sequence-viewer-vector-builder-sequence-card {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.sequence-viewer-vector-builder-map {
+  min-height: 0;
+  display: flex;
+  /* Zoom grows the map past the pane; native scrolling then pans it. */
+  overflow: auto;
+}
+
+.sequence-viewer-vector-builder-map .vector-map {
+  width: 100%;
+  height: 100%;
+  /* flex would otherwise shrink the zoomed box back to the pane. margin:auto
+     centres it while it still fits, without clipping the top/left edge once it
+     overflows the way align-items:center would. */
+  flex: 0 0 auto;
+  margin: auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.sequence-viewer-vector-builder-sequence {
+  min-height: 0;
+  overflow: auto;
+}
+
+#sequence-viewer-vector-builder-feature-replace-status:empty,
+#sequence-viewer-vector-builder-feature-replace-results:empty {
+  display: none;
+}
+
+.sequence-viewer-sequence-edit-note:empty {
+  display: none;
+}
+
+.vector-map__backbone {
+  fill: none;
+  stroke: var(--theme-border);
+  stroke-width: 4;
+}
+
+/* The linear track is a <line>, so it needs a thinner, squared stroke than the
+   circular backbone ring. */
+.vector-map--linear .vector-map__backbone {
+  stroke-width: 2;
+}
+
+.vector-map__primer-shaft {
+  stroke-width: 2;
+  stroke-linecap: butt;
+}
+
+.vector-map__primer {
+  cursor: pointer;
+}
+
+.vector-map__primer:hover .vector-map__primer-shaft,
+.vector-map__primer--active .vector-map__primer-shaft {
+  stroke-width: 3;
+}
+
+.vector-map__primer:focus,
+.vector-map__primer:focus-visible {
+  outline: none;
+}
+
+.vector-map__primer:focus-visible .vector-map__primer-shaft {
+  stroke: var(--theme-text-strong);
+  stroke-width: 3;
+}
+
+.vector-map__intron {
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.vector-map__label-text--on-bar {
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.vector-map__tick {
+  stroke: var(--theme-border);
+  stroke-width: 1;
+}
+
+.vector-map__tick-label {
+  fill: var(--theme-text-muted);
+  font-size: var(--text-2xs);
+}
+
+.vector-map__feature {
+  stroke: var(--theme-surface);
+  stroke-width: 0.75;
+  cursor: pointer;
+}
+
+.vector-map__feature:hover {
+  stroke: var(--theme-text-strong);
+  stroke-width: 1.5;
+}
+
+.vector-map__feature--active {
+  /* Feature fills come from a hash of the feature type, so an accent-coloured
+     outline can vanish on a blue feature. Outline in the text colour instead:
+     it contrasts against every generated fill. */
+  stroke: var(--theme-text-strong);
+  stroke-width: 3;
+}
+
+/* An `outline` on an SVG shape is drawn around its rectangular bounding box,
+   which reads as a box floating outside the feature. Suppress it and mark
+   focus on the shape itself instead. */
+.vector-map__feature:focus,
+.vector-map__label:focus,
+.vector-map__feature:focus-visible,
+.vector-map__label:focus-visible {
+  outline: none;
+}
+
+.vector-map__feature:focus-visible {
+  stroke: var(--theme-text-strong);
+  stroke-width: 3;
+}
+
+.vector-map__label:focus-visible .vector-map__label-text {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.vector-map__selection {
+  fill: var(--theme-accent-line);
+  stroke: var(--theme-accent);
+  stroke-width: 1;
+  pointer-events: none;
+}
+
+.vector-map--linear .vector-map__selection {
+  fill: var(--theme-accent-soft);
+}
+
+.vector-map__caret {
+  stroke: var(--theme-accent);
+  stroke-width: 2.5;
+  pointer-events: none;
+}
+
+.vector-map__leader {
+  fill: none;
+  stroke: var(--theme-border);
+  stroke-width: 1;
+}
+
+.vector-map__label {
+  cursor: pointer;
+}
+
+.vector-map__label-text {
+  font-size: var(--text-sm);
+}
+
+.vector-map__label:hover .vector-map__label-text {
+  font-weight: 600;
+}
+
+.vector-map__label--active .vector-map__label-text {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.vector-map__title {
+  fill: var(--theme-text-strong);
+  font-size: var(--text-xl);
+  font-weight: 600;
+}
+
+.vector-map__subtitle {
+  fill: var(--theme-text-muted);
+  font-size: var(--text-xs);
+}
+
+.vector-map__tooltip {
+  position: fixed;
+  z-index: 2700;
+  max-width: 280px;
+  padding: 5px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-elevated);
+  box-shadow: var(--theme-shadow-small);
+  color: var(--theme-text);
+  font-size: var(--text-xs);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* Must never sit between the cursor and the feature it describes. */
+  pointer-events: none;
+}
+
+.vector-map__tooltip[hidden] {
+  display: none !important;
+}
+
+.vector-map__tooltip.has-protein-properties {
+  white-space: normal;
+}
+
+.sequence-viewer-protein-hover {
+  margin-top: var(--space-6);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--theme-border);
+}
+
+.sequence-viewer-protein-hover p {
+  margin: 0;
+}
+
+.sequence-viewer-protein-hover p + p {
+  margin-top: 0.2rem;
+}
+
+.sequence-viewer-protein-hover .small-note {
+  font-size: inherit;
+}
+
+.sequence-viewer-primer-order-dialog {
+  --app-dialog-width: 640px;
+}
+
+.sequence-viewer-primer-order-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-12);
+}
+
+.sequence-viewer-primer-order-controls label {
+  display: grid;
+  gap: var(--space-4);
+  font-size: var(--text-xs);
+}
+
+.sequence-viewer-primer-order-preview-label {
+  display: grid;
+  gap: var(--space-4);
+  font-size: var(--text-xs);
+}
+
+/* Tab-separated rows: a monospace box makes a mangled paste obvious. */
+.sequence-viewer-primer-order-preview {
+  width: 100%;
+  font-family: var(--font-mono, "SFMono-Regular", "Consolas", monospace);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  white-space: pre;
+  overflow: auto;
+}
+
+.sequence-viewer-primer-order-warning {
+  color: var(--theme-danger);
+}
+
+/* A primer readout carries a copy button, so it has to accept the pointer and
+   wrap a full-length oligo instead of ellipsing it. */
+.vector-map__tooltip.is-interactive,
+.sequence-viewer-feature-hover-tooltip.is-interactive {
+  pointer-events: auto;
+  white-space: normal;
+  overflow: visible;
+  max-width: 340px;
+}
+
+.vector-map__tooltip-title {
+  display: block;
+  font-weight: 600;
+}
+
+.sequence-viewer-primer-hover {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid var(--theme-border);
+}
+
+.sequence-viewer-primer-hover-seq {
+  font-family: var(--font-mono, "SFMono-Regular", "Consolas", monospace);
+  font-size: var(--text-xs);
+  line-height: 1.35;
+  word-break: break-all;
+  color: var(--theme-text-strong);
+}
+
+.sequence-viewer-primer-hover-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+}
+
+.sequence-viewer-primer-hover-meta {
+  color: var(--theme-text-muted);
+  font-size: var(--text-2xs);
+}
+
+.sequence-viewer-context-divider {
+  border: 0;
+  border-top: 1px solid var(--theme-border);
+  margin: 3px 0;
+}
+
+@media (max-width: 1100px) {
+  .sequence-viewer-vector-builder-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Sits between the action buttons and the toolbar menus. It must not grow, or an
+   empty status leaves a gap holding the menus against the far edge. */
+.sequence-viewer-status-note {
+  align-self: center;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
+/* Feature picker: find the stored feature, choose which vector to amplify it
+   from, then look at that plasmid before confirming. The dialog needs the room
+   for three columns. */
+#sequence-viewer-vector-builder-feature-replace-form {
+  width: min(100%, 1040px);
+}
+
+.sequence-viewer-vector-builder-feature-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1.3fr);
+  gap: var(--space-12);
+  /* The three columns are what has to give when the window is short: the dialog
+     head and the action row stay put. The 1fr row plus stretched columns is what
+     lets each column scroll inside instead of running past the dialog. */
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.sequence-viewer-vector-builder-feature-picker-col {
+  display: grid;
+  gap: var(--space-8);
+  align-content: start;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.sequence-viewer-vector-builder-feature-picker-col h5 {
+  margin: 0;
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--theme-text-muted);
+}
+
+.sequence-viewer-vector-builder-feature-picker-col .sequence-viewer-protein-builder-feature-search-results,
+.sequence-viewer-feature-source-list {
+  margin-top: 0;
+  display: grid;
+  gap: var(--space-8);
+  align-content: start;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.sequence-viewer-feature-source-item {
+  border: 1px solid var(--theme-border-soft);
+  background: var(--theme-surface-subtle);
+  padding: var(--space-8) var(--space-10);
+  display: grid;
+  gap: var(--space-2);
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.sequence-viewer-protein-builder-feature-item.is-selected,
+.sequence-viewer-feature-source-item.is-selected {
+  border-color: var(--theme-accent);
+  box-shadow: inset 0 0 0 1px var(--theme-accent);
+}
+
+.sequence-viewer-feature-source-preview {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+}
+
+.sequence-viewer-feature-source-preview svg {
+  width: 100%;
+  height: auto;
+  max-height: 320px;
+}
+
+@media (max-width: 900px) {
+  .sequence-viewer-vector-builder-feature-picker {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    align-content: start;
+    overflow-y: auto;
+  }
+
+  .sequence-viewer-vector-builder-feature-picker-col {
+    min-height: auto;
+    overflow-y: visible;
+  }
+
+  .sequence-viewer-vector-builder-feature-picker-col .sequence-viewer-protein-builder-feature-search-results,
+  .sequence-viewer-vector-builder-feature-picker-col .sequence-viewer-feature-source-list {
+    max-height: none;
+    overflow-y: visible;
+  }
+}
+
+/* In the Protein Builder the same picker lives in a narrow rail, so the three
+   panels stack instead of sitting side by side. */
+.sequence-viewer-feature-source {
+  display: grid;
+  gap: var(--space-8);
+  margin-top: var(--space-12);
+  padding-top: var(--space-12);
+  border-top: 1px solid var(--theme-border-soft);
+}
+
+.sequence-viewer-feature-source[hidden] {
+  display: none;
+}
+
+.sequence-viewer-feature-source h5 {
+  margin: 0;
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--theme-text-muted);
+}
+
+.sequence-viewer-feature-source .sequence-viewer-feature-source-list {
+  max-height: 180px;
+}
+
+.sequence-viewer-feature-source .sequence-viewer-feature-source-preview {
+  min-height: 160px;
+}
+
+/* Protein selection is scoped to the builder rail; the replacement dialog
+   keeps its wider, three-column layout. */
+.sequence-viewer-protein-picker {
+  min-width: 0;
+}
+
+.sequence-viewer-protein-picker .sequence-viewer-protein-builder-feature-controls {
+  margin-top: var(--space-8);
+}
+
+.sequence-viewer-protein-picker .sequence-viewer-protein-builder-feature-controls input {
+  width: 100%;
+  min-width: 0;
+}
+
+.sequence-viewer-protein-picker .sequence-viewer-protein-builder-feature-search-results {
+  margin-top: var(--space-10);
+  gap: var(--space-6);
+}
+
+.sequence-viewer-protein-picker .sequence-viewer-protein-builder-feature-item,
+.sequence-viewer-protein-picker .sequence-viewer-feature-source-item {
+  position: relative;
+  min-width: 0;
+  padding: var(--space-10) var(--space-12);
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  box-shadow: none;
+  gap: var(--space-6);
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.sequence-viewer-protein-picker .sequence-viewer-protein-builder-feature-item:hover,
+.sequence-viewer-protein-picker .sequence-viewer-feature-source-item:hover {
+  background: var(--theme-surface-subtle);
+}
+
+.sequence-viewer-protein-picker .sequence-viewer-protein-builder-feature-item.is-selected,
+.sequence-viewer-protein-picker .sequence-viewer-feature-source-item.is-selected {
+  background: var(--theme-surface-hover);
+  box-shadow: none;
+}
+
+.sequence-viewer-protein-picker .is-selected::after {
+  content: "✓";
+  position: absolute;
+  top: 0.625rem;
+  right: 0.75rem;
+  color: var(--theme-accent);
+  font-weight: 700;
+}
+
+.sequence-viewer-protein-picker .sequence-viewer-protein-builder-feature-item:focus-visible,
+.sequence-viewer-protein-picker .sequence-viewer-feature-source-item:focus-visible,
+.sequence-viewer-protein-picker-map summary:focus-visible,
+.sequence-viewer-protein-picker-fold summary:focus-visible {
+  outline: 0.125rem solid var(--theme-accent);
+  outline-offset: 0.125rem;
+}
+
+.sequence-viewer-protein-picker .sequence-viewer-protein-builder-feature-head > div {
+  min-width: 0;
+  width: 100%;
+}
+
+.sequence-viewer-protein-picker .sequence-viewer-protein-builder-feature-head strong,
+.sequence-viewer-protein-picker-host-name {
+  display: block;
+  padding-right: var(--space-20);
+  overflow-wrap: anywhere;
+  font-size: var(--text-base);
+  font-weight: 650;
+}
+
+.sequence-viewer-protein-picker .sequence-viewer-protein-picker-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-10);
+  margin-top: var(--space-6);
+  font-size: var(--text-xs);
+}
+
+.sequence-viewer-protein-picker-type {
+  color: var(--theme-text-strong);
+  text-transform: uppercase;
+  font-size: var(--text-2xs);
+  font-weight: 600;
+}
+
+.sequence-viewer-protein-picker .sequence-viewer-protein-builder-feature-sequence {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--theme-text-muted);
+  font-size: var(--text-2xs);
+}
+
+.sequence-viewer-protein-picker .sequence-viewer-feature-source {
+  margin-top: var(--space-12);
+  padding-top: var(--space-12);
+  gap: var(--space-8);
+}
+
+.sequence-viewer-protein-picker .sequence-viewer-feature-source h5 {
+  font-size: var(--text-2xs);
+  letter-spacing: 0.06em;
+}
+
+.sequence-viewer-protein-picker .sequence-viewer-feature-source-item .small-note {
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+
+.sequence-viewer-protein-picker .sequence-viewer-feature-source .form-actions {
+  margin: var(--space-4) 0;
+}
+
+.sequence-viewer-protein-picker .sequence-viewer-feature-source .primary-btn {
+  width: 100%;
+}
+
+.sequence-viewer-protein-picker-fold {
+  min-width: 0;
+}
+
+.sequence-viewer-protein-picker-fold > summary {
+  cursor: pointer;
+  color: var(--theme-text-strong);
+  font-size: var(--text-base);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  padding-block: var(--space-6);
+}
+
+.sequence-viewer-protein-picker-fold[open] > summary {
+  margin-bottom: var(--space-8);
+}
+
+.sequence-viewer-protein-picker-map {
+  min-width: 0;
+  border-top: 0.0625rem solid var(--theme-border-soft);
+  padding-top: var(--space-10);
+}
+
+.sequence-viewer-protein-picker-map summary {
+  cursor: pointer;
+  color: var(--theme-text-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.sequence-viewer-protein-picker-map .sequence-viewer-feature-source-preview {
+  min-width: 0;
+  min-height: 0;
+  padding-top: var(--space-8);
+}
+
+.sequence-viewer-protein-picker-map .sequence-viewer-feature-source-preview svg {
+  display: block;
+  max-height: 15rem;
+}
+
+/* The assembled sequence is a field now: it keeps reading like the block it
+   replaced, so editing it does not turn the panel into a form. */
+.sequence-viewer-protein-builder-sequence-input {
+  white-space: pre-wrap;
+  word-break: break-all;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sequence-viewer-protein-builder-sequence-input:hover {
+  background: var(--theme-fill);
+}
+
+.sequence-viewer-protein-builder-sequence-input:focus {
+  outline: none;
+  border: 0;
+  background: var(--theme-fill);
+  box-shadow: none;
+}
+
+.sequence-viewer-protein-builder-sequence-head-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+#sequence-viewer-protein-builder-sequence-edited {
+  color: var(--theme-accent);
+  font-weight: 600;
+}

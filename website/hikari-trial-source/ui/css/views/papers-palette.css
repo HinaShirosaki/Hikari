@@ -1,0 +1,6 @@
+/* PDF highlight color. It marks the reader's own highlights on the page, so it
+   stays the same yellow in every theme. */
+
+:root {
+  --papers-highlight: rgba(255, 224, 102, 0.5);
+}

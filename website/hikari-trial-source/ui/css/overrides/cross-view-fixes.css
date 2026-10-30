@@ -1,0 +1,203 @@
+/* Spacing and overlap fixes by view */
+
+/*
+ * Declared on `body`, not `:root`: a custom property is substituted where it is
+ * DECLARED, so reading --theme-* from :root freezes the day palette and leaks
+ * those light colors into night mode. The theme class lives on body.
+ */
+body {
+  --app-left-rail-surface: var(--theme-surface-elevated);
+  --app-left-rail-divider: var(--theme-border);
+}
+.app-left-rail {
+  --app-left-rail-padding-inline: var(--space-16);
+  position: relative;
+  align-self: stretch;
+  display: grid;
+  align-content: start;
+  gap: var(--space-14);
+  min-width: 0;
+  min-height: 100%;
+  max-height: var(--shared-left-rail-layout-height);
+  margin-top: 0 !important;
+  padding: var(--space-14) var(--app-left-rail-padding-inline) var(--space-16) var(--app-left-rail-padding-inline) !important;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  border: 0 !important;
+  border-radius: 0 !important;
+  border-top: 0 !important;
+  background: transparent !important;
+  box-shadow: none;
+}
+
+.app-left-rail::before {
+  content: none !important;
+}
+
+
+
+.app-left-rail > * {
+  min-width: 0;
+}
+
+.app-file-drop-target {
+  transition:
+    outline-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.app-file-drop-target.is-file-drop-active {
+  outline: 2px solid var(--theme-accent);
+  outline-offset: 4px;
+  background: var(--theme-accent-wash);
+  box-shadow: inset 0 0 0 1px var(--theme-accent-soft);
+}
+
+.app-left-rail-section {
+  display: grid;
+  gap: var(--space-12);
+  align-content: start;
+  min-width: 0;
+}
+
+.app-left-rail-section + .app-left-rail-section {
+  padding-top: var(--space-16);
+  border-top: 1px solid var(--theme-border-soft);
+}
+
+.app-left-rail-list {
+  display: grid;
+  gap: 0;
+  align-content: start;
+}
+
+.app-left-rail-handle {
+  appearance: none;
+  -webkit-appearance: none;
+  position: absolute;
+  top: 0;
+  left: var(--app-left-rail-track-width);
+  bottom: 0;
+  width: 12px;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  background-image: none;
+  box-shadow: none;
+  outline: none;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 5;
+  transform: translateX(-50%);
+}
+
+.app-left-rail-handle:hover,
+.app-left-rail-handle:focus,
+.app-left-rail-handle:focus-visible,
+.app-left-rail-handle:active {
+  background: transparent;
+  background-image: none;
+  box-shadow: none;
+  outline: none;
+}
+
+.app-left-rail-fold-toggle {
+  appearance: none;
+  -webkit-appearance: none;
+  position: absolute;
+  top: .5rem;
+  left: var(--app-left-rail-track-width);
+  display: inline-grid;
+  place-items: center;
+  width: var(--shared-left-rail-folded-width);
+  min-width: var(--shared-left-rail-folded-width);
+  height: 2rem;
+  min-height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: .25rem;
+  background: transparent;
+  color: var(--theme-text-muted);
+  box-shadow: none;
+  cursor: pointer;
+  transform: none;
+  transition:
+    color 140ms ease,
+    background-color 140ms ease;
+  z-index: 6;
+}
+
+.app-left-rail-fold-toggle:hover,
+.app-left-rail-fold-toggle:focus-visible {
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
+  outline: none;
+}
+
+.app-left-rail-fold-toggle:focus-visible {
+  outline: .125rem solid var(--theme-focus);
+  outline-offset: -.125rem;
+  box-shadow: none;
+}
+
+.app-left-rail-fold-toggle__icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.app-left-rail-fold-toggle__chevron {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 140ms ease;
+}
+
+.app-left-rail-fold-toggle.is-folded {
+  left: 0;
+}
+
+.app-left-rail-fold-toggle.is-folded .app-left-rail-fold-toggle__chevron {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-left-rail-fold-toggle,
+  .app-left-rail-fold-toggle__chevron {
+    transition: none;
+  }
+}
+
+body.shared-left-rail-resizing,
+body.shared-left-rail-resizing * {
+  cursor: col-resize !important;
+  user-select: none;
+}
+
+@media (max-width: 980px) {
+  .app-left-rail {
+    min-height: auto;
+    max-height: none;
+    padding: 0 !important;
+    overflow: visible;
+    background: transparent !important;
+    box-shadow: none;
+    scrollbar-gutter: auto;
+  }
+
+  
+  .app-left-rail-handle {
+    display: none;
+  }
+
+  .app-left-rail-fold-toggle {
+    display: none;
+  }
+}

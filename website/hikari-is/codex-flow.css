@@ -1,0 +1,57 @@
+#agent-detail .codex-flow { position: absolute; inset: 0; }
+#agent-detail .codex-flow:not([hidden]) { display: grid; place-items: center; align-content: center; gap: clamp(16px, 3vw, 36px); }
+#agent-detail[data-feature="agent-codex"] { align-items: center; }
+#agent-detail[data-feature="agent-codex"] .shot-viewport { aspect-ratio: 900 / 520; }
+/* Hikari → Codex CLI → the visitor's ChatGPT sign-in. */
+.codex-chain { --codex-icon: clamp(32px, 4vw, 52px); --codex-signal-size: 18px; display: flex; align-items: flex-start; justify-content: center; gap: clamp(8px, 1.2vw, 16px); width: min(100%, 600px); }
+.codex-node { display: grid; justify-items: center; gap: 6px; min-width: 0; text-align: center; }
+.codex-node svg { display: block; height: var(--codex-icon); margin-bottom: 8px; }
+.codex-node .hikari-mark { aspect-ratio: 475 / 865; }
+.codex-icon { aspect-ratio: 1; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.codex-terminal { stroke: var(--diagram-pine); }
+.codex-openai { fill: #fff; stroke: none; }
+.codex-node b { color: var(--diagram-ink); font: 400 clamp(20px, 2.4vw, 32px)/1.1 var(--display); letter-spacing: -.01em; }
+.codex-node span { color: var(--diagram-muted); font: 14px/1.35 var(--sans); }
+.codex-link { position: relative; flex: 0 1 clamp(24px, 4vw, 52px); min-width: 16px; height: 9px; margin-top: calc(var(--codex-icon) / 2 - 4px); overflow: hidden;
+  background: repeating-linear-gradient(90deg, var(--diagram-line) 0 4px, transparent 4px 8px) center / 100% 1px no-repeat; }
+.codex-link::before, .codex-link::after { content: ''; position: absolute; top: 3px; left: calc(-1 * var(--codex-signal-size)); width: var(--codex-signal-size); height: 3px; border-radius: 2px; opacity: 0;
+  background: linear-gradient(90deg, transparent, var(--diagram-gold) 78%, var(--diagram-ink));
+  animation: codex-request 7s linear infinite paused; }
+.codex-link::before { animation-delay: .2s; }
+.codex-link::after { transform: scaleX(-1); animation-name: codex-response; animation-delay: 4.4s; }
+.codex-link:nth-of-type(2)::before { animation-delay: 1.4s; }
+.codex-link:nth-of-type(2)::after { animation-delay: 3.2s; }
+.codex-cursor { animation: codex-cursor 2.4s step-end infinite paused; }
+#agent-panel:not([hidden]) #agent-detail[data-feature="agent-codex"]:not([inert]) .codex-link::before,
+#agent-panel:not([hidden]) #agent-detail[data-feature="agent-codex"]:not([inert]) .codex-link::after,
+#agent-panel:not([hidden]) #agent-detail[data-feature="agent-codex"]:not([inert]) .codex-cursor { animation-play-state: running; }
+@keyframes codex-request {
+  0% { left: calc(-1 * var(--codex-signal-size)); opacity: 0; }
+  3% { opacity: 1; }
+  18% { left: 100%; opacity: 1; }
+  21%, 100% { left: 100%; opacity: 0; }
+}
+@keyframes codex-response {
+  0% { left: 100%; opacity: 0; }
+  3% { opacity: 1; }
+  18% { left: calc(-1 * var(--codex-signal-size)); opacity: 1; }
+  21%, 100% { left: calc(-1 * var(--codex-signal-size)); opacity: 0; }
+}
+@keyframes codex-cursor { 0%, 70%, 100% { opacity: 1; } 45% { opacity: .15; } }
+.codex-note { margin: 0; color: var(--diagram-muted); font: 14px/1.4 var(--sans); }
+@media (min-width: 761px) {
+  /* Center on the visible section, independently of the copy height. */
+  #agent-detail[data-feature="agent-codex"] #agent-shot {
+    align-self: start; position: relative;
+    top: calc(50svh - var(--detail-top, 0px)); transform: translateY(-50%);
+  }
+}
+@media (max-width: 980px) {
+  #agent-detail[data-feature="agent-codex"] .shot-viewport { aspect-ratio: 2; }
+}
+@media (max-width: 480px) {
+  .codex-node span, .codex-note { font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .codex-link::before, .codex-link::after, .codex-cursor { animation: none; }
+}

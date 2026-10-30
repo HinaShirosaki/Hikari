@@ -1,0 +1,1401 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- SEO:START -->
+<title>Hikari — Your Lab, in One App | Protocols, Samples &amp; DNA</title>
+<meta name="description" content="Free, open-source lab software for macOS and Windows: notebook, protocols, sample and freezer inventory, plasmid maps, plate and gel analysis, and optional AI.">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<meta name="theme-color" content="#191724">
+<link rel="canonical" href="https://hikari-lab-agent.com/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Hikari">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="Hikari — Your Lab, in One App">
+<meta property="og:description" content="Notebook, protocols, sample inventory, plasmid maps, and plate and gel analysis in one desktop app. Your records are saved locally. AI is optional.">
+<meta property="og:url" content="https://hikari-lab-agent.com/">
+<meta property="og:image" content="https://hikari-lab-agent.com/social-card.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:alt" content="Hikari — Your lab work, connected. Free and open source. Notebook, samples, protocols, and sequences.">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Hikari — Your Lab, in One App">
+<meta name="twitter:description" content="Notebook, protocols, sample inventory, plasmid maps, and plate and gel analysis in one desktop app. Your records are saved locally. AI is optional.">
+<meta name="twitter:image" content="https://hikari-lab-agent.com/social-card.jpg">
+<meta name="twitter:image:alt" content="Hikari — Your lab work, connected. Free and open source.">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://hikari-lab-agent.com/#website",
+      "url": "https://hikari-lab-agent.com/",
+      "name": "Hikari",
+      "inLanguage": "en"
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://hikari-lab-agent.com/#webpage",
+      "url": "https://hikari-lab-agent.com/",
+      "name": "Hikari — Your Lab, in One App | Protocols, Samples & DNA",
+      "isPartOf": {
+        "@id": "https://hikari-lab-agent.com/#website"
+      },
+      "mainEntity": {
+        "@id": "https://hikari-lab-agent.com/#app"
+      },
+      "inLanguage": "en",
+      "description": "Free, open-source lab software for macOS and Windows: notebook, protocols, sample and freezer inventory, plasmid maps, plate and gel analysis, and optional AI."
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://hikari-lab-agent.com/#app",
+      "name": "Hikari",
+      "url": "https://hikari-lab-agent.com/",
+      "description": "Free, open-source desktop lab software connecting notebook pages, protocols, sample and freezer inventory, chemicals, plasmid maps and DNA cloning, protein constructs, plate assays, gel analysis, papers, calculations, and workflows. An optional AI agent uses a separate ChatGPT plan with Codex CLI access.",
+      "featureList": [
+        "Notebook pages linked to samples, protocols, and results",
+        "Reusable protocols with fill-in fields",
+        "Sample inventory with freezer boxes and storage locations",
+        "Chemical inventory",
+        "Plasmid maps, DNA cloning, and primer design",
+        "Protein constructs and coding DNA",
+        "96-well plate assays",
+        "Gel image band quantification and blot figures",
+        "PDF paper library with highlights",
+        "Multi-step experiment workflows",
+        "Notebook calculations and PDF worksheets",
+        "Scientific figures with the Figura plugin",
+        "Optional AI agent through Codex CLI"
+      ],
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "macOS, Windows",
+      "isAccessibleForFree": true,
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "license": "https://www.apache.org/licenses/LICENSE-2.0",
+      "image": "https://hikari-lab-agent.com/social-card.jpg",
+      "installUrl": "https://hikari-lab-agent.com/#install",
+      "sameAs": [
+        "https://github.com/HinaShirosaki/Hikari",
+        "https://www.npmjs.com/package/@hinashirosaki/hikari"
+      ]
+    }
+  ]
+}
+</script>
+<!-- SEO:END -->
+<link rel="icon" type="image/x-icon" sizes="16x16 24x24 32x32 48x48 64x64 128x128 256x256" href="favicon-mark.ico?v=mark-20261029">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-mark-16.png?v=mark-20261029">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-mark-32.png?v=mark-20261029">
+<link rel="icon" type="image/svg+xml" sizes="any" href="favicon.svg?v=transparent-vector-1">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..600&family=Newsreader:opsz,wght@6..72,400..500&family=JetBrains+Mono:wght@400&family=Caveat:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="trial.css?v=d3ab63a01ed3">
+<link rel="stylesheet" href="protocol-flow.css?v=3bd52c7e7dff">
+<link rel="stylesheet" href="hikari-mark.css?v=f0b67f1c4122">
+<link rel="stylesheet" href="ai-flow.css?v=482674f2ad67">
+<link rel="stylesheet" href="codex-flow.css?v=19531fb0337d">
+<link rel="stylesheet" href="plugin-flow.css?v=d141409d9bb7">
+<link rel="stylesheet" href="plugins.css?v=d7a060db5997">
+<link rel="stylesheet" href="screenshot-focus.css?v=82b96523eada">
+<link rel="stylesheet" href="illustrations.css?v=66263cae00c9">
+<link rel="stylesheet" href="trial-guide.css?v=3fde8024403a">
+<style>
+  :root {
+    --site-header-height: 64px;
+    --feature-wide-gap: clamp(24px, 3vw, 48px);
+    --section-title-size: clamp(28px, 2.5vw, 34px);
+    --bg: #191724; --fg: #e0def4; --muted: #908caa; --accent: #f6c177;
+    --surface: #1f1d2e; --accent-hover: color-mix(in srgb, var(--accent) 85%, var(--fg)); --focus-on-light: #286983;
+    --card: #f8f5ee; --line: color-mix(in srgb, var(--fg) 12%, transparent);
+    --shadow: 0 40px 120px -30px color-mix(in srgb, var(--accent) 25%, transparent);
+    --sans: "DM Sans", -apple-system, "Segoe UI", sans-serif;
+    --display: "Newsreader", Georgia, serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scrollbar-gutter: stable; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg);
+    font: 17px/1.55 var(--sans); font-optical-sizing: auto; -webkit-font-smoothing: antialiased; }
+
+  [hidden] { display: none !important; }
+  .site-header { position: fixed; inset: 0 0 auto 0; height: var(--site-header-height); z-index: 10; display: grid;
+    grid-template-columns: 1fr auto 1fr; align-items: center; padding: 0 clamp(16px, 5vw, 64px);
+    background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(12px); }
+  .site-header .brand { display: flex; gap: 10px; align-items: center; color: var(--fg); text-decoration: none; font: 500 24px/1 var(--sans); letter-spacing: -.02em; }
+  .site-header img { width: 28px; height: 28px; border-radius: 7px; }
+  .site-header a.cta { justify-self: end; color: var(--bg); background: var(--fg); padding: 8px 16px; border-radius: 999px;
+    text-decoration: none; font: 500 12px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+  .header-tabs { display: flex; gap: 6px; }
+  .header-tabs a { padding: 10px 14px; border-bottom: 1px solid transparent; color: var(--muted); text-decoration: none; font-size: 14px; }
+  .header-tabs a[aria-selected="true"] { color: var(--fg); border-color: var(--accent); }
+  .header-tabs .tab-narrow { display: none; }
+  .site-header a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+  .feature-copy > h2:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; }
+
+  .opening-page { position: relative; min-height: 100vh; min-height: 100svh; display: grid;
+    grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(3.1em, auto) 38px;
+    place-content: center; justify-items: center; gap: 24px; padding: 88px clamp(24px, 5vw, 64px);
+    text-align: center; }
+  .opening-title { margin: 0; width: 100%; max-width: 1100px; font: 400 clamp(36px, 5.4vw, 76px)/1.12 var(--display);
+    letter-spacing: -.025em; }
+  .opening-title .lead { margin-bottom: .2em; font-size: clamp(26px, 3.4vw, 46px); }
+  .opening-statement { display: block; }
+  .opening-description { max-width: 640px; margin: 0; color: var(--muted); font: 400 17px/1.55 var(--sans); text-wrap: balance; }
+  .opening-page .hint { text-decoration: none; white-space: nowrap; }
+  .opening-page .hint:hover { color: var(--fg); }
+  .opening-page .hint:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; }
+  .opening-title .lead { animation: opening-rise .9s cubic-bezier(.22, 1, .36, 1) .25s both; }
+  .opening-statement { animation: opening-text-fade .8s ease-out .5s both; }
+  .opening-page > :is(p, .try-link) { animation: opening-rise 1s cubic-bezier(.22, 1, .36, 1) 1.3s both; }
+  .opening-page > .try-link { animation-delay: 1.45s; }
+  /* The hint is centred with transform, so it drops in with translate, in the direction of its arrow. */
+  .opening-page > .hint { animation: opening-drop 1s cubic-bezier(.22, 1, .36, 1) 2s both; }
+  @keyframes opening-rise { from { opacity: 0; transform: translateY(14px); } }
+  @keyframes opening-drop { from { opacity: 0; translate: 0 -12px; } }
+  @keyframes opening-text-fade { from { opacity: 0; } to { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) {
+    .opening-page :is(*, *::before, *::after) { animation: none !important; transition: none !important; }
+  }
+
+  /* The opening window follows all of the copy and retains the full dashboard. */
+  #opening { --opening-top: clamp(130px, 14vh, 190px); min-height: 100svh; align-content: start; grid-template-rows: none; padding-top: var(--opening-top); padding-bottom: 0; gap: 24px; overflow: hidden; }
+  #opening-title { animation: opening-settle 1.6s cubic-bezier(.4, 0, .2, 1) 1.05s both; text-wrap: balance; }
+  #opening-title .lead { display: inline; margin: 0; font-size: inherit; }
+  #opening-title .opening-statement { display: inline; }
+  #opening > .try-link { animation-delay: 2.05s; animation-duration: .6s; }
+  .hero-papers-credit { max-width: 720px; margin: 0; color: var(--muted); font: 12px/1.6 var(--sans); }
+  .hero-papers-credit a { color: inherit; text-underline-offset: 3px; }
+  #opening > .hint { animation-delay: 2.3s; }
+  @keyframes opening-settle {
+    from { transform: translateY(max(0px, calc(50svh - var(--opening-top) - .6em))); }
+    to { transform: translateY(0); }
+  }
+  .hero-product { width: min(100%, 1360px); margin: 24px 0 0; perspective: 1800px;
+    mask-image: linear-gradient(to bottom, #000 0%, #000 42%, rgb(0 0 0 / .65) 65%, rgb(0 0 0 / .18) 82%, transparent 98%);
+    animation: opening-rise 1.2s cubic-bezier(.4, 0, .2, 1) 1.65s both; }
+  .hero-product-window { position: relative; overflow: hidden; border: 1px solid rgb(224 222 244 / .24); border-radius: 12px;
+    background: #fcfbf8; transform: rotateX(-6deg); transform-origin: center top; box-shadow: 0 24px 90px rgb(0 0 0 / .25); }
+  .hero-product-window::after { content: ""; position: absolute; inset: 40% 0 0; pointer-events: none;
+    backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px);
+    mask-image: linear-gradient(to bottom, transparent, #000 75%); }
+  .hero-window-bar { height: 30px; display: flex; align-items: center; gap: 7px; padding: 0 12px; background: #f1efeb; border-bottom: 1px solid #dedbd5; }
+  .hero-window-bar i { width: 9px; height: 9px; border-radius: 50%; background: #d3cfc8; }
+  .hero-window-bar span { margin: auto; padding-right: 42px; color: #79746c; font: 11px var(--sans); }
+  .hero-product-frame { position: relative; aspect-ratio: 1600 / 940; isolation: isolate; }
+  .hero-product-frame > img { position: absolute; inset: 0; height: 100%; object-fit: contain; will-change: opacity; }
+  .hero-product img { display: block; width: 100%; height: auto; }
+  .hero-progress { position: fixed; left: 50%; bottom: max(20px, env(safe-area-inset-bottom)); z-index: 9;
+    transform: translateX(-50%); display: flex; justify-content: center; align-items: center; gap: 4px;
+    margin: 0; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px;
+    background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px); animation: opening-text-fade .6s ease-out 2.45s both; }
+  .hero-progress button { display: grid; place-items: center; width: 28px; height: 36px; padding: 0;
+    border: 0; border-radius: 999px; background: transparent; cursor: pointer;
+    transition: width var(--hero-transition-duration) var(--hero-transition-easing); }
+  .hero-progress-track { display: block; position: relative; width: 8px; height: 8px; overflow: hidden;
+    border-radius: 999px; background: color-mix(in srgb, var(--fg) 36%, transparent);
+    transition: width var(--hero-transition-duration) var(--hero-transition-easing), background .2s; }
+  .hero-progress button[aria-pressed="true"] { width: 80px; }
+  .hero-progress button[aria-pressed="true"] .hero-progress-track { width: 64px; background: color-mix(in srgb, var(--fg) 22%, transparent); }
+  .hero-progress-fill { display: block; position: absolute; inset: 0; background: var(--accent); transform: scaleX(0); transform-origin: left; }
+  .hero-progress button:hover .hero-progress-track { background: color-mix(in srgb, var(--fg) 60%, transparent); }
+  .hero-progress button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .hero-progress button, .hero-progress-track { transition: none; } }
+  #opening > .hint { position: static; transform: none; margin: 0 0 32px; }
+  @media (max-width: 760px) {
+    #opening { --opening-top: 112px; gap: 20px; }
+    .hero-product { width: calc(100% + 24px); margin-top: 12px; }
+    .hero-product-window { border-radius: 7px; }
+    .hero-window-bar { height: 22px; }
+    .hero-progress button { width: 24px; }
+    .hero-progress button[aria-pressed="true"] { width: 64px; }
+    .hero-progress button[aria-pressed="true"] .hero-progress-track { width: 48px; }
+  }
+
+  #track, #agent-track { position: relative; }            /* height set by JS: one section per feature */
+  #stage, #agent-stage { position: sticky; top: 0; height: 100vh; overflow: hidden; }
+
+  #head, #agent-head { position: absolute; left: clamp(16px, 5vw, 64px); top: 84px; margin: 0; width: min(88vw, 1400px);
+    --feature-title-size: clamp(26px, 2.3vw, 34px); --intro-title-size: clamp(40px, 6.2vw, 92px);
+    font: 450 calc(var(--feature-title-size) + (var(--intro-title-size) - var(--feature-title-size)) * var(--intro-progress, 0))/1.12 var(--display);
+    letter-spacing: -.02em; will-change: transform; }
+  #head .lead, #agent-head .lead, .opening-page .lead { color: var(--accent); display: block; }
+  #head .lead, #agent-head .lead { font-size: .82em; }
+  #stmt, #agent-stmt { display: block; position: relative; min-height: 2.24em; will-change: transform, opacity; }
+  #stmt .decode-final, #agent-stmt .decode-final { opacity: 0; }
+  #stmt .decode-text, #agent-stmt .decode-text { position: absolute; inset: 0; overflow: hidden; }
+  #stmt .noise, #agent-stmt .noise { color: var(--accent); opacity: .45; font-style: italic; }
+
+  #detail, #agent-detail { position: absolute; left: clamp(16px, 5vw, 64px); right: clamp(16px, 5vw, 64px); top: 0;
+    display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 8fr); gap: clamp(24px, 4vw, 64px);
+    align-items: start; will-change: transform, opacity; }
+  /* Give the media most of the width on desktop so captured app text stays legible. */
+  @media (min-width: 981px) {
+    #detail, #agent-detail { grid-template-columns: minmax(0, 4fr) minmax(0, 9fr); gap: var(--feature-wide-gap); }
+  }
+  #detail h2, #agent-detail h2 { margin: 0 0 14px; font: 500 var(--section-title-size)/1.15 var(--sans); letter-spacing: -.02em; text-wrap: balance; }
+  #detail p, #agent-detail p { margin: 0 0 18px; color: color-mix(in srgb, var(--fg) 60%, var(--muted)); }
+  #detail ul, #agent-detail ul { margin: 0; padding: 0; list-style: none; }
+  #detail .feature-copy li, #agent-detail .feature-copy li { position: relative; padding: 12px 0 12px 20px; border-top: 1px solid var(--line); font-size: 15px; color: var(--muted); }
+  #detail .feature-copy li strong, #agent-detail .feature-copy li strong { color: var(--fg); font-weight: 600; }
+  #detail .feature-copy li::before, #agent-detail .feature-copy li::before { content: "—"; position: absolute; left: 0; color: var(--accent); }
+  .feature-copy { min-width: 0; align-self: start; }
+  @media (min-width: 761px) and (max-width: 1160px) {
+    #detail .feature-copy > h2, #agent-detail .feature-copy > h2 { font-size: 30px; }
+    #detail .feature-copy > p, #agent-detail .feature-copy > p { font-size: 16px; line-height: 1.5; }
+    #detail .feature-copy li, #agent-detail .feature-copy li { font-size: 14px; line-height: 1.45; padding-block: 8px; }
+  }
+  @media (min-width: 761px) and (max-height: 700px) {
+    #detail .feature-copy > h2, #agent-detail .feature-copy > h2 { font-size: 28px; }
+    #detail .feature-copy > p, #agent-detail .feature-copy > p { font-size: 15px; line-height: 1.5; }
+    #detail .feature-copy li, #agent-detail .feature-copy li { font-size: 13px; line-height: 1.45; padding-block: 6px; }
+  }
+  .shot { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 6px;
+    box-shadow: var(--shadow); overflow: hidden; }
+  .shot .bar { height: 26px; display: flex; gap: 7px; align-items: center; padding: 0 12px; border-bottom: 1px solid rgba(0,0,0,.08); }
+  .shot .bar i { width: 11px; height: 11px; border-radius: 50%; background: rgba(0,0,0,.12); }
+  .feature-media { min-width: 0; display: grid; gap: 14px; }
+  .feature-media > .shot { min-width: 0; width: 100%; }
+  .feature-actions { display: flex; align-items: center; justify-content: flex-end; }
+  /* Same query as trial.js: phones get "Try Hikari on a computer", so skip links into it. */
+  @media (max-width: 760px), (hover: none) and (pointer: coarse) {
+    .try-link[href^="#trial"] { display: none; }
+    .feature-actions:has(.try-link[href^="#trial"]) { display: none; }
+  }
+  /* Real Hikari UI, captured from illustrative demo workspaces at high pixel density. */
+  .shot img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; background: #fcfbf8; }
+
+  #dots, #agent-dots { position: fixed; right: clamp(4px, 1vw, 16px); top: 50%; transform: translateY(-50%);
+    display: grid; z-index: 5; visibility: hidden; }
+  .feature-dots a { position: relative; display: grid; place-items: center; width: 28px; height: 28px;
+    color: var(--muted); text-decoration: none; border-radius: 5px; }
+  .feature-dots b { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: .4; transition: .15s; }
+  .feature-dots a[aria-current="location"] { color: var(--accent); }
+  .feature-dots a[aria-current="location"] b { opacity: 1; transform: scale(1.5); }
+  .feature-dots span { position: absolute; right: 24px; top: 50%; transform: translate(6px, -50%);
+    padding: 5px 10px; border-radius: 4px; background: color-mix(in srgb, var(--bg) 96%, transparent);
+    font: 500 13px/1.2 var(--sans); white-space: nowrap; opacity: 0; pointer-events: none;
+    transition: opacity .15s, transform .15s; }
+  .feature-dots:hover span, .feature-dots:focus-within span { opacity: 1; transform: translate(0, -50%); pointer-events: auto; }
+  .feature-dots a:hover, .feature-dots a:focus-visible { color: var(--fg); }
+  .feature-dots a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  @media (prefers-reduced-motion: reduce) { .feature-dots :is(b, span) { transition: none; } }
+
+  .hint { position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%); color: var(--muted);
+    font: 400 11px/1 var(--mono); letter-spacing: .18em; text-transform: uppercase; }
+
+  .practical { padding: 120px clamp(24px, 7vw, 100px); border-top: 1px solid var(--line); }
+  .practical-inner { max-width: 1200px; margin: auto; display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1fr); gap: clamp(48px, 8vw, 120px); align-items: start; }
+  .practical-kicker { margin: 0 0 16px; color: var(--accent); font: 12px/1.4 var(--mono); text-transform: uppercase; letter-spacing: .12em; }
+  .practical h2 { margin: 0; font: 400 clamp(38px, 4vw, 56px)/1.08 var(--display); letter-spacing: -.025em; }
+  .practical-intro { color: var(--muted); max-width: 340px; }
+  .practical-art { display: block; width: min(100%, 340px); margin-top: 36px; }
+  .practical dl { margin: 0; }
+  .practical .answer { padding: 20px 0; border-top: 1px solid var(--line); }
+  .practical .answer:last-child { border-bottom: 1px solid var(--line); }
+  .practical dt { font-weight: 600; }
+  .practical dd { margin: 7px 0 0; color: var(--muted); line-height: 1.6; }
+  .practical a { color: var(--fg); text-underline-offset: 3px; }
+  .practical a:hover { color: var(--accent); }
+  .practical a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+  @media (max-width: 760px) {
+    .practical { padding-block: 80px; }
+    .practical-inner { grid-template-columns: 1fr; gap: 36px; }
+    .practical-art { width: min(70%, 240px); margin-top: 24px; }
+  }
+
+  footer { min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column;
+    justify-content: center; align-items: center; text-align: center; gap: 24px;
+    padding: 112px clamp(24px, 5vw, 64px); }
+  /* Hold the install command for the same 1.2 viewport scroll cycle as a feature. */
+  .install-track[data-install-ready] { min-height: calc(var(--install-height) + 120svh); }
+  .install-track[data-install-ready] > .install-stage { position: sticky; top: min(0px, calc(100svh - var(--install-height))); }
+  footer h2 { margin: 0; max-width: 760px; font: 400 clamp(36px, 4.8vw, 64px)/1.12 var(--display); letter-spacing: -.025em; }
+  footer .footer-lead { display: block; margin-bottom: 16px; font-size: clamp(26px, 2.8vw, 36px); line-height: 1.1; }
+  footer h2 em { color: var(--accent); font-style: normal; }
+  .install-note { max-width: 640px; color: var(--muted); margin: 0; line-height: 1.6; }
+  .install-note strong { display: block; margin-bottom: 8px; color: var(--fg); font-weight: 500; }
+  .install-instructions { display: grid; justify-items: center; gap: 12px; width: min(100%, 780px); }
+  .install-platforms { display: flex; justify-content: center; gap: 8px; }
+  .install-platforms button { border: 0; border-bottom: 1px solid transparent; padding: 8px 14px;
+    color: var(--muted); background: transparent; font: 500 14px/1.2 var(--sans); cursor: pointer; }
+  .install-platforms button[aria-pressed="true"] { color: var(--fg); border-color: var(--accent); }
+  .install-platforms button:hover { color: var(--fg); }
+  .install-platforms button:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+  .install-shell { margin: 0; color: var(--muted); font: 14px/1.5 var(--sans); }
+  footer code { background: var(--surface); border: 1px solid var(--line); padding: 14px 18px; border-radius: 6px;
+    font: 13px/1.5 var(--mono); max-width: 100%; display: block; text-align: left; overflow-wrap: anywhere; }
+  .install-command-line { display: flex; align-items: center; width: 100%; min-width: 0;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+  .install-command-line code { flex: 1; min-width: 0; background: transparent; border: 0; }
+  .install-copy { display: inline-flex; align-items: center; justify-content: center; gap: 7px; flex: 0 0 88px;
+    margin-right: 8px; padding: 9px 8px; border: 0; border-radius: 4px; color: var(--muted); background: transparent;
+    font: 500 13px/1.2 var(--sans); cursor: pointer; }
+  .install-copy:hover, .install-copy[data-copied="true"] { color: var(--accent); }
+  .install-copy:hover { background: color-mix(in srgb, var(--fg) 5%, transparent); }
+  .install-copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .install-copy svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.6;
+    stroke-linecap: round; stroke-linejoin: round; }
+  .install-copy .install-check-icon, .install-copy[data-copied="true"] .install-copy-icon { display: none; }
+  .install-copy[data-copied="true"] .install-check-icon { display: block; }
+  .install-copy-status { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap; }
+  .setup-details { width: min(100%, 780px); }
+  .setup-details > summary { width: fit-content; margin-inline: auto; padding: 10px 4px;
+    color: var(--fg); font: 500 14px/1.5 var(--sans); cursor: pointer; text-align: left; }
+  .setup-details > summary::marker { color: var(--accent); }
+  .setup-details > summary:hover { color: var(--accent); }
+  .setup-details > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+  .setup-details[open] > summary { margin-bottom: 16px; }
+  .install-guide-button { padding: 10px 4px; border: 0; background: transparent; color: var(--fg);
+    font: 500 14px/1.5 var(--sans); cursor: pointer; text-decoration: underline; text-underline-offset: 4px; }
+  .install-guide-button:hover { color: var(--accent); }
+  .install-guide-button:focus-visible, .install-guide-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+  .install-dialog { width: min(680px, calc(100% - 32px)); max-height: calc(100% - 32px); box-sizing: border-box;
+    padding: clamp(24px, 5vw, 40px); border: 1px solid var(--line); border-radius: 10px;
+    color: var(--fg); background: var(--bg); text-align: left; }
+  .install-dialog::backdrop { background: rgba(0, 0, 0, .65); }
+  .install-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 28px; }
+  .install-dialog-header h2 { margin: 0; font: 400 30px/1.2 var(--display); }
+  .install-guide-close { border: 0; padding: 4px 8px; background: transparent; color: var(--fg); font: 28px/1 var(--sans); cursor: pointer; }
+  .install-details-content { display: grid; gap: 28px; }
+  .install-output-folder { color: var(--fg); font-family: var(--mono); font-size: .9em; }
+  .install-next-steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px;
+    width: 100%; margin: 0; padding: 0;
+    list-style: none; counter-reset: install-step; text-align: left; }
+  .install-next-steps li { counter-increment: install-step; min-width: 0; }
+  .install-next-steps h3 { margin: 0 0 8px; font: 500 17px/1.4 var(--sans); }
+  .install-next-steps h3::before { content: counter(install-step, decimal-leading-zero); display: block; margin-bottom: 12px;
+    color: var(--accent); font: 12px/1 var(--mono); }
+  .install-next-steps p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+  .install-next-steps strong { color: var(--fg); font-weight: 500; }
+  .install-details-content a { color: var(--fg); font-size: 14px;
+    text-underline-offset: 4px; text-decoration-color: var(--line); }
+  .install-details-content a:hover { color: var(--accent); text-decoration-color: currentColor; }
+  .install-details-content a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+  .install-guide-link { margin: 0; }
+  .footer-links { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; }
+  .footer-links a { display: grid; place-items: center; width: 48px; height: 48px; color: var(--fg);
+    border: 1px solid var(--line); border-radius: 50%; text-decoration: none; }
+  .footer-links svg { display: block; width: 24px; height: 24px; fill: currentColor; }
+  .footer-links .npm-icon { width: 32px; height: 32px; }
+  .footer-links a:hover { color: var(--bg); background: var(--fg); border-color: var(--fg); }
+  .footer-links a:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+
+  @media (max-width: 760px) {
+    .install-next-steps { grid-template-columns: 1fr; gap: 20px; }
+    .install-next-steps li { position: relative; padding-left: 36px; }
+    .install-next-steps h3::before { position: absolute; left: 0; top: 6px; margin: 0; }
+    #stmt, #agent-stmt { min-height: 3.36em; }
+    #detail, #agent-detail { grid-template-columns: 1fr; gap: 20px; }
+    #detail h2, #agent-detail h2 { font-size: 28px; }
+    #detail p, #agent-detail p { font-size: 15px; }
+    #detail .feature-copy li, #agent-detail .feature-copy li { font-size: 14px; }
+    #detail .shot-viewport, #agent-detail .shot-viewport { max-height: 22vh; }
+    #detail .feature-copy li:nth-child(n+3), #agent-detail .feature-copy li:nth-child(n+3) { display: none; }
+  }
+  @media (max-width: 680px) {
+    .header-tabs .tab-wide { display: none; }
+    .header-tabs .tab-narrow { display: inline; }
+  }
+  @media (max-width: 480px) {
+    .install-copy { flex-basis: 44px; min-height: 44px; }
+    .install-copy-label { display: none; }
+    .site-header { grid-template-columns: auto 1fr auto; gap: 8px; padding: 0 12px; }
+    .site-header .brand { gap: 6px; font-size: 22px; }
+    .site-header img { width: 24px; height: 24px; }
+    .header-tabs { justify-self: center; gap: 0; }
+    .header-tabs a { padding: 10px 8px; font-size: 13px; }
+    .site-header a.cta { padding: 8px 10px; font-size: 10px; }
+  }
+  @media (max-width: 360px) {
+    .site-header { gap: 6px; }
+    .site-header .brand { font-size: 0; gap: 0; }
+    .site-header .header-tabs a { padding-inline: 6px; font-size: 12px; }
+  }
+  @media (max-width: 420px) {
+    .site-header .brand { font-size: 0; gap: 0; }
+  }
+  @media (max-width: 760px) and (max-height: 740px) {
+    #head, #agent-head { --feature-title-size: 22px; }
+    #stmt, #agent-stmt { min-height: 2.24em; }
+    #detail, #agent-detail { gap: 10px; }
+    #detail h2, #agent-detail h2 { font-size: 24px; margin-bottom: 8px; }
+    #detail p, #agent-detail p { font-size: 14px; margin-bottom: 8px; }
+    #detail .feature-copy li, #agent-detail .feature-copy li { font-size: 13px; padding-block: 6px; }
+    #detail .shot-viewport, #agent-detail .shot-viewport { max-height: 17vh; }
+  }
+  /* Short windows can scroll through the canvas instead of crushing it to a strip. */
+  @media (max-height: 620px) {
+    #detail .shot-viewport, #agent-detail .shot-viewport { max-height: none; }
+    #detail[data-feature="protocols"] #dBody { display: block; }
+  }
+  @media (max-width: 760px) {
+    html { scrollbar-gutter: auto; -webkit-text-size-adjust: 100%; }
+    .site-header :is(.header-tabs a, a.cta) { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+    .opening-page { padding-inline: 20px; }
+    #opening { --opening-top: 104px; gap: 20px; }
+    .opening-description { font-size: 16px; }
+    .hero-progress { gap: 0; padding: 4px 6px; max-width: calc(100vw - 16px); }
+    .hero-progress button { width: 32px; height: 44px; }
+    #stage, #agent-stage { height: 100svh; }
+    #head, #agent-head { top: 124px; left: 20px; width: calc(100% - 40px); }
+    #detail, #agent-detail { left: 20px; right: 20px; gap: 20px; }
+    #detail p, #agent-detail p { font-size: 16px; line-height: 1.6; }
+    #detail .feature-copy li, #agent-detail .feature-copy li { font-size: 14px; line-height: 1.55; padding-block: 10px; }
+    #detail .feature-copy li:nth-child(n+3), #agent-detail .feature-copy li:nth-child(n+3) { display: list-item; }
+    #detail[data-feature="protocols"] #dList { display: block; }
+    #detail .shot-viewport, #agent-detail .shot-viewport { max-height: min(32svh, 260px); }
+    #dots, #agent-dots { top: var(--site-header-height); left: 0; right: 0; transform: none; display: flex;
+      overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding: 0 12px;
+      background: var(--bg); border-bottom: 1px solid var(--line); }
+    .feature-dots::-webkit-scrollbar { display: none; }
+    .feature-dots a { flex: 0 0 auto; width: auto; min-height: 44px; height: auto; padding: 10px 12px; border-radius: 0; }
+    .feature-dots b { display: none; }
+    .feature-dots span, .feature-dots:hover span, .feature-dots:focus-within span { position: static; transform: none;
+      opacity: 1; pointer-events: auto; padding: 0; background: transparent; font-size: 13px; }
+    .feature-dots a[aria-current="location"] { box-shadow: inset 0 -2px var(--accent); }
+    .install-platforms button, .install-guide-button, .install-guide-close { min-width: 44px; min-height: 44px; }
+    .install-stage { padding: 96px 20px 72px; gap: 20px; }
+    .install-stage code { font-size: 12px; padding: 14px 12px; }
+    .install-dialog { max-height: calc(100svh - 24px); }
+    .practical { padding: 72px 20px; }
+    .practical-inner { gap: 32px; }
+    .practical h2 { font-size: 36px; }
+    .plugins-page { padding-inline: 20px; }
+    .plugin-actions > a, .install-details-content a { min-height: 44px; display: inline-flex; align-items: center; }
+    .trial-page { overflow-y: auto; overscroll-behavior: contain; }
+  }
+</style>
+</head>
+<body>
+<svg class="hikari-symbols" width="0" height="0" aria-hidden="true" focusable="false">
+  <defs><symbol id="hikari-star-helix" viewBox="390 185 475 865">
+<path d="M628 209
+      C626 209 625 231 624 252
+      L613 487 473 366
+      Q469 363 471 369
+      L594 503 422 514
+      Q414 517 422 520
+      L594 531 613 548 626 754
+      Q628 785 630 754
+      L642 548 661 531 828 520
+      Q841 517 828 514
+      L661 503 783 370
+      Q788 363 782 367
+      L643 488
+      Q641 489 641 485
+      L631 255
+      C630 230 630 209 628 209Z" />
+    <path d="M596 527
+      C552 575 510 616 510 672
+      C510 737 552 774 600 812
+      L660 859
+      C708 899 740 951 729 1018
+      Q728 1023 732 1021
+      C754 977 749 934 728 901
+      C707 866 674 841 642 816
+      L593 777
+      C554 745 531 714 532 674
+      C532 623 572 584 616 545Z" />
+    <path d="M659 527
+      C705 576 746 617 746 672
+      C746 730 710 767 658 808
+      L641 794
+      C687 758 724 721 724 672
+      C724 623 684 583 640 545Z" />
+    <path d="M598 828
+      C555 860 510 902 510 962
+      C509 983 514 1004 522 1020
+      Q526 1024 526 1019
+      C516 956 549 897 614 841Z" />
+    <rect x="558" y="662" width="140" height="15" rx="7.5" />
+    <rect x="572" y="723" width="112" height="15" rx="7.5" />
+    <rect x="574" y="890" width="108" height="15" rx="7.5" />
+    <rect x="558" y="950" width="140" height="15" rx="7.5" />
+  </symbol></defs>
+</svg>
+
+<header class="site-header">
+  <a class="brand" href="#opening" aria-label="Hikari"><img src="icon.png" alt="">Hikari</a>
+  <nav class="header-tabs" role="tablist" aria-label="Explore Hikari">
+    <a id="product-tab" href="#product" role="tab" aria-selected="true" aria-controls="product-panel">Product</a>
+    <a id="agent-tab" href="#agent" role="tab" aria-selected="false" aria-controls="agent-panel" tabindex="-1">Agent</a>
+    <a id="trial-tab" href="#trial" role="tab" aria-selected="false" aria-controls="trial-panel" tabindex="-1"><span class="tab-wide">Interactive demo</span><span class="tab-narrow">Demo</span></a>
+    <a id="plugins-tab" href="#plugins" role="tab" aria-selected="false" aria-controls="plugins-panel" tabindex="-1">Plugins</a>
+  </nav>
+  <a class="cta" href="#install">Install</a>
+</header>
+
+<main id="product-panel" role="tabpanel" aria-labelledby="product-tab">
+<section id="opening" class="opening-page" aria-labelledby="opening-title">
+  <h1 id="opening-title" class="opening-title"><span class="lead">Hikari is</span> <span class="opening-statement">your lab, in one app.</span></h1>
+  <noscript><p><a href="#install">Install the desktop app</a>.</p></noscript>
+  <a class="try-link" href="#trial">Try in your browser <span aria-hidden="true">↗</span></a>
+  <figure class="hero-product" aria-label="Hikari Home dashboard with fictional lab records">
+    <div class="hero-product-window">
+      <div class="hero-window-bar" aria-hidden="true"><i></i><i></i><i></i><span>Hikari · Home</span></div>
+      <div class="hero-product-frame">
+      <img src="shots/home-hero.png?v=wide-rail-7" srcset="shots/home-hero-1280.webp 1280w, shots/home-hero-2560.webp 2560w, shots/home-hero-3840.webp 3840w, shots/home-hero.png?v=wide-rail-7 6400w" sizes="(max-width: 760px) calc(100vw - 24px), (max-width: 1488px) calc(100vw - 128px), 1360px" width="6400" height="3760" fetchpriority="high" alt="Hikari’s full Home dashboard: app dock, running incubation timer, HEK293T and CHO-K1 passage reminders, fictional enzyme stability papers, and a notebook note connecting sample PROT-017 to plate 04 results.">
+      </div>
+    </div>
+  </figure>
+  <div class="hero-progress" role="group" aria-label="Slideshow progress: choose a module" hidden></div>
+  <p class="hero-papers-credit" hidden>Featured papers: <a href="https://www.nature.com/articles/s41586-021-03819-2" target="_blank" rel="noopener noreferrer">AlphaFold · Jumper et al., Nature (2021)</a>, reproduced under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>; <a href="https://doi.org/10.1073/pnas.0707090104" target="_blank" rel="noopener noreferrer">copper-free click chemistry · Baskin et al., PNAS (2007)</a>.</p>
+  <a class="hint" href="#track">Scroll to explore <span aria-hidden="true">↓</span></a>
+</section>
+
+<div id="track">
+  <span id="protocol-to-notebook" class="feature-anchor" aria-hidden="true"></span>
+  <span id="workflow-trace" class="feature-anchor" aria-hidden="true"></span>
+  <span id="protein-builder" class="feature-anchor" aria-hidden="true"></span>
+  <div id="stage">
+    <h2 id="head"><span class="lead">Hikari is</span><span id="stmt"></span></h2>
+    <section id="detail" aria-live="polite">
+      <!-- PRODUCT_COPY:START -->
+      <div class="feature-copy" data-story-feature="experiments">
+        <h2 id="dTitle" data-feature-title tabindex="-1">One request. Connected work.</h2>
+        <p id="dBody" data-feature-body>Ask Hikari to work across your protocols, samples, notebook, and papers. It finds the context to help write methods, prepare pages, locate materials, and analyze results.</p>
+        <ul id="dList" data-feature-list><li><strong>One conversation</strong> across your lab records</li><li><strong>Write, find, explain, plot</strong> with your context</li><li><strong>Review first</strong> before saving drafts</li></ul>
+      </div>
+      <div class="feature-copy" data-story-feature="cloning" hidden>
+        <h2 id="copy-cloning-title" data-feature-title tabindex="-1">Design your cloning plan</h2>
+        <p id="copy-cloning-body" data-feature-body>Make a sequence edit, compare cloning routes, and get primers for the job. Review each primer’s properties, then copy the sequences or export a list for your order.</p>
+        <ul id="copy-cloning-list" data-feature-list><li><strong>7 cloning routes</strong>, including KLD and Gibson</li><li><strong>Check primers</strong>: length, Tm, and GC content</li><li><strong>Ready to order</strong>: copy sequences or export for IDT</li></ul>
+      </div>
+      <div class="feature-copy" data-story-feature="protein-builder" hidden>
+        <h2 id="copy-protein-builder-title" data-feature-title tabindex="-1">Build a protein. Prepare the sequence.</h2>
+        <p id="copy-protein-builder-body" data-feature-body>Assemble proteins, tags, linkers, and cleavage sites into one chain. Review the assembled amino acid sequence and build coding DNA with your chosen codon usage. Copy either sequence into an ordering platform for gene synthesis.</p>
+        <ul id="copy-protein-builder-list" data-feature-list><li><strong>Build your chain</strong> from protein blocks</li><li><strong>Generate coding DNA</strong> with your codon usage</li><li><strong>Copy protein or DNA</strong> for gene synthesis</li></ul>
+      </div>
+      <div class="feature-copy" data-story-feature="calculations" hidden>
+        <h2 id="copy-calculations-title" data-feature-title tabindex="-1">Bench calculations, on paper</h2>
+        <p id="copy-calculations-body" data-feature-body>Enter three known values to calculate the fourth, or leave two values for Hikari to write out the remaining arithmetic. Export the table with your notebook PDF and print it. At the bench, a lab calculator is all you need to finish the calculations—no return to the computer.</p>
+        <ul id="copy-calculations-list" data-feature-list><li><strong>Calculate in place</strong> in your notebook</li><li><strong>Print your worksheet</strong> with the notebook PDF</li><li><strong>Finish at the bench</strong> with a lab calculator</li></ul>
+      </div>
+      <div class="feature-copy" data-story-feature="protocols" hidden>
+        <h2 id="copy-protocols-title" data-feature-title tabindex="-1">Reuse a method. Record the run.</h2>
+        <p id="copy-protocols-body" data-feature-body>Start from a saved protocol and fill in the details for this run. Steps, sample links, and observations stay together in a notebook page, even when you later update the library.</p>
+        <ul id="copy-protocols-list" data-feature-list><li><strong>Reuse a saved method</strong> for each run</li><li><strong>Capture the details</strong>: samples, values, and notes</li><li><strong>Preserve each run</strong> when the library changes</li></ul>
+      </div>
+      <div class="feature-copy" data-story-feature="workflows" hidden>
+        <h2 id="copy-workflows-title" data-feature-title tabindex="-1">Repeat the process. Trace the run.</h2>
+        <p id="copy-workflows-body" data-feature-body>Turn a process you repeat into a reusable workflow. Each run keeps its own progress, results, and notebook links, so you can see what happened and what comes next.</p>
+        <ul id="copy-workflows-list" data-feature-list><li><strong>One template</strong> for repeated runs</li><li><strong>Track progress</strong> through steps and branches</li><li><strong>Keep the trail</strong>: results and notebook links</li></ul>
+      </div>
+      <div class="feature-copy" data-story-feature="samples" hidden>
+        <h2 id="copy-samples-title" data-feature-title tabindex="-1">Find every sample</h2>
+        <p id="copy-samples-body" data-feature-body>Know what a sample is, where it’s stored, and which experiments used it. Keep plasmids, proteins, cell lines, and other materials together, with records linked to your notebook.</p>
+        <ul id="copy-samples-list" data-feature-list><li><strong>Find the well</strong>, find your sample</li><li><strong>Know the sample</strong>: concentration, batch, and notes</li><li><strong>Connect your records</strong> with CSV and experiment links</li></ul>
+      </div>
+      <div class="feature-copy" data-story-feature="plugins" hidden>
+        <h2 id="copy-plugins-title" data-feature-title tabindex="-1">Your workspace. Your tools.</h2>
+        <p id="copy-plugins-body" data-feature-body>Shape Hikari around the way you work. Add a plugin when you need something new, and keep your everyday research in the same workspace.</p>
+        <ul id="copy-plugins-list" data-feature-list><li><strong>Add the tools you need</strong> through plugins</li><li><strong>Check permissions</strong> before enabling a plugin</li><li><strong>Grow your setup</strong> as your work evolves</li></ul>
+      </div>
+      <!-- PRODUCT_COPY:END -->
+      <div class="feature-media">
+      <figure class="shot" id="shot"><div class="bar" aria-hidden="true"><i></i><i></i><i></i><span class="shot-title"></span></div>
+        <div class="shot-viewport" id="dViewport"><img id="dImg" alt="" decoding="async">
+        <div id="ai-flow" class="ai-flow" data-illustration="ai-flow" data-title="Agent · Your connected workspace" hidden>
+          <svg class="ai-desktop" viewBox="0 0 900 480" role="img" aria-labelledby="ai-flow-title ai-flow-description">
+            <title id="ai-flow-title">One agent, your whole Hikari workspace</title>
+            <desc id="ai-flow-description">Protocols, samples, notebook pages, and papers connect to Hikari Agent. Ask it to write and polish protocols, find samples and stocks, draft notebook pages, plot results, or search and explain papers. Review drafted pages and protocols before saving.</desc>
+            <text class="ai-label" x="28" y="46">YOUR WORKSPACE</text>
+            <text class="ai-label" x="644" y="46">WHAT YOU CAN ASK</text>
+            <g class="ai-connections" fill="none" stroke-width="1.5" stroke-linecap="round">
+              <path id="ai-in-protocols" pathLength="100" d="M244 120C307 120 300 210 361 210" stroke="var(--diagram-pine)"/>
+              <path id="ai-in-samples" pathLength="100" d="M244 200C302 200 310 228 359 228" stroke="var(--diagram-gold)"/>
+              <path id="ai-in-notebook" pathLength="100" d="M244 280C302 280 310 246 359 246" stroke="var(--diagram-iris)"/>
+              <path id="ai-in-papers" pathLength="100" d="M244 360C307 360 300 264 361 264" stroke="var(--diagram-rose)"/>
+              <path id="ai-out-protocols" pathLength="100" d="M528 210C589 210 573 120 625 120" stroke="var(--diagram-pine)"/>
+              <path id="ai-out-samples" pathLength="100" d="M530 228C579 228 583 200 625 200" stroke="var(--diagram-gold)"/>
+              <path id="ai-out-notebook" pathLength="100" d="M530 246C579 246 583 280 625 280" stroke="var(--diagram-iris)"/>
+              <path id="ai-out-papers" pathLength="100" d="M528 264C589 264 573 360 625 360" stroke="var(--diagram-rose)"/>
+              <path d="m619 116 6 4-6 4" stroke="var(--diagram-pine)"/>
+              <path d="m619 196 6 4-6 4" stroke="var(--diagram-gold)"/>
+              <path d="m619 276 6 4-6 4" stroke="var(--diagram-iris)"/>
+              <path d="m619 356 6 4-6 4" stroke="var(--diagram-rose)"/>
+            </g>
+            <g class="ai-signals" fill="none" stroke-width="3" stroke-linecap="round" aria-hidden="true">
+              <use href="#ai-in-protocols"/><use href="#ai-in-samples"/><use href="#ai-in-notebook"/><use href="#ai-in-papers"/>
+              <use href="#ai-out-protocols"/><use href="#ai-out-samples"/><use href="#ai-out-notebook"/><use href="#ai-out-papers"/>
+            </g>
+            <g class="ai-module-icon" transform="translate(28 104)" stroke="var(--diagram-pine)">
+              <path d="M7 2h20v30H7ZM13 11h9M13 18h9M13 25h6M3 9h4M3 16h4M3 23h4"/>
+            </g>
+            <text class="ai-copy ai-module-name" x="80" y="116">Protocols</text>
+            <text class="ai-muted" x="80" y="140" font-size="14">Methods &amp; steps</text>
+            <g class="ai-module-icon" transform="translate(28 184)" stroke="var(--diagram-gold)">
+              <path d="M8 2h16M10 2v6l-2 4v17q0 3 3 3h10q3 0 3-3V12l-2-4V2M9 17h14M12 22h8M12 26h5"/>
+            </g>
+            <text class="ai-copy ai-module-name" x="80" y="196">Samples</text>
+            <text class="ai-muted" x="80" y="220" font-size="14">Stocks &amp; locations</text>
+            <g class="ai-module-icon" transform="translate(28 264)" stroke="var(--diagram-iris)">
+              <path d="M16 5C11 1 5 1 1 3v27c5-2 10-2 15 2 5-4 10-4 15-2V3c-4-2-10-2-15 2ZM16 5v27M5 10h6M5 16h6M21 10h6M21 16h6"/>
+            </g>
+            <text class="ai-copy ai-module-name" x="80" y="276">Notebook</text>
+            <text class="ai-muted" x="80" y="300" font-size="14">Runs &amp; results</text>
+            <g class="ai-module-icon" transform="translate(28 344)" stroke="var(--diagram-rose)">
+              <path d="M6 1h15l7 7v25H6ZM21 1v8h7M11 15h12M11 21h12M11 27h8"/>
+            </g>
+            <text class="ai-copy ai-module-name" x="80" y="356">Papers</text>
+            <text class="ai-muted" x="80" y="380" font-size="14">Literature &amp; methods</text>
+            <circle cx="444" cy="237" r="86" fill="none" stroke="var(--diagram-line)" stroke-dasharray="2 9"/>
+            <circle cx="444" cy="237" r="68" fill="none" stroke="var(--diagram-iris)" opacity=".18"/>
+            <text class="ai-muted" x="444" y="132" text-anchor="middle" font-size="14">Ask in plain language</text>
+            <svg class="hikari-mark" x="415" y="181" width="58" height="112" viewBox="390 185 475 865" aria-hidden="true"><use href="#hikari-star-helix" x="390" y="185" width="475" height="865"/></svg>
+            <text class="ai-name" x="444" y="356" text-anchor="middle">Hikari Agent</text>
+            <text class="ai-muted" x="444" y="380" text-anchor="middle" font-size="14">Your records in context</text>
+            <text class="ai-copy ai-task" x="644" y="116">Write &amp; polish protocols</text>
+            <text class="ai-muted" x="644" y="140" font-size="14">Prepare a method for the bench</text>
+            <text class="ai-copy ai-task" x="644" y="196">Find samples &amp; stocks</text>
+            <text class="ai-muted" x="644" y="220" font-size="14">Locate what you need</text>
+            <text class="ai-copy ai-task" x="644" y="276">Draft pages &amp; plot results</text>
+            <text class="ai-muted" x="644" y="300" font-size="14">Turn your work into a record</text>
+            <text class="ai-copy ai-task" x="644" y="356">Search &amp; explain papers</text>
+            <text class="ai-muted" x="644" y="380" font-size="14">Bring the literature into your work</text>
+            <path d="m275 440 5 5 10-12" fill="none" stroke="var(--diagram-pine)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <text class="ai-muted" x="450" y="445" text-anchor="middle" font-size="14">Review drafted pages &amp; protocols before saving</text>
+          </svg>
+          <svg class="ai-mobile" viewBox="0 0 420 240" role="img" aria-labelledby="ai-flow-mobile-title ai-flow-mobile-description">
+            <title id="ai-flow-mobile-title">One agent connects your protocols, samples, notebook, and papers</title>
+            <desc id="ai-flow-mobile-description">Ask Hikari Agent to write, find, explain, and plot using your connected records. Drafted pages and protocols wait for your review.</desc>
+            <g class="ai-connections" fill="none" stroke-width="1.4" stroke-linecap="round">
+              <path id="ai-mobile-protocols" pathLength="100" d="M92 65C143 65 144 96 166 100" stroke="var(--diagram-pine)"/>
+              <path id="ai-mobile-samples" pathLength="100" d="M328 65C277 65 276 96 254 100" stroke="var(--diagram-gold)"/>
+              <path id="ai-mobile-notebook" pathLength="100" d="M92 179C143 179 144 128 166 124" stroke="var(--diagram-iris)"/>
+              <path id="ai-mobile-papers" pathLength="100" d="M328 179C277 179 276 128 254 124" stroke="var(--diagram-rose)"/>
+            </g>
+            <g class="ai-signals" fill="none" stroke-width="2.8" stroke-linecap="round" aria-hidden="true">
+              <use href="#ai-mobile-protocols"/><use href="#ai-mobile-samples"/><use href="#ai-mobile-notebook"/><use href="#ai-mobile-papers"/>
+            </g>
+            <g class="ai-copy" text-anchor="middle" font-size="17"><text x="66" y="32">Protocols</text><text x="354" y="32">Samples</text><text x="66" y="158">Notebook</text><text x="354" y="158">Papers</text></g>
+            <g class="ai-module-icon" transform="translate(50 49)" stroke="var(--diagram-pine)"><path d="M7 2h20v30H7ZM13 11h9M13 18h9M13 25h6M3 9h4M3 16h4M3 23h4"/></g>
+            <g class="ai-module-icon" transform="translate(338 49)" stroke="var(--diagram-gold)"><path d="M8 2h16M10 2v6l-2 4v17q0 3 3 3h10q3 0 3-3V12l-2-4V2M9 17h14M12 22h8M12 26h5"/></g>
+            <g class="ai-module-icon" transform="translate(50 175)" stroke="var(--diagram-iris)"><path d="M16 5C11 1 5 1 1 3v27c5-2 10-2 15 2 5-4 10-4 15-2V3c-4-2-10-2-15 2ZM16 5v27M5 10h6M5 16h6M21 10h6M21 16h6"/></g>
+            <g class="ai-module-icon" transform="translate(338 175)" stroke="var(--diagram-rose)"><path d="M6 1h15l7 7v25H6ZM21 1v8h7M11 15h12M11 21h12M11 27h8"/></g>
+            <circle cx="210" cy="112" r="44" fill="none" stroke="var(--diagram-line)" stroke-dasharray="2 6"/>
+            <svg class="hikari-mark" x="193" y="80" width="34" height="65" viewBox="390 185 475 865" aria-hidden="true"><use href="#hikari-star-helix" x="390" y="185" width="475" height="865"/></svg>
+            <text class="ai-name" x="210" y="184" text-anchor="middle">Hikari Agent</text>
+            <text class="ai-muted" x="210" y="230" text-anchor="middle" font-size="13">Write · find · explain · plot</text>
+          </svg>
+        </div>
+        <div id="plugin-flow" class="plugin-flow" data-illustration="plugin-flow" data-title="Plugins · Shape your workspace" hidden>
+          <svg viewBox="0 0 520 440" role="img" aria-labelledby="plugin-flow-title plugin-flow-description">
+            <title id="plugin-flow-title">Room for your next idea.</title>
+            <desc id="plugin-flow-description">Plugins dock into an open hexagonal lattice around Hikari. Analysis and figure-creation cells snap into place, light up when Hikari reaches them, and an empty cell with a plus leaves room for your next plugin.</desc>
+            <defs><polygon id="pl-lattice-cell" points="64.95,-37.5 64.95,37.5 0,75 -64.95,37.5 -64.95,-37.5 0,-75"/></defs>
+            <g aria-hidden="true">
+              <g class="pl-ghost">
+                <use href="#pl-lattice-cell" transform="translate(289.95 86.5)"/>
+                <use href="#pl-lattice-cell" transform="translate(160.05 311.5)"/>
+                <use href="#pl-lattice-cell" transform="translate(160.05 86.5)"/>
+                <use href="#pl-lattice-cell" transform="translate(289.95 311.5)"/>
+              </g>
+              <g class="pl-analyze" transform="translate(160.05 86.5)"><g class="pl-dock">
+                <use class="pl-cell" href="#pl-lattice-cell"/>
+                <use class="pl-trace" href="#pl-lattice-cell"/>
+                <g class="pl-gel" transform="translate(0 -8)">
+                  <rect x="-28" y="-18" width="8" height="2.5" rx="1" opacity="0.45"/>
+                  <rect x="-28" y="0" width="8" height="4" rx="1" opacity="0.68"/>
+                  <rect x="-28" y="18" width="8" height="2.5" rx="1" opacity="0.9"/>
+                  <rect x="-16" y="-13" width="8" height="2.5" rx="1" opacity="0.68"/>
+                  <rect x="-16" y="5" width="8" height="4" rx="1" opacity="0.9"/>
+                  <rect x="-16" y="23" width="8" height="2.5" rx="1" opacity="0.45"/>
+                  <rect x="-4" y="-22" width="8" height="2.5" rx="1" opacity="0.9"/>
+                  <rect x="-4" y="-4" width="8" height="4" rx="1" opacity="0.45"/>
+                  <rect x="-4" y="14" width="8" height="2.5" rx="1" opacity="0.68"/>
+                  <rect x="8" y="-15" width="8" height="2.5" rx="1" opacity="0.45"/>
+                  <rect x="8" y="3" width="8" height="4" rx="1" opacity="0.68"/>
+                  <rect x="8" y="21" width="8" height="2.5" rx="1" opacity="0.9"/>
+                  <rect x="20" y="-19" width="8" height="2.5" rx="1" opacity="0.68"/>
+                  <rect x="20" y="-1" width="8" height="4" rx="1" opacity="0.9"/>
+                  <rect x="20" y="17" width="8" height="2.5" rx="1" opacity="0.45"/>
+                </g>
+                <text class="pl-label" x="0" y="44">Analyze</text>
+              </g></g>
+              <g class="pl-create" transform="translate(289.95 311.5)"><g class="pl-dock">
+                <use class="pl-cell" href="#pl-lattice-cell"/>
+                <use class="pl-trace" href="#pl-lattice-cell"/>
+                <g class="pl-figure" transform="translate(0 -12)">
+                  <path class="pl-figure-lines" pathLength="100" d="M-23 12-7-14 20-9 28 17 2 27Z"/>
+                  <path class="pl-figure-detail" d="M-5-39h35m-35 7h23"/>
+                  <circle cx="-23" cy="12" r="4"/><circle cx="-7" cy="-14" r="4"/>
+                  <circle cx="20" cy="-9" r="4"/><circle cx="28" cy="17" r="4"/><circle cx="2" cy="27" r="4"/>
+                </g>
+                <text class="pl-label" x="0" y="44">Create</text>
+              </g></g>
+              <g class="pl-extend" transform="translate(354.9 199)">
+                <use class="pl-cell" href="#pl-lattice-cell"/>
+                <use class="pl-trace" href="#pl-lattice-cell"/>
+                <path class="pl-plus" d="M-11-8h22M0-19V3"/>
+                <text class="pl-label" x="0" y="44">Extend</text>
+              </g>
+              <g class="pl-core" transform="translate(225 199)">
+                <use class="pl-cell" href="#pl-lattice-cell"/>
+                <svg class="hikari-mark" x="-20.87" y="-49" width="41.73" height="76" viewBox="390 185 475 865"><use href="#hikari-star-helix" x="390" y="185" width="475" height="865"/></svg>
+                <text class="pl-label pl-hikari" x="0" y="51">Hikari</text>
+              </g>
+              <g class="pl-links">
+                <path class="pl-link-analyze" d="M225 124 160.05 161.5"/>
+                <path class="pl-link-create" d="M289.95 236.5 225 274"/>
+                <path class="pl-link-extend" d="M289.95 161.5v75"/>
+              </g>
+              <text class="pl-tagline" x="260" y="430">Room for your next idea.</text>
+            </g>
+          </svg>
+        </div>
+        <div id="protocol-flow" class="protocol-flow" data-illustration="protocol-flow" data-title="Protocol → Notebook" role="group" aria-label="A reusable protocol becomes a notebook page for a specific run" hidden>
+          <div class="pf-path" aria-hidden="true"><span>Protocol library</span><span>→</span><span>Biology notebook</span></div>
+          <div class="pf-cards">
+            <section class="pf-method" aria-label="Saved protocol with reusable fields">
+              <div class="pf-card-head"><span class="pf-eyebrow">Saved protocol</span><h3>Protein comparison</h3></div>
+              <ol class="pf-steps">
+                <li><span><span class="pf-step-copy">Label an aliquot of </span><b class="pf-blank">[Protein]</b></span></li>
+                <li><span><span class="pf-step-copy">Prepare </span><b class="pf-blank">[Volume]</b><span class="pf-step-copy"> of buffer</span></span></li>
+                <li><span><span class="pf-step-copy">Compare after </span><b class="pf-blank">[Time]</b></span></li>
+              </ol>
+              <div class="pf-method-foot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 8a8 8 0 0 0-13-3L3 9m0-6v6h6M4 16a8 8 0 0 0 13 3l4-4m0 6v-6h-6"/></svg><span>Reuse for every run</span></div>
+            </section>
+            <div class="pf-connector" aria-hidden="true"><svg viewBox="0 0 40 24"><path id="pf-transfer-path" pathLength="100" d="M2 12h33"/><path d="M27 5l8 7-8 7"/><use class="pf-transfer" href="#pf-transfer-path"/></svg><span>Start<br>experiment</span></div>
+            <section class="pf-run" aria-label="Notebook page with run values and an observation">
+              <div class="pf-card-head"><span class="pf-eyebrow">Notebook · <span id="pf-run-number">Run 01</span></span><h3 id="pf-run-title">Variant A comparison</h3></div>
+              <ol class="pf-steps">
+                <li><span><span class="pf-step-copy">Label an aliquot of </span><input id="pf-protein" class="pf-value" aria-label="Example protein" value="Variant A" autocomplete="off" maxlength="32"></span></li>
+                <li><span><span class="pf-step-copy">Prepare </span><input id="pf-volume" class="pf-value" aria-label="Example volume" value="200 µL" autocomplete="off" maxlength="24"><span class="pf-step-copy"> of buffer</span></span></li>
+                <li><span><span class="pf-step-copy">Compare after </span><input id="pf-time" class="pf-value" aria-label="Example elapsed time" value="15 min" autocomplete="off" maxlength="24"></span></li>
+              </ol>
+              <div class="pf-observation"><span>Observation</span><p id="pf-observation">Clear solution; no precipitate.</p></div>
+              <div class="pf-snapshot"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6Z M15 3v5h4"/><defs><path id="pf-save-check" pathLength="1" d="M9 14l3 3 5-6"/></defs><use href="#pf-save-check" stroke-opacity=".3"/><use class="pf-snapshot-mark" href="#pf-save-check"/></svg><span>Method saved with this run</span></div>
+            </section>
+          </div>
+          <div class="pf-footer"><button id="pf-next-run" type="button">See another run <span aria-hidden="true">↻</span></button></div>
+          <span id="pf-status" class="trial-sr-only" role="status" aria-live="polite"></span>
+        </div>
+        </div>
+      </figure>
+      <div class="feature-actions"><a id="dTry" class="try-link" href="#agent">Explore Agent <span aria-hidden="true">↗</span></a></div>
+      </div>
+    </section>
+    <div class="hint" id="hint">Scroll</div>
+  </div>
+</div>
+<nav id="dots" class="feature-dots" aria-label="Product features"></nav>
+
+<div id="install" class="install-track">
+<footer class="install-stage">
+  <h2><span class="footer-lead">Hikari is</span><em>ready for your<br>next experiment.</em></h2>
+  <p class="install-note"><strong>Free and open source.</strong>Optional AI requires a ChatGPT plan with Codex CLI access.</p>
+  <div class="install-instructions">
+    <div id="install-platforms" class="install-platforms" role="group" aria-label="Installation platform" hidden>
+      <button type="button" data-install-platform="macos" aria-pressed="true">macOS</button>
+      <button type="button" data-install-platform="windows" aria-pressed="false">Windows</button>
+    </div>
+    <p id="install-shell" class="install-shell" aria-live="polite">macOS · Open Terminal, paste the command below, then press Return.</p>
+    <div id="install-command-line" class="install-command-line">
+      <code id="install-command" aria-label="macOS install command">curl -fsSL https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.sh | bash</code>
+      <button id="install-copy" class="install-copy" type="button" aria-label="Copy macOS install command" title="Copy macOS install command" hidden>
+        <svg class="install-copy-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>
+        <svg class="install-check-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m5 12 4 4L19 6"/></svg>
+        <span id="install-copy-label" class="install-copy-label">Copy</span>
+      </button>
+    </div>
+    <span id="install-copy-status" class="install-copy-status" role="status" aria-atomic="true"></span>
+    <noscript>
+      <p class="install-shell">Windows · Open PowerShell, paste the command below, then press Enter.</p>
+      <code>iwr -useb https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.ps1 | iex</code>
+    </noscript>
+  </div>
+  <button class="install-guide-button" id="install-guide-open" type="button" hidden>Install guide</button>
+  <noscript><a href="https://github.com/HinaShirosaki/Hikari/blob/main/docs/guide/README.md#install">Install guide</a></noscript>
+  <dialog class="install-dialog" id="install-dialog" aria-labelledby="install-dialog-title">
+    <div class="install-dialog-header">
+      <h2 id="install-dialog-title">Install guide</h2>
+      <button class="install-guide-close" id="install-guide-close" type="button" aria-label="Close install guide">&times;</button>
+    </div>
+    <div class="install-details-content">
+      <ol class="install-next-steps" aria-label="Installation steps" role="list">
+        <li>
+          <h3>Open the terminal</h3>
+          <p id="install-terminal-instructions">On macOS, press Command–Space, type Terminal, and press Return. On Windows, press the Windows key, type PowerShell, and press Enter.</p>
+        </li>
+        <li>
+          <h3>Run the command</h3>
+          <p>Copy the install command on the page, paste it into the terminal, and press Enter or Return.</p>
+        </li>
+        <li>
+          <h3>Wait for installation</h3>
+          <p><span id="install-wait-instructions">Keep the terminal window open until the command finishes.</span> The first run may take several minutes. The app is saved in <span class="install-output-folder">hikari-out</span>, inside the folder where you ran the command.</p>
+        </li>
+        <li>
+          <h3>Open Hikari</h3>
+          <p id="install-open-instructions">Open the output folder when the command finishes. On macOS, move Hikari.app to Applications and open it. On Windows, run HikariSetup.exe, then open Hikari from the Start menu.</p>
+        </li>
+      </ol>
+      <p class="install-guide-link"><a href="https://github.com/HinaShirosaki/Hikari/blob/main/docs/guide/README.md#install" target="_blank" rel="noopener noreferrer">Full installation instructions <span aria-hidden="true">↗</span></a></p>
+    </div>
+  </dialog>
+  <div class="footer-links" role="group" aria-label="Project links">
+    <a href="https://github.com/HinaShirosaki/Hikari" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository" title="GitHub repository">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 .297C5.37 .297 0 5.67 0 12.297c0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.043-1.61-4.043-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.084 1.838 1.237 1.838 1.237 1.07 1.835 2.809 1.305 3.495.998.108-.776.419-1.305.762-1.605-2.665-.304-5.467-1.334-5.467-5.93 0-1.31.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.52 11.52 0 0 1 12 6.099c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.652.242 2.873.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.371.823 1.102.823 2.222 0 1.606-.015 2.898-.015 3.293 0 .319.216.694.825.576C20.565 22.092 24 17.592 24 12.297 24 5.67 18.627.297 12 .297Z"/></svg>
+    </a>
+    <a href="https://www.npmjs.com/package/@hinashirosaki/hikari" target="_blank" rel="noopener noreferrer" aria-label="npm package" title="npm package">
+      <svg class="npm-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M0 7.334v9.332h6.667V18H12v-1.334h12V7.334Zm6.667 8H5.333v-5.333H4v5.333H1.333V8.666h5.334Zm5.333 0v1.333H9.333V8.666h5.334v6.668Zm10.667 0h-1.334v-5.333H20v5.333h-1.333v-5.333h-1.334v5.333H16V8.666h6.667ZM12 10h1.333v4H12Z"/></svg>
+    </a>
+  </div>
+</footer>
+</div>
+
+<section id="practical-answers" class="practical" aria-labelledby="practical-title">
+  <div class="practical-inner">
+    <div>
+      <p class="practical-kicker">Good to know</p>
+      <h2 id="practical-title">Practical answers,<br>before you begin.</h2>
+      <p class="practical-intro">A few details about bringing Hikari to your bench.</p>
+      <svg class="practical-art" viewBox="0 0 340 220" aria-hidden="true" focusable="false">
+        <rect x="30" y="35" width="220" height="150" rx="10" fill="#252334" stroke="#6e6a86"/>
+        <path d="M30 65h220" stroke="#6e6a86"/><circle cx="48" cy="50" r="4" fill="#eb6f92"/><circle cx="63" cy="50" r="4" fill="#f6c177"/><circle cx="78" cy="50" r="4" fill="#9ccfd8"/>
+        <rect x="50" y="85" width="84" height="9" rx="4.5" fill="#e0def4"/><rect x="50" y="106" width="133" height="5" rx="2.5" fill="#6e6a86"/><rect x="50" y="120" width="106" height="5" rx="2.5" fill="#6e6a86"/>
+        <path d="M197 127h92a10 10 0 0 1 10 10v43a10 10 0 0 1-10 10h-92a10 10 0 0 1-10-10v-43a10 10 0 0 1 10-10Z" fill="#f8f5ee"/><path d="M199 127v-9a7 7 0 0 1 7-7h31l9 16" fill="#f6c177"/>
+        <path d="M218 157h49m-24-18v36m0 0-9-9m9 9 9-9" fill="none" stroke="#6e6a86" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="282" cy="53" r="16" fill="none" stroke="#f6c177"/><path d="m275 53 5 5 9-11" fill="none" stroke="#f6c177" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <dl>
+      <div class="answer"><dt>Which systems are supported?</dt><dd>Hikari runs on macOS and Windows.</dd></div>
+      <div class="answer"><dt>Where does my data live?</dt><dd>Your records and files are saved in a folder you choose on your computer. <a href="https://github.com/HinaShirosaki/Hikari/blob/main/docs/guide/README.md#data-and-storage">Read about storage</a>.</dd></div>
+      <div class="answer"><dt>Do I need AI to use Hikari?</dt><dd>No. The optional agent needs a ChatGPT plan with Codex CLI access. Prompts, attachments, and record content used by the agent are sent to OpenAI.</dd></div>
+      <div class="answer"><dt>Is Hikari released?</dt><dd>Hikari is free and open source, and currently in beta. See <a href="https://github.com/HinaShirosaki/Hikari/releases">releases</a> for the latest version.</dd></div>
+      <div class="answer"><dt>Where can I get help?</dt><dd>Start with the <a href="https://github.com/HinaShirosaki/Hikari/blob/main/docs/guide/README.md">user guide</a>, or report a problem on <a href="https://github.com/HinaShirosaki/Hikari/issues">GitHub Issues</a>.</dd></div>
+    </dl>
+  </div>
+</section>
+</main>
+
+<main id="agent-panel" role="tabpanel" aria-labelledby="agent-tab" hidden>
+<section id="agent-opening" class="opening-page" aria-labelledby="agent-opening-title">
+  <h1 id="agent-opening-title" class="opening-title"><span class="lead">Hikari is</span> <span class="opening-statement">an agent that works<br> from your records.</span></h1>
+  <p class="opening-description">Ask Hikari to write, explain, search, and plot from your records. Review drafted notebook pages and protocols before saving.</p>
+  <a class="hint" href="#agent-track">Scroll to explore <span aria-hidden="true">↓</span></a>
+</section>
+
+<div id="agent-track">
+  <div id="agent-stage">
+    <h2 id="agent-head"><span class="lead">Hikari is</span><span id="agent-stmt"></span></h2>
+    <section id="agent-detail" aria-live="polite">
+      <!-- AGENT_COPY:START -->
+      <div class="feature-copy" data-story-feature="agent-codex">
+        <h2 id="agent-dTitle" data-feature-title tabindex="-1">Your ChatGPT plan. No API key.</h2>
+        <p id="agent-dBody" data-feature-body>Hikari’s optional agent runs through Codex CLI with a ChatGPT plan that includes CLI access. Prompts, attachments, and the record content it uses are sent to OpenAI for processing. Connect it in Hikari Settings; your plan’s usage limits apply.</p>
+        <ul id="agent-dList" data-feature-list><li><strong>Free and open source</strong> Hikari desktop app</li><li><strong>No account needed</strong> for core lab tools</li><li><strong>No Hikari subscription</strong> for the optional agent</li></ul>
+      </div>
+      <div class="feature-copy" data-story-feature="agent-protocols" hidden>
+        <h2 id="agent-copy-agent-protocols-title" data-feature-title tabindex="-1">Write and polish protocols</h2>
+        <p id="agent-copy-agent-protocols-body" data-feature-body>Describe a method, paste one from a paper, or attach notes and images, and Hikari drafts a structured protocol. Polish rewrites a rough draft in clear lab wording, side by side with your original.</p>
+        <ul id="agent-copy-agent-protocols-list" data-feature-list><li><strong>Start with what you have</strong>: notes, images, or a PDF</li><li><strong>Polish the wording</strong>, keep your steps and fields</li><li><strong>Compare side by side</strong> before applying</li></ul>
+      </div>
+      <div class="feature-copy" data-story-feature="agent-insights" hidden>
+        <h2 id="agent-copy-agent-insights-title" data-feature-title tabindex="-1">Explain what you select</h2>
+        <p id="agent-copy-agent-insights-body" data-feature-body>Select a reagent or term in a protocol or notebook page. Explain selection describes its role in that step, and Find suppliers lists products to compare. The answer stays on the text for next time.</p>
+        <ul id="agent-copy-agent-insights-list" data-feature-list><li><strong>Understand the step</strong> with answers in context</li><li><strong>Compare suppliers</strong> and prices</li><li><strong>Keep the answer</strong> on the record for next time</li></ul>
+      </div>
+      <div class="feature-copy" data-story-feature="agent-papers" hidden>
+        <h2 id="agent-copy-agent-papers-title" data-feature-title tabindex="-1">Find, save, and ask about papers</h2>
+        <p id="agent-copy-agent-papers-body" data-feature-body>Search for related work and save the PDFs to your paper library. If a publisher blocks the download, Hikari opens its page so you can click Download. Then ask about the paper you are reading, or turn its methods into a protocol draft.</p>
+        <ul id="agent-copy-agent-papers-list" data-feature-list><li><strong>Build your library</strong> with saved PDFs</li><li><strong>Ask as you read</strong> about the open paper</li><li><strong>From methods to draft</strong> in your protocol library</li></ul>
+      </div>
+      <div class="feature-copy" data-story-feature="agent-plot" hidden>
+        <h2 id="agent-copy-agent-plot-title" data-feature-title tabindex="-1">Plot by asking</h2>
+        <p id="agent-copy-agent-plot-body" data-feature-body>With an assay open, ask for the chart you need. Hikari reads the plate and its results and draws an interactive chart in the analysis panel, in the same style as Hikari’s built-in charts.</p>
+        <ul id="agent-copy-agent-plot-list" data-feature-list><li><strong>Use your plate data</strong> from the open assay</li><li><strong>Explore, then export</strong> charts as PNG or SVG</li><li><strong>Keep a consistent style</strong> with built-in charts</li></ul>
+      </div>
+      <div class="feature-copy" data-story-feature="agent-review" hidden>
+        <h2 id="agent-copy-agent-review-title" data-feature-title tabindex="-1">Review notebook and protocol drafts</h2>
+        <p id="agent-copy-agent-review-body" data-feature-body>Drafted notebook pages, additions to existing pages, and new protocols wait for your review. Approve a draft to add it to your records, or reject it.</p>
+        <ul id="agent-copy-agent-review-list" data-feature-list><li><strong>Draft notebook pages</strong> or add to existing ones</li><li><strong>Prepare protocols</strong> from chat or a paper</li><li><strong>You decide</strong>: approve or reject each draft</li></ul>
+      </div>
+      <!-- AGENT_COPY:END -->
+      <figure class="shot" id="agent-shot">
+        <div class="shot-viewport" id="agent-dViewport">
+          <img id="agent-dImg" alt="" decoding="async">
+          <div id="codex-flow" class="codex-flow" data-illustration="codex-flow" data-title="Codex CLI · ChatGPT sign-in" hidden>
+            <div class="codex-chain">
+              <div class="codex-node">
+                <svg class="hikari-mark" viewBox="390 185 475 865" aria-hidden="true"><use href="#hikari-star-helix" x="390" y="185" width="475" height="865"/></svg>
+                <b>Hikari</b><span>Your records</span>
+              </div>
+              <span class="codex-link" aria-hidden="true"></span>
+              <div class="codex-node">
+                <svg class="codex-icon codex-terminal" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="6" width="26" height="20" rx="3"/><path d="m9 13 4 3-4 3"/><path class="codex-cursor" d="M16 19h7"/></svg>
+                <b>Codex CLI</b><span>Runs the agent</span>
+              </div>
+              <span class="codex-link" aria-hidden="true"></span>
+              <div class="codex-node">
+                <svg class="codex-icon codex-openai" viewBox="140 219 280 280" aria-hidden="true"><path d="M249.176 323.434V298.276C249.176 296.158 249.971 294.569 251.825 293.509L302.406 264.381C309.29 260.409 317.5 258.555 325.973 258.555C357.75 258.555 377.877 283.185 377.877 309.399C377.877 311.253 377.877 313.371 377.611 315.49L325.178 284.771C322.001 282.919 318.822 282.919 315.645 284.771L249.176 323.434ZM367.283 421.415V361.301C367.283 357.592 365.694 354.945 362.516 353.092L296.048 314.43L317.763 301.982C319.617 300.925 321.206 300.925 323.058 301.982L373.639 331.112C388.205 339.586 398.003 357.592 398.003 375.069C398.003 395.195 386.087 413.733 367.283 421.412V421.415ZM233.553 368.452L211.838 355.742C209.986 354.684 209.19 353.095 209.19 350.975V292.718C209.19 264.383 230.905 242.932 260.301 242.932C271.423 242.932 281.748 246.641 290.49 253.26L238.321 283.449C235.146 285.303 233.555 287.951 233.555 291.659V368.455L233.553 368.452ZM280.292 395.462L249.176 377.985V340.913L280.292 323.436L311.407 340.913V377.985L280.292 395.462ZM300.286 475.968C289.163 475.968 278.837 472.259 270.097 465.64L322.264 435.449C325.441 433.597 327.03 430.949 327.03 427.239V350.445L349.011 363.155C350.865 364.213 351.66 365.802 351.66 367.922V426.179C351.66 454.514 329.679 475.965 300.286 475.965V475.968ZM237.525 416.915L186.944 387.785C172.378 379.31 162.582 361.305 162.582 343.827C162.582 323.436 174.763 305.164 193.563 297.485V357.861C193.563 361.571 195.154 364.217 198.33 366.071L264.535 404.467L242.82 416.915C240.967 417.972 239.377 417.972 237.525 416.915ZM234.614 460.343C204.689 460.343 182.71 437.833 182.71 410.028C182.71 407.91 182.976 405.792 183.238 403.672L235.405 433.863C238.582 435.715 241.763 435.715 244.938 433.863L311.407 395.466V420.622C311.407 422.742 310.612 424.331 308.758 425.389L258.179 454.519C251.293 458.491 243.083 460.343 234.611 460.343H234.614ZM300.286 491.854C332.329 491.854 359.073 469.082 365.167 438.892C394.825 431.211 413.892 403.406 413.892 375.073C413.892 356.535 405.948 338.529 391.648 325.552C392.972 319.991 393.766 314.43 393.766 308.87C393.766 271.003 363.048 242.666 327.562 242.666C320.413 242.666 313.528 243.723 306.644 246.109C294.725 234.457 278.307 227.042 260.301 227.042C228.258 227.042 201.513 249.815 195.42 280.004C165.761 287.685 146.694 315.49 146.694 343.824C146.694 362.362 154.638 380.368 168.938 393.344C167.613 398.906 166.819 404.467 166.819 410.027C166.819 447.894 197.538 476.231 233.024 476.231C240.172 476.231 247.058 475.173 253.943 472.788C265.859 484.441 282.278 491.854 300.286 491.854Z"/></svg>
+                <b>ChatGPT</b><span>Your plan</span>
+              </div>
+            </div>
+            <p class="codex-note">No API key to create or paste</p>
+          </div>
+        </div>
+      </figure>
+    </section>
+    <div class="hint" id="agent-hint">Scroll</div>
+  </div>
+</div>
+<nav id="agent-dots" class="feature-dots" aria-label="Agent features"></nav>
+
+<div id="agent-end" class="install-track">
+<footer class="install-stage">
+  <h2><span class="footer-lead">Hikari is</span><em>ready for your<br>next experiment.</em></h2>
+  <p class="install-note"><strong>Free and open source.</strong>Optional AI requires a ChatGPT plan with Codex CLI access.</p>
+  <div class="install-instructions">
+    <div id="agent-install-platforms" class="install-platforms" role="group" aria-label="Installation platform" hidden>
+      <button type="button" data-install-platform="macos" aria-pressed="true">macOS</button>
+      <button type="button" data-install-platform="windows" aria-pressed="false">Windows</button>
+    </div>
+    <p id="agent-install-shell" class="install-shell" aria-live="polite">macOS · Open Terminal, paste the command below, then press Return.</p>
+    <div id="agent-install-command-line" class="install-command-line">
+      <code id="agent-install-command" aria-label="macOS install command">curl -fsSL https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.sh | bash</code>
+      <button id="agent-install-copy" class="install-copy" type="button" aria-label="Copy macOS install command" title="Copy macOS install command" hidden>
+        <svg class="install-copy-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>
+        <svg class="install-check-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m5 12 4 4L19 6"/></svg>
+        <span id="agent-install-copy-label" class="install-copy-label">Copy</span>
+      </button>
+    </div>
+    <span id="agent-install-copy-status" class="install-copy-status" role="status" aria-atomic="true"></span>
+    <noscript>
+      <p class="install-shell">Windows · Open PowerShell, paste the command below, then press Enter.</p>
+      <code>iwr -useb https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.ps1 | iex</code>
+    </noscript>
+  </div>
+  <button class="install-guide-button" id="agent-install-guide-open" type="button" hidden>Install guide</button>
+  <noscript><a href="https://github.com/HinaShirosaki/Hikari/blob/main/docs/guide/README.md#install">Install guide</a></noscript>
+  <dialog class="install-dialog" id="agent-install-dialog" aria-labelledby="agent-install-dialog-title">
+    <div class="install-dialog-header">
+      <h2 id="agent-install-dialog-title">Install guide</h2>
+      <button class="install-guide-close" id="agent-install-guide-close" type="button" aria-label="Close install guide">&times;</button>
+    </div>
+    <div class="install-details-content">
+      <ol class="install-next-steps" aria-label="Installation steps" role="list">
+        <li>
+          <h3>Open the terminal</h3>
+          <p id="agent-install-terminal-instructions">On macOS, press Command–Space, type Terminal, and press Return. On Windows, press the Windows key, type PowerShell, and press Enter.</p>
+        </li>
+        <li>
+          <h3>Run the command</h3>
+          <p>Copy the install command on the page, paste it into the terminal, and press Enter or Return.</p>
+        </li>
+        <li>
+          <h3>Wait for installation</h3>
+          <p><span id="agent-install-wait-instructions">Keep the terminal window open until the command finishes.</span> The first run may take several minutes. The app is saved in <span class="install-output-folder">hikari-out</span>, inside the folder where you ran the command.</p>
+        </li>
+        <li>
+          <h3>Open Hikari</h3>
+          <p id="agent-install-open-instructions">Open the output folder when the command finishes. On macOS, move Hikari.app to Applications and open it. On Windows, run HikariSetup.exe, then open Hikari from the Start menu.</p>
+        </li>
+      </ol>
+      <p class="install-guide-link"><a href="https://github.com/HinaShirosaki/Hikari/blob/main/docs/guide/README.md#install" target="_blank" rel="noopener noreferrer">Full installation instructions <span aria-hidden="true">↗</span></a></p>
+    </div>
+  </dialog>
+  <div class="footer-links" role="group" aria-label="Project links">
+    <a href="https://github.com/HinaShirosaki/Hikari" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository" title="GitHub repository">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 .297C5.37 .297 0 5.67 0 12.297c0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.043-1.61-4.043-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.084 1.838 1.237 1.838 1.237 1.07 1.835 2.809 1.305 3.495.998.108-.776.419-1.305.762-1.605-2.665-.304-5.467-1.334-5.467-5.93 0-1.31.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.52 11.52 0 0 1 12 6.099c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.652.242 2.873.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.371.823 1.102.823 2.222 0 1.606-.015 2.898-.015 3.293 0 .319.216.694.825.576C20.565 22.092 24 17.592 24 12.297 24 5.67 18.627.297 12 .297Z"/></svg>
+    </a>
+    <a href="https://www.npmjs.com/package/@hinashirosaki/hikari" target="_blank" rel="noopener noreferrer" aria-label="npm package" title="npm package">
+      <svg class="npm-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M0 7.334v9.332h6.667V18H12v-1.334h12V7.334Zm6.667 8H5.333v-5.333H4v5.333H1.333V8.666h5.334Zm5.333 0v1.333H9.333V8.666h5.334v6.668Zm10.667 0h-1.334v-5.333H20v5.333h-1.333v-5.333h-1.334v5.333H16V8.666h6.667ZM12 10h1.333v4H12Z"/></svg>
+    </a>
+  </div>
+</footer>
+</div>
+</main>
+
+<main id="trial-panel" class="trial-page" role="tabpanel" aria-labelledby="trial-tab" hidden>
+  <h1 class="trial-sr-only">Hikari interactive demo</h1>
+  <section id="trial-desktop-message" class="trial-desktop-message" aria-labelledby="trial-desktop-title" hidden>
+    <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="8" y="7" width="32" height="24" rx="3"/><path d="M18 41h12M24 31v10M9 26h30"/></svg>
+    <h2 id="trial-desktop-title">Try Hikari<br><em>on a computer.</em></h2>
+    <p>Hikari is a desktop app. Open this page on a laptop or desktop to explore the interactive demo.</p>
+    <a class="trial-secondary" href="#product">Back to Product <span aria-hidden="true">↗</span></a>
+  </section>
+  <div id="trial-layout" class="trial-layout">
+    <aside class="trial-sidebar">
+      <h2 class="trial-feature-heading">Try in your browser</h2>
+      <nav aria-label="Demo features"><ul id="trial-feature-list" class="trial-feature-list"></ul></nav>
+    </aside>
+    <div id="trial-stage" class="trial-stage">
+    <article id="trial-workbench" class="trial-workbench" aria-labelledby="trial-title">
+    <h2 id="trial-title" class="trial-sr-only"></h2>
+    <div id="trial-frame-pool" class="trial-app-wrap"></div>
+    <div class="trial-controls">
+      <button id="trial-retry" class="trial-retry" type="button" hidden>Reload demo</button>
+      <button id="trial-guide-start" class="trial-guide-start" type="button" title="Reset this feature and start its guide again">Restart demo</button>
+    </div>
+    <p id="demo-status" class="demo-status" role="status" aria-live="polite" hidden></p>
+    </article>
+    </div>
+  </div>
+  <noscript>The interactive demo needs JavaScript. You can still install Hikari from the Product page.</noscript>
+</main>
+
+<main id="plugins-panel" class="plugins-page" role="tabpanel" aria-labelledby="plugins-tab" hidden>
+  <div class="plugins-content">
+    <div class="plugins-intro">
+      <p class="plugins-eyebrow">Hikari plugins</p>
+      <h1>Tools for <em>your lab.</em></h1>
+      <p>Add the tools your lab needs, right inside Hikari.</p>
+    </div>
+    <article class="plugin-showcase" aria-labelledby="illustration-plugin-title">
+      <div class="plugin-copy">
+        <svg class="plugin-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 7a7 7 0 1 0 7 7"/><circle cx="9" cy="15" r="2.25"/><path d="m12 12 .75-3 6.5-6.5a1.77 1.77 0 0 1 2.5 2.5l-6.5 6.5Z m5.5-7.75 2.5 2.5"/></svg>
+        <h2 id="illustration-plugin-title">Figura</h2>
+        <p>Generate artwork with AI and combine it with editable diagrams, plots, and labels to compose scientific figures. Reuse saved components, then export as SVG, PNG, or PowerPoint.</p>
+        <div class="plugin-actions">
+          <a class="try-link" href="https://github.com/HinaShirosaki/Figura" target="_blank" rel="noopener noreferrer">View plugin <span aria-hidden="true">↗</span></a>
+        </div>
+      </div>
+      <figure class="shot plugin-preview" id="plugin-preview" data-media="screenshot">
+        <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span class="shot-title"></span></div>
+        <div class="shot-viewport"><img id="plugin-preview-image" src="shots/plugins-1920.webp?v=demo-4k-20261018-receptor-response" width="3840" height="2400" decoding="async" alt="Figura: an editable five-panel receptor-response figure with a lipid membrane and signaling pathway, modular receptor constructs, dose-response curves, single-cell distributions, and a time-response heatmap; all measurements are synthetic"></div>
+      </figure>
+    </article>
+    <div class="plugins-guides">
+      <section aria-labelledby="plugin-install-title">
+        <h2 id="plugin-install-title">Install a plugin.</h2>
+        <p>Open <strong>Settings → Plugins</strong> in Hikari, then choose either option.</p>
+        <div class="plugin-install-option">
+          <h3>From GitHub</h3>
+          <p>Enter the plugin’s repository URL and click <strong>Install from GitHub</strong>. Requires Git.</p>
+          <p class="plugin-repo-example">For Figura: <a href="https://github.com/HinaShirosaki/Figura" target="_blank" rel="noopener noreferrer">https://github.com/HinaShirosaki/Figura</a></p>
+        </div>
+        <div class="plugin-install-option">
+          <h3>From a folder</h3>
+          <p>Click <strong>Add Plugin Folder</strong> and open the plugin folder containing <strong>plugin.json</strong>.</p>
+        </div>
+        <p>Review the plugin’s access, enable it, then click <strong>Reload App</strong>. Open the plugin from the dock or <strong>More</strong> menu.</p>
+      </section>
+      <section aria-labelledby="plugin-build-title">
+        <h2 id="plugin-build-title">Build your own.</h2>
+        <p>Make a tool for your workflow with HTML, CSS, and JavaScript. Give it a workspace in Hikari and connect it to the notebook.</p>
+        <a class="plugin-text-link" href="https://github.com/HinaShirosaki/Hikari/blob/main/docs/plugins/quickstart.md" target="_blank" rel="noopener noreferrer">Plugin quickstart <span aria-hidden="true">↗</span></a>
+      </section>
+    </div>
+  </div>
+</main>
+
+<script type="module" src="install.mjs?v=d8f8b39e85bc"></script>
+<script defer src="hero-switcher.js?v=db07902c4d5a"></script>
+<script src="protocol-flow.js"></script>
+<script>
+// Feature introductions — shown in this order.
+const CLAIMS = [
+  { id: "experiments", nav: "AI Agent", anchor: "product-agent", s: "an agent for your whole workspace.", illustration: "ai-flow", action: "Explore Agent", href: "#agent",
+    t: "One request. Connected work.", b: "Ask Hikari to work across your protocols, samples, notebook, and papers. It finds the context to help write methods, prepare pages, locate materials, and analyze results.", bMobile: "Ask Hikari to write, find, explain, and plot using your protocols, samples, notebook, and papers.",
+    l: ["<strong>One conversation</strong> across your lab records", "<strong>Write, find, explain, plot</strong> with your context", "<strong>Review first</strong> before saving drafts"] },
+  { id: "cloning", nav: "Cloning", s: "a cloning planner that writes your primers.", img: "clone.webp", alt: "Hikari Cloning Design: a fictional fragment's two mutagenesis primers, with sequence, length, Tm and GC",
+    t: "Design your cloning plan", b: "Make a sequence edit, compare cloning routes, and get primers for the job. Review each primer’s properties, then copy the sequences or export a list for your order.", bMobile: "Compare cloning routes for a sequence edit. Review the primers, then copy or export them for ordering.",
+    l: ["<strong>7 cloning routes</strong>, including KLD and Gibson", "<strong>Check primers</strong>: length, Tm, and GC content", "<strong>Ready to order</strong>: copy sequences or export for IDT"] },
+  { id: "protein-builder", nav: "Protein Builder", s: "a construct builder, from protein to DNA.", img: "protein-builder.webp", alt: "Hikari Protein Builder: an illustrative VH–VL–Fc–VHH fusion with three flexible GS linkers assembled into a 614-aa chain, with matching 1,842-nt coding DNA, Human codon usage, and copy controls for both sequences", 
+    t: "Build a protein. Prepare the sequence.", b: "Assemble proteins, tags, linkers, and cleavage sites into one chain. Review the assembled amino acid sequence and build coding DNA with your chosen codon usage. Copy either sequence into an ordering platform for gene synthesis.", bMobile: "Assemble proteins, tags, linkers, and cleavage sites. Copy the protein or reverse-translated DNA to an ordering platform for gene synthesis.",
+    l: ["<strong>Build your chain</strong> from protein blocks", "<strong>Generate coding DNA</strong> with your codon usage", "<strong>Copy protein or DNA</strong> for gene synthesis"] },
+  { id: "calculations", nav: "Calculations", s: "a molarity calculator inside your notebook.", img: "calc.webp", alt: "Hikari Notebook molarity worksheet: weight and molarity calculated where three values are known, the arithmetic left in the blank cells where two are",
+    t: "Bench calculations, on paper", b: "Enter three known values to calculate the fourth, or leave two values for Hikari to write out the remaining arithmetic. Export the table with your notebook PDF and print it. At the bench, a lab calculator is all you need to finish the calculations—no return to the computer.", bMobile: "Export the calculation table with your notebook PDF and print it. Finish the arithmetic at the bench with a lab calculator, without returning to the computer.",
+    l: ["<strong>Calculate in place</strong> in your notebook", "<strong>Print your worksheet</strong> with the notebook PDF", "<strong>Finish at the bench</strong> with a lab calculator"] },
+  { id: "protocols", nav: "Notebook", anchor: "protocol-to-notebook", s: "a protocol library you reuse run after run.", illustration: "protocol-flow",
+    t: "Reuse a method. Record the run.", b: "Start from a saved protocol and fill in the details for this run. Steps, sample links, and observations stay together in a notebook page, even when you later update the library.", bMobile: "Reuse a saved protocol. Each notebook page keeps its own method, run values, and observations.",
+    l: ["<strong>Reuse a saved method</strong> for each run", "<strong>Capture the details</strong>: samples, values, and notes", "<strong>Preserve each run</strong> when the library changes"] },
+  { id: "workflows", nav: "Workflows", anchor: "workflow-trace", s: "a run tracker for the processes you repeat.", img: "workflow.webp", alt: "Hikari Workflows: three fictional protein-production runs with separate progress, optional branches, and Run 02’s purification record, completion dates, results, and Notebook link",
+    t: "Repeat the process. Trace the run.", b: "Turn a process you repeat into a reusable workflow. Each run keeps its own progress, results, and notebook links, so you can see what happened and what comes next.", bMobile: "Reuse one workflow for repeated processes. Track each run’s steps, results, and linked notebook pages.",
+    l: ["<strong>One template</strong> for repeated runs", "<strong>Track progress</strong> through steps and branches", "<strong>Keep the trail</strong>: results and notebook links"] },
+  { id: "samples", nav: "Samples", s: "a sample inventory, down to the well.", img: "samples.webp", alt: "Hikari Samples: a fictional freezer box containing three samples, with the selected enzyme sample's details",
+    t: "Find every sample", b: "Know what a sample is, where it’s stored, and which experiments used it. Keep plasmids, proteins, cell lines, and other materials together, with records linked to your notebook.", bMobile: "Find your samples by container and position. Keep their details connected to the experiments that use them.",
+    l: ["<strong>Find the well</strong>, find your sample", "<strong>Know the sample</strong>: concentration, batch, and notes", "<strong>Connect your records</strong> with CSV and experiment links"] },
+  { id: "plugins", nav: "Plugins", anchor: "product-plugins", s: "a workspace that grows with your lab.", illustration: "plugin-flow", action: "Explore Plugins", href: "#plugins",
+    t: "Your workspace. Your tools.", b: "Shape Hikari around the way you work. Add a plugin when you need something new, and keep your everyday research in the same workspace.", bMobile: "Shape Hikari around your work. Add new tools through plugins, all in the same workspace.",
+    l: ["<strong>Add the tools you need</strong> through plugins", "<strong>Check permissions</strong> before enabling a plugin", "<strong>Grow your setup</strong> as your work evolves"] },
+];
+
+// Agent introductions — the Codex connection first, then five capture-only
+// Trial scenes with prepared model replies (agent-scenes.js).
+const AGENT_CLAIMS = [
+  { id: "agent-codex", nav: "Codex CLI", s: "powered by Codex CLI.", illustration: "codex-flow",
+    t: "Your ChatGPT plan. No API key.", b: "Hikari’s optional agent runs through Codex CLI with a ChatGPT plan that includes CLI access. Prompts, attachments, and the record content it uses are sent to OpenAI for processing. Connect it in Hikari Settings; your plan’s usage limits apply.", bMobile: "Connect Codex CLI with a ChatGPT plan that includes CLI access. AI sends requests and the record content it uses to OpenAI. Your plan’s usage limits apply.",
+    l: ["<strong>Free and open source</strong> Hikari desktop app", "<strong>No account needed</strong> for core lab tools", "<strong>No Hikari subscription</strong> for the optional agent"] },
+  { id: "agent-protocols", nav: "Protocols", s: "a protocol writer that shows its edits.", img: "agent-protocols.webp", alt: "Hikari Protocols: a rough His-tag purification draft beside the polished version, ready to apply",
+    t: "Write and polish protocols", b: "Describe a method, paste one from a paper, or attach notes and images, and Hikari drafts a structured protocol. Polish rewrites a rough draft in clear lab wording, side by side with your original.", bMobile: "Draft a protocol from a description, notes, or a paper. Polish rewrites a rough draft beside your original.",
+    l: ["<strong>Start with what you have</strong>: notes, images, or a PDF", "<strong>Polish the wording</strong>, keep your steps and fields", "<strong>Compare side by side</strong> before applying"] },
+  { id: "agent-insights", nav: "Explanations", s: "a second opinion on any reagent.", img: "agent-insights.webp", alt: "Hikari Protocols: imidazole highlighted in a protocol, with a saved explanation and two example supplier options",
+    t: "Explain what you select", b: "Select a reagent or term in a protocol or notebook page. Explain selection describes its role in that step, and Find suppliers lists products to compare. The answer stays on the text for next time.", bMobile: "Select a reagent to learn its role in the step and compare products. The answer stays on the text.",
+    l: ["<strong>Understand the step</strong> with answers in context", "<strong>Compare suppliers</strong> and prices", "<strong>Keep the answer</strong> on the record for next time"] },
+  { id: "agent-papers", nav: "Papers", s: "a reading partner for every paper.", img: "agent-papers.webp", alt: "Hikari Papers: the Methods page of a fictional preprint beside the chat answer explaining its three thermal shift controls",
+    t: "Find, save, and ask about papers", b: "Search for related work and save the PDFs to your paper library. If a publisher blocks the download, Hikari opens its page so you can click Download. Then ask about the paper you are reading, or turn its methods into a protocol draft.", bMobile: "Search for related papers and save their PDFs. Ask about the one you are reading, or turn its methods into a protocol draft.",
+    l: ["<strong>Build your library</strong> with saved PDFs", "<strong>Ask as you read</strong> about the open paper", "<strong>From methods to draft</strong> in your protocol library"] },
+  { id: "agent-plot", nav: "Plotting", s: "a plotting assistant that reads your plate.", img: "agent-plot.webp", alt: "Hikari Plate: an agent chart of activity against inhibitor concentration for three variants, with fitted curves and the request in the chat",
+    t: "Plot by asking", b: "With an assay open, ask for the chart you need. Hikari reads the plate and its results and draws an interactive chart in the analysis panel, in the same style as Hikari’s built-in charts.", bMobile: "Ask for a chart while an assay is open. Hikari draws it from the plate’s results.",
+    l: ["<strong>Use your plate data</strong> from the open assay", "<strong>Explore, then export</strong> charts as PNG or SVG", "<strong>Keep a consistent style</strong> with built-in charts"] },
+  { id: "agent-review", nav: "Review", s: "an assistant with drafts you can review.", img: "agent-review.webp", alt: "Hikari Notebook: a drafted notebook page in the review dialog, with Reject and Approve, and a drafted protocol waiting next",
+    t: "Review notebook and protocol drafts", b: "Drafted notebook pages, additions to existing pages, and new protocols wait for your review. Approve a draft to add it to your records, or reject it.", bMobile: "Review drafted notebook pages, page additions, and protocols. They are added to your records only after approval.",
+    l: ["<strong>Draft notebook pages</strong> or add to existing ones", "<strong>Prepare protocols</strong> from chat or a paper", "<strong>You decide</strong>: approve or reject each draft"] },
+];
+
+// Focus each screenshot on the part of Hikari described by its introduction.
+const PHOTO_FOCUS = {
+  'protein-builder': { scale: 1.24, x: .587, y: .55, title: 'Protein Builder · Protein and DNA sequences' },
+  cloning: { scale: 1.33, x: .612, y: .54, title: 'Cloning Design · Primers' },
+  calculations: { scale: 1.27, x: .6075, y: .4775, title: 'Notebook · Molarity worksheet' },
+  workflows: { scale: 1.3, x: .615, y: .55, title: 'Workflows · Runs and step records' },
+  samples: { scale: 1.28, x: .61, y: .48, title: 'Samples · Example box' },
+  plugins: { scale: 1.08, x: .492, y: .53, title: 'Figura' },
+  'agent-protocols': { scale: 1, x: .5, y: .5, title: 'Protocols · Polish' },
+  'agent-insights': { scale: 1.35, x: .536, y: .549, title: 'Protocols · Saved answer' },
+  'agent-papers': { scale: 1.12, x: .51, y: .5, title: 'Papers · Methods and answer' },
+  'agent-plot': { scale: 1.3, x: .615, y: .49, title: 'Plate · Agent chart' },
+  'agent-review': { scale: 1.3, x: .52, y: .52, title: 'Notebook · Review changes' },
+};
+// Cache-busting date of each screenshot capture.
+const SHOT_VERSIONS = {
+  'protein-builder.webp': '20261012-vh-vl-fc-vhh',
+  'workflow.webp': '20261010-workflows', 'calc.webp': '20261015-clean-formulas', 'samples.webp': '20261015-full-box', 'plugins.webp': '20261018-receptor-response', 'agent-protocols.webp': '20261016-17px-text', 'agent-insights.webp': '20261008',
+  'agent-papers.webp': '20261008-methods', 'agent-plot.webp': '20261014-clean', 'agent-review.webp': '20261008' };
+
+const $ = id => document.getElementById(id);
+const CYCLE = 1.2;                                   // viewport heights of scroll per feature
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const ease = x => x * x * (3 - 2 * x);
+const range = (p, a, b) => ease(clamp((p - a) / (b - a)));
+
+// The real phrase reserves its final line breaks while the code resolves above it.
+const GLYPHS = "ACGTacgt01{}[]<>/=+*#%&";
+function makeNoise(text) {
+  const noise = document.createElement('span'); noise.className = 'noise';
+  noise.textContent = [...text].map(char => char === ' ' ? ' ' : GLYPHS[Math.random() * GLYPHS.length | 0]).join('');
+  return noise;
+}
+function shotSizes(scale = 1) { return `(max-width: 760px) ${90 * scale}vw, (max-width: 980px) ${54 * scale}vw, ${62 * scale}vw`; }
+function setShotSource(img, file, scale = 1) {
+  img.decoding = 'async';
+  const source = width => `shots/${width ? file.replace('.webp', `-${width}.webp`) : file}?v=demo-4k-${SHOT_VERSIONS[file] || '20261006'}`;
+  img.srcset = `${source(1280)} 1280w, ${source(1920)} 1920w, ${source()} 3840w`;
+  img.sizes = shotSizes(scale);
+  img.width = 3840; img.height = 2400;
+  img.src = source();
+}
+function focusShot(figure, preset) {
+  figure.dataset.focus = String(!!preset);
+  const title = figure.querySelector('.shot-title');
+  if (!preset) { if (title) title.textContent = figure.querySelector('[data-illustration]:not([hidden])')?.dataset.title || 'Hikari'; return; }
+  figure.style.setProperty('--focus-scale', preset.scale);
+  figure.style.setProperty('--focus-x', preset.x);
+  figure.style.setProperty('--focus-y', preset.y);
+  if (title) title.textContent = preset.title;
+  const img = figure.querySelector('.shot-viewport img');
+  if (!img.dataset.fullAlt) img.dataset.fullAlt = img.alt;
+  img.alt = `Close-up: ${img.dataset.fullAlt}`;
+  img.sizes = shotSizes(preset.scale);
+}
+
+// One scrolling feature story per tab. Product uses the plain element ids (head, stmt, detail…);
+// the Agent tab uses the same ids prefixed with "agent-". Both support illustrations;
+// Product also has the interactive protocol workflow and feature links.
+function createStory(prefix, claims, panelId) {
+  const el = name => $(prefix + name);
+  const head = el("head"), stmt = el("stmt"), detail = el("detail"), track = el("track"), stage = el("stage"), hint = el("hint"), dotsBox = el("dots");
+  const shot = el("shot"), image = el("dImg"), tryLink = el("dTry");
+  const illustrations=shot.querySelectorAll('[data-illustration]');
+  const copyPanels=[...detail.querySelectorAll('[data-story-feature]')];
+  claims.forEach((c, i) => {
+    const id = c.anchor || c.id;
+    let anchor = $(id);
+    if (!anchor) {
+      anchor = document.createElement('span');
+      anchor.id = id; anchor.className = 'feature-anchor';
+      anchor.setAttribute('aria-hidden', 'true');
+      track.insertBefore(anchor, stage);
+    }
+    // Land after the reveal, before a tall section starts panning upward.
+    anchor.style.top = (i + (i === 0 && !reduced ? .46 : .12)) * CYCLE * 100 + 'vh';
+    const link = document.createElement('a'), label = document.createElement('span'), dot = document.createElement('b');
+    link.href = '#' + id; label.textContent = c.nav;
+    dot.setAttribute('aria-hidden', 'true');
+    link.append(label, dot); dotsBox.append(link);
+  });
+  const dots = [...dotsBox.children];
+  track.style.height = (claims.length * CYCLE + 1) * 100 + "vh";
+  let decodeId = 0, pendingDecode = null, current = -1, headH = 0;
+  let focusPan = null, contentPan = 0, lastScroll = scrollY;
+
+  function prepareDecode(text) {
+    if (reduced) { stmt.textContent = text; return null; }
+    const final = document.createElement('span'), overlay = document.createElement('span');
+    final.className = 'decode-final'; final.textContent = text;
+    overlay.className = 'decode-text'; overlay.setAttribute('aria-hidden', 'true');
+    overlay.append(makeNoise(text));
+    stmt.replaceChildren(final, overlay);
+    return overlay;
+  }
+  function decode(text, previousText = '') {
+    const id = ++decodeId;
+    const overlay = prepareDecode(text);
+    if (!overlay) return;
+    const start = performance.now(), scrambleDuration = 180, holdDuration = 100, resolveDuration = 520;
+    (function frame(now) {
+      if (id !== decodeId) return;
+      const elapsed = now - start;
+      const leaving = previousText && elapsed < scrambleDuration;
+      const template = leaving ? previousText : text;
+      const progress = leaving ? 1 - clamp(elapsed / scrambleDuration) : clamp((elapsed - scrambleDuration - holdDuration) / resolveDuration);
+      const done = Math.floor(progress * template.length);
+      if (!leaving && progress === 1) { stmt.textContent = text; return; }
+      overlay.replaceChildren(document.createTextNode(template.slice(0, done)), makeNoise(template.slice(done)));
+      requestAnimationFrame(frame);
+    })(start);
+  }
+  function show(i) {
+    const previousText = current < 0 ? '' : (stmt.querySelector('.decode-text')?.textContent || stmt.textContent);
+    current = i;
+    focusPan = null;
+    const c = claims[i];
+    ++decodeId; pendingDecode = { text: c.s, previousText };
+    prepareDecode(c.s); headH = head.offsetHeight;
+    detail.dataset.feature = c.id;
+    copyPanels.forEach(panel => {
+      const active=panel.dataset.storyFeature===c.id;
+      panel.hidden=!active;
+      for(const [role,name] of [['title','dTitle'],['body','dBody'],['list','dList']]) {
+        panel.querySelector(`[data-feature-${role}]`).id=prefix+(active?name:`copy-${panel.dataset.storyFeature}-${role}`);
+      }
+    });
+    el("dBody").textContent = innerWidth < 760 ? (c.bMobile || c.b) : c.b;
+    image.hidden = !!c.illustration;
+    illustrations.forEach(illustration=>{illustration.hidden=illustration.dataset.illustration!==c.illustration;});
+    shot.dataset.media = c.img ? 'screenshot' : 'illustration';
+    if(c.img) { setShotSource(image,c.img,PHOTO_FOCUS[c.id]?.scale || 1); image.alt = c.alt; image.dataset.fullAlt = c.alt; }
+    focusShot(shot, c.img ? PHOTO_FOCUS[c.id] : null);
+    if (tryLink) {
+      tryLink.href = c.href || `#trial/${c.id}`;
+      const arrow = document.createElement('span'); arrow.setAttribute('aria-hidden', 'true'); arrow.textContent = '↗';
+      tryLink.replaceChildren(document.createTextNode(c.action || 'Try in your browser'), arrow);
+      tryLink.setAttribute("aria-label", `${c.action || 'Try in your browser'}: ${c.t}`);
+    }
+  }
+  // Load the current capture and prime only the next one during its predecessor.
+  const primed = new Set();
+
+  function render() {
+    if ($(panelId).hidden) { dotsBox.style.visibility = "hidden"; dots.forEach(d => d.removeAttribute('aria-current')); detail.style.setProperty('--illustration-play-state', 'paused'); return; }
+    const mobile = innerWidth <= 760;
+    const vh = mobile ? stage.clientHeight : innerHeight, trackTop = track.offsetTop, y = Math.max(0, (scrollY - trackTop) / vh);
+    if (scrollY !== lastScroll) { focusPan = null; lastScroll = scrollY; }
+    const inTrack = scrollY >= trackTop && scrollY < trackTop + track.offsetHeight - 1;
+    dotsBox.style.visibility = inTrack ? "visible" : "hidden";
+    const i = clamp(Math.floor(y / CYCLE) || 0, 0, claims.length - 1);
+    if (i !== current) {
+      show(i);
+      if (mobile) dotsBox.scrollTo({ left: dots[i].offsetLeft - (dotsBox.clientWidth - dots[i].offsetWidth) / 2, behavior: 'auto' });
+    }
+    dots.forEach((dot, j) => {
+      if (inTrack && j === i) dot.setAttribute('aria-current', 'location');
+      else dot.removeAttribute('aria-current');
+    });
+    const p = clamp((y - i * CYCLE) / CYCLE);
+    const next = claims[i + 1];
+    if (p > .6 && next?.img && !primed.has(next.img)) {
+      primed.add(next.img); setShotSource(new Image(), next.img, PHOTO_FOCUS[next.id]?.scale || 1);
+    }
+    // Shrink once into the first feature, then keep every later heading steady.
+    const intro = reduced || i > 0 ? 0 : 1 - range(p, .07, .33);
+    head.style.setProperty('--intro-progress', intro);
+    headH = head.offsetHeight;
+    const headTop = mobile ? 124 : 84;
+    const centerTop = Math.max(headTop, (vh - headH) / 2);
+    head.style.transform = intro ? `translateY(${(centerTop - headTop) * intro}px)` : 'none';
+    const statementBox = stmt.getBoundingClientRect();
+    if (pendingDecode && statementBox.top < vh && statementBox.bottom > 0) {
+      const next = pendingDecode; pendingDecode = null; decode(next.text, next.previousText);
+    }
+    const exit = i === claims.length - 1 ? 1 : 1 - range(p, .9, 1);
+    const d = reduced ? 1 : (i === 0 ? range(p, .33, .44) : range(p, 0, .08)) * exit;
+    const drift = reduced ? 0 : (1 - d) * 8;
+    // Keep the code transition visible, even when scrolling stops at a boundary.
+    stmt.style.opacity = 1;
+    stmt.style.transform = 'none';
+    const detailTop = headTop + headH + 24 + drift;
+    // Reveal the entire feature before its exit, even when its natural height exceeds
+    // the viewport. Keep the same section and decode while the lower content passes.
+    const overflow = Math.max(0, detailTop + detail.offsetHeight + 24 - vh);
+    const scrollPan = overflow * range(p, reduced || i > 0 ? .12 : .46, .82);
+    contentPan = clamp(focusPan ?? scrollPan, 0, overflow);
+    if (contentPan) {
+      head.style.transform = `translateY(${(centerTop - headTop) * intro - contentPan}px)`;
+    }
+    detail.style.setProperty('--detail-top', `${detailTop}px`);
+    detail.style.transform = `translateY(${detailTop - contentPan}px)`;
+    detail.style.opacity = d;
+    detail.style.pointerEvents = d > 0.5 ? "auto" : "none";
+    detail.inert = d <= 0.5;
+    detail.style.setProperty('--illustration-play-state', d > 0.5 && scrollY < trackTop + track.offsetHeight ? 'running' : 'paused');
+    hint.style.opacity = 1 - clamp(y * 4);
+  }
+  // Keyboard users can reach the action or an editable diagram without first
+  // positioning the page with a wheel. Avoid the hidden stage retaining a scroll.
+  detail.addEventListener('focusin', event => {
+    stage.scrollTop = 0;
+    const bounds = event.target.getBoundingClientRect();
+    const safeTop = document.querySelector('.site-header').getBoundingClientRect().bottom + (innerWidth <= 760 ? 56 : 12);
+    if (bounds.bottom > innerHeight - 24 || bounds.top < safeTop) {
+      focusPan = contentPan + (bounds.bottom > innerHeight - 24 ? bounds.bottom - innerHeight + 24 : bounds.top - safeTop);
+      render();
+    }
+  });
+  detail.addEventListener('focusout', event => {
+    if (!detail.contains(event.relatedTarget)) { focusPan = null; render(); }
+  });
+  function remeasure() {
+    if ($(panelId).hidden) return;
+    const mobile = innerWidth <= 760, height = mobile ? stage.clientHeight : innerHeight;
+    track.style.height = `${(claims.length * CYCLE + 1) * height}px`;
+    claims.forEach((c, i) => { $(c.anchor || c.id).style.top = `${(i + (i === 0 && !reduced ? .46 : .12)) * CYCLE * height}px`; });
+    headH = head.offsetHeight;
+    const c = claims[current]; if(c) el("dBody").textContent = mobile ? (c.bMobile || c.b) : c.b;
+  }
+  return { render, remeasure };
+}
+
+const productStory = createStory("", CLAIMS, "product-panel");
+const agentStory = createStory("agent-", AGENT_CLAIMS, "agent-panel");
+$("plugin-preview-image").loading = 'lazy';
+setShotSource($("plugin-preview-image"), 'plugins.webp', PHOTO_FOCUS.plugins.scale);
+focusShot($("plugin-preview"), PHOTO_FOCUS.plugins);
+
+// trial.js calls render() after switching tabs; each story ignores scrolling while its tab is hidden.
+function render() { productStory.render(); agentStory.render(); }
+
+let queued = false;
+addEventListener("scroll", () => { if (!queued) { queued = true; requestAnimationFrame(() => { queued = false; render(); }); } }, { passive: true });
+const remeasure = () => { productStory.remeasure(); agentStory.remeasure(); render(); };
+addEventListener("resize", remeasure);
+addEventListener("pageshow", event => {
+  const target = $(location.hash.slice(1));
+  if (!event.persisted && target?.classList.contains('feature-anchor')) requestAnimationFrame(() => {
+    target.scrollIntoView({block:'start'}); render();
+  });
+});
+document.fonts.ready.then(remeasure);   // web fonts change the headline height
+render();
+</script>
+<script src="trial-core.js?v=add4d4898939"></script>
+<script src="trial-guide.js?v=163f31c71eca"></script>
+<script src="trial.js?v=00a6d86bec34"></script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hikari social card source</title>
+<!-- Capture this page at 1200 × 630 to regenerate social-card.jpg. -->
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
+  body { position: relative; padding: 64px 70px; background: #191724; color: #e0def4; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  .brand { display: flex; align-items: center; gap: 14px; font-size: 32px; letter-spacing: -.7px; }
+  .brand img { width: 42px; height: 42px; }
+  .free { position: absolute; top: 70px; right: 70px; font-size: 16px; color: #f6c177; border: 1px solid #5c4c46; border-radius: 999px; padding: 9px 18px; }
+  h1 { font-family: Georgia, serif; font-size: 90px; line-height: 1.07; font-weight: 400; letter-spacing: -3px; margin: 74px 0 0; }
+  h1 em { color: #f6c177; font-weight: 400; }
+  .tools { margin-top: 45px; padding-top: 24px; border-top: 1px solid #383343; color: #c5c0d8; font-size: 21px; letter-spacing: .15px; }
+  .mark { position: absolute; top: 185px; right: 64px; width: 260px; height: 210px; }
+  .mark path, .mark circle { fill: none; stroke: #f6c177; stroke-width: 1.4; }
+  .mark .dim { stroke: #665675; }
+  .mark .dot { fill: #f6c177; stroke: none; }
+</style>
+</head>
+<body>
+  <div class="brand"><img src="../hikari-is/icon.png" alt="">Hikari</div>
+  <div class="free">Free &amp; open source</div>
+  <h1>Your lab work,<br><em>connected.</em></h1>
+  <svg class="mark" viewBox="0 0 260 230" aria-hidden="true">
+    <path class="dim" d="M130 24 225 78 225 177 130 220 35 177 35 78Z M35 78 130 122 225 78 M35 177 130 122 225 177 M130 24V220"/>
+    <circle class="dim" cx="130" cy="122" r="72"/>
+    <path d="M113 67C180 100 80 146 147 179 M147 67C80 100 180 146 113 179 M115 74H145 M113 89H147 M118 108H142 M118 138H142 M113 157H147 M115 172H145"/>
+    <circle class="dot" cx="130" cy="24" r="4"/>
+    <circle class="dot" cx="225" cy="78" r="4"/>
+    <circle class="dot" cx="225" cy="177" r="4"/>
+    <circle class="dot" cx="130" cy="220" r="4"/>
+    <circle class="dot" cx="35" cy="177" r="4"/>
+    <circle class="dot" cx="35" cy="78" r="4"/>
+  </svg>
+  <p class="tools">Notebook &nbsp;·&nbsp; Samples &nbsp;·&nbsp; Protocols &nbsp;·&nbsp; Sequences</p>
+</body>
+</html>

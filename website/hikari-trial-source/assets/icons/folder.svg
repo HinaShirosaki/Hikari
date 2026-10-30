@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Original Hikari folder glyph for compact left-rail navigation. -->
+  <path d="M3.25 8.75v-2c0-1.1.9-2 2-2h3.1c.53 0 1.04.21 1.41.59L11.42 7h7.33c1.1 0 2 .9 2 2v8.25c0 1.1-.9 2-2 2H5.25c-1.1 0-2-.9-2-2v-8.5Z" />
+  <path d="M3.25 9h17.5" />
+</svg>

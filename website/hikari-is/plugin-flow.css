@@ -1,0 +1,63 @@
+#detail .plugin-flow { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--diagram-ink); }
+#detail[data-feature="plugins"] { align-items: center; }
+#detail[data-feature="plugins"] .shot-viewport { aspect-ratio: 520 / 440; }
+.plugin-flow > svg { display: block; width: 100%; height: 100%; max-width: 620px; max-height: 500px; overflow: visible; font-family: var(--sans); }
+.plugin-flow .pl-analyze { color: var(--diagram-pine); }
+.plugin-flow .pl-create { color: var(--diagram-iris); }
+.plugin-flow .pl-core, .plugin-flow .pl-extend { color: var(--diagram-gold); }
+.plugin-flow .pl-cell { fill: currentColor; fill-opacity: .035; stroke: currentColor; stroke-width: 1.35; stroke-linejoin: round; stroke-opacity: .65; }
+.plugin-flow .pl-core .pl-cell { fill-opacity: .045; stroke-opacity: .9; }
+.plugin-flow .pl-ghost { fill: none; stroke: var(--diagram-line); stroke-width: 1.2; stroke-dasharray: 3 7; opacity: .55; }
+.plugin-flow .pl-extend .pl-cell { fill: none; stroke-dasharray: 3 7; stroke-opacity: .5; }
+.plugin-flow .pl-gel { fill: currentColor; }
+.plugin-flow .pl-figure, .plugin-flow .pl-plus { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.plugin-flow .pl-figure circle { fill: var(--diagram-card); }
+.plugin-flow .pl-figure-detail { opacity: .5; }
+.plugin-flow .pl-plus { stroke-width: 1.5; }
+.plugin-flow .pl-label { fill: var(--diagram-ink); fill-opacity: .82; font: 500 17px var(--sans); letter-spacing: .01em; text-anchor: middle; }
+.plugin-flow .pl-hikari { fill-opacity: 1; font-size: 20px; letter-spacing: 0; }
+.plugin-flow .pl-tagline { fill: var(--diagram-ink); font: 400 21px var(--sans); text-anchor: middle; }
+/* Story: Analyze and Create are lowered onto the page into empty sockets around Hikari
+   (.pl-dock has no transform attribute, so scale() pivots on the cell centre).
+   Then, every 6s, Hikari's shared edge lights each tool in turn (the tool reacts),
+   and finally the empty Extend slot glows: room for the next plugin. */
+.plugin-flow .pl-analyze .pl-dock { animation: pl-dock .8s cubic-bezier(.34, 1.56, .64, 1) .2s backwards; }
+.plugin-flow .pl-create .pl-dock { animation: pl-dock .8s cubic-bezier(.34, 1.56, .64, 1) 1.1s backwards; }
+.plugin-flow .pl-figure-lines { stroke-dasharray: 100; animation: pl-draw 1s ease-out 1.7s backwards; }
+.plugin-flow .pl-links { fill: none; stroke-width: 2.6; stroke-linecap: round; }
+.plugin-flow .pl-link-analyze { stroke: var(--diagram-pine); }
+.plugin-flow .pl-link-create { stroke: var(--diagram-iris); }
+.plugin-flow .pl-link-extend { stroke: var(--diagram-gold); stroke-dasharray: 4 6; }
+.plugin-flow .pl-trace { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linejoin: round; }
+.plugin-flow :is(.pl-trace, .pl-links path) { opacity: 0; animation: pl-pulse 6s ease-out infinite; animation-delay: var(--pl-beat); }
+.plugin-flow :is(.pl-analyze, .pl-link-analyze) { --pl-beat: .85s; }
+.plugin-flow :is(.pl-create, .pl-link-create) { --pl-beat: 1.75s; }
+.plugin-flow :is(.pl-extend, .pl-link-extend) { --pl-beat: 2.9s; }
+.plugin-flow .pl-gel rect { fill-opacity: .6; animation: pl-band 6s ease-out infinite; animation-delay: calc(var(--pl-beat) + var(--pl-step, 0s)); }
+.plugin-flow .pl-gel rect:nth-child(n+4) { --pl-step: .1s; }
+.plugin-flow .pl-gel rect:nth-child(n+7) { --pl-step: .2s; }
+.plugin-flow .pl-gel rect:nth-child(n+10) { --pl-step: .3s; }
+.plugin-flow .pl-gel rect:nth-child(n+13) { --pl-step: .4s; }
+.plugin-flow .pl-figure circle { animation: pl-node 6s ease-out infinite; animation-delay: calc(var(--pl-beat) + var(--pl-step, 0s)); }
+.plugin-flow .pl-figure circle:nth-of-type(2) { --pl-step: .1s; }
+.plugin-flow .pl-figure circle:nth-of-type(3) { --pl-step: .2s; }
+.plugin-flow .pl-figure circle:nth-of-type(4) { --pl-step: .3s; }
+.plugin-flow .pl-figure circle:nth-of-type(5) { --pl-step: .4s; }
+.plugin-flow .pl-plus { opacity: .55; animation: pl-ready 6s ease-out infinite; animation-delay: var(--pl-beat); }
+.plugin-flow :is(.pl-dock, .pl-figure-lines, .pl-trace, .pl-links path, .pl-gel rect, .pl-figure circle, .pl-plus) { animation-play-state: var(--illustration-play-state, paused); }
+@keyframes pl-dock { from { opacity: 0; transform: scale(1.4); filter: drop-shadow(0 24px 14px rgb(0 0 0 / .7)); } }
+@keyframes pl-draw { from { stroke-dashoffset: 100; } }
+@keyframes pl-pulse { 6% { opacity: 1; } 30% { opacity: 0; } }
+@keyframes pl-band { 6% { fill-opacity: 1; } 25% { fill-opacity: .6; } }
+@keyframes pl-node { 6% { fill: currentColor; } 25% { fill: var(--diagram-card); } }
+@keyframes pl-ready { 6% { opacity: 1; } 30% { opacity: .55; } }
+@media (max-width: 760px) {
+  #detail[data-feature="plugins"] .shot-viewport { max-height: none; }
+}
+@media (max-width: 480px) {
+  .plugin-flow .pl-label { font-size: 22px; }
+  .plugin-flow .pl-hikari { font-size: 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .plugin-flow :is(.pl-dock, .pl-figure-lines, .pl-trace, .pl-links path, .pl-gel rect, .pl-figure circle, .pl-plus) { animation: none; }
+}

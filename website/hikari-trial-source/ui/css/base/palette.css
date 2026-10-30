@@ -1,0 +1,167 @@
+/*
+ * Shared application theme contract.
+ *
+ * App and module CSS should use these semantic colors first. A module that
+ * needs visualization-specific colors must define them in its own
+ * `*-palette.css` file instead of expanding this shared theme.
+ */
+
+:root,
+#setting-appearance-preview[data-mode="day"] {
+  color-scheme: light;
+
+  /* Page and surface colors */
+  --theme-background: #fcfbf8;
+  --theme-surface: #fcfbf8;
+  --theme-surface-subtle: #f1e9de;
+  --theme-surface-elevated: #ffffff;
+  --theme-surface-muted: color-mix(in srgb, var(--theme-surface-subtle) 78%, var(--theme-surface-elevated) 22%);
+  --theme-surface-hover: color-mix(in srgb, var(--theme-accent) 8%, var(--theme-surface));
+  --theme-surface-active: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface));
+
+  /* Borders */
+  --theme-border: #d8cec1;
+  --theme-border-soft: #e6ddd1;
+
+  /* Text */
+  --theme-text: #2a241d;
+  --theme-text-muted: #72675d;
+  --theme-text-strong: #17120e;
+  --theme-primary: var(--theme-text-strong);
+  --theme-text-on-accent: #fbf9f4;
+
+  /* Actions and status */
+  /* The Hikari mark's blue (rainbow-blue), darkened to hold 4.5:1 under on-accent text. */
+  --theme-accent: #4169d8;
+  --theme-accent-soft: color-mix(in srgb, var(--theme-accent) 18%, transparent);
+  --theme-focus: #5478e6;
+  --theme-success: #166534;
+  --theme-warning: #b25522;
+  --theme-danger: #a74b3a;
+  --theme-hikari-rainbow-red: #f04f62;
+  --theme-hikari-rainbow-orange: #f28a38;
+  --theme-hikari-rainbow-yellow: #e9c83f;
+  --theme-hikari-rainbow-green: #48b96b;
+  --theme-hikari-rainbow-cyan: #32aec2;
+  --theme-hikari-rainbow-blue: #5478e6;
+  --theme-hikari-rainbow-violet: #9b5de5;
+
+  /* Shared component states */
+  --theme-panel: var(--theme-surface-elevated);
+  /* Preserve the original near-white textbox treatment in day mode. */
+  --theme-control-background: var(--theme-surface);
+  --theme-control-background-hover: color-mix(in srgb, var(--theme-surface-subtle) 84%, var(--theme-accent) 16%);
+
+  /* Overlays and shadows */
+  --theme-loading-background: #11140f;
+  --theme-overlay: rgba(18, 34, 55, 0.2);
+  --theme-overlay-strong: rgba(0, 0, 0, 0.46);
+  --theme-shadow-color-subtle: rgba(27, 20, 14, 0.08);
+  --theme-shadow-color: rgba(27, 20, 14, 0.14);
+  --theme-shadow-color-strong: rgba(27, 20, 14, 0.18);
+  --theme-shadow-small: 0 2px 8px rgba(27, 20, 14, 0.1);
+  --theme-shadow-medium: 0 6px 14px rgba(27, 20, 14, 0.12);
+
+  /* Scrollbars */
+  --theme-scrollbar-size: 8px;
+  --theme-scrollbar-thumb: rgba(120, 113, 104, 0.24);
+  --theme-scrollbar-thumb-hover: rgba(120, 113, 104, 0.36);
+}
+
+body.theme-night,
+#setting-appearance-preview[data-mode="night"] {
+  color-scheme: dark;
+
+  /*
+   * Night is a neutral graphite with a faint cool cast, so the Hikari blue
+   * accent (day's #4169d8, lifted for dark) is its only hue. The ramp is monotonic:
+   * background < surface < surface-subtle < surface-elevated, so a raised
+   * dialog reads as raised. `--theme-border` is tuned to 3:1 against
+   * surface-elevated (the lightest thing it ever sits on) because form
+   * fields on dark are told apart by their edge, not by their fill.
+   */
+  --theme-background: #131417;
+  --theme-surface: #1a1b1f;
+  --theme-surface-subtle: #232429;
+  --theme-surface-elevated: #2a2c32;
+  --theme-surface-muted: color-mix(in srgb, var(--theme-surface-subtle) 78%, var(--theme-surface));
+  --theme-surface-hover: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-surface));
+  --theme-surface-active: color-mix(in srgb, var(--theme-accent) 18%, var(--theme-surface));
+
+  --theme-border: #767a86;
+  --theme-border-soft: #383a42;
+
+  --theme-text: #e6e7eb;
+  --theme-text-muted: #a2a5ae;
+  --theme-text-strong: #f6f7f9;
+  --theme-primary: var(--theme-text-strong);
+  /* Accent is light in night mode, so ink that sits on it must be dark. */
+  --theme-text-on-accent: #0b1122;
+
+  --theme-accent: #8aa4f0;
+  --theme-accent-soft: color-mix(in srgb, var(--theme-accent) 20%, transparent);
+  --theme-focus: #a6baf5;
+  --theme-success: #74d69e;
+  --theme-warning: #eeae70;
+  --theme-danger: #f3947f;
+
+  --theme-panel: var(--theme-surface-elevated);
+  /* Keep fields visibly lifted from the page instead of reading as dark cutouts. */
+  --theme-control-background: color-mix(in srgb, var(--theme-surface-subtle) 76%, var(--theme-surface-elevated) 24%);
+  --theme-control-background-hover: color-mix(in srgb, var(--theme-surface-subtle) 84%, var(--theme-accent) 16%);
+
+  --theme-loading-background: #131417;
+  --theme-overlay: rgba(5, 6, 8, 0.5);
+  --theme-overlay-strong: rgba(5, 6, 8, 0.66);
+  --theme-shadow-color-subtle: rgba(0, 0, 0, 0.3);
+  --theme-shadow-color: rgba(0, 0, 0, 0.44);
+  --theme-shadow-color-strong: rgba(0, 0, 0, 0.6);
+  --theme-shadow-small: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --theme-shadow-medium: 0 6px 14px rgba(0, 0, 0, 0.48);
+
+  --theme-scrollbar-thumb: rgba(226, 228, 234, 0.26);
+  --theme-scrollbar-thumb-hover: rgba(226, 228, 234, 0.42);
+}
+
+/*
+ * Tints: the only steps a view may derive from the colors above. Reach for one
+ * of these before writing a new color-mix() percentage; a wash that is 2%
+ * darker is a new color nobody can tell apart, and they add up.
+ *   fill      neutral tonal fill (ghost buttons, empty chips); -strong on hover
+ *   wash      quiet hover / chip background (10%)
+ *   soft      selected / pressed background (18%; accent-soft is per theme)
+ *   line      tinted border, outline or ring
+ *   ink       status or accent text that must hold 4.5:1 on its own wash
+ * Declared on body (not :root) so each theme's colors are substituted, and on
+ * the appearance preview so its swatches follow the mode they preview.
+ */
+body,
+#setting-appearance-preview {
+  --theme-fill: color-mix(in srgb, var(--theme-text) 6%, transparent);
+  --theme-fill-strong: color-mix(in srgb, var(--theme-text) 11%, transparent);
+
+  --theme-accent-wash: color-mix(in srgb, var(--theme-accent) 10%, transparent);
+  --theme-accent-line: color-mix(in srgb, var(--theme-accent) 55%, transparent);
+  --theme-accent-ink: color-mix(in srgb, var(--theme-accent) 78%, var(--theme-text-strong));
+  --theme-accent-hover: color-mix(in srgb, var(--theme-accent) 88%, var(--theme-text-strong));
+
+  --theme-success-wash: color-mix(in srgb, var(--theme-success) 10%, transparent);
+  --theme-success-soft: color-mix(in srgb, var(--theme-success) 18%, transparent);
+  --theme-success-line: color-mix(in srgb, var(--theme-success) 40%, transparent);
+  --theme-success-ink: color-mix(in srgb, var(--theme-success) 80%, var(--theme-text-strong));
+  --theme-warning-wash: color-mix(in srgb, var(--theme-warning) 10%, transparent);
+  --theme-warning-soft: color-mix(in srgb, var(--theme-warning) 18%, transparent);
+  --theme-warning-line: color-mix(in srgb, var(--theme-warning) 40%, transparent);
+  --theme-warning-ink: color-mix(in srgb, var(--theme-warning) 80%, var(--theme-text-strong));
+  --theme-danger-wash: color-mix(in srgb, var(--theme-danger) 10%, transparent);
+  --theme-danger-soft: color-mix(in srgb, var(--theme-danger) 18%, transparent);
+  --theme-danger-line: color-mix(in srgb, var(--theme-danger) 40%, transparent);
+  --theme-danger-ink: color-mix(in srgb, var(--theme-danger) 80%, var(--theme-text-strong));
+
+  /* Activity heatmaps (Home, notebook projects): empty, then four accent steps. */
+  --theme-heat-0: color-mix(in srgb, var(--theme-text-strong) 7%, var(--theme-surface-elevated));
+  --theme-heat-1: color-mix(in srgb, var(--theme-accent) 24%, var(--theme-surface-elevated));
+  --theme-heat-2: color-mix(in srgb, var(--theme-accent) 48%, var(--theme-surface-elevated));
+  --theme-heat-3: color-mix(in srgb, var(--theme-accent) 73%, var(--theme-surface-elevated));
+  --theme-heat-4: var(--theme-accent);
+}

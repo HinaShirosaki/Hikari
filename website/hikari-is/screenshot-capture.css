@@ -1,0 +1,26 @@
+/* Capture the real demo UI at 1280 × 800 logical pixels, rendered at 3×.
+   Zoom mode (Product scenes): a 3840 × 2446 viewport and a full-page screenshot, cropped to the app.
+   Native mode (&density=native, Agent scenes): a 1280 × 816 viewport at devicePixelRatio 3, via
+   capture-scenes.cjs --native. Widgets that measure text, like Plotly charts, need native density. */
+html[data-capture="true"]:not([data-capture-density="native"]) { zoom: 3; }
+html[data-capture="true"] .app-shell { height: 800px; }
+html[data-capture="true"] #topbar-local-time { font-size: 0; }
+html[data-capture="true"] #topbar-local-time::after { content: "09:41"; font: 600 14px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+/* These widgets measure rendered pixels in JS. Keep their dimensions in
+   logical pixels when CSS zoom increases the capture density. */
+html[data-capture="true"]:not([data-capture-density="native"]) .tabulator-col[tabulator-field^="demo_molarity_"],
+html[data-capture="true"]:not([data-capture-density="native"]) .tabulator-cell[tabulator-field^="demo_molarity_"] { width: 180px !important; }
+html[data-capture="true"]:not([data-capture-density="native"]) .tabulator-header .tabulator-col { height: 42px !important; padding-top: 0 !important; padding-bottom: 0 !important; }
+html[data-capture="true"]:not([data-capture-density="native"]) .tabulator-header,
+html[data-capture="true"]:not([data-capture-density="native"]) .tabulator-header .tabulator-headers { height: 42px !important; min-height: 42px !important; }
+html[data-capture="true"]:not([data-capture-density="native"]) .tabulator-header .tabulator-headers { display: flex !important; align-items: flex-start !important; }
+html[data-capture="true"]:not([data-capture-density="native"]) .tabulator-header .tabulator-col { flex-shrink: 0; }
+html[data-capture="true"]:not([data-capture-density="native"]) .tabulator-tableholder { height: 123px !important; min-height: 123px !important; }
+html[data-capture="true"] body[data-trial-feature="experiments"] .folder-tree-template__hover-card { left: 278px !important; top: 199px !important; }
+/* Pin the saved-answer panel beside its highlight (the app flips it over the word at this size). */
+html[data-capture="true"] body[data-trial-feature="agent-insights"] .selection-insight-panel { left: 535px !important; top: 150px !important; }
+/* The notebook's floating toolbox (z-index 240) sits above the rail's review dialog (z-index 18). */
+html[data-capture="true"] body[data-trial-feature="agent-review"] .biology-notebook-tool-sidebar { visibility: hidden; }
+/* Polish's translucent backdrop lets the editor bleed between and below the two cards. Use the
+   same backdrop tone, opaque, so the compare dialog reads on its own (rgb sampled from the app). */
+html[data-capture="true"] body[data-trial-feature="agent-protocols"] #protocol-polish-overlay { background: #cfd1d2; }

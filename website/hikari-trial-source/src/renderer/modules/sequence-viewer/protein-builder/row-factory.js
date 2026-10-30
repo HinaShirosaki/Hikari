@@ -1,0 +1,99 @@
+import { escapeHtml } from '../../../lib/html.js';
+import { sanitizeProteinAssemblySequence } from './assembly-model.js';
+import { cleanText } from '../shared.js';
+import { LIBRARY_LOOKUP } from './constants.js';
+import { buildFeatureDerivedSequence } from './sequence-utils.js';
+
+export function cloneLibraryRow(nextRowId, type, libraryId) {
+  const preset = LIBRARY_LOOKUP.get(`${type}:${libraryId}`);
+  if (!preset) {
+    return null;
+  }
+  return {
+    id: `builder_row_${nextRowId}`,
+    kind: 'library',
+    type,
+    libraryId,
+    label: preset.label,
+    sequence: preset.sequence,
+    note: preset.note || ''
+  };
+}
+
+export function createPoiRow(nextRowId) {
+  return {
+    id: `builder_row_${nextRowId}`,
+    kind: 'poi',
+    type: 'poi',
+    label: 'Current DNA',
+    sequence: '',
+    note: 'Uses the active DNA source.'
+  };
+}
+
+export function createCustomRow(nextRowId, label, sequence) {
+  return {
+    id: `builder_row_${nextRowId}`,
+    kind: 'custom',
+    type: 'custom',
+    label: cleanText(label, 160).trim() || 'Custom Protein',
+    sequence: sanitizeProteinAssemblySequence(sequence || '', true),
+    note: 'User-defined protein sequence.'
+  };
+}
+
+export function createFeatureRow(nextRowId, feature, source = {}) {
+  const derived = buildFeatureDerivedSequence(feature);
+  const hostCount = Math.max(0, Number(feature?.hostCount) || 0);
+  // The vector the block was taken from is the plasmid it has to be amplified
+  // from later, so it is recorded on the row rather than just counted.
+  const sourceVectorName = cleanText(source?.host?.hostVectorName, 160);
+  const noteParts = [
+    feature?.type ? `Stored type: ${feature.type}` : '',
+    derived.mode === 'translated'
+      ? `Translated from ${Math.max(0, Number(feature?.sequenceLength) || String(derived.sourceSequence || '').length)} nt`
+      : 'Stored as protein sequence',
+    sourceVectorName
+      ? `From ${sourceVectorName}`
+      : (hostCount ? `${hostCount} host vector${hostCount === 1 ? '' : 's'}` : ''),
+    source?.codonOptimize ? 'Codon optimization enabled' : ''
+  ].filter(Boolean);
+
+  return {
+    sourceVectorId: cleanText(source?.host?.hostVectorId, 200),
+    sourceVectorName,
+    sourceVectorSequence: cleanText(source?.hostRecord?.sequence, 400000),
+    codonOptimize: Boolean(source?.codonOptimize),
+    id: `builder_row_${nextRowId}`,
+    kind: 'feature',
+    type: 'feature',
+    label: cleanText(feature?.name, 140) || 'Feature Block',
+    sequence: derived.sequence,
+    note: noteParts.join(' | '),
+    sourceFeatureId: cleanText(feature?.id, 200),
+    sourceFeatureType: cleanText(feature?.type, 120),
+    sourceSequence: derived.sourceSequence,
+    sourceDnaSequence: derived.mode === 'translated' ? derived.sourceSequence : '',
+    warnings: derived.warnings
+  };
+}
+
+export function formatCount(count, singular, plural = `${singular}s`) {
+  const safeCount = Math.max(0, Number(count) || 0);
+  return `${safeCount} ${safeCount === 1 ? singular : plural}`;
+}
+
+export function previewSequence(sequence, maxLength = 36) {
+  const cleaned = sanitizeProteinAssemblySequence(sequence, true);
+  if (!cleaned.length) {
+    return '-';
+  }
+  if (cleaned.length <= maxLength) {
+    return cleaned;
+  }
+  return `${cleaned.slice(0, maxLength)}...`;
+}
+
+export function escapeAttribute(value) {
+  return escapeHtml(String(value || '')).replace(/"/g, '&quot;');
+}

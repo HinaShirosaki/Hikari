@@ -1,0 +1,29 @@
+/* Conceptual diagrams sit on the page; window framing belongs to captured UI. */
+.shot[data-media="illustration"] {
+  --diagram-ink: var(--fg);
+  --diagram-muted: #b0acc7;
+  --diagram-line: #524f67;
+  --diagram-card: var(--surface);
+  --diagram-iris: #c4a7e7;
+  --diagram-iris-soft: #26233a;
+  --diagram-pine: #9ccfd8;
+  --diagram-pine-soft: #212e35;
+  --diagram-gold: var(--accent);
+  --diagram-gold-soft: #342d30;
+  --diagram-rose: #ebbcba;
+  --diagram-rose-soft: #332831;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.shot[data-media="illustration"] .bar { display: none; }
+.shot[data-media="illustration"] .shot-viewport { background: transparent; }
+.shot [data-illustration][hidden] { --illustration-play-state: paused; }
+/* One short trace follows a path; the underlying connection stays visible. */
+@keyframes illustration-signal {
+  0% { stroke-dashoffset: 8; opacity: 0; }
+  3% { opacity: 1; }
+  20% { stroke-dashoffset: -100; opacity: 1; }
+  24%, 100% { stroke-dashoffset: -100; opacity: 0; }
+}

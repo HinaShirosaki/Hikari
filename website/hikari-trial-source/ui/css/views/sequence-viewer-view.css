@@ -1,0 +1,7 @@
+/* Sequence Viewer stylesheet manifest.
+ * Keep these imports in their original source order: several later rules
+ * intentionally refine the same selectors declared by earlier sections. */
+@import url("./sequence-viewer-view/shell-and-builders.css");
+@import url("./sequence-viewer-view/detail-sequence.css");
+@import url("./sequence-viewer-view/dialogs-and-themes.css");
+@import url("./sequence-viewer-view/vector-builder.css");

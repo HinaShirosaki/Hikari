@@ -1,0 +1,161 @@
+/* Small browser adaptations around the unchanged Hikari desktop layout. */
+body { min-width: 0; }
+body[data-trial-feature] .trial-main-action:not([hidden]) { width: auto !important; min-width: max-content; flex-basis: auto; display: inline-flex !important; align-items: center; gap: 6px; padding-inline: 10px !important; }
+body[data-trial-feature] .trial-main-action[hidden] { display: none !important; }
+body[data-trial-feature] .trial-main-action::after { content: attr(data-trial-label); position: static; display: inline; opacity: 1; visibility: visible; transform: none; transition: none; width: auto; padding: 0; border: 0; background: none; color: inherit; box-shadow: none; font-family: inherit; font-size: var(--text-sm); line-height: 1.3; white-space: nowrap; }
+.trial-boot-error { position: fixed; z-index: 2000; inset: auto 16px 16px; display: flex; align-items: center; justify-content: center; gap: 12px; padding: 12px; border: 1px solid #ddd8ce; border-radius: 8px; background: #fff8ec; color: #36323e; font: 13px/1.4 sans-serif; }
+.trial-boot-error button { cursor: pointer; }
+#home-view { display: none !important; }
+.trial-example-active .workspace-shell { visibility: hidden; }
+.trial-example-preview { position: absolute; inset: 53px 0 0; z-index: 2; display: grid; grid-template-columns: 245px minmax(0,1fr); gap: 16px; padding: 16px; color: #272729; background: #fcfbf8; font: 1rem/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.trial-example-rail { padding: 14px 10px; overflow: auto; }
+.trial-example-preview h2 { margin: 0 0 12px; font-size: 1.2143rem; font-weight: 600; }
+.trial-example-rail h2 { margin: 0 8px 20px; font-size: .9286rem; }
+.trial-example-record { padding: 10px 8px; border-radius: 7px; font-size: .9286rem; }
+.trial-example-record.is-selected { background: #efeee9; }
+.trial-example-main { min-height: 0; display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.trial-example-main header { padding: 18px 22px; border-bottom: 1px solid #e9e6df; }
+.trial-example-main header h2 { margin-bottom: 3px; }
+.trial-example-main header p { margin: 0; }
+.trial-example-content { min-height: 0; overflow: auto; padding: 20px 22px; }
+.trial-example-content h3 { margin: 0 0 10px; font-size: 1.1429rem; }
+.trial-example-content h4 { margin: 22px 0 10px; font-size: 1rem; }
+.trial-example-content p { margin: 10px 0; max-width: 68ch; }
+.trial-example-content li { margin-bottom: 12px; }
+.trial-example-tag { display: inline-block; margin-bottom: 16px; padding: 3px 9px; border-radius: 5px; background: #eeeff8; color: #5867ad; font-size: .8571rem; }
+.trial-example-field { padding: 2px 6px; border: 1px solid #d1dcee; border-radius: 4px; color: #5068a7; background: #edf2fb; }
+.trial-example-table-wrap { overflow-x: auto; margin: 20px 0; }
+.trial-example-preview table { border-collapse: collapse; width: 100%; text-align: left; font-size: .9286rem; white-space: nowrap; }
+.trial-example-preview th, .trial-example-preview td { padding: 11px 12px; border: 1px solid #e6e4dd; }
+.trial-example-preview th { background: #f5f4ef; font-weight: 500; }
+.trial-example-sequence { display: grid; grid-template-columns: 65px minmax(0,1fr); gap: 16px; margin: 24px 0; }
+.trial-example-sequence code { overflow-wrap: anywhere; white-space: normal; }
+.trial-example-sequence mark { background: #ffdec9; color: inherit; padding: 3px; }
+.trial-example-dna { display: block; overflow-wrap: anywhere; white-space: normal; letter-spacing: .13em; line-height: 2; }
+.trial-example-wells { display: grid; grid-template-columns: repeat(var(--trial-example-columns,9),minmax(0,1fr)); gap: 8px; margin: 20px 0; }
+.trial-example-well { display: grid; min-height: 58px; padding: 7px; gap: 4px; border: 1px solid #e5e3dc; border-radius: 7px; background: #f9f8f3; font-size: .7857rem; }
+.trial-example-well.is-filled { background: #e9edf7; border-color: #cbd4e8; }
+.trial-example-well strong { font-weight: 500; overflow-wrap: anywhere; }
+@media (max-width:980px) {
+  .trial-example-preview { grid-template-columns: minmax(0,1fr); grid-template-rows: auto minmax(0,1fr); gap: 8px; padding: 10px; }
+  .trial-example-rail { display: flex; align-items: center; gap: 8px; overflow-x: auto; padding: 0; white-space: nowrap; }
+  .trial-example-rail h2 { margin: 0 8px; }
+  .trial-example-main header, .trial-example-content { padding: 14px; }
+}
+.trial-window-controls { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); display: flex; gap: 8px; pointer-events: none; }
+.trial-window-controls i { display: block; width: 12px; height: 12px; border-radius: 50%; box-shadow: inset 0 0 0 1px #00000012; }
+.trial-window-controls i:nth-child(1) { background: #ff5f57; }
+.trial-window-controls i:nth-child(2) { background: #febc2e; }
+.trial-window-controls i:nth-child(3) { background: #28c840; }
+body[data-trial-feature] .topbar { grid-template-columns: auto minmax(0, 1fr) auto; padding-inline-start: 96px; }
+body[data-trial-feature] .topbar-tools { grid-column: 3; grid-row: 1; width: auto; justify-self: end; }
+body[data-trial-feature] .app-dock { min-height: 52px; }
+/* The website's feature list and the app's own back buttons replace the title bar, so the trial gives its height to the workspace. */
+html:not([data-capture="true"]) body[data-trial-feature] .topbar { display: none; }
+html:not([data-capture="true"]) body[data-trial-feature] .app-shell { grid-template-rows: minmax(0, 1fr); }
+html:not([data-capture="true"]) .trial-example-preview { inset: 0; }
+body[data-trial-feature] [data-view][hidden] { display: none !important; }
+body[data-trial-feature] #agent-rail-toggle,
+body[data-trial-feature] .topbar-agent-toggle,
+body[data-trial-feature] #setting-storage-path,
+body[data-trial-feature] #setting-plugins-add-btn { display: none !important; }
+
+body[data-trial-feature] #topbar-search-toggle,
+body[data-trial-feature] #setting-external-skills-refresh-btn,
+body[data-trial-feature] #setting-agent-external-skills-enabled,
+body[data-trial-feature] [data-plugin-remove] { display: none !important; }
+
+/* Navigation is regenerated on resize; keep it scoped to this trial. */
+body:is([data-trial-feature="experiments"], [data-trial-feature="calculations"], [data-trial-feature="protocols"]) :is(.app-dock-nav, #app-more-menu) [data-view]:not([data-view="biology-notebook-view"]),
+body[data-trial-feature="samples"] :is(.app-dock-nav, #app-more-menu) [data-view]:not([data-view="sample-registry-view"]),
+body[data-trial-feature="workflows"] :is(.app-dock-nav, #app-more-menu) [data-view]:not([data-view="workflow-management-view"]):not([data-view="biology-notebook-view"]),
+html[data-capture="true"] body[data-trial-feature="cloning"] :is(.app-dock-nav, #app-more-menu) [data-view],
+html[data-capture="true"] body[data-trial-feature="protein-builder"] :is(.app-dock-nav, #app-more-menu) [data-view] { display: none !important; }
+/* One native feature icon and label in every public trial, at every size. */
+html:not([data-capture="true"]) body[data-trial-feature] :is(#app-more-btn, #app-more-menu, .app-dock-divider) { display: none !important; }
+html:not([data-capture="true"]) body[data-trial-feature] .app-dock-nav .app-dock-btn { width: auto; padding-inline: var(--space-12); color: var(--theme-text-strong); background: var(--theme-accent-soft); }
+html:not([data-capture="true"]) body[data-trial-feature] .app-dock-nav .app-dock-label { display: inline; }
+body[data-trial-feature="protein-builder"] #sequence-viewer-protein-builder-back-btn { display: none !important; }
+body[data-trial-feature="protein-builder"] .sequence-viewer-protein-builder-grid { min-width: 0; }
+body[data-trial-feature="protein-builder"] .sequence-viewer-protein-builder-main { display: block; height: 100%; }
+body[data-trial-feature="protein-builder"] .sequence-viewer-protein-builder-workflow-panel { grid-template-rows: auto auto; overflow: visible; }
+/* Keep the chain and both outputs together in the fitted desktop canvas. */
+html:not([data-capture="true"]) body[data-trial-feature="protein-builder"] .sequence-viewer-protein-builder-main { display: grid; grid-template-rows: minmax(0,1.1fr) minmax(0,.85fr) minmax(0,1.35fr); overflow: hidden; }
+html:not([data-capture="true"]) body[data-trial-feature="protein-builder"] .sequence-viewer-protein-builder-main > .sequence-viewer-protein-builder-panel { min-height: 0; overflow: auto; }
+html:not([data-capture="true"]) body[data-trial-feature="protein-builder"] .sequence-viewer-protein-builder-sequence-panel { display: flex; flex-direction: column; }
+html:not([data-capture="true"]) body[data-trial-feature="protein-builder"] :is(.sequence-viewer-protein-builder-sequence-editor, .sequence-viewer-protein-builder-sequence-panel .sequence-block) { min-height: 0; max-height: none; flex: 1; overflow: auto; }
+
+/* Give larger trial text room to wrap and scroll within the desktop window. */
+html:not([data-capture="true"]) body[data-trial-feature] .spreadsheet-table .tabulator-cell { min-height: 1.8em; line-height: 1.4; }
+/* trial-grid.js (worksheet only) sizes columns with CSS grid instead of Tabulator's measured widths. */
+.trial-grid { display: flex; flex-direction: column; }
+.trial-grid :is(.tabulator-headers, .tabulator-row) { display: grid; grid-template-columns: var(--trial-grid-columns); }
+.trial-grid.tabulator .tabulator-header .tabulator-col { justify-content: center; }
+.trial-grid .tabulator-tableholder { flex: 1; min-height: 0; }
+.trial-grid.tabulator .tabulator-tableholder .tabulator-table { display: block; }
+html:not([data-capture="true"]) body[data-trial-feature="workflows"] .workflow-drawer { width: min(560px, 100%); }
+html:not([data-capture="true"]) body[data-trial-feature="workflows"] .workflow-stepper-node.is-pending::after { content: none; }
+html:not([data-capture="true"]) body[data-trial-feature="workflows"] .workflow-drawer-actions :is(.primary-btn, .ghost-btn) { line-height: 1.3; }
+html:not([data-capture="true"]) body[data-trial-feature="samples"] .well-grid:has([data-container-id="demo-box"]) { gap: 1px; background: var(--theme-border); }
+html:not([data-capture="true"]) body[data-trial-feature="samples"] .well[data-container-id="demo-box"] { flex-direction: column; gap: .2rem; padding: .2rem; border: 0; }
+html:not([data-capture="true"]) body[data-trial-feature="samples"] .well-number { font-size: var(--text-2xs); }
+html:not([data-capture="true"]) body[data-trial-feature="samples"] .well[data-container-id="demo-box"] .well-number { position: static; max-width: 100%; }
+html:not([data-capture="true"]) body[data-trial-feature="samples"] .well[data-container-id="demo-box"] .well-sample-dot { width: 46%; height: auto; aspect-ratio: 1; }
+html:not([data-capture="true"]) body[data-trial-feature="samples"] .well-sample-count { font-size: var(--text-2xs); height: auto; min-height: 1.2em; line-height: 1.2; }
+body:is([data-trial-feature="cloning"], [data-trial-feature="protein-builder"]) #app-more-btn { display: none !important; }
+html:not([data-capture="true"]) body[data-trial-feature="protein-builder"] .sequence-viewer-protein-builder-block { grid-template-rows: 5.5714rem auto; min-width: 7.4286rem; max-width: 30rem; }
+html:not([data-capture="true"]) body[data-trial-feature="protein-builder"] .sequence-viewer-protein-builder-block-compact { min-width: 6.2857rem; }
+html:not([data-capture="true"]) body[data-trial-feature="protein-builder"] .sequence-viewer-protein-builder-block-shape { min-height: 4.4286rem; }
+
+/* Step records are edited in the workflow; the linked page is a reading view. */
+body[data-trial-feature="workflows"] :is(#biology-notebook-new-experiment-btn, #biology-notebook-edit-protocol-btn, #biology-notebook-mark-executed-btn, #save-biology-notebook-btn) { display: none !important; }
+/* Keep feature trials complete without advertising unrelated desktop tools. */
+html:not([data-capture="true"]) body[data-trial-feature] :is(#biology-notebook-add-gel-btn, #biology-notebook-add-assay-btn, [data-requires-agent]) { display: none !important; }
+/* The Trial does not ship jsPDF, which both notebook PDF actions need. */
+html:not([data-capture="true"]) body[data-trial-feature] :is(#biology-notebook-export-btn, #biology-notebook-print-btn) { display: none !important; }
+html:not([data-capture="true"]) body:is([data-trial-feature="cloning"], [data-trial-feature="protein-builder"]) :is(#sequence-viewer-vector-builder-btn, #sequence-viewer-home-vector-builder-btn, #sequence-viewer-annotate-btn, #sequence-viewer-recognize-backbone-btn) { display: none !important; }
+html:not([data-capture="true"]) body[data-trial-feature="cloning"] #sequence-viewer-protein-builder-btn { display: none !important; }
+html:not([data-capture="true"]) body[data-trial-feature="calculations"] :is(#biology-notebook-new-experiment-btn, #biology-notebook-header-add-project-btn, #biology-notebook-edit-protocol-btn, #biology-notebook-mark-executed-btn) { display: none !important; }
+.trial-workflow-back { white-space: nowrap; font-size: var(--text-sm); }
+.trial-sample-links { padding-top: var(--space-12); border-top: 1px solid var(--theme-border); }
+.trial-sample-links summary { cursor: pointer; padding-block: var(--space-8); }
+.trial-sample-links label { display: grid; gap: var(--space-4); margin-block: var(--space-8); }
+body[data-trial-feature="workflows"] .workflow-editor-layout { height: 100%; min-height: 0; }
+body[data-trial-feature="workflows"] .workflow-editor-main { height: 100%; min-height: 0; overflow: hidden; }
+
+/* The host sizes the frame to the screen; keep the app shell inside that frame. */
+html, body { height: 100%; min-height: 0; overflow: hidden; }
+body[data-trial-feature] .app-shell { height: 100%; min-height: 0; }
+body[data-trial-feature] .workspace-shell,
+body[data-trial-feature] .workspace-main { height: 100%; min-height: 0; overflow: hidden; }
+body[data-trial-feature] .workspace-main > .view.is-active { height: 100%; min-height: 0; }
+body[data-trial-feature="cloning"] .sequence-viewer-cloning-design-workspace { height: 100%; }
+body[data-trial-feature="cloning"] .sequence-viewer-detail-workspace { height: 100%; min-height: 0; }
+body[data-trial-feature="cloning"] .sequence-viewer-detail-main { min-height: 0; overflow-y: auto; }
+body[data-trial-feature="cloning"] .sequence-viewer-cloning-design-grid { min-height: 0; align-items: stretch; }
+body[data-trial-feature="cloning"] #sequence-viewer-detail-view .sequence-viewer-cloning-design-main { height: 100%; min-height: 0; overflow-x: hidden; overflow-y: auto; }
+body[data-trial-feature="samples"] .personal-inventory-layout { height: 100%; min-height: 0; }
+body[data-trial-feature="samples"] #personal-inventory-view .inventory-main-panel { height: 100%; min-height: 0; overflow-x: hidden; overflow-y: auto; }
+body[data-trial-feature="samples"] .well-grid-panel { min-height: 0; }
+
+@media (max-width:980px) {
+  body[data-trial-feature] .topbar { grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; padding: 6px 10px; padding-inline-start: 78px; }
+  .trial-window-controls { left: 14px; gap: 6px; }
+  body[data-trial-feature] .topbar-tools { width: auto; }
+  body[data-trial-feature] .biology-notebook-layout {
+    height: 100%; min-height: 0; grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(64px, 104px) minmax(0, 1fr); gap: 0;
+  }
+  body[data-trial-feature] .biology-notebook-layout > .biology-notebook-rail { height: 100%; min-height: 0; max-height: none; }
+  body[data-trial-feature] .biology-notebook-layout > .biology-notebook-viewer-column { height: 100%; min-height: 0; padding-top: 0; overflow: hidden; }
+  body[data-trial-feature] .biology-notebook-viewer { height: 100%; min-height: 0; grid-template-rows: auto minmax(0, 1fr); gap: 0; overflow: hidden; }
+  body[data-trial-feature] .biology-notebook-viewer-scroll { min-height: 0; overflow-y: auto; padding-top: 8px; }
+  body[data-trial-feature] .biology-notebook-layout > .biology-notebook-tool-sidebar { position: absolute; }
+  body[data-trial-feature="cloning"] .sequence-viewer-cloning-design-grid,
+  body[data-trial-feature="samples"] .personal-inventory-layout { grid-template-rows: minmax(64px, 104px) minmax(0, 1fr); gap: 0; }
+  body[data-trial-feature="cloning"] .sequence-viewer-cloning-design-sidebar,
+  body[data-trial-feature="samples"] .inventory-rail-panel { height: 100%; min-height: 0; }
+  body[data-trial-feature="cloning"] .sequence-viewer-cloning-design-main { padding-top: 8px; }
+  body[data-trial-feature="samples"] .inventory-main-panel { padding-top: 8px; }
+  body[data-trial-feature="samples"] .container-detail-sticky { position: static; }
+}

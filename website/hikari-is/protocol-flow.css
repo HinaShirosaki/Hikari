@@ -1,0 +1,120 @@
+.feature-anchor { position: absolute; width: 1px; height: 1px; pointer-events: none; }
+#detail[data-feature="protocols"] { align-items: center; }
+/* Keep the editable pages readable instead of spreading them across wide displays. */
+#detail[data-feature="protocols"] .feature-media { width: 100%; max-width: 840px; justify-self: center; }
+#detail[data-feature="protocols"] .shot-viewport { aspect-ratio: auto; max-height: none; }
+#detail .protocol-flow { position: static; display: flex; flex-direction: column;
+  color: var(--diagram-ink); padding: 0; background: transparent; font: 14px/1.5 var(--sans); }
+#detail .protocol-flow[hidden] { display: none; }
+.pf-path { display: grid; grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1.2fr); gap: 16px; margin-bottom: 22px;
+  color: var(--diagram-muted); font: 11px/1.3 var(--mono); letter-spacing: .02em; }
+.pf-path > :nth-child(2) { text-align: center; color: var(--diagram-gold); }
+.pf-cards { display: grid; grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1.2fr); column-gap: 16px; row-gap: 0; align-items: start; }
+.pf-method, .pf-run { min-width: 0; display: grid; grid-template-rows: subgrid; grid-row: 1 / span 4; }
+.pf-method { grid-column: 1; }
+.pf-run { grid-column: 3; }
+.pf-card-head { padding: 18px 16px 16px; border-top: 1px solid var(--diagram-line); }
+.pf-run .pf-card-head { border-color: var(--diagram-iris); }
+.pf-eyebrow { display: block; margin-bottom: 6px; color: var(--diagram-muted); font-size: 11px; }
+.pf-card-head h3 { margin: 0; font-size: 21px; line-height: 1.25; font-weight: 600; overflow-wrap: anywhere; }
+#detail .pf-steps { margin: 0; padding: 18px 16px; list-style: none; counter-reset: pf-step; display: grid; gap: 14px; }
+#detail .pf-steps li { counter-increment: pf-step; display: flex; align-items: baseline; gap: 10px; padding: 0; border: 0; font-size: 14px; line-height: 1.5; }
+#detail .pf-steps li::before { content: counter(pf-step, decimal-leading-zero); color: var(--diagram-muted); font: 10px var(--mono); flex-shrink: 0; }
+.pf-blank { display: inline-block; padding: 0 4px; border-bottom: 1px dashed var(--diagram-line); color: var(--diagram-muted); font-size: 13px; font-weight: 400; }
+.pf-value { display: inline-block; width: 110px; max-width: 100%; padding: 2px 5px; border: 0; border-bottom: 1px solid var(--diagram-iris);
+  border-radius: 0; color: var(--diagram-iris); background: transparent; font: 500 13px/1.3 var(--sans); }
+#pf-volume, #pf-time { width: 78px; }
+.pf-value:focus-visible { outline: 2px solid var(--diagram-iris); outline-offset: 2px; }
+.pf-method-foot, .pf-snapshot { display: flex; align-items: center; align-self: start; gap: 8px; padding: 14px 16px; font-size: 12px; color: var(--diagram-muted); border-top: 1px solid var(--diagram-line); }
+.pf-method-foot svg, .pf-snapshot svg { width: 16px; height: 16px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.pf-connector { position: relative; grid-column: 2; grid-row: 2; align-self: center; text-align: center; color: var(--diagram-gold); }
+.pf-connector svg { display: block; width: 100%; height: 28px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.pf-connector span { position: absolute; top: calc(100% + 8px); left: -6px; width: calc(100% + 12px); display: block; color: var(--diagram-muted); font-size: 10px; line-height: 1.5; }
+.pf-observation { margin: 0 16px 12px; padding: 10px 12px; border-left: 1px solid var(--diagram-gold); }
+.pf-observation > span { color: var(--diagram-gold); font-size: 11px; }
+#detail .pf-observation p { margin: 4px 0 0; color: var(--diagram-ink); font-size: 13px; line-height: 1.5; }
+.pf-snapshot { color: var(--diagram-pine); border: 0; }
+.pf-footer { display: flex; align-items: center; justify-content: flex-end; gap: 16px; margin-top: 18px; color: var(--diagram-muted); font-size: 11px; }
+.pf-footer button { flex-shrink: 0; border: 0; border-bottom: 1px solid transparent; background: transparent; color: var(--diagram-iris); padding: 6px 0; cursor: pointer; font: 500 12px var(--sans); }
+.pf-footer button:hover { border-color: var(--diagram-iris); }
+.pf-footer button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.pf-transfer { stroke-width: 3; stroke-dasharray: 8 112; stroke-dashoffset: 8; opacity: 0;
+  animation: illustration-signal 9s linear infinite; animation-play-state: var(--illustration-play-state, paused); }
+.pf-run .pf-value { animation: pf-value-cue 9s ease-in-out infinite; animation-delay: var(--pf-cue-delay); animation-play-state: var(--illustration-play-state, paused); }
+#pf-protein { --pf-cue-delay: 1.2s; }
+#pf-volume { --pf-cue-delay: 2.3s; }
+#pf-time { --pf-cue-delay: 3.4s; }
+.pf-snapshot-mark { stroke-dasharray: 1; stroke-dashoffset: 1;
+  animation: pf-save-mark 9s ease-out infinite; animation-play-state: var(--illustration-play-state, paused); }
+.protocol-flow:has(.pf-value:focus) :is(.pf-transfer, .pf-value, .pf-snapshot-mark) { animation-play-state: paused; }
+@keyframes pf-value-cue {
+  0%, 22%, 100% { background: transparent; box-shadow: none; }
+  6%, 14% { background: var(--diagram-iris-soft); box-shadow: 0 1px 0 var(--diagram-iris); }
+}
+@keyframes pf-save-mark {
+  0%, 59% { stroke-dashoffset: 1; }
+  68%, 92% { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: 1; }
+}
+.pf-run.is-new-run .pf-value { animation: pf-fill .6s ease-out; animation-play-state: var(--illustration-play-state, paused); }
+@keyframes pf-fill { from { color: var(--diagram-gold); border-color: var(--diagram-gold); } to { color: var(--diagram-iris); border-color: var(--diagram-iris); } }
+@media (max-width: 1160px), (max-height: 700px) {
+  .pf-path { margin-bottom: 14px; gap: 12px; font-size: 10px; }
+  .pf-cards { column-gap: 12px; }
+  .pf-card-head { padding: 14px 12px 12px; }
+  .pf-card-head h3 { font-size: 18px; }
+  .pf-eyebrow { margin-bottom: 5px; font-size: 10px; }
+  #detail .pf-steps { padding: 14px 12px; gap: 10px; }
+  #detail .pf-steps li { gap: 7px; font-size: 12px; }
+  #detail .pf-steps li::before { font-size: 9px; }
+  .pf-blank, .pf-value { font-size: 11px; }
+  .pf-value { width: 92px; }
+  #pf-volume, #pf-time { width: 67px; }
+  .pf-method-foot, .pf-snapshot { padding: 10px 12px; font-size: 11px; gap: 6px; }
+  .pf-method-foot svg, .pf-snapshot svg { width: 14px; height: 14px; }
+  .pf-observation { margin: 0 12px 10px; padding: 8px 10px; }
+  #detail .pf-observation p { font-size: 12px; }
+  .pf-footer { margin-top: 14px; font-size: 10px; }
+  .pf-footer button { font-size: 11px; }
+}
+@media (max-width: 980px) {
+  .pf-path, .pf-cards { grid-template-columns: minmax(0, 1fr) 28px minmax(0, 1.2fr); column-gap: 10px; }
+  .pf-step-copy { display: none; }
+  .pf-connector span { display: none; }
+  .pf-footer > span { max-width: 160px; }
+}
+@media (max-width: 760px) {
+  #detail[data-feature="protocols"] #dList { display: none; }
+  .pf-path { margin-bottom: 8px; font-size: 9px; }
+  .pf-card-head { padding: 8px 7px; }
+  .pf-card-head h3 { font-size: 14px; }
+  .pf-eyebrow { margin-bottom: 3px; font-size: 9px; }
+  #detail .pf-steps { padding: 8px 7px; gap: 6px; }
+  #detail .pf-steps li:nth-child(n+3) { display: flex; }
+  .pf-value { width: 82px; }
+  #pf-volume, #pf-time { width: 62px; }
+  .pf-method-foot, .pf-snapshot { padding: 6px 7px; font-size: 10px; }
+  .pf-observation { margin: 0 7px 6px; padding: 4px 6px; }
+  .pf-observation > span { font-size: 10px; }
+  #detail .pf-observation p { font-size: 11px; }
+  .pf-footer { margin-top: 8px; justify-content: flex-end; }
+  .pf-footer button { padding-block: 4px; }
+  .pf-footer > span { display: none; }
+}
+@media (max-width: 760px) and (max-height: 740px) {
+  .pf-path { display: none; }
+  .pf-card-head { padding: 7px; }
+  .pf-card-head h3 { font-size: 13px; }
+  #detail .pf-steps { padding: 7px; gap: 6px; }
+  #detail .pf-steps li { line-height: 1.3; }
+  .pf-method-foot, .pf-snapshot { padding: 6px 7px; font-size: 9px; }
+  .pf-observation { margin-bottom: 6px; padding: 4px 6px; }
+  #detail .pf-observation p { font-size: 10px; }
+}
+@media (max-width: 760px) and (max-height: 600px) {
+  #detail[data-feature="protocols"] #dBody { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pf-run .pf-value, .pf-run.is-new-run .pf-value, .pf-transfer, .pf-snapshot-mark { animation: none; }
+  .pf-snapshot-mark { stroke-dashoffset: 0; }
+}

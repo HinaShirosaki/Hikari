@@ -1,0 +1,7 @@
+/* Agent Chat stylesheet manifest.
+ * Keep the legacy-to-refresh ordering because later sections deliberately
+ * override the base chat presentation. */
+@import url("./agent-view/layout-and-messages.css");
+@import url("./agent-view/chat-refresh-and-composer.css");
+@import url("./agent-view/review-and-responsive.css");
+@import url("./agent-view/reading-layout.css");
