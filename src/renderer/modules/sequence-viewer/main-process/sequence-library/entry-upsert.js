@@ -84,6 +84,18 @@ async function writeEntryFilesAndRow({ db, existing, paths, payload, gbkText }) 
   const requestedName = normalizeName(payload.name || existing?.name || 'sequence', 'sequence');
   const resolvedName = status === STATUS_SAVED ? findNextSavedName(db, requestedName, existing?.id || '') : requestedName;
   const entryId = existing?.id || inputId || buildEntryId();
+  const parentEntryId = cleanText(payload.parentEntryId ?? existing?.parentEntryId, 200);
+  const visited = new Set([entryId]);
+  let ancestorId = parentEntryId;
+  let parent = null;
+  while (ancestorId) {
+    if (visited.has(ancestorId)) throw new Error('A DNA entry cannot be its own ancestor.');
+    visited.add(ancestorId);
+    const ancestor = normalizeEntryRow(readSingleRow(db, 'SELECT * FROM sequence_entries WHERE id = ?', [ancestorId]));
+    if (!ancestor) throw new Error('Parent DNA entry not found.');
+    parent ||= ancestor;
+    ancestorId = ancestor.parentEntryId;
+  }
   const entryDir = path.join(paths.entriesRoot, entryId);
   await fs.mkdir(entryDir, { recursive: true });
   await clearDirectoryContents(entryDir, { preserveNames: [ALIGNMENTS_DIR_NAME, 'agent-design.json'] });
@@ -94,6 +106,8 @@ async function writeEntryFilesAndRow({ db, existing, paths, payload, gbkText }) 
 
   const now = new Date().toISOString();
   const row = buildEntryRow({ existing, payload, entryId, resolvedName, status, gbkAbsPath, paths, now });
+  row.parentEntryId = parentEntryId;
+  if (parent) row.folderId = parent.folderId;
   upsertEntryRow(db, row);
   const designPath = path.join(entryDir, 'agent-design.json');
   const design = await fs.readFile(designPath, 'utf8').then(JSON.parse, error => { if (error.code === 'ENOENT') return null; throw error; });

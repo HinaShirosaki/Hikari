@@ -86,6 +86,7 @@ function createLibraryOpen({
       state.libraryEntries = [];
       state.libraryFolders = [];
       state.expandedLibraryFolderIds = [];
+      state.expandedDnaEntryIds = [];
       state.libraryFolderExpansionInitialized = false;
       state.libraryStoragePath = '';
       state.selectedLibraryEntryId = '';
@@ -118,6 +119,7 @@ function createLibraryOpen({
         state.libraryStoragePath = storagePath;
         state.libraryFolderExpansionInitialized = false;
         state.expandedLibraryFolderIds = [];
+        state.expandedDnaEntryIds = [];
       }
       state.libraryEntries = entries;
       state.libraryFolders = folders;
@@ -139,6 +141,21 @@ function createLibraryOpen({
         ? preferred
         : (entries[0]?.id || '');
       state.selectedLibraryEntryId = cleanText(nextSelected, 200);
+
+      if (options.selectedId) {
+        const byId = new Map(entries.map(entry => [entry.id, entry]));
+        const expandedDna = new Set(state.expandedDnaEntryIds || []);
+        const visited = new Set();
+        let selected = byId.get(nextSelected);
+        while (selected && !visited.has(selected.id)) {
+          visited.add(selected.id);
+          if (selected.folderId) expanded.add(selected.folderId);
+          if (selected.parentEntryId) expandedDna.add(selected.parentEntryId);
+          selected = byId.get(selected.parentEntryId);
+        }
+        state.expandedLibraryFolderIds = [...expanded];
+        state.expandedDnaEntryIds = [...expandedDna];
+      }
 
       renderLibraryList();
       await loadSelectedLibraryPreview();

@@ -1,4 +1,7 @@
 import { protocolSpanish } from './locales/es.js';
+import { protocolSimplifiedChinese } from './locales/zh-Hans.js';
+import { protocolTraditionalChinese } from './locales/zh-Hant.js';
+import { protocolJapanese } from './locales/ja.js';
 import { createPresentation } from '../../lib/i18n/presentation.js';
 const statusPresentation = createPresentation('protocol');
 import { i18n } from '../../lib/i18n/index.js';
@@ -10,6 +13,9 @@ import { protocolEnglish } from './locales/en.js';
 
 i18n.registerMessages('en', 'protocol', protocolEnglish);
 i18n.registerMessages('es', 'protocol', protocolSpanish);
+i18n.registerMessages('zh-Hans', 'protocol', protocolSimplifiedChinese);
+i18n.registerMessages('zh-Hant', 'protocol', protocolTraditionalChinese);
+i18n.registerMessages('ja', 'protocol', protocolJapanese);
 export const protocolText = i18n.scope('protocol');
 export const protocolMessage = (key, params) => messageSpan(`protocol.${key}`, params);
 export const protocolAttributes = (bindings, params) => messageAttributes(

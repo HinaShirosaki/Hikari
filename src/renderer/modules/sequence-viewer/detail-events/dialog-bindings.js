@@ -26,6 +26,7 @@ function bindDetailDialogEvents(context = {}, { closeToolbarMenus = () => {} } =
     deleteFeatureFromContext,
     applyFeatureEditorChanges,
     getActiveFeatureActionContext,
+    onSaveDnaFragment = () => {},
     openSequenceEditFromKeyboardEvent,
     applySequenceEditDialog,
     hasOpenSequenceEditDialog
@@ -55,6 +56,11 @@ function bindDetailDialogEvents(context = {}, { closeToolbarMenus = () => {} } =
     }
 
     const context = getActiveFeatureActionContext();
+    if (action === 'save-fragment' && context?.selectionRange) {
+      hideFeatureContextMenu();
+      onSaveDnaFragment(context.selectionRange);
+      return;
+    }
     if (action === 'add') {
       openFeatureEditor('add', context);
       return;

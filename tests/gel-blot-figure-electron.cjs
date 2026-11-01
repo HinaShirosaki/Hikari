@@ -269,7 +269,9 @@ async function main() {
     await exec("click('gel-export-pptx-btn')");await waitFor("el('gel-figure-status').textContent==='PPTX exported.'");
     const individualPptx=await exec('pptxInfo()');
     assert.deepEqual(ownTables.map(table=>table.rotated),[true,false],'Only a one-row table becomes rotated captions');
-    assert.equal((individualPptx.xml.match(/<a:tbl>/g)||[]).length,6,'A multi-row table remains editable PowerPoint cells');
+    assert.equal((individualPptx.xml.match(/<a:tbl>/g)||[]).length,1,'A multi-row table exports as one editable PowerPoint table');
+    assert.equal((individualPptx.xml.match(/<a:gridCol /g)||[]).length,7,'The table has a label column and one column per lane');
+    assert.match(individualPptx.xml,/<a:t>Dose<\/a:t>/,'Row labels are the table\'s first column');
     assert.equal((individualPptx.xml.match(/rot="18900000"/g)||[]).length,4,'One-row captions are editable text rotated 45°');
     assert.match(individualPptx.xml,/<a:t>A4<\/a:t>/);assert.match(individualPptx.xml,/<a:t>B6<\/a:t>/);
     await exec("click('gel-export-image-btn')");await waitFor("el('gel-figure-status').textContent==='PNG exported.'");

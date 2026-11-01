@@ -3,15 +3,26 @@ module.exports = function workspacePage({ root, url }) {
   const fs = require('node:fs');
   const path = require('node:path');
   const markup = fs.readFileSync(path.join(root, 'ui/html/views/assay-view.html'), 'utf8');
+  const shell = fs.readFileSync(path.join(root, 'ui/html/shell/end.html'), 'utf8');
+  const rail = shell.slice(shell.indexOf('      <aside id="universal-agent-chat-rail"'), shell.indexOf('      </aside>') + '      </aside>'.length);
   return `<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="${url('vendor/tabulator/tabulator.min.css')}">
     <link rel="stylesheet" href="${url('styles.css')}">
     <style>body{display:block;margin:0}#assay-view{display:block!important;height:100vh;padding:0}
     #assay-view .assay-results-layout{height:100vh}[hidden]{display:none!important}</style>
     <script src="${url('vendor/plotly/plotly.min.js')}"></script>
     <script src="${url('vendor/tabulator/tabulator.min.js')}"></script>
-    ${markup}
+    <div class="workspace-shell"><main class="workspace-main">${markup}</main>${rail}</div>
     <script type="module">
       import {initAssay} from '${url('src/renderer/modules/assay/index.js')}';
+      import {createAgentChatRail} from '${url('src/renderer/app/navigation-shell/agent-rail.js')}';
+      import {bindTranslations} from '${url('src/renderer/lib/i18n/dom.js')}';
+      bindTranslations(document);
+      document.body.dataset.activeView='assay-view';
+      document.body.dataset.agentAvailability='connected';
+      const agentRail=createAgentChatRail({VIEWS:{PAPERS:'papers-view'},documentObject:document,
+        getActiveViewId:()=>document.body.dataset.activeView,getAppForView:()=>({agentChatRail:true}),
+        resolveNavigationViewId:id=>id,moduleRuntime:{},sharedLeftRailRuntime:{syncWidth(){}}});
+      agentRail.init();
       let pending=Promise.resolve();const react=Plotly.react.bind(Plotly);
       Plotly.react=(...args)=>pending=react(...args);
       const layout=[],results={};
@@ -25,7 +36,8 @@ module.exports = function workspacePage({ root, url }) {
         projects:[],notebookEntries:[],settings:{}
       };
       const safeText=value=>{const e=document.createElement('span');e.textContent=String(value??'');return e.innerHTML;};
-      const module=initAssay({state,persist:()=>localStorage.setItem('assay-workspace-state',JSON.stringify(state)),createId:()=>crypto.randomUUID(),safeText});
+      const module=initAssay({state,persist:()=>localStorage.setItem('assay-workspace-state',JSON.stringify(state)),createId:()=>crypto.randomUUID(),safeText,
+        onAssayModeChanged:mode=>{document.getElementById('assay-view').dataset.agentChatRail=mode==='results'?'enabled':'disabled';agentRail.syncState('assay-view');}});
       module.render();
       await new Promise(resolve=>setTimeout(resolve,150));
       document.getElementById('assay-mode-results-btn').click();
@@ -35,11 +47,11 @@ module.exports = function workspacePage({ root, url }) {
         select.value='qa-workspace-assay';select.dispatchEvent(new Event('change',{bubbles:true}));
       }
       await new Promise(resolve=>setTimeout(resolve,150));
+      const initialChartRendered=Boolean(document.querySelector('[data-assay-analysis-chart]')?.data?.length);
       const kind=document.getElementById('assay-analysis-kind');kind.value='linear';kind.dispatchEvent(new Event('change',{bubbles:true}));
-      document.getElementById('assay-analysis-panel').open=false;
-      document.getElementById('assay-chart-format-panel').open=true;
+      document.getElementById('assay-format-toggle-btn').click();
       const q=key=>document.querySelector('[data-cc="'+key+'"]');
-      window.qa={state,module,ready:()=>pending,
+      window.qa={state,module,initialChartRendered,ready:()=>pending,
         get host(){return document.querySelector('[data-assay-analysis-chart]')},
         getStyle:()=>state.assays[0].chartStyle,
         set:(key,value)=>{const field=q(key);if(field.type==='checkbox')field.checked=value;else field.value=value;field.dispatchEvent(new Event('change',{bubbles:true}));},

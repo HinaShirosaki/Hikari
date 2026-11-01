@@ -9,6 +9,8 @@ export const shellSpanish = Object.freeze({
   "clock.label": "Hora local actual",
   "navigation.label": "Navegación principal",
   "navigation.more": "Más módulos",
+  "leftRail.show": "Mostrar panel izquierdo",
+  "leftRail.hide": "Ocultar panel izquierdo",
   "history.label": "Deshacer y rehacer",
   "history.undo": "Deshacer",
   "history.redo": "Rehacer",

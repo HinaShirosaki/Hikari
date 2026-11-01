@@ -86,7 +86,6 @@
   --font-chat: "IBM Plex Sans", var(--font-app);
   --shared-left-rail-min: 240px;
   --shared-left-rail-width: 280px;
-  --shared-left-rail-folded-width: 1.5rem;
   --shared-left-rail-layout-height: calc(100vh - 144px);
   --app-left-rail-track-width: max(var(--shared-left-rail-min), var(--shared-left-rail-width));
   --layout-left-panel-width: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width));
@@ -250,8 +249,9 @@ div {
 }
 
 .topbar-brand {
-  display: grid;
-  gap: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
   min-width: 0;
   justify-self: start;
 }
@@ -443,6 +443,22 @@ html[data-window-chrome='mac'] .topbar :is(input, textarea, [contenteditable]) {
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.topbar-left-rail-toggle {
+  flex: 0 0 auto;
+}
+
+.topbar-left-rail-toggle[hidden] {
+  display: none;
+}
+
+.topbar-left-rail-toggle[aria-expanded='true'] {
+  color: var(--theme-text-strong);
+}
+
+.topbar-left-rail-toggle[aria-expanded='true'] rect {
+  fill: var(--theme-accent-wash);
 }
 
 .topbar-search-shell {
@@ -676,9 +692,7 @@ body.has-shared-left-rail-view .workspace-shell::before {
 }
 
 body.has-shared-left-rail-view.has-folded-shared-left-rail .workspace-shell::before {
-  width: var(--shared-left-rail-folded-width);
-  background: var(--theme-background);
-  box-shadow: inset -.0625rem 0 0 var(--theme-border-soft);
+  display: none;
 }
 
 .workspace-main {

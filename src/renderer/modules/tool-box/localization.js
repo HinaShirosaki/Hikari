@@ -1,4 +1,7 @@
 import { toolsSpanish } from './locales/es.js';
+import { toolsSimplifiedChinese } from './locales/zh-Hans.js';
+import { toolsTraditionalChinese } from './locales/zh-Hant.js';
+import { toolsJapanese } from './locales/ja.js';
 import { createPresentation } from '../../lib/i18n/presentation.js';
 const statusPresentation = createPresentation('tools');
 import { i18n } from '../../lib/i18n/index.js';
@@ -10,6 +13,9 @@ import { escapeHtml } from '../../lib/html.js';
 
 i18n.registerMessages('en', 'tools', toolsEnglish);
 i18n.registerMessages('es', 'tools', toolsSpanish);
+i18n.registerMessages('zh-Hans', 'tools', toolsSimplifiedChinese);
+i18n.registerMessages('zh-Hant', 'tools', toolsTraditionalChinese);
+i18n.registerMessages('ja', 'tools', toolsJapanese);
 export const toolText = i18n.scope('tools');
 export const toolMessage = (key, params) => messageSpan(`tools.${key}`, params);
 export const setToolText = (element, key, params) => setTranslatedText(element, `tools.${key}`, params);

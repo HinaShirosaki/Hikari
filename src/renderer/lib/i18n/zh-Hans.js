@@ -1,0 +1,25 @@
+// Simplified Chinese preview. Missing entries use the English catalog.
+export const commonSimplifiedChinese = Object.freeze({
+  "full.dea0fcd6": "正在添加样品",
+  "full.462bc166": "添加样本",
+  "full.3167540a": "{p0} 个容器",
+  "full.3ea9fa7b": "{p0} 个容器",
+  "full.3f2b02dd": "{p0} 个样本",
+  "full.1eb537ea": "{p0} 个样本",
+  "full.9ab0051c": "选择容器",
+  "full.b23d4718": "容器",
+  "full.54989f84": "网格盒",
+  "full.2b4775ec": "此位置没有容器。",
+  "full.f1776509": "单个",
+  "full.dc269d7b": "请输入样本名称。",
+  "full.a618ccf9": "为此样本选择容器。",
+  "full.9179142e": "样本代码 {p0} 已存在。",
+  "full.7d028cc3": "无法添加样本。",
+  "action.discard": "放弃更改",
+  "action.saveChanges": "保存更改",
+  "status.saved": "所有更改已保存",
+  "status.unsaved": "有未保存的更改",
+  "status.saving": "正在保存…",
+  "status.saveSuccess": "更改已保存",
+  "status.saveError": "无法保存更改，请重试。"
+});

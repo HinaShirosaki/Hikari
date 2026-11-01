@@ -45,20 +45,20 @@ vector, raster, and text objects. Older figures move their scratch components
 and groups to this canvas with their positions, dimensions, rotation, artwork
 and labels intact. The migration saves a new scene file before committing the
 library index, leaving the original file recoverable.
-Select objects on a canvas or in the layer list; drag to move and use the
-eight handles to resize. Vector and raster artwork stretches with the box:
+Select objects on a canvas or in the layer list; drag to move and use a single
+object's eight handles to resize. Vector and raster artwork stretches with the box:
 corners adjust both dimensions, edge midpoints adjust one dimension. Hold Shift
 while dragging a handle to keep the proportions; the artwork then scales without
-stretching, and the opposite corner or edge stays in place. Text and
-multi-component selections always resize proportionally.
+stretching, and the opposite corner or edge stays in place. Text always resizes
+proportionally.
 Clicks on transparent pixels in images and vector artwork pass through to
 visible components underneath. On empty canvas they begin area selection.
 Text keeps a fixed aspect ratio with every handle; its box and font scale together.
-Changing a text layer's Width or Height also scales both dimensions and its font.
 The font-size control remains independently editable.
 Double-click a text label on the canvas or its row in Layers to change its text
 directly on the canvas. Press Enter to save, Shift+Enter for a new line, or Escape
 to cancel. Clicking elsewhere also saves. Each change can be undone in one step.
+Text layers use their content as the label in Layers and have no separate name field.
 Text selection outlines and click targets fit the rendered label, so blank
 space in its layout box does not interfere with nearby components. Alignment,
 anchoring, and saved placement remain unchanged.
@@ -69,11 +69,20 @@ vertically to give them equal gaps while keeping the outer items fixed.
 Complete groups count as one item; individually selected group members can be
 arranged independently. Alignment uses rotated bounds and the measured text
 range, and only changes position. Each action saves one undoable edit.
+While dragging, **Smart guides** magnetically snap the selection's edges and
+centers to nearby components and the canvas, including its horizontal and
+vertical center. Pink dashed lines mark alignment; purple gap markers show
+equal spacing between neighbors or an extension of an existing row or column.
+Complete groups move together and serve as one reference. The attraction stays
+the same size on screen at every zoom level. Hold **Cmd** (Mac) or **Ctrl** (Windows) to move freely,
+or turn off **Smart guides** in **Align and distribute**. Release saves one
+undoable move; Escape cancels it. Guides are temporary and never exported.
 The opposite corner or edge midpoint stays fixed, including rotated
 objects. Arrow keys nudge, Shift nudges by ten pixels; Escape clears selection.
+Keyboard nudging bypasses magnetic snapping.
 Drag the round handle connected to the selection frame to rotate around its
-center. It works on artwork, text, groups, and multiple selected components in
-the canvas. Hold Shift to snap to 15° increments. Escape cancels rotation
+center. It works on a single selected artwork or text layer.
+Hold Shift to snap to 15° increments. Escape cancels rotation
 without changing the figure; releasing the pointer saves one undoable edit.
 Text rotates around its visible bounds while keeping its font and layout size.
 The handle keeps a fixed screen size and moves to an available edge when needed.
@@ -82,6 +91,20 @@ Enter or Space rotates 15° clockwise.
 Use **Ctrl+C / Ctrl+V** (or **⌘C / ⌘V** on macOS) to copy and paste selected
 components, multiple selections, or complete groups. Paste targets the active
 canvas or another illustration, and selects the new copies.
+You can also copy a chemical structure in **ChemDraw** and paste it onto the
+Figura canvas. Hikari preserves SVG first, or converts an available single-page
+PDF drawing into SVG paths, including the original font outlines for atom labels.
+Bonds, atom symbols and charges stay together in one movable, resizable vector
+layer and remain sharp when enlarged. SVG and PowerPoint exports keep this vector
+artwork. Edit the chemistry in ChemDraw and paste the revised structure when needed.
+Paste saves one undoable edit and leaves text-field pastes alone. If only a bitmap
+is available, Figura pastes it as an image and identifies that limitation in the
+status message; copy as SVG or PDF from ChemDraw for vector quality. Existing
+bitmap pastes must be replaced by a new vector paste to gain that quality.
+Native SVG/PDF clipboard access requires the updated Hikari host
+and Figura's **clipboard:read** permission; re-add the plugin folder to grant
+that permission on an existing installation. Text SVG copied onto the clipboard
+and browser-provided image paste events can work without the native reader.
 The copied snapshot keeps the original artwork, independent text, styling,
 rotations, layer order, and full group membership even if the source is later
 edited or deleted. Copies get fresh IDs and a 15-pixel cascading offset; each
@@ -112,11 +135,15 @@ member of a selection moves all its selected components together.
 Drag to outline components on the canvas; a freehand path
 closes automatically on release. Components whose boxes touch the region are
 selected, including rotated components. Hidden standalone layers are excluded.
-Groups select together; hold Alt to select only the touched members. A selected
-group shows only its outer frame. Ungrouped selections also show individual
-component outlines; the outer frame moves and resizes the full selection.
+Groups select together; hold Alt to select only the touched members. Multiple
+selected components each show their own outline. A floating bar above the selection
+offers **Group**, **Ungroup**, and **Align and distribute**. Drag any selected member
+to move the whole selection. Empty gaps remain available for a new area selection.
 Shift adds to the current selection. Escape cancels a gesture and keeps the
 previous selection.
+Shift-click a component to add or remove it from the selection. Hold Shift while
+dragging a selected component to constrain movement horizontally or vertically;
+the initial drag direction chooses the axis. Release Shift to move freely again.
 Freehand selection also allows dragging selected components to move them.
 Resize handles work in both tools, so there is no need to switch tools after selecting.
 The region is temporary and never appears in exports or agent readback.
@@ -126,10 +153,10 @@ canvas object and open **Layers** from the toolbar, or select its layer row. Sel
 on the canvas keeps the current panel layout steady. Double-click a label to
 edit its text inline without changing the canvas zoom. Open Layers for the compact font,
 size, color, bold/italic/underline, alignment, weight and anchor controls.
-Rotation and opacity stay visible; expand **Position & size** for exact
-coordinates, dimensions and canvas membership. Vector source and fill/stroke
-overrides are editable; clearing an override restores the original SVG style.
-Raster artwork can be replaced. Layer actions duplicate, reorder, delete, or
+Opacity has a slider and a linked percentage field. Drag the handle for a live
+preview, or enter an exact percentage from 0 to 100. Releasing the slider saves
+one undoable adjustment; Escape cancels an unfinished preview.
+Layer actions duplicate, reorder, delete, or
 copy the selection to the other canvas. No label is part of an artwork asset.
 
 For an empty illustration with chat closed, describe your figure in the compact

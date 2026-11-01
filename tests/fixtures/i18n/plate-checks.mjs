@@ -8,14 +8,15 @@ export async function checkLocalizedPlate({ core, i18n, check }) {
   const toast = () => document.querySelector('[data-hikari-transient-toast]');
   const params = node => JSON.parse(node.getAttribute('data-i18n-params') || '{}');
   const assertBindings = () => {
-    for (const node of root.querySelectorAll('[data-i18n]')) {
+    const surfaces = [root, byId('assay-workspace-tools'), byId('assay-context-rail')];
+    for (const node of surfaces.flatMap(surface => [...surface.querySelectorAll('[data-i18n]')])) {
       if (node.children.length || (node.matches('option') && !node.hasAttribute('value'))) continue;
       const key = node.dataset.i18n;
       check(i18n.has(key) && node.textContent === i18n.t(key, params(node)), 'Plate binding: ' + key);
     }
     for (const attribute of ['title', 'aria-label', 'placeholder', 'data-hover-caption', 'label']) {
       const binding = 'data-i18n-' + attribute.replace(/^data-/, '');
-      for (const node of root.querySelectorAll('[' + binding + ']')) {
+      for (const node of surfaces.flatMap(surface => [...surface.querySelectorAll('[' + binding + ']')])) {
         const key = node.getAttribute(binding);
         check(node.getAttribute(attribute) === i18n.t(key, JSON.parse(node.getAttribute(binding + '-params') || node.getAttribute('data-i18n-params') || '{}')), 'Plate attribute binding: ' + key);
       }
@@ -40,7 +41,7 @@ export async function checkLocalizedPlate({ core, i18n, check }) {
   check(preview.querySelector('thead th:nth-child(2)').textContent === 'Sample ID'
     && preview.querySelector('.assay-plate-editor-row th').textContent === 'Conc. (uM)', 'English plate axis headers keep the unit suffix');
   const option = [...byId('assay-plate-type').options].find(item => item.value === '96');
-  check(option.textContent === '96 well' && root.querySelector('optgroup').label === 'Statistics', 'English options and option groups keep their text');
+  check(option.textContent === '96 well' && byId('assay-analysis-kind').querySelector('optgroup').label === 'Statistics', 'English options and option groups keep their text');
   assertBindings();
 
   // Unsaved Setup drafts and an active inline well edit survive language switches.
@@ -54,7 +55,7 @@ export async function checkLocalizedPlate({ core, i18n, check }) {
   'Language switching preserves the plate editor, drafts, focus, selection and saved assays');
   check(byId('assay-mode-create-btn').textContent === 'Configurar' && wellA1.isConnected
     && wellA1.title === 'A1 • ID de muestra: DMSO | Conc.: 10 • Haga clic para editar el ID de muestra', 'Plate grid tooltips translate live around stored values');
-  check(well.placeholder === 'Muestra' && option.textContent === '96 pocillos' && root.querySelector('optgroup').label === 'Estadística',
+  check(well.placeholder === 'Muestra' && option.textContent === '96 pocillos' && byId('assay-analysis-kind').querySelector('optgroup').label === 'Estadística',
     'Placeholders, plate types and method groups translate live');
   check(JSON.stringify([...byId('assay-analysis-kind').options].map(item => item.value)).includes('"plate_qc"'), 'Method option values stay canonical');
   notebook.value = notebookDraft; well.blur();
@@ -108,9 +109,10 @@ export async function checkLocalizedPlate({ core, i18n, check }) {
   check(chartTitle.textContent === 'Summary statistics' && byId('assay-workspace-meta').textContent.startsWith('96-well plate'),
     'Analyze header returns to English live');
   i18n.setLocale('es');
-  byId('assay-data-order-btn').click();
-  check(byId('assay-data-order-btn').textContent === 'Gráfico primero', 'Data-order toggle translates');
-  byId('assay-data-order-btn').click();
+  byId('assay-workspace-view-data').click();
+  check(byId('assay-workspace-view-data').getAttribute('aria-label') === 'Datos'
+    && byId('assay-workspace-chart').hidden && !byId('assay-workspace-data').hidden, 'The translated Data switch shows only tables');
+  byId('assay-workspace-view-chart').click();
   byId('assay-analysis-add-row-group-btn').click();
   check(byId('assay-analysis-row-groups').value.startsWith('Row Group 1'), 'Group names stay canonical data in Spanish');
   byId('assay-analysis-clear-groups-btn').click();

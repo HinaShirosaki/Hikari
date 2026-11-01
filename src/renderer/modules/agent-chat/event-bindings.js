@@ -2,6 +2,7 @@ import { trimText } from './shared.js';
 import { applyLiveProgressEvent } from './live-progress-state.js';
 import { extractPlotlyGraphArtifactFromProgressEvent } from './plotly-artifacts.js';
 import { agentFailure, agentUi } from './localization.js';
+import { normalizeScopeKey } from '../app-state/agent-chat-normalizer.js';
 
 export function bindAgentChatEvents({
   dom,
@@ -199,7 +200,8 @@ export function bindAgentChatEvents({
       const EventClass = document?.defaultView?.CustomEvent;
       if (EventClass) document.dispatchEvent(new EventClass('sequence-library-agent-changed'));
     }
-    const isVisible = trimText(request.sessionId, 120) === trimText(state.agentChat.currentSessionId, 120);
+    const isVisible = trimText(request.sessionId, 120) === trimText(state.agentChat.currentSessionId, 120)
+      && (!request.scopeKey || request.scopeKey === normalizeScopeKey(state.agentChatContext || {}));
     if (!isVisible) {
       return;
     }

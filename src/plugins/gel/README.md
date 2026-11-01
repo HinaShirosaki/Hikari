@@ -179,8 +179,7 @@ covering the entire image has no automatic background and displays **–** until
 a manual baseline is available. One-sided background is also marked for review.
 CSV reports include the baseline method, status, background sum, and signed net
 intensity. Saved reports with source pixels are recalculated when reopened.
-Band intensity and the band integration window can be moved by dragging their title bars,
-or by focusing the title bar and using the arrow keys (Shift moves farther).
+Band intensity and the band integration window stay in fixed positions within the image stage.
 Escape closes the front window.
 
 ## Distribution and permissions

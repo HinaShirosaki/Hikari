@@ -14,7 +14,7 @@ Screenshots use fictional example records. Supplier names, catalog numbers, and 
 
 ![The left panel has the add and import buttons, Search, Filter Location, and Sort By. The list is in the middle, and the selected chemical's details are on the right.](images/01-chemicals-workspace.png)
 
-The list shows each chemical's **Name**, **Code**, and **CAS Number**. Above it, Hikari shows how many chemicals match your search, such as **Showing 8 of 8 chemicals.**
+The list shows each chemical's **Name**, **Code**, and **CAS Number**.
 
 Hikari saves the chemical inventory in your workspace folder.
 

@@ -1,6 +1,28 @@
 'use strict';
 
 const { execFileSync } = require('node:child_process');
+const fs = require('node:fs');
+
+// Thin Mach-O in either byte order, plus fat (universal) binaries.
+const MACH_O_MAGIC = new Set(['feedface', 'feedfacf', 'cefaedfe', 'cffaedfe', 'cafebabe', 'bebafeca']);
+
+// osx-sign runs codesign once per file its binary sniff flags, including every
+// PNG, .pak and PDF.js cmap (~1000 calls, ~40 s). The bundle signature already
+// seals those resources, so only Mach-O files and bundles need their own pass.
+function isDataFile(filePath) {
+  let fd;
+  try {
+    if (!fs.statSync(filePath).isFile()) return false;
+    fd = fs.openSync(filePath, 'r');
+    const magic = Buffer.alloc(4);
+    fs.readSync(fd, magic, 0, 4, 0);
+    return !MACH_O_MAGIC.has(magic.toString('hex'));
+  } catch {
+    return false;
+  } finally {
+    if (fd !== undefined) fs.closeSync(fd);
+  }
+}
 
 function resolveMacSigningOptions({ env = process.env, run = execFileSync, warn = console.warn } = {}) {
   const requested = String(env.HIKARI_MAC_SIGN_IDENTITY || '').trim();
@@ -34,6 +56,7 @@ function resolveMacSigningOptions({ env = process.env, run = execFileSync, warn 
     identityValidation: Boolean(identity),
     preAutoEntitlements: false,
     preEmbedProvisioningProfile: false,
+    ignore: isDataFile,
     optionsForFile: () => ({
       hardenedRuntime: Boolean(identity),
       // Developer ID releases use Apple's timestamp service. Local development
@@ -43,4 +66,4 @@ function resolveMacSigningOptions({ env = process.env, run = execFileSync, warn 
   };
 }
 
-module.exports = { resolveMacSigningOptions };
+module.exports = { resolveMacSigningOptions, isDataFile };

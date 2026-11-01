@@ -203,6 +203,7 @@ export function createNavigationShell({
       'has-folded-shared-left-rail',
       hasSharedLeftRailView && visibleRailShell?.classList.contains('is-left-rail-folded')
     );
+    sharedLeftRailRuntime.syncToggle?.();
   }
 
 
@@ -422,13 +423,16 @@ export function createNavigationShell({
     if (typeof windowObject.MutationObserver === 'function') {
       const workspaceMain = documentObject.querySelector('.workspace-main');
       if (workspaceMain) {
-        const hiddenObserver = new windowObject.MutationObserver(() => {
-          syncSharedLeftRailShellChrome();
+        const hiddenObserver = new windowObject.MutationObserver((changes) => {
+          if (changes.some((change) => change.attributeName === 'hidden'
+            || change.target.matches?.('.view, .left-rail-template'))) {
+            syncSharedLeftRailShellChrome();
+          }
         });
         hiddenObserver.observe(workspaceMain, {
           subtree: true,
           attributes: true,
-          attributeFilter: ['hidden']
+          attributeFilter: ['hidden', 'class']
         });
       }
     }

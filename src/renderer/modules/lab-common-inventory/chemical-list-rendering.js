@@ -1,10 +1,10 @@
 import { createPresentation } from "../../lib/i18n/presentation.js";
 import "./localization.js";
 const i18nUi = createPresentation("chemicals");
-import { chemicalText, chemicalMessage, setChemicalText } from './localization.js';
+import { chemicalText, chemicalMessage } from './localization.js';
 export function installChemicalListRendering(ctx) {
   const { safeText, state } = ctx;
-  const { chemicalLocation, chemicalFilterLocation, chemicalSort, chemicalSearch, chemicalResultsSummary, chemicalList } = ctx.elements;
+  const { chemicalLocation, chemicalFilterLocation, chemicalSort, chemicalSearch, chemicalList } = ctx.elements;
   const parseLocationCode = (...args) => ctx.parseLocationCode(...args);
   const renderChemicalDetail = (...args) => ctx.renderChemicalDetail(...args);
 
@@ -105,18 +105,12 @@ function renderChemicalList() {
   const allChemicals = state.labInventory.chemicals;
   if (!allChemicals.length) {
     ctx.selectedChemicalId = '';
-    if (chemicalResultsSummary) {
-      setChemicalText(chemicalResultsSummary, 'empty');
-    }
     i18nUi.setHtml(chemicalList, '');
     renderChemicalDetail();
     return;
   }
 
   const chemicals = getVisibleChemicals();
-  if (chemicalResultsSummary) {
-    setChemicalText(chemicalResultsSummary, 'list.summary', { visible: chemicals.length, total: allChemicals.length });
-  }
   if (!chemicals.length) {
     ctx.selectedChemicalId = '';
     i18nUi.setHtml(chemicalList, `<p class="small-note">${chemicalMessage('list.emptySearch')}</p>`);

@@ -1,0 +1,68 @@
+.sequence-viewer-fragment-dialog.app-dialog-surface {
+  --app-dialog-width: 560px;
+}
+
+.sequence-viewer-fragment-dialog fieldset,
+.sequence-viewer-fragment-dialog [data-fragment-pcr] {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-12);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.sequence-viewer-fragment-dialog label {
+  display: grid;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.sequence-viewer-fragment-dialog :is(input, select, textarea) {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sequence-viewer-fragment-dialog textarea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  resize: vertical;
+  overflow-wrap: anywhere;
+}
+
+.sequence-viewer-fragment-dialog [hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-fragment-dialog p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.sequence-viewer-fragment-error {
+  color: var(--theme-danger);
+  font-size: var(--text-sm);
+}
+
+.sequence-viewer-fragment-dialog .form-actions {
+  justify-content: flex-end;
+}
+
+.sequence-viewer-primer-pcr-btn {
+  padding: var(--space-4) var(--space-8);
+  white-space: nowrap;
+}
+
+.sequence-viewer-dna-row {
+  box-sizing: border-box;
+  grid-template-columns: 22px minmax(0, 1fr) 28px;
+}
+
+.sequence-viewer-dna-row > .sequence-viewer-library-item,
+.sequence-viewer-dna-row > .sequence-viewer-library-item:hover {
+  background: transparent;
+  padding-inline: var(--space-4);
+}
+
+.sequence-viewer-dna-children {
+  min-width: 0;
+}

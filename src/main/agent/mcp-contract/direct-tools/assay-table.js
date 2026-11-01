@@ -29,7 +29,7 @@ const ASSAY_TABLE_SUCCESS_STATUSES = Object.freeze([
 
 const ASSAY_TABLE_MCP_TOOL = Object.freeze({
   name: 'assay_table',
-  description: 'Use for calculations over supplied or active Assay data, including replicate means, blank correction, normalization, curve fitting, grouped statistics, or derived columns. Create scratch assay tables, derive calculated tables, add calculated columns, and run Python-backed table transforms. Use supplied rows or the hidden Assay plate TSV (map its header and rows to explicit row objects, preserving empty cells) and never local lookup tools for active plate rows; if rows are missing from the TSV, ask for or await refreshed context. Create the table before calculating or graphing. These are scratch tables, not edits to saved plate measurements.',
+  description: 'Use for calculations over supplied or active Assay data, including replicate means, blank correction, normalization, curve fitting, grouped statistics, or derived columns. Active Plate context supplies an already-created complete scratch table ID; use it directly for derive/python. read returns at most 50 rows: pass offset=table.next_offset until null to read all rows. Python staging includes every stored row. For user-supplied rows, create a table first. A hidden TSV preview is not a complete plate; never substitute local lookup data for current UI values. These are scratch tables, not edits to saved plate measurements.',
   annotations: buildWriteToolAnnotations('Assay table'),
   inputSchema: cloneJson(AGENT_TOOL_CALL_CATALOG['assay-table']?.input_schema, {
     type: 'object',

@@ -1,6 +1,7 @@
 import { axisLabel } from '../shared.js';
 import { getPlateDefinition, parseWellId, toRowLabel } from '../plate-model.js';
 import { describeAnalysisSpec } from '../analysis/index.js';
+import { ASSAY_CONTEXT_COLUMNS, normalizeAssayContextTable } from '../../../../shared/assay-agent-context.mjs';
 
 // Builds the hidden agent-chat context describing the active assay plate.
 export function createAssayAgentContext({
@@ -72,7 +73,7 @@ export function createAssayAgentContext({
       .trim();
   }
 
-  function buildAgentResultRows(layout = [], results = {}, maxRows = 384) {
+  function buildAgentResultRows(layout = [], results = {}) {
     const rows = [];
     const seen = new Set();
     const resultByWell = {};
@@ -94,7 +95,7 @@ export function createAssayAgentContext({
     });
     (Array.isArray(layout) ? layout : []).forEach((item) => {
       const well = cleanAgentTableCell(item?.well, 40).toUpperCase();
-      if (!well || seen.has(well) || rows.length >= maxRows) {
+      if (!well || seen.has(well)) {
         return;
       }
       seen.add(well);
@@ -104,16 +105,16 @@ export function createAssayAgentContext({
         well,
         row: position.row,
         column: position.column,
-        sample: cleanAgentTableCell(item?.sampleId, 160),
-        concentration: cleanAgentTableCell(item?.concentration, 160),
-        result: hasResult ? cleanAgentTableCell(resultByWell[well], 220) : ''
+        sample: String(item?.sampleId ?? '').trim(),
+        concentration: String(item?.concentration ?? '').trim(),
+        result: hasResult ? String(resultByWell[well] ?? '').trim() : ''
       };
       if (row.sample || row.concentration || row.result) {
         rows.push(row);
       }
     });
     Object.entries(resultByWell).forEach(([well, rawValue]) => {
-      if (!well || seen.has(well) || rows.length >= maxRows) {
+      if (!well || seen.has(well)) {
         return;
       }
       seen.add(well);
@@ -124,7 +125,7 @@ export function createAssayAgentContext({
         column: position.column,
         sample: '',
         concentration: '',
-        result: cleanAgentTableCell(rawValue, 220)
+        result: String(rawValue ?? '').trim()
       });
     });
     return rows;
@@ -138,23 +139,24 @@ export function createAssayAgentContext({
     if (!safeColumns.length || !safeRows.length) {
       return [];
     }
-    const visibleRows = safeRows.slice(0, maxRows);
+    const visibleRows = [];
+    let remaining = 6000 - safeColumns.join('\t').length;
+    for (const row of safeRows.slice(0, maxRows)) {
+      const line = safeColumns.map((column, index) => cleanAgentTableCell(
+        Array.isArray(row) ? row[index] : row?.[column], 220
+      )).join('\t');
+      if (line.length + 1 > remaining) break;
+      visibleRows.push(line);
+      remaining -= line.length + 1;
+    }
+    if (!visibleRows.length) return [`${title}: preview omitted; table is too wide.`];
     const truncated = safeRows.length > visibleRows.length
       ? `; showing first ${visibleRows.length}`
       : '';
     return [
       `${title} (${safeRows.length} row${safeRows.length === 1 ? '' : 's'}${truncated}):`,
       safeColumns.join('\t'),
-      ...visibleRows.map((row) => {
-        const source = Array.isArray(row)
-          ? row
-          : (row && typeof row === 'object' ? row : {});
-        return safeColumns.map((column, index) => (
-          Array.isArray(source)
-            ? cleanAgentTableCell(source[index], 220)
-            : cleanAgentTableCell(source[column], 220)
-        )).join('\t');
-      })
+      ...visibleRows
     ];
   }
 
@@ -214,11 +216,12 @@ export function createAssayAgentContext({
       160
     );
     const resultRows = buildAgentResultRows(layout, results);
+    const assayTable = normalizeAssayContextTable({ columns: ASSAY_CONTEXT_COLUMNS, rows: resultRows });
     const resultTableLines = formatAgentTsvSection(
-      'Assay plate data (TSV; complete active mapped wells/results for assay_table create)',
-      ['well', 'row', 'column', 'sample', 'concentration', 'result'],
+      'Assay plate data (TSV preview; complete rows supplied separately as a structured table)',
+      ASSAY_CONTEXT_COLUMNS,
       resultRows,
-      384
+      32
     );
     const analysisTableLines = buildAgentAnalysisTableLines(latestAnalysis);
     const wellPreview = buildAgentWellPreview(layout, results);
@@ -265,6 +268,7 @@ export function createAssayAgentContext({
         kind: 'assay-page',
         label: assayName ? `Active assay: ${assayName}` : 'Active assay',
         text: lines.join('\n'),
+        assayTable,
         assayId,
         assayName: assayName || assayNumber,
         projectName

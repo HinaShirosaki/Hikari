@@ -20,7 +20,7 @@ Rules live where Codex reads them as instructions:
 
 - Cross-tool rules (evidence and citations, saved Preferred Journals, workspace files, MEMORY.md) are in the AGENTS block, `codex-agent/agent-instructions.js`.
 - Multi-step workflows are in the official skills, for example protocol placeholders in `hikari-protocol-generation` and the protocol-then-notebook handoff in `hikari-notebook-draft`.
-- Per-tool rules are in each tool's description: notebook enrichment and append formatting in `notebook_append`, the delegation limit in `literature_search`, the download policy in `paper_download`, Assay TSV intake in `assay_table`, and citation columns in `paper_experiments_sql`.
+- Per-tool rules are in each tool's description: notebook enrichment and append formatting in `notebook_append`, the delegation limit in `literature_search`, the download policy in `paper_download`, complete staged Plate tables and paginated reads in `assay_table`, and citation columns in `paper_experiments_sql`.
 
 ## Background experiment suggestions
 

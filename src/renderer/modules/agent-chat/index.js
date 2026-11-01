@@ -21,6 +21,7 @@ import { createNotebookDraftAgentAdapter } from '../biology-notebook/agent/index
 import { createProtocolAgentAdapter } from '../protocol/agent/index.js';
 import { normalizeScopeKey } from '../app-state/agent-chat-normalizer.js';
 import { agentAttributes, agentMessage, setAgentText } from './localization.js';
+import { createAgentPlotReplay } from './plot-replay.js';
 
 export { mapExperimentDataToLlmJson };
 
@@ -67,6 +68,7 @@ export function initAgentChat({
     onProtocolsChanged
   });
   const runtime = createAgentChatRuntimeState();
+  const plotReplay = createAgentPlotReplay({ state, runtime, onPlotlyGraphArtifact });
   const shell = createAgentChatShellController({
     dom,
     state,
@@ -146,6 +148,7 @@ export function initAgentChat({
     ),
     onActiveSessionChanged: () => {
       shell.syncActiveRequestState();
+      plotReplay.replay();
     },
     onNewChatPendingChanged: (isPending) => {
       runtime.sessionTransitionPending = isPending === true;
@@ -231,6 +234,7 @@ export function initAgentChat({
     syncComposerHeight: shell.syncComposerHeight,
     syncActiveRequestState: shell.syncActiveRequestState,
     notebookDraftAdapter,
+    onAssistantMessagePersisted: plotReplay.replay,
     openReviewForMessage: (message) => reviewController?.openForMessage?.(message)
   });
 
@@ -265,6 +269,7 @@ export function initAgentChat({
       loadPersistentSessions
     });
     renderHiddenContextIndicator();
+    plotReplay.replay();
   };
 
   function focusComposer() {
@@ -356,7 +361,7 @@ export function initAgentChat({
     requestController,
     historyController,
     captureImageAttachment,
-    onPlotlyGraphArtifact
+    onPlotlyGraphArtifact: plotReplay.deliver
   });
 
   return {

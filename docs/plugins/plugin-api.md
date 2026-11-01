@@ -31,6 +31,7 @@ app, and use this same API; [§1.2](#12-tool-plugins) lists what differs.
 | `projects.list` | `projects:read` | Project ids and names | [§2](#2-read-verbs) |
 | `samples.list` | `samples:read` | Sample ids, names, and types | [§2](#2-read-verbs) |
 | `chemicals.list` | `chemicals:read` | Compound names, molecular weights, pKa values, and forms: inventory plus reference | [§2](#2-read-verbs) |
+| `clipboard.readChemical` | `clipboard:read` | Native chemical clipboard image previews, in Sample's format priority; call only for a user-triggered paste | [§2](#2-read-verbs) |
 | `notebook.list`, `notebook.get` | `notebook:read` | Notebook summaries; one entry in full | [§2](#2-read-verbs) |
 | `storage.get`, `storage.set` | `storage` | The plugin's own JSON blob | [§2](#2-read-verbs), [§3](#3-write-verbs) |
 | `settings.get`, `settings.set`, `settings.changed` event | `settings` | Schema-validated preferences shown in Settings → Plugins | [Plugin settings](plugin-settings.md) |
@@ -283,6 +284,28 @@ await hikari.call('chemicals.list');
 
 Only these fields cross the bridge. Storage locations, quantities, and other
 inventory columns stay in Hikari.
+
+### `clipboard.readChemical` — `clipboard:read`
+
+Call in response to a user paste action. Reuses Sample's native clipboard reader
+and image format priority, including ChemDraw's available image previews.
+
+```js
+const clipboard = await hikari.call('clipboard.readChemical');
+// null when native clipboard access is unavailable; otherwise:
+// { vectors: [{ svg: '<svg...>', source: 'pdf' }], images: ['data:image/png;base64,...'], formats: ['public.pdf', ...], text: '' }
+```
+
+`vectors` contains original SVG or single-page PDF vector drawings converted to
+SVG paths. PDF text uses font outlines; unsupported drawing operations fail that
+conversion instead of approximating the chemical structure. `vectorError` gives
+the reason when conversion failed. `images` contains fallback previews. Native CDX bytes
+and unrelated clipboard text are omitted. `text` is included only for Figura's
+own serialized component clipboard format, so it can retain editable copying.
+An empty image list means no supported preview was available; it does not
+convert native chemical data into a new molecular drawing. Requires a local
+plugin with the permission in its installed record; re-add an existing plugin
+folder to grant a newly declared permission.
 
 ### `notebook.list` — `notebook:read`
 

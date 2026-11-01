@@ -100,6 +100,7 @@ export function normalizeAgentResponse(result) {
   return {
     htmlArtifacts: asArray(result?.html_artifacts),
     imageArtifacts: asArray(result?.image_artifacts),
+    plotlyArtifacts: asArray(result?.plotly_graph_artifacts),
     parser,
     protocolWorkflow,
     notebookDraftWorkflow,

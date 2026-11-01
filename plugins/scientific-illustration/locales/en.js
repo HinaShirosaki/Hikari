@@ -1,4 +1,11 @@
 (function (root) { root.HikariUiEnglish = { ...(root.HikariUiEnglish || {}), figura: {
+  "full.804e0152": "Chemical structure pasted as vector artwork",
+  "full.769a2ec4": "Chemical structure pasted as an image. Copy as SVG or PDF in ChemDraw for vector quality.",
+  "full.7b2f3f65": "Clipboard access is unavailable in this Hikari install. Copy the structure as an image and use Edit → Paste.",
+  "full.2bf0bcb7": "The clipboard has structure data but no image preview. In ChemDraw, copy the structure as an image and paste again.",
+  "full.18825395": "Chemical structure pasted",
+  "guides.label": "Smart guides",
+  "guides.hint": "Hold Cmd/Ctrl while dragging to move freely.",
   "full.8c0d9694": "Import asset",
   "full.f5415f73": "Replace artwork",
   "full.bbd6a65c": "Import artwork",

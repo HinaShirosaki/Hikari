@@ -1,5 +1,6 @@
-// Scene data is shared by manual controls and the agent. Artwork and labels
-// never share a layer. DOM validation of SVG happens in artwork.mjs.
+// Scene data is shared by manual controls and the agent. Figure labels stay
+// separate; atom labels belong to pasted chemical structures. SVG is validated
+// in artwork.mjs.
 import { COMPLEXITY_LEVELS, DEFAULT_COMPLEXITY } from './complexity.mjs';
 import { imageGenerationPercent } from './image-generation.mjs';
 import { imageGenerationStyle, MAX_IMAGE_STYLE_LINE } from './image-style.mjs';
@@ -11,7 +12,7 @@ export const CANVASES = ['main'];
 export const MAX_DOCUMENT_CHARS = 12000000;
 // Every group owns at least two objects, so the group cap follows the object cap.
 export const MAX_OBJECTS = 500, MAX_GROUPS = MAX_OBJECTS / 2;
-export const OBJECT_FIELDS = ['id', 'name', 'type', 'canvas', 'x', 'y', 'width', 'height', 'rotation', 'opacity', 'visible', 'svg', 'plotly', 'dataUrl', 'textFree', 'text', 'fontFamily', 'fontSize', 'fontWeight', 'color', 'align', 'anchor', 'italic', 'underline', 'fill', 'stroke', 'strokeWidth'];
+export const OBJECT_FIELDS = ['id', 'name', 'type', 'canvas', 'x', 'y', 'width', 'height', 'rotation', 'opacity', 'visible', 'svg', 'plotly', 'dataUrl', 'textFree', 'chemicalStructure', 'text', 'fontFamily', 'fontSize', 'fontWeight', 'color', 'align', 'anchor', 'italic', 'underline', 'fill', 'stroke', 'strokeWidth'];
 export const TEXT_FIELDS = ['text', 'fontFamily', 'fontSize', 'fontWeight', 'color', 'align', 'anchor', 'italic', 'underline'];
 const clone = value => JSON.parse(JSON.stringify(value));
 export const validId = value => typeof value === 'string' && /^[a-zA-Z0-9_-]{1,100}$/.test(value);
@@ -56,9 +57,11 @@ export function normalizeObject(raw, validateSvg = value => value) {
     rotation: number(raw.rotation ?? 0, 'rotation', -360, 360), opacity: number(raw.opacity ?? 1, 'opacity', 0, 1), visible: raw.visible ?? true };
   if (typeof result.visible !== 'boolean') throw new Error('visible must be boolean.');
   if (type !== 'plot' && 'plotly' in raw) throw new Error('plotly is only supported on plot layers.');
+  if ('chemicalStructure' in raw && (!['vector', 'raster'].includes(type) || raw.chemicalStructure !== true)) throw new Error('chemicalStructure must be true on a vector or raster structure layer.');
   if (type === 'vector') {
     for (const key of ['dataUrl', 'textFree', ...TEXT_FIELDS]) if (key in raw) throw new Error(`${key} is not a vector property.`);
-    result.svg = validateSvg(string(raw.svg, 'svg', 300000));
+    result.svg = validateSvg(string(raw.svg, 'svg', raw.chemicalStructure ? 3000000 : 300000), { chemical: raw.chemicalStructure === true });
+    if (raw.chemicalStructure === true) result.chemicalStructure = true;
     if (!result.svg.trim()) throw new Error('Vector objects need a text-free SVG.');
     if (raw.fill !== undefined) result.fill = color(raw.fill, true);
     if (raw.stroke !== undefined) result.stroke = color(raw.stroke, true);
@@ -72,8 +75,11 @@ export function normalizeObject(raw, validateSvg = value => value) {
     for (const key of ['svg', 'fill', 'stroke', 'strokeWidth', ...TEXT_FIELDS]) if (key in raw) throw new Error(`${key} is not a raster property.`);
     const dataUrl = string(raw.dataUrl, 'dataUrl', 7000000);
     if (!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(dataUrl)) throw new Error('Raster objects need embedded PNG, JPEG or WebP bytes.');
-    if (raw.textFree !== true) throw new Error('Confirm raster artwork is text-free with textFree: true. Put labels in text objects.');
-    result.dataUrl = dataUrl; result.textFree = true;
+    if (raw.textFree !== true && !(raw.chemicalStructure === true && raw.textFree === false)) throw new Error('Confirm raster artwork is text-free with textFree: true. Put labels in text objects.');
+    result.dataUrl = dataUrl; result.textFree = raw.textFree;
+    // Atom symbols, charges and bond labels belong to the pasted structure.
+    // Keep that exception explicit instead of claiming these images lack text.
+    if (raw.chemicalStructure === true) result.chemicalStructure = true;
   } else {
     for (const key of ['svg', 'dataUrl', 'textFree', 'fill', 'stroke', 'strokeWidth']) if (key in raw) throw new Error(`${key} is not a text property.`);
     Object.assign(result, { text: string(raw.text ?? 'Label', 'text', 3000), fontFamily: string(raw.fontFamily ?? 'Arial', 'fontFamily', 100),

@@ -1,0 +1,111 @@
+.sequence-viewer-digest-dialog.app-dialog-surface {
+  --app-dialog-width: 640px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sequence-viewer-digest-dialog fieldset,
+.sequence-viewer-digest-sites,
+.sequence-viewer-digest-products,
+.sequence-viewer-digest-product {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-12);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.sequence-viewer-digest-dialog label {
+  display: grid;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.sequence-viewer-digest-dialog fieldset {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding-right: var(--space-4);
+}
+
+.sequence-viewer-digest-dialog :is(input:not([type="checkbox"]), select) {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.sequence-viewer-digest-dialog .sequence-viewer-digest-keep {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  font-weight: 650;
+}
+
+.sequence-viewer-digest-keep input[type="checkbox"] {
+  flex: 0 0 auto;
+  width: 16px;
+  min-width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.sequence-viewer-digest-product {
+  padding: var(--space-12);
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+}
+
+.sequence-viewer-digest-dialog p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.sequence-viewer-digest-dialog .form-actions {
+  padding-block: var(--space-8);
+  flex-shrink: 0;
+  justify-content: flex-end;
+  background: var(--theme-surface-elevated);
+}
+
+.sequence-viewer-digest-actions,
+.sequence-viewer-digest-picker {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.sequence-viewer-digest-actions {
+  flex-wrap: wrap;
+  margin-top: var(--space-8);
+}
+
+.sequence-viewer-digest-actions button {
+  font-size: var(--text-sm);
+  padding: var(--space-6) var(--space-8);
+}
+
+.sequence-viewer-digest-picker {
+  position: fixed;
+  z-index: 2600;
+  right: var(--space-18);
+  bottom: var(--space-18);
+  max-width: min(560px, calc(100vw - 36px));
+  box-sizing: border-box;
+  padding: var(--space-12);
+  border: 1px solid var(--theme-accent);
+  border-radius: 8px;
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text-strong);
+  box-shadow: var(--theme-shadow-small);
+}
+
+.sequence-viewer-digest-picker span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sequence-viewer-digest-picker button {
+  flex-shrink: 0;
+}

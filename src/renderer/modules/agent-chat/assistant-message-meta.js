@@ -1,5 +1,6 @@
 import { mergeAgentHtmlArtifacts } from './html-artifacts.js';
 import { mergeAgentImageArtifacts } from './image-artifacts.js';
+import { mergeAgentPlotlyGraphArtifacts } from './plotly-artifacts.js';
 
 export function buildAssistantResponseMessage({
   createId,
@@ -34,6 +35,7 @@ export function buildAssistantResponseMessage({
       notebookDrafts: notebookDrafts || (notebookDraft ? [notebookDraft] : []),
       html_artifacts: mergeAgentHtmlArtifacts(traceRows.htmlArtifacts, response.htmlArtifacts),
       image_artifacts: mergeAgentImageArtifacts(traceRows.imageArtifacts, response.imageArtifacts),
+      plotly_graph_artifacts: mergeAgentPlotlyGraphArtifacts(traceRows.plotlyArtifacts, response.plotlyArtifacts),
       sequence_actions: traceRows.sequenceActions || [],
       thinking_trace_rows: traceRows.thinking,
       activity_trace_rows: traceRows.activity,
@@ -84,6 +86,7 @@ export function buildAssistantErrorMessage({
       notebookDraft: null,
       html_artifacts: traceRows.htmlArtifacts || [],
       image_artifacts: traceRows.imageArtifacts || [],
+      plotly_graph_artifacts: traceRows.plotlyArtifacts || [],
       sequence_actions: traceRows.sequenceActions || [],
       thinking_trace_rows: traceRows.thinking,
       activity_trace_rows: traceRows.activity,

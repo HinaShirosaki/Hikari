@@ -21,7 +21,9 @@ async function main() {
   ]) {
     const folderPath = path.join(root, folder);
     const source = fs.readFileSync(path.join(folderPath, htmlPath), 'utf8').replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '');
-    const markup = /<head>/.test(source) ? source.replace('<head>', `<head><base href="${pathToFileURL(folderPath + '/').href}">`) : `<!doctype html><html><head><base href="${pathToFileURL(folderPath + '/').href}"></head><body>${source}</body></html>`;
+    const fragmentStyles = ns === 'gel' ? [...fs.readFileSync(path.join(folderPath, 'index.html'), 'utf8').matchAll(/<link\b[^>]*rel="stylesheet"[^>]*>/g)].map(match => match[0]).join('\n') : '';
+    const fragment = ns === 'gel' ? `<div id="gel-host">${source.replace('id="gel-view" class="view"', 'id="gel-view" class="view is-active"')}</div>` : source;
+    const markup = /<head>/.test(source) ? source.replace('<head>', `<head><base href="${pathToFileURL(folderPath + '/').href}">`) : `<!doctype html><html><head><base href="${pathToFileURL(folderPath + '/').href}">${fragmentStyles}</head><body class="${ns === 'gel' ? 'plugin-gel theme-day ui-neutral-compact' : ''}">${fragment}</body></html>`;
     const fixture = path.join(scratch, ns + '.html'); fs.writeFileSync(fixture, markup);
     win = new BrowserWindow({ show: false, width: 1300, height: 900, webPreferences: { sandbox: true, contextIsolation: true } });
     await win.loadFile(fixture);
@@ -53,14 +55,55 @@ async function main() {
       i18n.registerMessages('es', ns, { [i18n.keyFor('UI test')]: '<img src=x onerror=alert(1)>' });
       const safe = document.createElement('div'); safe.innerHTML = ui.html('UI test'); document.body.append(safe);
       check(!safe.querySelector('img') && safe.textContent.startsWith('<img'), 'translation is escaped text');
+      if (ns !== 'qpcr') {
+        for (const [preference, locale] of [['zh-CN','zh-Hans'],['zh-TW','zh-Hant'],['ja-JP','ja']]) {
+          check(i18n.setLocale(preference) === locale, 'production locale resolves: ' + preference);
+          check(document.documentElement.lang === locale, 'plugin document language follows the host');
+          const catalog = window.HikariUiTranslations[locale][ns];
+          const expected = catalog[i18n.keyFor(dynamic)].split('{p0}').join('300').split('{p1}').join('200');
+          check(text.textContent === expected, 'production dynamic message translates: ' + locale);
+          for (const node of document.querySelectorAll('[data-i18n]')) {
+            if (node.children.length || node.matches('input, textarea, select')) continue;
+            const params = JSON.parse(node.getAttribute('data-i18n-params') || '{}');
+            check(node.textContent === i18n.t(node.dataset.i18n, params, node.textContent), 'production binding ' + locale + ' ' + node.dataset.i18n);
+          }
+          for (const attribute of ['title','placeholder','aria-label','alt','data-caption','data-hover-caption','label']) {
+            const binding = 'data-i18n-' + attribute.replace(/^data-/, '');
+            for (const node of document.querySelectorAll('[' + binding + ']')) {
+              const params = JSON.parse(node.getAttribute(binding + '-params') || node.getAttribute('data-i18n-params') || '{}');
+              check(node.getAttribute(attribute) === i18n.t(node.getAttribute(binding), params), 'production attribute ' + locale + ' ' + node.getAttribute(binding));
+            }
+          }
+          check(document.querySelectorAll('button').length === beforeButtons, 'language preserves every control');
+          check(JSON.stringify([...document.querySelectorAll('select')].map(select => [...select.options].map(o => o.value))) === JSON.stringify(beforeValues), 'language preserves scientific option values');
+          if (editable) check(editable.value === 'Draft <&> — keep this' && document.activeElement === editable, 'language preserves draft and focus');
+        }
+      }
+      if (ns === 'gel') {
+        i18n.setLocale('en');
+        const { initGelAnalysis } = await import(${JSON.stringify(pathToFileURL(path.join(folderPath, 'workspace/index.js')).href)});
+        i18n.setLocale('ja');
+        const controller = initGelAnalysis({ state: { gelAnalyses: [], settings: { storagePath: '' } },
+          persist() {}, createId: () => crypto.randomUUID(), document,
+          safeText(value) { const span = document.createElement('span'); span.textContent = String(value ?? ''); return span.innerHTML; }
+        });
+        await controller.ready; controller.render();
+        check(document.getElementById('gel-figure-heading').textContent === 'ゲル', 'late-inserted Gel navigation uses the saved language on first load');
+        check(document.getElementById('gel-figure-add-btn').getAttribute('aria-label') === 'ゲルを追加', 'late-inserted Gel accessibility copy uses the saved language');
+        check(document.getElementById('gel-figure-stack-btn').title === 'スタックを追加', 'late-inserted Gel tooltips use the saved language');
+        controller.destroy();
+      }
       i18n.setLocale('en'); check(text.textContent === dynamic.replace('{p0}', '300').replace('{p1}', '200'), 'English status is restored');
       return { checks, bindings: document.querySelectorAll('[data-i18n]').length };
     })().catch(error => { throw new Error(error.stack); })`);
     assert.ok(result.bindings >= 30, `${ns} has substantial static coverage`); checks += result.checks;
     const output = path.join(root, 'artifacts/i18n-plugins'); fs.mkdirSync(output, { recursive: true });
-    for (const width of [1300, 800]) { win.setSize(width, 900); await win.webContents.executeJavaScript('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))'); fs.writeFileSync(path.join(output, `${ns}-${width}.png`), (await win.webContents.capturePage()).toPNG()); }
+    for (const locale of ns === 'qpcr' ? ['en'] : ['en','zh-Hans','zh-Hant','ja']) {
+      await win.webContents.executeJavaScript(`window.HikariUi.setLocale(${JSON.stringify(locale)})`);
+      for (const width of [1300, 800]) { win.setSize(width, 900); await win.webContents.executeJavaScript('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))'); fs.writeFileSync(path.join(output, `${ns}-${locale}-${width}.png`), (await win.webContents.capturePage()).toPNG()); }
+    }
     win.destroy(); win = null;
   }
-  console.log(`Plugin i18n: ${checks} English/Spanish binding, draft, option, control, and escaping checks passed across Figura, qPCR, and Gel.`);
+  console.log(`Plugin i18n: ${checks} English/Spanish/Chinese/Japanese binding, draft, option, control, and escaping checks passed across Figura, qPCR, and Gel.`);
 }
 main().then(() => { clearTimeout(timeout); app.quit(); }).catch(error => { console.error(error); clearTimeout(timeout); win?.destroy(); app.exit(1); });

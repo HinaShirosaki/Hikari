@@ -14,7 +14,8 @@ export function createPapersWorkspaceControls(context) {
     elements.papersLayout?.classList?.toggle('has-active-context', hasContext);
     doc?.body?.classList?.toggle('has-papers-context', hasContext);
     if (elements.papersLibraryRail) {
-      const compactContext = hasContext && Number(win?.innerWidth) <= 1280;
+      const compactContext = hasContext && Number(win?.innerWidth) <= 1280
+        && !elements.papersLayout?.classList?.contains('is-left-rail-expanded');
       elements.papersLibraryRail.inert = compactContext
         || Boolean(elements.papersLayout?.classList?.contains('is-left-rail-folded'));
     }

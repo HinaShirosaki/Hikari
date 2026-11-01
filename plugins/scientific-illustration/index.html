@@ -83,7 +83,12 @@
           <div class="canvases">
             <div class="main-stage-wrap">
               <div id="main-canvas" class="canvas-stage" data-canvas="main"></div>
-              <div id="canvas-empty" class="canvas-empty" hidden><strong><span data-i18n="figura.full.25761803">Start with an idea</span></strong><span id="canvas-empty-hint"><span data-i18n="figura.full.dcde2e72">Describe your figure below, or add a layer.</span></span></div>
+              <div id="selection-toolbar" class="selection-toolbar" role="toolbar" aria-label="Illustration tools" aria-orientation="horizontal" hidden data-i18n-aria-label="figura.full.febdba08">
+                <button type="button" class="icon-button" data-selection-action="group" data-icon="group" title="Group selection (⌘G / Ctrl+G)" aria-label="Group selection" data-i18n-title="figura.full.2e0a8670" data-i18n-aria-label="figura.full.2df3bdea"></button>
+                <button type="button" class="icon-button" data-selection-action="ungroup" data-icon="ungroup" title="Ungroup (⌘⇧G / Ctrl+Shift+G)" aria-label="Ungroup" data-i18n-title="figura.full.8fc6a9b3" data-i18n-aria-label="figura.full.460af6ed"></button>
+                <span class="selection-toolbar-separator" aria-hidden="true"></span>
+                <button id="selection-align" type="button" class="icon-button" data-selection-action="align" data-icon="align" title="Align and distribute" aria-label="Align and distribute" aria-expanded="false" aria-controls="align-menu" data-i18n-title="figura.full.d67ce352" data-i18n-aria-label="figura.full.d67ce352"></button>
+              </div>
             </div>
           </div>
           <form id="prompt-form" class="prompt" hidden>
@@ -103,14 +108,13 @@
               <div class="text-toolbar"><div class="format-group" role="group" aria-label="Text formatting" data-i18n-aria-label="figura.full.d9585801"><button type="button" data-text-style="bold" aria-label="Bold" title="Bold" aria-pressed="false" data-i18n-title="figura.full.45768d96" data-i18n-aria-label="figura.full.45768d96"><b>B</b></button><button type="button" data-text-style="italic" aria-label="Italic" title="Italic" aria-pressed="false" data-i18n-title="figura.full.8db0c08d" data-i18n-aria-label="figura.full.8db0c08d"><i>I</i></button><button type="button" data-text-style="underline" aria-label="Underline" title="Underline" aria-pressed="false" data-i18n-title="figura.full.9a85011f" data-i18n-aria-label="figura.full.9a85011f"><u>U</u></button></div><div class="format-group" role="group" aria-label="Text alignment" data-i18n-aria-label="figura.full.d40ac0af"><button type="button" data-align="start" data-icon="alignLeft" aria-label="Align left" title="Align left" aria-pressed="false" data-i18n-title="figura.full.bdd22217" data-i18n-aria-label="figura.full.bdd22217"></button><button type="button" data-align="middle" data-icon="alignCenter" aria-label="Align center" title="Align center" aria-pressed="false" data-i18n-title="figura.full.76127b0f" data-i18n-aria-label="figura.full.76127b0f"></button><button type="button" data-align="end" data-icon="alignRight" aria-label="Align right" title="Align right" aria-pressed="false" data-i18n-title="figura.full.1a76ce88" data-i18n-aria-label="figura.full.1a76ce88"></button></div></div>
               <div class="field-grid"><label><span data-i18n="figura.full.993014d9">Weight</span><select name="fontWeight"><option value="100" data-i18n="figura.full.45599092">Thin</option><option value="200" data-i18n="figura.full.187bbd95">Extra light</option><option value="300" data-i18n="figura.full.8ad2f8cf">Light</option><option value="400" data-i18n="figura.full.e750f2b7">Regular</option><option value="500" data-i18n="figura.full.9be5f96">Medium</option><option value="600" data-i18n="figura.full.7afc6564">Semibold</option><option value="700" data-i18n="figura.full.45768d96">Bold</option><option value="800" data-i18n="figura.full.31066fac">Extra bold</option><option value="900" data-i18n="figura.full.2b043744">Black</option></select></label><label><span data-i18n="figura.full.b54055d4">Anchor</span><select name="anchor"><option value="top" data-i18n="figura.full.99b73dc">Top</option><option value="middle" data-i18n="figura.full.9d92c238">Middle</option><option value="bottom" data-i18n="figura.full.22b5f34a">Bottom</option></select></label></div>
             </fieldset>
-            <fieldset id="vector-properties" hidden><legend class="sr-only"><span data-i18n="figura.full.bc50ad22">Vector</span></legend>
-              <div class="field-grid"><label><span data-i18n="figura.full.32184168">Fill</span><input name="fill" placeholder="Original" title="Hex color or none. Clear to restore the original." data-i18n-title="figura.full.d5421ee6" data-i18n-placeholder="figura.full.a2fe7692"></label><label><span data-i18n="figura.full.ffb57955">Stroke</span><input name="stroke" placeholder="Original" title="Hex color or none. Clear to restore the original." data-i18n-title="figura.full.d5421ee6" data-i18n-placeholder="figura.full.a2fe7692"></label></div>
-              <label class="inline-field"><span data-i18n="figura.full.870ad3a1">Stroke width</span><input name="strokeWidth" type="number" min="0" max="50" step="any" placeholder="Original" data-i18n-placeholder="figura.full.a2fe7692"></label>
-              <button type="button" id="edit-artwork" class="secondary-button"><span data-i18n="figura.full.a65c56a0">Edit SVG source</span></button>
-            </fieldset>
-            <button type="button" id="replace-raster" class="secondary-button" hidden><span data-i18n="figura.full.6b1b72cf">Replace artwork…</span></button>
-            <div class="field-grid object-basics"><label><span data-i18n="figura.full.232777f">Rotation</span><span class="unit-field"><input name="rotation" type="number" min="-360" max="360" step="any" required><span>°</span></span></label><label><span data-i18n="figura.full.de1f0406">Opacity</span><input name="opacity" type="number" min="0" max="1" step="0.05" required></label></div>
-            <details class="geometry-options"><summary><span data-i18n="figura.full.d3294249">Position &amp; size</span></summary><div class="field-grid"><label>X<input name="x" type="number" step="any" required></label><label>Y<input name="y" type="number" step="any" required></label><label><span data-i18n="figura.full.3b42dfbf">Width</span><input name="width" type="number" min="1" max="8000" step="any" required></label><label><span data-i18n="figura.full.1bd13562">Height</span><input name="height" type="number" min="1" max="8000" step="any" required></label></div></details>
+            <div class="object-basics">
+              <label id="opacity-label" for="opacity-range"><span data-i18n="figura.full.de1f0406">Opacity</span></label>
+              <div class="opacity-control">
+                <input id="opacity-range" type="range" min="0" max="100" step="0.1" value="100" aria-labelledby="opacity-label">
+                <span class="unit-field opacity-value"><input id="opacity-number" name="opacity" type="number" min="0" max="100" step="0.1" value="100" required aria-labelledby="opacity-label"><span aria-hidden="true">%</span></span>
+              </div>
+            </div>
             <div class="object-actions"><button type="button" id="duplicate" class="icon-button" data-icon="copy" title="Duplicate layer" aria-label="Duplicate layer" data-i18n-title="figura.full.b5c2ccaf" data-i18n-aria-label="figura.full.b5c2ccaf"></button><button type="button" id="raise" class="icon-button" data-icon="up" title="Bring forward" aria-label="Bring forward" data-i18n-title="figura.full.80e5c21e" data-i18n-aria-label="figura.full.80e5c21e"></button><button type="button" id="lower" class="icon-button" data-icon="lower" title="Send backward" aria-label="Send backward" data-i18n-title="figura.full.358d7f8c" data-i18n-aria-label="figura.full.358d7f8c"></button><span></span><button type="button" id="delete" class="icon-button danger-button" data-icon="trash" title="Delete layer" aria-label="Delete layer" data-i18n-title="figura.full.21c1db53" data-i18n-aria-label="figura.full.21c1db53"></button></div>
           </form>
           </section>
@@ -132,6 +136,9 @@
             <hr>
             <button type="button" data-layout-action="distribute-horizontal" data-icon="distributeHorizontal" title="Equal horizontal gaps; keep the outermost items fixed" disabled data-i18n-title="figura.full.55f47d1d"><span data-i18n="figura.full.6c16d5">Distribute horizontally</span></button>
             <button type="button" data-layout-action="distribute-vertical" data-icon="distributeVertical" title="Equal vertical gaps; keep the outermost items fixed" disabled data-i18n-title="figura.full.58f6cf7b"><span data-i18n="figura.full.9eb0ffc7">Distribute vertically</span></button>
+            <hr>
+            <label class="check smart-guide-toggle"><input id="smart-guides" type="checkbox" checked><span data-i18n="figura.guides.label">Smart guides</span></label>
+            <p class="smart-guide-hint" data-i18n="figura.guides.hint">Hold Cmd/Ctrl while dragging to move freely.</p>
           </div></details>
           <details class="popover" id="add-menu"><summary class="icon-button" data-icon="plus" title="Add layer" aria-label="Add layer" data-i18n-title="figura.full.5b118919" data-i18n-aria-label="figura.full.5b118919"></summary><div class="popover-panel">
             <button type="button" id="add-text"><span data-i18n="figura.full.13a8df60">Text label</span></button><button type="button" id="add-vector"><span data-i18n="figura.full.d27bcff5">Vector component</span></button><button type="button" id="import"><span data-i18n="figura.full.2cb5b20e">Import artwork…</span></button>
@@ -158,7 +165,6 @@
     <hr role="separator">
     <button type="button" role="menuitem" data-context-action="save-asset" data-icon="assets" tabindex="-1"><span data-i18n="figura.full.6466a9af">Save as an asset…</span></button>
   </div>
-  <dialog id="source-dialog"><form id="source-form"><h2><span data-i18n="figura.full.db646e85">Text-free SVG artwork</span></h2><textarea id="svg-source" aria-label="SVG source" spellcheck="false" required></textarea><p id="source-error" role="alert"></p><div class="actions"><button type="button" id="cancel-source"><span data-i18n="figura.full.35afca3b">Cancel</span></button><button type="submit"><span data-i18n="figura.full.d839544b">Apply artwork</span></button></div></form></dialog>
   <input id="asset-input" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp" hidden>
   <dialog id="raster-dialog" aria-labelledby="raster-title"><form id="raster-form">
     <h2 id="raster-title"><span data-i18n="figura.full.bbd6a65c">Import artwork</span></h2>
@@ -179,6 +185,9 @@
   <script src="vendor/cropperjs/cropper.min.js"></script>
   <script src="./locales/en.js"></script>
 <script src="./locales/es.js"></script>
+<script src="./locales/zh-Hans.js"></script>
+<script src="./locales/zh-Hant.js"></script>
+<script src="./locales/ja.js"></script>
 <script src="./i18n.js"></script>
 <script type="module" src="main.mjs"></script>
 </body>

@@ -105,6 +105,24 @@ async function main() {
   function sameRect(a,b,label) {
     for(const key of ['x','y','width','height']) assert.ok(Math.abs(a[key]-b[key])<1, `${label}: ${key}: ${a[key]} → ${b[key]}`);
   }
+  async function assertStationaryWindow(id, label) {
+    const before = await exec(`rect('${id}')`);
+    const header = await exec(`(()=>{const h=document.querySelector('#${id} [data-gel-window-header]');return {rect:h.getBoundingClientRect().toJSON(),cursor:getComputedStyle(h).cursor,title:h.title}})()`);
+    assert.notEqual(header.cursor,'move',`${label} has no move cursor`);
+    assert.equal(header.title,'',`${label} has no movement tooltip`);
+    for (const shiftKey of [false,true]) {
+      for (const key of ['ArrowRight','ArrowDown','ArrowLeft','ArrowUp']) {
+        await exec(`{const h=document.querySelector('#${id} [data-gel-window-header]');h.focus();h.dispatchEvent(new KeyboardEvent('keydown',{key:'${key}',shiftKey:${shiftKey},bubbles:true}))}`);
+        sameRect(before,await exec(`rect('${id}')`),`${label} stays fixed for ${key} (Shift: ${shiftKey})`);
+      }
+    }
+    const start = {x:Math.round(header.rect.x+45),y:Math.round(header.rect.y+18)};
+    win.webContents.sendInputEvent({type:'mouseDown',button:'left',clickCount:1,...start});
+    win.webContents.sendInputEvent({type:'mouseMove',x:start.x+65,y:start.y+35});
+    win.webContents.sendInputEvent({type:'mouseUp',button:'left',clickCount:1,x:start.x+65,y:start.y+35});
+    await settle();
+    sameRect(before,await exec(`rect('${id}')`),`${label} stays fixed when its title is dragged`);
+  }
   try {
     await win.loadFile(fixture);
     win.focus();
@@ -346,7 +364,7 @@ async function main() {
     assert.equal(await exec("document.getElementById('gel-peak-editor-overlay').hidden"),false);
     assert.equal(await exec("document.querySelector('.gel-peak-editor-dialog').getAttribute('aria-modal')"),'false');
     sameRect(dockedBaseline,await exec("rect('gel-canvas')"),'Opening peak editor');
-    await exec("document.querySelector('#gel-peak-editor-overlay [data-gel-window-handle]').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))");
+    await exec("document.querySelector('#gel-peak-editor-overlay [data-gel-window-header]').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))");
     assert.equal(await exec("document.getElementById('gel-peak-editor-overlay').hidden"),true);
     assert.equal(await exec("document.getElementById('gel-lane-table-panel').hidden"),false,'Escape leaves the docked table visible');
     await exec("click('gel-close-lane-table-btn')");
@@ -387,31 +405,19 @@ async function main() {
     assert.equal(await exec('qaCopiedText'),await exec("[...document.querySelectorAll('#gel-cell-table-host tr')].map(row=>[...row.cells].map(cell=>cell.textContent.trim()).join('\\t')).join('\\n')"),'Copy includes every header and row');
     await exec("{const input=document.querySelector('#gel-lane-table-shell [data-table-lane]');input.value='Control <A>';input.dispatchEvent(new Event('input',{bubbles:true}))}");
     assert.match(await exec("document.querySelector('#gel-band-intensity-chart .gel-intensity-series title').textContent"),/Control <A>/,'An open graph reflects updated lane labels');
-    const intensityBefore=await exec("rect('gel-cell-table-panel')");
-    await exec("{const h=document.querySelector('#gel-cell-table-panel [data-gel-window-handle]');h.focus();h.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}))}");
-    assert.ok((await exec("rect('gel-cell-table-panel')")).x>intensityBefore.x,'Band intensity can be moved without changing the gel');
-    await exec("document.querySelector('#gel-cell-table-panel [data-gel-window-handle]').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))");
+    await assertStationaryWindow('gel-cell-table-panel','Band intensity');
+    await exec("document.querySelector('#gel-cell-table-panel [data-gel-window-header]').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))");
     assert.equal(await exec("document.getElementById('gel-cell-table-panel').hidden"),true);
     assert.equal(await exec("document.activeElement.id"),'gel-open-band-intensity-btn','Closing restores focus to Band intensity');
     await exec("click('gel-open-band-intensity-btn')");
     await exec("click('gel-open-peak-editor-btn')");
     await settle();
-    await exec("document.querySelector('#gel-peak-editor-overlay [data-gel-window-handle]').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))");
+    await exec("document.querySelector('#gel-peak-editor-overlay [data-gel-window-header]').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))");
     assert.equal(await exec("document.getElementById('gel-peak-editor-overlay').hidden"),true,'Escape closes the front window');
     assert.equal(await exec("document.getElementById('gel-cell-table-panel').hidden"),false,'Escape preserves the window underneath');
     await exec("click('gel-open-peak-editor-btn')");
     await settle();
-    const peakBefore = await exec("rect('gel-peak-editor-overlay')");
-    await exec("const h=document.querySelector('#gel-peak-editor-overlay [data-gel-window-handle]');h.focus();h.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));");
-    assert.ok((await exec("rect('gel-peak-editor-overlay')")).x > peakBefore.x,'Keyboard moves the floating window');
-    const handle = await exec("document.querySelector('#gel-peak-editor-overlay [data-gel-window-handle]').getBoundingClientRect().toJSON()");
-    const start = { x:Math.round(handle.x+45), y:Math.round(handle.y+18) };
-    win.webContents.sendInputEvent({type:'mouseDown',button:'left',clickCount:1,...start});
-    win.webContents.sendInputEvent({type:'mouseMove',x:start.x+65,y:start.y});
-    win.webContents.sendInputEvent({type:'mouseUp',button:'left',clickCount:1,x:start.x+65,y:start.y});
-    await settle();
-    const dragged = await exec("rect('gel-peak-editor-overlay')");
-    assert.ok(dragged.x>handle.x,'Pointer dragging moves the window within the available canvas bounds');
+    await assertStationaryWindow('gel-peak-editor-overlay','Band integration');
     await exec("click('gel-peak-editor-close-btn')");
     await exec("document.querySelector('.gel-band-intensity-body').scrollTop=0");
     // Rail buttons scrolled into view finish their theme transition late; capture the settled look.
@@ -450,7 +456,12 @@ async function main() {
       }
       assert.ok(sizes.canvas.bottom<=sizes.stage.bottom+1,'Gel fits stage height');
       await checkDock();
-      sizes.windows.forEach(({rect,layer})=>{assert.ok(rect.left>=layer.left-1&&rect.right<=layer.right+1,'Window fits width');assert.ok(rect.top>=layer.top-1&&rect.bottom<=layer.bottom+1,'Window fits height');});
+      sizes.windows.forEach(({rect,layer})=>{
+        assert.ok(rect.left>=layer.left-1&&rect.right<=layer.right+1,'Window fits width');
+        assert.ok(rect.top>=layer.top-1&&rect.bottom<=layer.bottom+1,'Window fits height');
+        assert.ok(Math.abs(rect.left-layer.left-Math.max(0,Math.min(12,layer.width-rect.width)))<1,'Window keeps its horizontal anchor after resizing');
+        assert.ok(Math.abs(rect.top-layer.top-Math.max(0,Math.min(12,layer.height-rect.height)))<1,'Window keeps its vertical anchor after resizing');
+      });
       await exec("document.getElementById('gel-cell-table-copy-btn').scrollIntoView({block:'nearest'})");
       await settle();
       const copyBounds=await exec("({button:rect('gel-cell-table-copy-btn'),panel:rect('gel-cell-table-panel')})");
@@ -546,7 +557,7 @@ async function main() {
     await exec("click('gel-peak-editor-clear-lane-btn')");
     await waitFor("Boolean(document.querySelector('#gel-peak-editor-chart [data-band-baseline=auto]'))");
     assert.equal(await exec("Boolean(document.querySelector('#gel-cell-table-host td[title=\"Manual baseline\"]'))"),false,'Clearing restores automatic background');
-    await exec("document.querySelector('#gel-peak-editor-overlay [data-gel-window-handle]').focus();controller.undo()");
+    await exec("document.querySelector('#gel-peak-editor-overlay [data-gel-window-header]').focus();controller.undo()");
     await waitFor("Boolean(document.querySelector('#gel-peak-editor-chart [data-band-baseline=manual]'))");
     assert.equal(await exec("document.querySelector('#gel-cell-table-host td[title=\"Manual baseline\"]').textContent"),manualValue,'Undo restores the manual measurement');
     await exec('controller.redo()');
@@ -563,7 +574,7 @@ async function main() {
     assert.doesNotMatch(await exec('qaCopiedText'),/Review background/,'The copyable intensity column remains numeric');
     assert.ok(await exec("Boolean(document.querySelector('#gel-band-intensity-chart rect[data-review=true][data-value]'))"),'The graph marks review measurements');
     fs.writeFileSync(path.join(output,'band-background-review.png'),(await win.webContents.capturePage()).toPNG());
-    await exec("document.querySelector('#gel-cell-table-panel [data-gel-window-close]').click();document.querySelector('#gel-peak-editor-overlay [data-gel-window-handle]').focus();controller.undo();controller.undo();controller.undo()");
+    await exec("document.querySelector('#gel-cell-table-panel [data-gel-window-close]').click();document.querySelector('#gel-peak-editor-overlay [data-gel-window-header]').focus();controller.undo();controller.undo();controller.undo()");
     await waitFor("Boolean(document.querySelector('#gel-peak-editor-chart [data-band-baseline=manual]'))");
     // Theme colors animate in the shared styles; inspect the settled appearance.
     await new Promise(resolve=>setTimeout(resolve,350));
@@ -616,7 +627,7 @@ async function main() {
     assert.equal(await exec("document.querySelector('.gel-divider-menu')"),null,'Destroy removes the divider menu');
     assert.deepEqual(await exec("window.qaErrors"),[]);
     assert.deepEqual(errors,[]);
-    console.log('gel-floating-workspace-electron: passed (Band intensity graph/table/copy/live labels/empty state, stacked windows and bounds at 4 sizes, divider tolerance, MW editing, light/dark, table dock, crop rotation, disposal)');
+    console.log('gel-floating-workspace-electron: passed (Band intensity graph/table/copy/live labels/empty state, fixed window positions, stacking and bounds at 4 sizes, divider tolerance, MW editing, light/dark, table dock, crop rotation, disposal)');
   } finally { win.destroy();app.quit(); }
 }
 main().catch(error=>{console.error(error);process.exitCode=1;if(process.versions.electron)require('electron').app.exit(1);});

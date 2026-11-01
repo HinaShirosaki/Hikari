@@ -29,8 +29,9 @@ export function createAgentChatRail({
     const app = getAppForView(viewId);
     const navViewId = resolveNavigationViewId(viewId);
     const view = documentObject.getElementById(navViewId);
-    // Papers and registered plugin tools keep the strip usable without Codex.
-    const hasTools = documentObject.getElementById('plugin-workspace-tools')?.dataset.viewId === navViewId;
+    // Native workspace controls and plugin tools remain usable without Codex.
+    const hasTools = view?.dataset.workspaceTools === 'available'
+      || documentObject.getElementById('plugin-workspace-tools')?.dataset.viewId === navViewId;
     return hasTools || isAgentChatRailAvailable(app, view)
       && (isAgentAvailable(documentObject) || navViewId === VIEWS.PAPERS);
   }

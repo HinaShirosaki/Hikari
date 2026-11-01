@@ -17,7 +17,6 @@ export const papersEnglish = Object.freeze({
   'menu.nameEmpty': 'Folder name cannot be empty.',
   'menu.nameDuplicate': 'A folder with this name already exists.',
   'menu.confirmDelete': 'Delete this journal club folder and its papers?',
-  'viewer.empty': 'Scientific PDFs open here with page navigation and zoom.',
   'viewer.commentPins': 'Paper comment pins',
   'viewer.commentBy': 'Comment by {author}',
   'viewer.pageLinks': 'Paper page {page} links',

@@ -16,7 +16,8 @@ const objectProperties = {
   } },
   fill: { type: 'string', description: 'Optional vector-wide fill override: hex or none.' }, stroke: { type: 'string' }, strokeWidth: { type: 'number' },
   dataUrl: { type: 'string', maxLength: 7000000, description: 'Embedded PNG/JPEG/WebP. Prefer operation.raster_asset with plugin_canvas assets to import a file without transmitting base64.' },
-  textFree: { type: 'boolean', description: 'Required true for raster, after checking the image has no baked-in text.' },
+  textFree: { type: 'boolean', description: 'Required true for normal raster artwork. Pasted chemical structures retain false because atom labels are integral to the structure.' },
+  chemicalStructure: { type: 'boolean', const: true, description: 'User-pasted vector or raster chemical structure. Vector SVG may include integral atom text. Preserve atom symbols, charges and bonds together; captions still belong in separate text layers.' },
   text: { type: 'string', maxLength: 3000 }, fontFamily: { type: 'string', maxLength: 100, description: 'Inter is bundled and embedded in SVG exports and previews. Other fonts use installed system fonts.' }, fontSize: { type: 'number', minimum: 4, maximum: 300 },
   fontWeight: { type: 'number', minimum: 100, maximum: 900 }, color: { type: 'string' }, align: { type: 'string', enum: ['start', 'middle', 'end'] },
   anchor: { type: 'string', enum: ['top', 'middle', 'bottom'] }, italic: { type: 'boolean' }, underline: { type: 'boolean' }

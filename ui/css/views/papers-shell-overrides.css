@@ -170,21 +170,21 @@ body[data-active-view="papers-view"] .universal-agent-chat-rail__header {
 }
 
 @media (max-width: 80rem) {
-  #papers-view .papers-layout.has-active-context {
+  #papers-view .papers-layout.has-active-context:not(.is-left-rail-expanded) {
     grid-template-columns: minmax(0, 1fr) !important;
     gap: 0 !important;
   }
 
-  #papers-view .has-active-context > :is(.papers-library-rail, .app-left-rail-fold-toggle) {
+  #papers-view .has-active-context:not(.is-left-rail-expanded) > .papers-library-rail {
     display: none !important;
   }
 
-  #papers-view .has-active-context > .papers-main {
+  #papers-view .has-active-context:not(.is-left-rail-expanded) > .papers-main {
     grid-column: 1;
     padding-left: 0;
   }
 
-  body[data-active-view="papers-view"].has-papers-context .workspace-shell::before {
+  body[data-active-view="papers-view"].has-papers-context:not(:has(#papers-layout.is-left-rail-expanded)) .workspace-shell::before {
     display: none;
   }
 }

@@ -96,6 +96,7 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     applySequenceEditDialog,
     hasOpenSequenceEditDialog,
     onRequestSave,
+    onSaveDnaFragment: config.onSaveDnaFragment,
     onRequestAnnotate,
     onRequestAlignment,
     onRequestCloningDesign,

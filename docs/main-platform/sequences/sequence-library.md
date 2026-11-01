@@ -44,6 +44,22 @@ Entries have two main statuses:
 
 `promoteSequenceEntry(...)` is the bridge between them: it reloads an existing temporary entry and writes it back as a saved one.
 
+## Derived DNA fragments
+
+In the DNA detail view, select bases and choose **Save DNA Fragment…** from the right-click menu. Primer cards and the selected-primer details also offer **PCR…**, which pairs that site with an opposite-strand primer from the template, the Primer Library, or a pasted 5′–3′ oligo. The dialog previews the product length before saving.
+
+Both workflows save a linear `.gbk` entry with remapped annotations. PCR products include the primer sequences and their 5′ additions; circular templates can produce products spanning the origin. Pasted primers require a unique exact 3′ match of at least 12 bases; annotated primers select their specific binding site. Invalid orientations and ambiguous pasted-primer sites prevent saving.
+
+The template is saved first if needed. The new entry records `parentEntryId` in SQLite, inherits the template's folder, and appears beneath it in both library rails. The template's disclosure button folds/unfolds its descendants; searching for a child reveals its ancestry. Moving a template to a folder carries its descendants. Moving a child independently detaches it from its parent. Deleting a template retains its children as root entries.
+
+## Restriction digestion
+
+Restriction sites offer **Single digestion…** and **Double digestion…** in their right-click menus, hover panels, and selected-site details. These actions also work on the Vector Builder map and sequence pane. Double digestion starts from the chosen site, then waits for a click on a different restriction site. A confirmation dialog displays both sites, their enzyme/cut-pattern choices, and the resulting fragments before writing anything.
+
+Select the fragments to keep and optionally rename them. Each selected product is saved as a linear `.gbk` child under the template. One break produces one linearized product from circular DNA or two products from linear DNA; two breaks produce two or three products respectively. Enzymes with upstream and downstream cuts can produce additional fragments. Unknown patterns, cuts outside linear DNA, and overlapping strand cuts prevent saving.
+
+Product lengths and the GenBank sequence refer to the plus strand. Terminal `misc_feature` annotations preserve blunt/sticky-end type, overhang sequence in 5′–3′ orientation, enzyme, and zero-based template strand-cut coordinates in `hikari_digest_*` qualifiers. Genes interrupted by a cut are retained as partial annotations rather than joined across a new linear end. Multi-product saves use stable entry IDs, so retrying a partial save does not duplicate fragments already written.
+
 ## What `upsertSequenceEntry(...)` really does
 
 This function (in `entry-upsert.js`) is the heart of the library.

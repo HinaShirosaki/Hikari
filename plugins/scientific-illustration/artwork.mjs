@@ -1,5 +1,4 @@
 import { RESIZE_HANDLES, resizeCursor } from './geometry.mjs';
-import { selectionBounds } from './grouping.mjs';
 
 const NS = 'http://www.w3.org/2000/svg';
 const TAGS = new Set(['svg', 'g', 'defs', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'clipPath', 'mask', 'linearGradient', 'radialGradient', 'stop']);
@@ -26,12 +25,13 @@ function usesInter(object) {
   return object.type === 'text' && object.fontFamily.split(',').some(name => name.trim().replace(/^['"]|['"]$/g, '').toLowerCase() === 'inter');
 }
 
-export function validateSvg(source, { plot = false } = {}) {
+export function validateSvg(source, { plot = false, chemical = false } = {}) {
+  const extended = plot || chemical;
   if (/<!DOCTYPE|<!ENTITY/i.test(source)) throw new Error('SVG entities and document types are not supported.');
   const parsed = new DOMParser().parseFromString(source, 'image/svg+xml');
   const svg = parsed.documentElement;
   if (svg.localName !== 'svg' || svg.namespaceURI !== NS || parsed.querySelector('parsererror')) throw new Error('Use a complete, valid SVG with xmlns and viewBox.');
-  if (plot && !svg.hasAttribute('viewBox')) svg.setAttribute('viewBox', `0 0 ${parseFloat(svg.getAttribute('width'))} ${parseFloat(svg.getAttribute('height'))}`);
+  if (extended && !svg.hasAttribute('viewBox')) svg.setAttribute('viewBox', `0 0 ${parseFloat(svg.getAttribute('width'))} ${parseFloat(svg.getAttribute('height'))}`);
   if (!svg.hasAttribute('viewBox')) throw new Error('SVG artwork needs a viewBox.');
   const box = svg.getAttribute('viewBox').trim().split(/[\s,]+/).map(Number);
   if (box.length !== 4 || box.some(value => !Number.isFinite(value)) || box[2] <= 0 || box[3] <= 0) throw new Error('SVG viewBox needs positive width and height.');
@@ -45,12 +45,14 @@ export function validateSvg(source, { plot = false } = {}) {
   };
   const visit = node => {
     if (node.nodeType === 1) {
-      if (node.namespaceURI !== NS || !(plot ? PLOT_TAGS : TAGS).has(node.localName)) throw new Error(`SVG <${node.localName}> is not supported. Use text objects for all labels and separate raster objects for images.`);
+      if (node.namespaceURI !== NS || !(extended ? PLOT_TAGS : TAGS).has(node.localName)
+        || chemical && node.localName === 'image') throw new Error(`SVG <${node.localName}> is not supported. Use text objects for all labels and separate raster objects for images.`);
       for (const attr of [...node.attributes]) {
-        if (plot && (['class', 'role', 'version', 'focusable'].includes(attr.name) || /^(?:data-|aria-)/.test(attr.name))) { node.removeAttribute(attr.name); continue; }
-        const namespaces = plot ? ['http://www.w3.org/2000/xmlns/', 'http://www.w3.org/1999/xlink', 'http://www.w3.org/XML/1998/namespace'] : ['http://www.w3.org/2000/xmlns/'];
-        if (!(plot ? PLOT_ATTRIBUTES : ATTRIBUTES).has(attr.name) || attr.namespaceURI && !namespaces.includes(attr.namespaceURI)) throw new Error(`SVG attribute ${attr.name} is not supported. Use presentation attributes instead of styles.`);
-        if (plot && attr.name === 'style') {
+        if (extended && (['class', 'role', 'version', 'focusable'].includes(attr.name) || /^(?:data-|aria-)/.test(attr.name))) { node.removeAttribute(attr.name); continue; }
+        const namespaces = extended ? ['http://www.w3.org/2000/xmlns/', 'http://www.w3.org/1999/xlink', 'http://www.w3.org/XML/1998/namespace'] : ['http://www.w3.org/2000/xmlns/'];
+        if (!(extended ? PLOT_ATTRIBUTES : ATTRIBUTES).has(attr.name) || attr.namespaceURI && !namespaces.includes(attr.namespaceURI)) throw new Error(`SVG attribute ${attr.name} is not supported. Use presentation attributes instead of styles.`);
+        if (chemical && ['href', 'xlink:href'].includes(attr.name)) throw new Error('Chemical vector artwork must contain only self-contained paths and text.');
+        if (extended && attr.name === 'style') {
           for (const property of [...node.style]) {
             if (!PLOT_STYLES.has(property)) continue;
             const value = node.style.getPropertyValue(property).trim(); reference(value);
@@ -70,7 +72,7 @@ export function validateSvg(source, { plot = false } = {}) {
         ids.add(node.id);
       }
       for (const child of node.childNodes) visit(child);
-    } else if (node.nodeType === 3 && node.textContent.trim() && !plot) throw new Error('SVG artwork must be text-free. Create an independent text object.');
+    } else if (node.nodeType === 3 && node.textContent.trim() && !extended) throw new Error('SVG artwork must be text-free. Create an independent text object.');
     else if (![3, 8].includes(node.nodeType)) throw new Error('SVG processing instructions are not supported.');
   };
   visit(svg);
@@ -195,7 +197,7 @@ export function objectGroup(object, interactive = false, scope = 'thumbnail') {
   return group;
 }
 
-export function scene(documentState, canvas, { interactive = false, selectedId = '', selectedIds = [], selectionBox } = {}) {
+export function scene(documentState, canvas, { interactive = false, selectedId = '', selectedIds = [] } = {}) {
   const { width, height, background } = documentState.canvases[canvas];
   const svg = element('svg', { xmlns: NS, viewBox: `0 0 ${width} ${height}`, width, height, role: 'img', 'aria-label': `${canvas} illustration canvas` });
   svg.append(element('rect', { width, height, fill: background, 'pointer-events': 'none' }));
@@ -209,8 +211,7 @@ export function scene(documentState, canvas, { interactive = false, selectedId =
   }
   if (interactive) {
     const members = documentState.objects.filter(object => selectedIds.includes(object.id) && object.canvas === canvas).map(interactionBox);
-    const groupedIds = new Set(groups.filter(group => group.ids.every(id => selectedIds.includes(id))).flatMap(group => group.ids));
-    const outlinedMembers = members.filter(object => object.visible && !groupedIds.has(object.id));
+    const outlinedMembers = members.filter(object => object.visible);
     if (members.length > 1 && outlinedMembers.length) {
       const outlines = element('g', { class: 'selection-members', 'pointer-events': 'none', 'aria-hidden': 'true' });
       for (const object of outlinedMembers) {
@@ -222,15 +223,9 @@ export function scene(documentState, canvas, { interactive = false, selectedId =
       svg.append(outlines);
     }
     const single = documentState.objects.find(obj => obj.id === selectedId && obj.canvas === canvas && obj.visible);
-    const selected = selectionBox || (members.length > 1 && members.some(object => object.visible)
-      ? { ...selectionBounds(members), id: 'selection' }
-      : single && interactionBox(single));
+    const selected = members.length > 1 ? null : single && interactionBox(single);
     if (selected) {
       const { x, y, width: w, height: h, rotation } = selected;
-      // Gaps inside a multi-selection drag all of it. The area sits under the
-      // objects, so members and unselected objects keep their own hits.
-      if (members.length > 1) svg.firstChild.after(element('rect', { width: w, height: h, transform: `translate(${x} ${y}) rotate(${rotation} ${w / 2} ${h / 2})`,
-        fill: 'transparent', 'pointer-events': 'all', class: 'selection-move', 'data-move-id': selected.id }));
       const handles = element('g', { transform: `translate(${x} ${y}) rotate(${rotation} ${w / 2} ${h / 2})`, class: 'selection', 'pointer-events': 'none' });
       handles.dataset.selectionWidth = w; handles.dataset.selectionHeight = h;
       handles.append(element('rect', { width: w, height: h, fill: 'none', stroke: '#3977c3', 'stroke-width': 1.5, 'vector-effect': 'non-scaling-stroke' }));

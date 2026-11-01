@@ -1,4 +1,5 @@
 /* Late-load Assay shell and plate refinements. */
+@import url("./assay-view/context-rail.css");
 
 .calendar-view-switch {
   gap: var(--space-4);

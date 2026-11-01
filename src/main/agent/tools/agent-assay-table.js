@@ -2,7 +2,7 @@
 
 const { asArray, cloneJson, ensureObject } = require('../../lib/normalize.js');
 const { applyOperation, buildColumnValue, groupRows, normalizeCalculationColumns } = require('./assay-table/column-operations.js');
-const { ASSAY_TABLE_ACTIONS, MAX_NAME_LENGTH, MAX_PREVIEW_ROWS, MAX_ROWS, MAX_SOURCE_LENGTH } = require('./assay-table/constants.js');
+const { ASSAY_TABLE_ACTIONS, MAX_NAME_LENGTH, MAX_PREVIEW_ROWS, MAX_SOURCE_LENGTH } = require('./assay-table/constants.js');
 const { cleanText, normalizeCell, normalizeColumnName, normalizeRows, serializeTable, uniqueColumnNames } = require('./assay-table/table-normalizing.js');
 
 function createAgentAssayTableRuntime(deps = {}) {
@@ -102,7 +102,7 @@ function createAgentAssayTableRuntime(deps = {}) {
     return {
       ok: true,
       status: 'read',
-      table: serializeTable(table, { maxRows: input.max_rows || input.maxRows || MAX_PREVIEW_ROWS }),
+      table: serializeTable(table, { maxRows: input.max_rows || input.maxRows || MAX_PREVIEW_ROWS, offset: input.offset }),
       summary: `Read assay table ${table.id}.`
     };
   }
@@ -227,9 +227,9 @@ function createAgentAssayTableRuntime(deps = {}) {
     }
     const outputPath = cleanText(input.output_path || input.outputPath || 'output_table.json', 240) || 'output_table.json';
     const allTables = [...tables.values()].map((table) => serializeTable(table, {
-      maxRows: MAX_ROWS
+      complete: true
     }));
-    const stagedSource = sourceTable ? serializeTable(sourceTable, { maxRows: MAX_ROWS }) : null;
+    const stagedSource = sourceTable ? serializeTable(sourceTable, { complete: true }) : null;
     const sandbox = await runPythonSandbox({
       code,
       timeout_ms: input.timeout_ms || input.timeoutMs || 15000,

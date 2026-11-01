@@ -299,7 +299,10 @@ export const settingsEnglish = Object.freeze({
   "full.4ccc5fe9": "Read only · review changes",
   "full.5621b4c4": "Workspace access",
   "appearance.language": "Language",
-  "appearance.languageDescription": "Choose the language for menus and controls. Spanish is a preview; some text still appears in English.",
+  "appearance.languageDescription": "Choose the language for menus and controls. Preview languages may still show some text in English.",
   "appearance.languageEnglish": "English",
-  "appearance.languageSpanish": "Español (preview)"
+  "appearance.languageSpanish": "Español (preview)",
+  "appearance.languageSimplifiedChinese": "简体中文（预览）",
+  "appearance.languageTraditionalChinese": "繁體中文（預覽）",
+  "appearance.languageJapanese": "日本語（プレビュー）"
 });

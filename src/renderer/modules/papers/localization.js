@@ -1,4 +1,7 @@
 import { papersSpanish } from './locales/es.js';
+import { papersSimplifiedChinese } from './locales/zh-Hans.js';
+import { papersTraditionalChinese } from './locales/zh-Hant.js';
+import { papersJapanese } from './locales/ja.js';
 import { createPresentation } from '../../lib/i18n/presentation.js';
 const statusPresentation = createPresentation('papers');
 import { i18n } from '../../lib/i18n/index.js';
@@ -9,6 +12,9 @@ import { papersEnglish } from './locales/en.js';
 
 i18n.registerMessages('en', 'papers', papersEnglish);
 i18n.registerMessages('es', 'papers', papersSpanish);
+i18n.registerMessages('zh-Hans', 'papers', papersSimplifiedChinese);
+i18n.registerMessages('zh-Hant', 'papers', papersTraditionalChinese);
+i18n.registerMessages('ja', 'papers', papersJapanese);
 export const paperText = i18n.scope('papers');
 export const paperMessage = (key, params) => messageSpan(`papers.${key}`, params);
 export const paperAttributes = (bindings, params) => messageAttributes(

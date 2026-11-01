@@ -464,6 +464,7 @@ export function createSequenceViewerDetailController(config = {}) {
       applySequenceEditDialog,
       hasOpenSequenceEditDialog: () => sequenceEditingController?.hasOpenSequenceEditDialog?.() || false,
       onRequestSave,
+      onSaveDnaFragment: config.onSaveDnaFragment,
       onRequestAnnotate,
       onRequestAlignment,
       onRequestCloningDesign,

@@ -63,7 +63,7 @@ function illustrationToolbarFixture(icons) {
     if (params.tools.some(tool => tool.kind !== 'output' && !accepted.has(tool.icon))) throw new Error('Unsupported icon');
     return { mounted: true };
   } };
-  const toolbar = createWorkspaceTools({ hikari, document: { body: { classList }, defaultView: {}, getElementById: id => nodes[id] } });
+  const toolbar = createWorkspaceTools({ hikari, document: { body: { classList }, defaultView: { addEventListener() {} }, getElementById: id => nodes[id] } });
   const info = { permissions: ['layout'], layout: { workspaceTools: { available: true, ...(icons ? { icons } : {}) } } };
   return { calls, events, nodes, classes, toolbar, info };
 }

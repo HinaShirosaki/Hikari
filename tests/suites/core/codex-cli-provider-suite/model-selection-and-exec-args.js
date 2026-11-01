@@ -642,8 +642,8 @@ process.stdin.on('data', (chunk) => {
         assert.match(describe('paper_download'), /share its original query as `collection_name`/);
         assert.doesNotMatch(describe('paper_download'), /linked_name/);
         assert.match(describe('paper_download'), /deny_paper_download: true/);
-        assert.match(describe('assay_table'), /hidden Assay plate TSV/);
-        assert.match(describe('assay_table'), /never local lookup tools for active plate rows/);
+        assert.match(describe('assay_table'), /already-created complete scratch table ID/);
+        assert.match(describe('assay_table'), /never substitute local lookup data for current UI values/);
         for (const text of [buildHikariAgentMcpInstructions(), ...definitions.map((tool) => tool.description)]) {
           assert.doesNotMatch(text, /mcp__[a-z0-9-]+__/i);
         }

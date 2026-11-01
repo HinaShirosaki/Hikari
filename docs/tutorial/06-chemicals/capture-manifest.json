@@ -1,5 +1,5 @@
 {
-  "sourceVersion": "1.1.0-beta.9",
+  "sourceVersion": "1.1.0-beta.10",
   "exampleDate": "2026-10-24",
   "timezone": "America/Chicago",
   "viewport": [
@@ -33,7 +33,7 @@
           "label": "Chemicals",
           "rect": {
             "x": 336,
-            "y": 145,
+            "y": 120,
             "width": 674,
             "height": 378
           }
@@ -259,22 +259,11 @@
           "badge": "right"
         },
         {
-          "selector": "#chemical-results-summary",
-          "label": "How many are shown",
-          "rect": {
-            "x": 336,
-            "y": 108,
-            "width": 163,
-            "height": 19
-          },
-          "badge": "right"
-        },
-        {
           "selector": "#chemical-list",
           "label": "Matching chemicals",
           "rect": {
             "x": 336,
-            "y": 145,
+            "y": 120,
             "width": 674,
             "height": 127
           }
@@ -288,7 +277,7 @@
         "x": 0,
         "y": 61,
         "width": 1028,
-        "height": 564
+        "height": 539
       },
       "targets": [
         {
@@ -318,7 +307,7 @@
           "label": "Imported chemicals",
           "rect": {
             "x": 336,
-            "y": 145,
+            "y": 120,
             "width": 674,
             "height": 462
           }

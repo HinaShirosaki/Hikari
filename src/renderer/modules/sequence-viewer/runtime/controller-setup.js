@@ -6,6 +6,10 @@ import { createSequenceViewerAnnotationController } from '../annotation.js';
 import { createSequenceViewerCloningDesignController } from '../cloning-design.js';
 import { createPrimerOrderController } from '../primer-order-dialog.js';
 import { createPrimerLibraryController } from '../primer-library.js';
+import { createSequenceSamplePositionController } from '../sample-position.js';
+import { createDnaFragmentDialog } from '../fragment-dialog.js';
+import { createDnaDigestionController } from '../digestion-dialog.js';
+import { getCommercialRestrictionFeaturesForRecord } from '../restriction-analysis.js';
 import { createSequenceViewerDetailController } from '../detail-controller.js';
 import { createSequenceViewerHomeController } from '../home-controller.js';
 import { createSequenceViewerProteinBuilderController } from '../protein-builder.js';
@@ -18,6 +22,9 @@ import {
 
 export function setupSequenceViewerControllers(ctx) {
   const { actions, controllers, elements, onNavigateDetail, onNavigateHome, options, rootDocument, state } = ctx;
+  controllers.samplePosition = createSequenceSamplePositionController({
+    rootDocument, appState: options?.state, persist: options?.persist, createId: options?.createId
+  });
   controllers.home = createSequenceViewerHomeController({
     rootDocument,
     elements,
@@ -43,6 +50,7 @@ export function setupSequenceViewerControllers(ctx) {
     onDeleteLibraryFolder: actions.deleteLibraryFolder,
     onMoveLibraryEntry: actions.moveLibraryEntryToFolder,
     onRecognizeBackbone: actions.recognizeCurrentBackboneInsert,
+    onRecordSamplePosition: (entry) => controllers.samplePosition.openSequence(entry),
     onLibraryEntryLoaded: ({ alignments }) => {
       actions.setAlignmentSessions(alignments);
       controllers.alignment?.handleReferenceRecordChanged?.();
@@ -64,7 +72,37 @@ export function setupSequenceViewerControllers(ctx) {
   controllers.primerLibrary = createPrimerLibraryController({
     rootDocument, elements, appState: options?.state, persist: options?.persist,
     createId: options?.createId, getSelectedRecord: actions.getSelectedRecord,
+    onRecordSamplePosition: (primer) => controllers.samplePosition.openPrimer(primer),
     onRequestPrimerOrder: (primers) => controllers.primerOrder?.open?.(primers)
+  });
+
+  controllers.fragments = createDnaFragmentDialog({
+    rootDocument, getSelectedRecord: actions.getSelectedRecord,
+    getEntryId: () => state.activeEntryId, appState: options?.state,
+    saveFragment: actions.saveDerivedDnaFragment
+  });
+
+  controllers.digestion = createDnaDigestionController({
+    rootDocument, getSelectedRecord: actions.getSelectedRecord, getEntryId: () => state.activeEntryId,
+    getSites: () => getCommercialRestrictionFeaturesForRecord(actions.getSelectedRecord(), { vendorFilter: state.restrictionVendorFilter }),
+    getFeatureFromEvent: event => {
+      const surface = event.target?.closest?.('[data-feature-index]');
+      const index = Number(surface?.dataset.featureIndex);
+      if (!surface || !Number.isInteger(index)) return null;
+      if (elements.vectorBuilderMap?.contains(surface) || elements.vectorBuilderSequence?.contains(surface)) {
+        return controllers.vectorBuilder?.getFeatureByIndex(actions.getSelectedRecord(), index);
+      }
+      if (elements.sequenceHost?.contains(surface) || elements.featureRailHost?.contains(surface)) {
+        return controllers.detail?.getVisibleFeaturesForRecord(actions.getSelectedRecord())[index];
+      }
+      return null;
+    },
+    hideMenus: () => {
+      controllers.detail?.hideFeatureContextMenu();
+      if (elements.vectorBuilderContextMenu) elements.vectorBuilderContextMenu.hidden = true;
+      rootDocument?.querySelectorAll?.('[data-sequence-hover-tooltip]').forEach(node => { node.hidden = true; });
+    },
+    saveFragments: actions.saveDerivedDnaFragments, setStatus: actions.setStatus
   });
 
   controllers.detail = createSequenceViewerDetailController({
@@ -77,6 +115,7 @@ export function setupSequenceViewerControllers(ctx) {
     hasStoragePath: actions.hasStoragePath,
     persistFeatureMutation: actions.persistFeatureMutation,
     onRequestSave: actions.saveCurrentRecordToLibrary,
+    onSaveDnaFragment: (range) => controllers.fragments.open({ range }),
     onRequestAnnotate: () => controllers.annotation?.annotateCurrentRecord?.(),
     onApplySequenceEdit: actions.applySequenceEdit,
     onApplyAminoAcidEdit: actions.applyAminoAcidEdit,

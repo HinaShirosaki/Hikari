@@ -437,6 +437,79 @@
         </section>
       </div>
 
+      <dialog id="sequence-viewer-quick-sample-overlay" class="app-dialog-overlay app-dialog-overlay--center" aria-labelledby="sequence-viewer-quick-sample-title" hidden>
+        <div class="biology-notebook-quick-sample-dialog app-dialog-surface">
+          <div class="app-dialog-head">
+            <div>
+              <h3 id="sequence-viewer-quick-sample-title"><span data-i18n="dna.ui.recordSamplePosition">Record sample position</span></h3>
+            </div>
+            <button id="sequence-viewer-quick-sample-close-btn" class="app-dialog-close-btn" type="button" aria-label="Close quick add sample" title="Close" data-i18n-title="dna.full.cd86acc3" data-i18n-aria-label="dna.full.7b5187d3"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+          </div>
+          <form id="sequence-viewer-quick-sample-form" class="biology-notebook-quick-sample-form">
+            <div class="biology-notebook-quick-sample-layout">
+              <section class="biology-notebook-quick-sample-storage" aria-label="Sample storage and position" data-i18n-aria-label="dna.full.3e59c0de">
+                <div class="biology-notebook-quick-sample-location-panel">
+                  <span class="biology-notebook-quick-sample-location-label"><span data-i18n="dna.full.5bc08dc6">Location</span></span>
+                  <div id="sequence-viewer-quick-sample-location-list" class="biology-notebook-quick-sample-location-list" role="listbox" aria-label="Storage locations" data-i18n-aria-label="dna.full.1b4dce06"></div>
+                  <label class="biology-notebook-quick-sample-container-field">
+                    <span data-i18n="dna.full.b23d4718">Container</span>
+                    <select id="sequence-viewer-quick-sample-container" required></select>
+                  </label>
+                </div>
+                <div class="biology-notebook-quick-sample-grid-panel">
+                  <div class="biology-notebook-quick-sample-grid-head">
+                    <strong><span data-i18n="dna.full.54989f84">Grid box</span></strong>
+                    <span id="sequence-viewer-quick-sample-grid-label" class="small-note"><span data-i18n="dna.full.54989f84">Grid box</span></span>
+                  </div>
+                  <div id="sequence-viewer-quick-sample-grid" class="biology-notebook-quick-sample-grid is-empty" aria-label="Container positions" data-i18n-aria-label="dna.full.d8cb3878">
+                    <p class="small-note"><span data-i18n="dna.full.b5182db6">Choose a container.</span></p>
+                  </div>
+                </div>
+              </section>
+              <section class="biology-notebook-quick-sample-fields" aria-label="Sample details" data-i18n-aria-label="dna.full.9836ee05">
+                <label>
+                  <span data-i18n="dna.full.ab0de2a6">Sample Name</span>
+                  <input id="sequence-viewer-quick-sample-name" required autocomplete="off" placeholder="Required"  data-i18n-placeholder="dna.full.51e4b240"/>
+                </label>
+                <div class="biology-notebook-quick-sample-field-row">
+                  <label>
+                    <span data-i18n="dna.full.fb4006b4">Sample Code</span>
+                    <input id="sequence-viewer-quick-sample-code" autocomplete="off" placeholder="Auto"  data-i18n-placeholder="dna.full.126befb6"/>
+                  </label>
+                  <label>
+                    <span data-i18n="dna.full.d155d06d">Type</span>
+                    <select id="sequence-viewer-quick-sample-type"></select>
+                  </label>
+                </div>
+                <div class="biology-notebook-quick-sample-field-row">
+                  <label>
+                    <span data-i18n="dna.full.a4819fc1">Lot / Batch</span>
+                    <input id="sequence-viewer-quick-sample-lot" autocomplete="off" />
+                  </label>
+                  <label>
+                    <span data-i18n="dna.full.32bee3d6">Concentration</span>
+                    <input id="sequence-viewer-quick-sample-concentration" autocomplete="off" placeholder="e.g. 2 mg/mL" />
+                  </label>
+                </div>
+              </section>
+            </div>
+            <div class="biology-notebook-quick-sample-footer">
+              <p id="sequence-viewer-quick-sample-status" class="small-note" aria-live="polite"></p>
+              <div class="form-actions">
+                <button id="sequence-viewer-quick-sample-cancel-btn" class="ghost-btn" type="button"><span data-i18n="dna.full.35afca3b">Cancel</span></button>
+                <button id="sequence-viewer-quick-sample-submit-btn" class="primary-btn biology-notebook-quick-sample-submit-btn" type="submit" aria-label="Add Sample" title="Add Sample" data-i18n-title="dna.full.462bc166" data-i18n-aria-label="dna.full.462bc166">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M5.5 4h7M7 4v5l-2.6 6.4A3.2 3.2 0 0 0 7.4 20h2.2a3.2 3.2 0 0 0 3-4.4L10 9V4"></path>
+                    <path d="M14 14.5h6M17 11.5v6"></path>
+                  </svg>
+                  <span class="sr-only"><span data-i18n="dna.full.462bc166">Add Sample</span></span>
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </dialog>
+
       <dialog id="sequence-viewer-primer-library-overlay" class="sequence-viewer-primer-library-overlay app-dialog-overlay app-dialog-overlay--center" aria-labelledby="sequence-viewer-primer-library-title">
         <section class="sequence-viewer-primer-library-dialog app-dialog-surface">
           <div class="result-card-head app-dialog-head">
@@ -451,7 +524,7 @@
             <table class="sequence-viewer-primer-library-table">
               <thead><tr>
                 <th scope="col"><input id="sequence-viewer-primer-library-select-all" type="checkbox" aria-label="Select all visible primers" data-i18n-aria-label="dna.ui.selectAllVisiblePrimers"></th>
-                <th scope="col" data-i18n="dna.ui.name">Name</th><th scope="col" data-i18n="dna.ui.sequence53">Sequence (5′ → 3′)</th><th scope="col">nt</th><th scope="col" data-i18n="dna.ui.source">Source</th>
+                <th scope="col" data-i18n="dna.ui.name">Name</th><th scope="col" data-i18n="dna.ui.sequence53">Sequence (5′ → 3′)</th><th scope="col">nt</th><th scope="col" data-i18n="dna.ui.source">Source</th><th scope="col"><span class="sr-only" data-i18n="dna.ui.recordSamplePosition">Record sample position</span></th>
               </tr></thead>
               <tbody id="sequence-viewer-primer-library-body"></tbody>
             </table>

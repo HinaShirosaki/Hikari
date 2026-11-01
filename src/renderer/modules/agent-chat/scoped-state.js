@@ -1,4 +1,5 @@
 import { asArray, trimText } from './shared.js';
+import { normalizeAssayContextTable } from '../../../shared/assay-agent-context.mjs';
 import {
   normalizeAgentChatState,
   normalizePaperAgentChatSessions,
@@ -110,6 +111,7 @@ function normalizeHiddenContext(context = {}) {
     kind: trimText(source.kind || 'selection', 80),
     label: trimText(source.label || 'Hidden context', 120),
     text,
+    ...(source.assayTable ? { assayTable: normalizeAssayContextTable(source.assayTable) } : {}),
     paperId: trimText(source.paperId, 220),
     paperTitle: trimText(source.paperTitle, 320),
     pageNumber: Number.isFinite(Number(source.pageNumber))

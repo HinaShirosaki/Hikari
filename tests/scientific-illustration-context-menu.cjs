@@ -37,9 +37,10 @@ async function verifyContextMenu({ tool, evaluate, check, win, pause, temp }) {
   const clickAction = async action => { await mouse(await center(`#canvas-context-menu [data-context-action="${action}"]`), 'left'); return settle(); };
   const menuHidden = () => evaluate('document.getElementById("canvas-context-menu").hidden');
   try {
+    await evaluate('document.fonts.ready.then(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))');
     const empty = await center('#main-canvas'); await mouse(empty);
     let available = await availability();
-    check(!await menuHidden() && available.paste && !available.copy && !available.group && !available.ungroup && !available['save-asset'], 'Empty canvas opens a menu with only Paste available');
+    check(!await menuHidden() && available.paste && !available.copy && !available.group && !available.ungroup && !available['save-asset'], `Empty canvas opens a menu with only Paste available: ${JSON.stringify({hidden:await menuHidden(),available,empty})}`);
     await key('Escape', 27);
     check(await menuHidden() && await evaluate('document.activeElement.id==="main-canvas"'), 'Escape closes the menu and returns focus to canvas');
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60"><ellipse cx="50" cy="30" rx="48" ry="28" fill="#70aca7"/></svg>';
@@ -57,8 +58,8 @@ async function verifyContextMenu({ tool, evaluate, check, win, pause, temp }) {
     check(await menuHidden() && await evaluate('document.activeElement.id==="figure-title"'), 'Outside click dismisses the menu and permits text-field focus');
     check(await evaluate(`(()=>{const event=new MouseEvent('contextmenu',{bubbles:true,cancelable:true});document.getElementById('figure-title').dispatchEvent(event);return !event.defaultPrevented})()`) && await menuHidden(), 'Text fields keep their native right-click menus');
     await chooseLayers(['context-shape', 'context-label']);
-    await mouse(await center('#main-canvas [data-resize-direction=se]'));
-    check((await selection()).length === 2 && (await availability()).group, 'Right-clicking a shared selection handle keeps its real members');
+    await mouse(await object('context-label'));
+    check((await selection()).length === 2 && (await availability()).group, 'Right-clicking an individually outlined selection member keeps its real members');
     await key('Escape', 27);
     await mouse(await object('context-shape')); available = await availability();
     check((await selection()).length === 2 && available.group && !available.ungroup, 'Right-clicking a selected member retains the multi-selection');

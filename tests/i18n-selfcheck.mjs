@@ -44,13 +44,24 @@ import { translatedDate } from '../src/renderer/lib/i18n/dom.js';
 import { messageAttributes } from '../src/renderer/lib/i18n/markup.js';
 
 assert.notEqual(presentationKey('Info 🔥'), presentationKey('Info 💧'), 'Distinct supplementary Unicode characters have distinct source IDs');
-assert.deepEqual(i18n.getAvailableLocales(), ['en', 'es'], 'English and the Spanish preview are bundled');
+assert.deepEqual(i18n.getAvailableLocales(), ['en', 'es', 'zh-Hans', 'zh-Hant', 'ja'], 'All product languages are bundled');
 assert.equal(i18n.getLocale(), 'en', 'English remains the default');
 assert.equal(normalizeLocale('es-MX'), 'es');
 assert.equal(normalizeState({ settings: { locale: 'es_MX' } }).settings.locale, 'es');
 assert.equal(canonicalLocale(' en_US '), 'en-US');
 assert.equal(normalizeLocale('en-US'), 'en');
 assert.equal(normalizeLocale('zh_Hans_CN', ['en', 'zh-Hans']), 'zh-Hans');
+for (const [input, expected] of [
+  ['zh', 'zh-Hans'], ['zh-CN', 'zh-Hans'], ['zh-SG', 'zh-Hans'],
+  ['zh-TW', 'zh-Hant'], ['zh-HK', 'zh-Hant'], ['zh-MO', 'zh-Hant'],
+  ['zh_Hant_TW', 'zh-Hant'], ['zh-Hans-TW', 'zh-Hans'], ['zh-Hant-CN', 'zh-Hant'],
+  ['zh-TW-u-nu-hanidec', 'zh-Hant'], ['ja-JP', 'ja'], [' ja_JP ', 'ja']
+]) {
+  assert.equal(normalizeLocale(input), expected, 'Regional locale resolves its writing system: ' + input);
+  assert.equal(normalizeState({ settings: { locale: input } }).settings.locale, expected, 'Workspace keeps the language: ' + input);
+  assert.equal(i18n.setLocale(input), expected, 'Bundled runtime accepts the language: ' + input);
+}
+i18n.setLocale('en');
 for (const invalid of [null, {}, [], 42, '', 'not_a_locale_!', 'fr']) {
   assert.equal(normalizeLocale(invalid), 'en', 'Unsupported preferences remain English');
 }
@@ -118,6 +129,38 @@ for (const [en, es] of [[commonEnglish, commonSpanish], [settingsEnglish, settin
   for (const [key, message] of Object.entries(es)) {
     assert.ok(Object.hasOwn(en, key), 'Spanish key has no English source: ' + key);
     assert.deepEqual(parameters(message), parameters(en[key]), 'Translation retains parameters: ' + key);
+  }
+}
+const loadPreviews = async prefix => Object.fromEntries(await Promise.all(['zh-Hans', 'zh-Hant', 'ja']
+  .map(async locale => [locale, Object.values(await import(`${prefix}${locale}.js`))[0]])));
+const translatedFeatures = await Promise.all([
+  ['agent', agentEnglish, 'agent-chat'], ['plate', plateEnglish, 'assay'],
+  ['notebook', notebookEnglish, 'biology-notebook'], ['home', homeEnglish, 'home-dashboard'],
+  ['chemicals', chemicalsEnglish, 'lab-common-inventory'], ['papers', papersEnglish, 'papers'],
+  ['samples', samplesEnglish, 'personal-inventory'], ['protocol', protocolEnglish, 'protocol'],
+  ['dna', dnaEnglish, 'sequence-viewer'], ['tools', toolsEnglish, 'tool-box'],
+  ['workflow', workflowEnglish, 'workflow']
+].map(async ([namespace, english, module]) => [namespace, english, await loadPreviews(`../src/renderer/modules/${module}/locales/`)]));
+for (const [namespace, englishCatalog, previews, complete] of [
+  ['common', commonEnglish, await loadPreviews('../src/renderer/lib/i18n/')],
+  ['shell', shellEnglish, await loadPreviews('../src/renderer/lib/i18n/shell-')],
+  ['settings', settingsEnglish, await loadPreviews('../src/renderer/modules/settings/locales/')],
+  ...translatedFeatures.map(feature => [...feature, true])
+]) {
+  const parameters = message => [...new Set(Object.values(typeof message === 'string' ? { other: message } : message)
+    .flatMap(text => [...text.matchAll(/\{(\w+)\}/g)].map(match => match[1])))].sort();
+  for (const [locale, messages] of Object.entries(previews)) {
+    if (complete) assert.deepEqual(Object.keys(messages).filter(key => !key.startsWith('full.')).sort(), Object.keys(englishCatalog).filter(key => !key.startsWith('full.')).sort(), `${locale} covers every semantic message in ${namespace}`);
+    if (namespace === 'notebook' || namespace === 'plate') assert.deepEqual(Object.keys(messages).sort(), Object.keys(englishCatalog).sort(), `${locale} covers every caption and control message in ${namespace}`);
+    for (const [key, message] of Object.entries(messages)) {
+      assert.ok(Object.hasOwn(englishCatalog, key), `${locale} key has an English source: ${namespace}.${key}`);
+      assert.equal(typeof message, 'string');
+      assert.ok(message.length > 0 || englishCatalog[key] === '', `${locale} preview is not unexpectedly empty: ${key}`);
+      assert.deepEqual(parameters(message), parameters(englishCatalog[key]), `${locale} retains parameters: ${key}`);
+    }
+    const preview = createI18n({ locale, catalogs: { en: { [namespace]: englishCatalog, test: { fallback: 'English fallback' } }, [locale]: { [namespace]: messages } } });
+    assert.equal(preview.getLocale(), locale);
+    assert.equal(preview.t('test.fallback'), 'English fallback', 'Incomplete previews retain the English fallback');
   }
 }
 for (const field of CHEMICAL_IMPORT_FIELDS) assert.equal(chemicalsEnglish['field.' + field.key], field.label, 'Chemical UI English matches the canonical import schema: ' + field.key);
@@ -225,8 +268,8 @@ spanish.setLocale('es_MX');
 assert.equal(spanish.getLocale(), 'es-MX');
 assert.equal(spanish.t('test.regional'), 'México');
 assert.equal(spanish.t('settings.startup.resume'), 'Reanudar el último módulo', 'Regional catalogs inherit Spanish module messages');
-assert.deepEqual(i18n.getAvailableLocales(), ['en', 'es'], 'Only product locales are registered by default');
+assert.deepEqual(i18n.getAvailableLocales(), ['en', 'es', 'zh-Hans', 'zh-Hant', 'ja'], 'Only product locales are registered by default');
 const uncatalogued = createPresentation('selfcheck');
 assert.match(uncatalogued.html('Copy missing from the catalog'), />Copy missing from the catalog</, 'Uncatalogued copy renders its English source, not its key');
 assert.match(uncatalogued.render(uncatalogued.compose([uncatalogued.message('Also missing {n}', { n: 2 })])), />Also missing 2</);
-console.log('i18n selfcheck passed: English, Spanish, regional fallback, catalogs, interpolation, plurals, formatting, preferences, subscriptions.');
+console.log('i18n selfcheck passed: English, Spanish, Simplified/Traditional Chinese, Japanese, regional fallback, catalogs, interpolation, plurals, formatting, preferences, subscriptions.');

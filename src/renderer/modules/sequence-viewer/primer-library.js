@@ -4,6 +4,7 @@ const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../lib/html.js';
 import { showTransientNotice } from '../../lib/notify.js';
 import { addPrimersToLibrary, normalizePrimerLibrary } from '../../../shared/primer-library.mjs';
+import { samplePositionButtonHtml } from './sample-position.js';
 
 export function createPrimerLibraryController(config = {}) {
   const elements = config.elements || {};
@@ -44,7 +45,8 @@ export function createPrimerLibraryController(config = {}) {
         <td><code>${escapeHtml(row.sequence)}</code></td>
         <td class="sequence-viewer-primer-library-length">${row.sequence.length}</td>
         <td>${escapeHtml(row.sourceName || '—')}</td>
-      </tr>`).join('') : `<tr><td colspan="5" class="sequence-viewer-primer-library-empty">${i18nUi.render((query ? i18nUi.message("No primers match your search.") : i18nUi.message("Save primers from a cloning design or a primer hover window to build your library.")))}</td></tr>`);
+        <td>${samplePositionButtonHtml('data-primer-sample-position', row.id)}</td>
+      </tr>`).join('') : `<tr><td colspan="6" class="sequence-viewer-primer-library-empty">${i18nUi.render((query ? i18nUi.message("No primers match your search.") : i18nUi.message("Save primers from a cloning design or a primer hover window to build your library.")))}</td></tr>`);
     syncSelection();
   }
 
@@ -124,6 +126,11 @@ export function createPrimerLibraryController(config = {}) {
       }
       if (row.name === name) return;
       commit(rows.map(entry => entry.id === row.id ? { ...entry, name, updatedAt: new Date().toISOString() } : entry), 'Rename library primer');
+    });
+    elements.primerLibraryBody?.addEventListener('click', event => {
+      const button = event.target.closest?.('[data-primer-sample-position]');
+      if (!button) return;
+      config.onRecordSamplePosition?.(entries().find(row => row.id === button.dataset.primerSamplePosition));
     });
     elements.primerLibraryExportBtn?.addEventListener('click', () => {
       config.onRequestPrimerOrder?.(entries().filter(entry => selected.has(entry.id)));

@@ -542,8 +542,8 @@ ORIGIN
 
   const libraryList = document.getElementById('sequence-viewer-library-list');
   const eventTarget = {
-    closest() {
-      return { dataset: { sequenceEntryId: 'entry_1' } };
+    closest(selector) {
+      return selector.includes('data-sequence-entry-id') ? { dataset: { sequenceEntryId: 'entry_1' } } : null;
     }
   };
 

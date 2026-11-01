@@ -5,5 +5,5 @@
   "icon": "icon.svg",
   "description": "Assemble editable scientific figures with Codex, a canvas, and reusable components.",
   "serve": true,
-  "permissions": ["storage", "files", "downloads", "agent:chat", "agent:canvas", "layout"]
+  "permissions": ["storage", "files", "downloads", "clipboard:read", "agent:chat", "agent:canvas", "layout"]
 }

@@ -16,7 +16,7 @@ const readDataUrl = (file, type) => new Promise((resolve, reject) => {
   reader.readAsDataURL(new Blob([file], { type }));
 });
 
-export function initArtworkImport({ workspace, getCanvas, getIllustrationId, getSelected, select, showAssets, status }) {
+export function initArtworkImport({ workspace, getCanvas, getIllustrationId, select, showAssets, status }) {
   const $ = id => document.getElementById(id), dialog = $('raster-dialog'), preview = $('raster-preview');
   let picker, session, generation = 0, busy = false;
   function clear() {
@@ -60,7 +60,6 @@ export function initArtworkImport({ workspace, getCanvas, getIllustrationId, get
   }
   $('import').addEventListener('click', () => chooseFile('canvas'));
   $('import-asset').addEventListener('click', () => chooseFile('asset'));
-  $('replace-raster').addEventListener('click', () => { const object = getSelected(); if (object?.type === 'raster') chooseFile('canvas', object.id); });
   $('asset-input').addEventListener('change', async () => {
     const file = $('asset-input').files[0], intent = picker; $('asset-input').value = ''; picker = null;
     if (!file || !intent) return;

@@ -145,7 +145,7 @@ test('documented Plotly updates preserve data and heatmap recipe preserves zeroe
   assert.deepEqual(heatmap.graph.inspection.issues, []);
 });
 
-test('documented Python example runs in the real sandbox and refuses truncated staging', async () => {
+test('documented Python example runs in the real sandbox with all stored rows', async () => {
   const workspace = await fs.mkdtemp(path.join(os.tmpdir(), 'assay-skill-python-'));
   try {
     const client = createClient({ runPythonSandbox, sandboxRoot: workspace });
@@ -166,11 +166,8 @@ test('documented Python example runs in the real sandbox and refuses truncated s
     assert.equal(builtIn.table.rows[0].n, 51);
     assert.equal(builtIn.table.rows[0].mean, 25);
     const example = namedExample('Example Python dose summary');
-    const before = client.tables.listTables().length;
-    const refused = await client.call(example.tool, { ...example.arguments, table_id: large.table.id });
-    assert.equal(refused.ok, false);
-    assert.equal(refused.status, 'python_failed');
-    assert.match(refused.error, /Input table is missing rows/);
-    assert.equal(client.tables.listTables().length, before);
+    const complete = await client.success(example.tool, { ...example.arguments, table_id: large.table.id });
+    assert.equal(complete.table.rows[0].n, 51);
+    assert.equal(complete.table.rows[0].mean, 25);
   } finally { await fs.rm(workspace, { recursive: true, force: true }); }
 });

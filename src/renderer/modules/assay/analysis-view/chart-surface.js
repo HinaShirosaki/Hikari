@@ -70,6 +70,8 @@ function createChartSurface({
     if (!assayChartFormatPanel) {
       return;
     }
+    const EventCtor = assayChartFormatPanel.ownerDocument?.defaultView?.CustomEvent;
+    if (EventCtor) assayChartFormatPanel.dispatchEvent(new EventCtor('assay:open-chart-format'));
     assayChartFormatPanel.open = true;
     chartControls?.refresh();
     assayChartFormatPanel.scrollIntoView({ block: 'nearest' });
@@ -296,6 +298,18 @@ function createChartSurface({
     unmountAnalysisChart,
     hasFittedCurve,
     renderAnalysisChart,
+    redrawChart(model) {
+      if (!agentPlotlyTarget) {
+        if (model) renderAnalysisChart(model);
+        return;
+      }
+      const target = agentPlotlyTarget;
+      agentReady.then(() => {
+        if (target === agentPlotlyTarget && target.getClientRects().length) {
+          return getPlotlyRuntime()?.Plots?.resize(target);
+        }
+      }).catch(() => {});
+    },
     exportChartImage,
     getChartStyle,
     loadChartStyle,

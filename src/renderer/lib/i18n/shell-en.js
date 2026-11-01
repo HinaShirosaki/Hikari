@@ -8,6 +8,8 @@ export const shellEnglish = Object.freeze({
   "clock.label": "Current local time",
   "navigation.label": "Primary navigation",
   "navigation.more": "More modules",
+  "leftRail.show": "Show left rail",
+  "leftRail.hide": "Hide left rail",
   "history.label": "Undo and redo",
   "history.undo": "Undo",
   "history.redo": "Redo",

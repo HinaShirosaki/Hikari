@@ -3,6 +3,7 @@ import "../../localization.js";
 const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../../../lib/html.js';
 import { cleanText } from '../../shared.js';
+import { renderDigestionActions } from '../../digestion-actions.js';
 
 // The vector map's right-click menu: what the click landed on, which range it
 // covers, and the edit each menu item runs.
@@ -123,6 +124,7 @@ function createVectorContextActions({
       : `<button type="button" class="sequence-viewer-context-item" data-vector-action="protein-insert">${i18nUi.html("Insert Protein Construct...")}</button>`;
 
     i18nUi.setHtml(menu, `
+      ${renderDigestionActions(getFeatureByIndex(record, vb().selectedFeatureIndex), { menu: true })}
       ${rangeLabel ? `<p class="small-note">${escapeHtml(rangeLabel)}</p>` : ''}
       ${insertBaseItems}
       <button type="button" class="sequence-viewer-context-item" data-vector-action="design-primer"${disabledRange}>${i18nUi.html("Design Primer")}</button>

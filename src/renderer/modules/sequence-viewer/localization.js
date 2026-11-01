@@ -1,4 +1,7 @@
 import { dnaSpanish } from './locales/es.js';
+import { dnaSimplifiedChinese } from './locales/zh-Hans.js';
+import { dnaTraditionalChinese } from './locales/zh-Hant.js';
+import { dnaJapanese } from './locales/ja.js';
 import { createPresentation } from '../../lib/i18n/presentation.js';
 const statusPresentation = createPresentation('dna');
 import { i18n } from '../../lib/i18n/index.js';
@@ -9,6 +12,9 @@ import { dnaEnglish } from './locales/en.js';
 
 i18n.registerMessages('en', 'dna', dnaEnglish);
 i18n.registerMessages('es', 'dna', dnaSpanish);
+i18n.registerMessages('zh-Hans', 'dna', dnaSimplifiedChinese);
+i18n.registerMessages('zh-Hant', 'dna', dnaTraditionalChinese);
+i18n.registerMessages('ja', 'dna', dnaJapanese);
 export const dnaText = i18n.scope('dna');
 export const dnaMessage = (key, params) => messageSpan(`dna.${key}`, params);
 export const dnaAttributes = (bindings, params) => messageAttributes(

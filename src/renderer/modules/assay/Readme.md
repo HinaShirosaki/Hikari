@@ -19,7 +19,7 @@
 - `plate-model.js`: plate definitions, well IDs, layout normalization, and axis template helpers.
 - `numbering.js`: assay number allocation and previews.
 - `ui/`: browser-view rendering and top-level event bindings.
-- `workspace/`: the analyze workspace, the assay form and list, and notebook links.
+- `workspace/`: the analyze workspace, the assay form and list, and notebook links. Analyze keeps assay navigation on the left; `context-rail.js` mounts Data Analysis and Chart Format beside the shared chat, with a vertical Chart/Data switch above the tools. The selected data tab survives view switches, and transforms reveal the data workspace.
 - `agent/`: the context the agent rail reads for the open plate.
 - `public-api.js`: the narrow surface other features import.
 - `dom.js`: DOM node collection for `assay-view.html`.

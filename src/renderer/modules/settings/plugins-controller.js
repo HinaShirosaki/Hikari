@@ -75,6 +75,7 @@ export function createPluginsController({
       name: inspected.name,
       version: inspected.version,
       description: inspected.description,
+      iconDataUrl: inspected.iconDataUrl || '',
       permissions: Array.isArray(inspected.permissions) ? inspected.permissions : [],
       settings: inspected.settings || [],
       path: inspected.path,

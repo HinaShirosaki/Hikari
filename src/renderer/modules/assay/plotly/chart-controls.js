@@ -21,7 +21,7 @@ export function mountChartControls(container, { store, promptForName, agentEleme
   let form;
   let elementControls;
   function notice(message = '') {
-    i18nUi.setText(q('validation'), message);
+    i18nUi.setOwnedText(q('validation'), message);
     q('validation').hidden = !message;
   }
   function apply(patch) {
@@ -83,8 +83,8 @@ export function mountChartControls(container, { store, promptForName, agentEleme
     if (focusedTab && activeTab !== 'elements') container.querySelector(`[data-cc-tab="${activeTab}"]`).focus();
   }
   function refreshPresets(selected = '') {
-    form.options('presetSelect', [['', 'Custom'], [FIGURE_CLASSIC_PRESET, 'Figure Classic'],
-      ...listChartPresets().map((name) => [`saved:${name}`, name === 'Figure Classic' ? `${name} (saved)` : name])]);
+    form.options('presetSelect', [['', i18nUi.message('Custom')], [FIGURE_CLASSIC_PRESET, i18nUi.message('Figure Classic')],
+      ...listChartPresets().map((name) => [`saved:${name}`, name === 'Figure Classic' ? i18nUi.message('{p0} (saved)', { p0: name }) : name])]);
     q('presetSelect').value = selected;
     q('presetDeleteBtn').disabled = !selected || selected === FIGURE_CLASSIC_PRESET;
   }
@@ -129,9 +129,11 @@ export function mountChartControls(container, { store, promptForName, agentEleme
     if (!key) return;
     if (event.target.type === 'number' && !event.target.validity.valid) {
       const { min, max, labels } = event.target;
-      const name = labels?.[0]?.firstChild?.textContent.trim() || 'This field';
-      const range = min && max ? `between ${min} and ${max}` : min ? `of at least ${min}` : max ? `of at most ${max}` : 'that is a valid number';
-      notice(`${name} needs a value ${range}.`);
+      const name = labels?.[0]?.firstChild?.textContent.trim() || i18nUi.text('This field');
+      notice(min && max ? i18nUi.message('{p0} needs a value between {p1} and {p2}.', { p0: name, p1: min, p2: max })
+        : min ? i18nUi.message('{p0} needs a value of at least {p1}.', { p0: name, p1: min })
+          : max ? i18nUi.message('{p0} needs a value of at most {p1}.', { p0: name, p1: max })
+            : i18nUi.message('{p0} needs a value that is a valid number.', { p0: name }));
       return;
     }
     const style = store.getStyle();
@@ -195,7 +197,7 @@ export function mountChartControls(container, { store, promptForName, agentEleme
     }
     if (key === 'presetSaveBtn') {
       const current = q('presetSelect').value;
-      const name = sanitizePresetName(askName('Save this chart style as:', current.startsWith('saved:') ? current.slice(6) : ''));
+      const name = sanitizePresetName(askName(i18nUi.text('Save this chart style as:'), current.startsWith('saved:') ? current.slice(6) : ''));
       if (name) {
         if (saveChartPreset(name, store.getStyle())) refreshPresets(`saved:${name}`);
         else notice('Unable to save this preset.');

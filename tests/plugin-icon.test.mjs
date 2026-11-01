@@ -64,7 +64,7 @@ test('presentation refresh updates existing install names and icons without chan
   await loadPluginIcons({ plugins: [plugin, { ...plugin, bundled: true }, disabled, { ...plugin, service: {} }], appRegistry: [app], api, documentObject });
   assert.equal(reads, 2);
   assert.match(app.iconMarkup, /data-plugin-icon/);
-  assert.deepEqual(plugin, { ...before, name: manifest.name });
+  assert.deepEqual(plugin, { ...before, name: manifest.name, iconDataUrl: dataUrl });
   assert.equal(disabled.name, manifest.name, 'Disabled install names also refresh in Settings');
   assert.equal(disabled.enabled, false);
   assert.equal(app.label, manifest.name);
@@ -74,7 +74,9 @@ test('presentation refresh updates existing install names and icons without chan
   assert.match(frame.title, /Icon plugin/);
   assert.match(frame.title, /storage/);
   assert.doesNotMatch(frame.title, /files/);
-  for (const inspected of [{ ok: false, name: 'Rejected name' }, { ok: true, id: 'different', name: 'Different plugin', iconDataUrl: dataUrl }]) {
+  await loadPluginIcons({ plugins: [plugin], appRegistry: [app], api: { inspectPluginFolder: async () => ({ ok: false, error: 'Unknown permission' }) }, documentObject });
+  assert.match(app.iconMarkup, /data-plugin-icon/, 'An inspection error keeps the installed icon');
+  for (const inspected of [{ ok: true, id: 'different', name: 'Different plugin', iconDataUrl: dataUrl }]) {
     await loadPluginIcons({ plugins: [plugin], appRegistry: [app], api: { inspectPluginFolder: async () => inspected }, documentObject });
     assert.doesNotMatch(app.iconMarkup, /data-plugin-icon/);
     assert.equal(plugin.name, manifest.name);

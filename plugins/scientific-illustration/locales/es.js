@@ -1,5 +1,7 @@
 // Spanish preview; other messages fall back to English.
 (function(root){root.HikariUiSpanish={...(root.HikariUiSpanish||{}),figura:{
+  "guides.label": "Guías inteligentes",
+  "guides.hint": "Mantén Cmd/Ctrl al arrastrar para mover libremente.",
   "full.ac8a560": "Restablecer",
   "full.35afca3b": "Cancelar",
   "full.f9ddcd5b": "Aplicar recorte",

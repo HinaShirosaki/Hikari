@@ -5,6 +5,7 @@ import { escapeHtml } from '../../lib/html.js';
 import { COMMON_SEQUENCE_FEATURE_TYPES } from './feature-types.js';
 import { clamp, cleanText, normalizeRecordName } from './shared.js';
 import { createPrimerDesignOverlay } from './detail-feature-editing/primer-design.js';
+import { renderDigestionActions } from './digestion-actions.js';
 import {
   buildManualFeatureId,
   doesFeatureOverlapRange,
@@ -147,6 +148,8 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
     const featureName = cleanText(context?.featureContext?.feature?.name, 120) || 'feature';
     i18nUi.setHtml(elements.featureContextMenu, `
       ${selectionLabel ? `<p class="small-note">${escapeHtml(selectionLabel)}</p>` : ''}
+      ${renderDigestionActions(context?.restrictionFeature, { menu: true })}
+      ${context?.selectionRange ? `<button type="button" class="sequence-viewer-context-item" data-sequence-feature-action="save-fragment">${i18nUi.html('Save DNA Fragment…')}</button>` : ''}
       <button type="button" class="sequence-viewer-context-item" data-sequence-feature-action="add"${context?.selectionRange ? '' : ' disabled'}>${i18nUi.html("Add Feature")}</button>
       <button type="button" class="sequence-viewer-context-item" data-sequence-feature-action="design-primer">${i18nUi.html("Design Primer")}</button>
       <button type="button" class="sequence-viewer-context-item" data-sequence-feature-action="edit"${context?.featureContext ? '' : ' disabled'}>${i18nUi.html("Edit")} ${escapeHtml(featureName)}</button>
@@ -176,7 +179,8 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
 
     return {
       selectionRange,
-      featureContext
+      featureContext,
+      restrictionFeature: visibleFeatures[clickedFeatureIndex]?.type === 'restriction_site' ? visibleFeatures[clickedFeatureIndex] : null
     };
   }
 

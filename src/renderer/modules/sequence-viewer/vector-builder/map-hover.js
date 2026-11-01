@@ -15,6 +15,8 @@ import { showTransientNotice } from '../../../lib/notify.js';
 import { copyPrimerValueFromEvent } from '../primer-copy.js';
 import { createHoverTooltipInteractivity, renderPrimerHoverSection } from '../primer-hover.js';
 import { renderCdsProteinHoverSection } from '../rendering/protein-summary.js';
+import { copyProteinValueFromEvent } from '../protein-copy.js';
+import { renderDigestionActions } from '../digestion-actions.js';
 
 const TOOLTIP_CLASS = 'vector-map__tooltip';
 const POINTER_OFFSET_PX = 14;
@@ -41,6 +43,10 @@ export function attachMapHoverLabel(config = {}) {
     interactivity = createHoverTooltipInteractivity(node, hideNow);
     node.addEventListener('click', (event) => {
       void (async () => {
+        if (event.target?.closest?.('[data-sequence-protein-copy]')) {
+          await copyProteinValueFromEvent(event);
+          return;
+        }
         const result = await copyPrimerValueFromEvent(event);
         if (!result.handled) {
           return;
@@ -56,7 +62,7 @@ export function attachMapHoverLabel(config = {}) {
 
   function hideNow() {
     if (interactivity) {
-      interactivity.cancelHide();
+      interactivity.reset();
     }
     if (node) {
       node.hidden = true;
@@ -71,11 +77,13 @@ export function attachMapHoverLabel(config = {}) {
     interactivity.requestHide();
   }
 
-  function show(text, detailHtml, clientX, clientY) {
+  function show(text, detailHtml, event) {
     const element = ensureNode();
     if (!element) {
       return;
     }
+    const contentKey = text + detailHtml;
+    if (interactivity?.shouldPreserve(event, contentKey)) return;
     interactivity?.cancelHide();
     rootDocument?.querySelectorAll?.('[data-sequence-hover-tooltip]').forEach(node => {
       if (node !== element) node.hidden = true;
@@ -87,7 +95,8 @@ export function attachMapHoverLabel(config = {}) {
       i18nUi.setText(element, text);
     }
     element.classList?.toggle('has-protein-properties', detailHtml.includes('sequence-viewer-protein-hover'));
-    interactivity?.setInteractive(detailHtml.includes('sequence-viewer-primer-copy-btn'));
+    interactivity?.setInteractive(/data-sequence-(?:(?:primer|protein)-copy=|digest-action=)/.test(detailHtml));
+    interactivity?.anchor(event, contentKey);
     element.hidden = false;
 
     // Flip to the other side of the cursor rather than letting the readout run
@@ -96,6 +105,7 @@ export function attachMapHoverLabel(config = {}) {
     const viewHeight = Number(globalThis?.innerHeight) || 0;
     const width = Number(element.offsetWidth) || 0;
     const height = Number(element.offsetHeight) || 0;
+    const { clientX, clientY } = event;
     let left = clientX + POINTER_OFFSET_PX;
     let top = clientY + POINTER_OFFSET_PX;
     if (viewWidth && left + width > viewWidth - 8) {
@@ -127,9 +137,10 @@ export function attachMapHoverLabel(config = {}) {
       }
       const feature = getFeature(Number(trigger.dataset.featureIndex));
       const sequence = getSequence();
-      const detailHtml = renderPrimerHoverSection(feature, sequence, { allowLibrarySave: Boolean(config.allowLibrarySave) }) + renderCdsProteinHoverSection(feature, sequence);
+      const detailHtml = renderPrimerHoverSection(feature, sequence, { allowLibrarySave: Boolean(config.allowLibrarySave), allowPcr: Boolean(config.allowPcr) }) + renderCdsProteinHoverSection(feature, sequence)
+        + (config.allowDigestion ? renderDigestionActions(feature) : '');
       const rect = event.type === 'focusin' ? trigger.getBoundingClientRect?.() : null;
-      show(label, detailHtml, rect ? rect.left : event.clientX, rect ? rect.bottom : event.clientY);
+      show(label, detailHtml, rect ? { type: event.type, clientX: rect.left, clientY: rect.bottom } : event);
     }
 
     host.addEventListener('mousemove', showFeatureReadout);

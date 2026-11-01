@@ -1,4 +1,7 @@
 import { agentSpanish } from './locales/es.js';
+import { agentSimplifiedChinese } from './locales/zh-Hans.js';
+import { agentTraditionalChinese } from './locales/zh-Hant.js';
+import { agentJapanese } from './locales/ja.js';
 import { createPresentation } from '../../lib/i18n/presentation.js';
 const statusPresentation = createPresentation('agent');
 import { createI18n, i18n } from '../../lib/i18n/index.js';
@@ -10,6 +13,9 @@ import { agentEnglish } from './locales/en.js';
 
 i18n.registerMessages('en', 'agent', agentEnglish);
 i18n.registerMessages('es', 'agent', agentSpanish);
+i18n.registerMessages('zh-Hans', 'agent', agentSimplifiedChinese);
+i18n.registerMessages('zh-Hant', 'agent', agentTraditionalChinese);
+i18n.registerMessages('ja', 'agent', agentJapanese);
 // The Home status pill picks its tone from English words, whatever the UI language.
 const english = createI18n({ catalogs: { en: { agent: agentEnglish } } });
 export const agentText = i18n.scope('agent');

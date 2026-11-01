@@ -62,7 +62,7 @@ export function createChartControlsForm({ q, store, selection, pickers, textCont
     const tick = style[`${axis}Tick`];
     const tickPresets = TICK_PRESETS[scale];
     const customTick = selection.customTick[axis] || (tick !== null && !tickPresets.some(([value]) => Number(value) === tick));
-    options(`${axis}TickPreset`, [['auto', 'Auto'], ...tickPresets, ['custom', 'Custom…']]);
+    options(`${axis}TickPreset`, [['auto', i18nUi.message('Auto')], ...tickPresets, ['custom', i18nUi.message('Custom…')]]);
     set(`${axis}TickPreset`, customTick ? 'custom' : tick === null ? 'auto' : tick);
     set(`${axis}Tick`, tick);
     q(`${axis}Tick`).closest('label').hidden = !customTick;
@@ -92,7 +92,7 @@ export function createChartControlsForm({ q, store, selection, pickers, textCont
       q(key).disabled = !style.showVerticalGrid && !style.showHorizontalGrid;
     });
     ['x', 'y'].forEach((axis) => refreshAxis(axis, style, context));
-    options('seriesTarget', [['', 'All series'], ...context.seriesLabels.map((label, i) => [String(i), label || `Series ${i + 1}`])]);
+    options('seriesTarget', [['', i18nUi.message('All series')], ...context.seriesLabels.map((label, i) => [String(i), label || i18nUi.message('Series {p0}', { p0: i + 1 })])]);
     set('seriesTarget', selection.series === null ? '' : String(seriesIndex));
     q('seriesDefaults').hidden = selection.series === null;
     SERIES_FIELDS.forEach((key) => {
@@ -109,7 +109,7 @@ export function createChartControlsForm({ q, store, selection, pickers, textCont
     q('columnNote').hidden = !context.hasFittedCurve;
     ['xColumn', 'yColumn', 'seriesColumn'].forEach((key) => {
       const headers = key === 'yColumn' ? context.numericHeaders : context.headers;
-      options(key, [['auto', 'Auto'], ...headers.map((name) => [name, name])]);
+      options(key, [['auto', i18nUi.message('Auto')], ...headers.map((name) => [name, name])]);
       set(key, headers.includes(style[key]) ? style[key] : 'auto');
       q(key).disabled = !headers.length;
     });

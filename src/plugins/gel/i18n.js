@@ -34,6 +34,7 @@
     return parts.map(p => typeof p === 'string' ? p : t(p.key, p.params)).join('');
   }
   function refresh(doc = typeof document === 'object' ? document : null) {
+    doc?.documentElement?.setAttribute('lang', locale);
     const nodes = [...(doc?.querySelectorAll?.(selector) || [])];
     if (doc?.matches?.(selector)) nodes.unshift(doc);
     for (const node of nodes) {
@@ -96,8 +97,25 @@
       setAttribute(node, attribute, m) { if (!node) return m; const binding = bindingFor(attribute); if (m?.i18nKey) { node.setAttribute?.(binding, m.i18nKey); node.setAttribute?.(`${binding}-params`, JSON.stringify(m.i18nParams)); } else { node.removeAttribute?.(binding); node.removeAttribute?.(`${binding}-params`); } node.setAttribute?.(attribute, value(m)); if (['title','placeholder','alt'].includes(attribute)) node[attribute] = value(m); return m?.i18nKey ? value(m) : m; }
     };
   }
-  root.HikariUi = { createPresentation, registerMessages: register, t, refresh, keyFor, getLocale: () => locale, setLocale(language) { let next; try { next = Intl.getCanonicalLocales(language)[0]; } catch { next = 'en'; } const resolved = catalogs.has(next) ? next : catalogs.has(next.split('-')[0]) ? next.split('-')[0] : 'en'; if (resolved === locale) return locale; locale = resolved; refresh(); for (const listener of listeners) listener(locale); return locale; }, subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); } };
+  function resolveLocale(language) {
+    let canonical = '';
+    try { if (typeof language === 'string') canonical = Intl.getCanonicalLocales(language.trim().replaceAll('_', '-'))[0] || ''; } catch { /* Unsupported preferences use English. */ }
+    const candidates = [], parts = canonical.split('-');
+    while (parts.length && parts[0]) { candidates.push(parts.join('-')); parts.pop(); }
+    if (canonical.split('-')[0] === 'zh') {
+      const scriptLocale = `zh-${new Intl.Locale(canonical).maximize().script}`;
+      if (!candidates.includes(scriptLocale)) candidates.splice(candidates.indexOf('zh'), 0, scriptLocale);
+    }
+    return candidates.find(candidate => catalogs.has(candidate)) || 'en';
+  }
+  root.HikariUi = { createPresentation, registerMessages: register, t, refresh, keyFor, getLocale: () => locale,
+    setLocale(language) { const resolved = resolveLocale(language); if (resolved === locale) return locale; locale = resolved; refresh(); for (const listener of listeners) listener(locale); return locale; },
+    subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); }
+  };
   for (const [namespace, messages] of Object.entries(root.HikariUiEnglish || {})) register('en', namespace, messages);
   for (const [namespace, messages] of Object.entries(root.HikariUiSpanish || {})) register('es', namespace, messages);
+  for (const [language, namespaces] of Object.entries(root.HikariUiTranslations || {})) {
+    for (const [namespace, messages] of Object.entries(namespaces)) register(language, namespace, messages);
+  }
   if (typeof module === 'object' && module.exports) module.exports = root.HikariUi;
 }(typeof window === 'object' ? window : globalThis));

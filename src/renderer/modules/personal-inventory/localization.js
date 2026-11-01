@@ -1,4 +1,7 @@
 import { samplesSpanish } from './locales/es.js';
+import { samplesSimplifiedChinese } from './locales/zh-Hans.js';
+import { samplesTraditionalChinese } from './locales/zh-Hant.js';
+import { samplesJapanese } from './locales/ja.js';
 import { createPresentation } from '../../lib/i18n/presentation.js';
 const statusPresentation = createPresentation('samples');
 import { i18n } from '../../lib/i18n/index.js';
@@ -11,6 +14,9 @@ import { showTransientNotice } from '../../lib/notify.js';
 
 i18n.registerMessages('en', 'samples', samplesEnglish);
 i18n.registerMessages('es', 'samples', samplesSpanish);
+i18n.registerMessages('zh-Hans', 'samples', samplesSimplifiedChinese);
+i18n.registerMessages('zh-Hant', 'samples', samplesTraditionalChinese);
+i18n.registerMessages('ja', 'samples', samplesJapanese);
 export const sampleText = i18n.scope('samples');
 export const sampleMessage = (key, params) => messageSpan(`samples.${key}`, params);
 export const sampleAttributes = (bindings, params) => messageAttributes(

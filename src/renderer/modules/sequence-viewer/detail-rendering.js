@@ -1,4 +1,6 @@
 import { createPresentation } from "../../lib/i18n/presentation.js";
+import { renderPrimerPcrButton } from './primer-hover.js';
+import { renderDigestionActions } from './digestion-actions.js';
 import "./localization.js";
 const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../lib/html.js';
@@ -154,7 +156,7 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
     const selected = features[state.selectedFeatureIndex] || null;
     i18nUi.setHtml(elements.featureDetail, formatSelectedFeatureDetailHtml(selected, record.sequence.length, {
       sequence: record.sequence
-    }));
+    }) + renderPrimerPcrButton(selected) + renderDigestionActions(selected));
   }
 
   function renderSequence(record, options = {}) {

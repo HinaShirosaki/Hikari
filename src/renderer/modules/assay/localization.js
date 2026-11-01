@@ -1,4 +1,7 @@
 import { plateSpanish } from './locales/es.js';
+import { plateSimplifiedChinese } from './locales/zh-Hans.js';
+import { plateTraditionalChinese } from './locales/zh-Hant.js';
+import { plateJapanese } from './locales/ja.js';
 import { createPresentation } from '../../lib/i18n/presentation.js';
 const statusPresentation = createPresentation('plate');
 import { i18n } from '../../lib/i18n/index.js';
@@ -11,6 +14,9 @@ import { plateEnglish } from './locales/en.js';
 
 i18n.registerMessages('en', 'plate', plateEnglish);
 i18n.registerMessages('es', 'plate', plateSpanish);
+i18n.registerMessages('zh-Hans', 'plate', plateSimplifiedChinese);
+i18n.registerMessages('zh-Hant', 'plate', plateTraditionalChinese);
+i18n.registerMessages('ja', 'plate', plateJapanese);
 export const plateText = i18n.scope('plate');
 export const plateMessage = (key, params) => messageSpan(`plate.${key}`, params);
 export const plateAttributes = (bindings, params) => messageAttributes(

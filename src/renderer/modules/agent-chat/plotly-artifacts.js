@@ -50,3 +50,10 @@ export function extractPlotlyGraphArtifactFromProgressEvent(eventPayload = {}) {
   }
   return null;
 }
+
+// Plate has one chart surface. Keep the latest complete figure for this turn,
+// independently of transient progress metadata and visibility.
+export function mergeAgentPlotlyGraphArtifacts(...sources) {
+  const artifacts = sources.flatMap(asArray).map(normalizeAgentPlotlyGraphArtifact).filter(Boolean);
+  return artifacts.length ? [artifacts.at(-1)] : [];
+}

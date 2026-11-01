@@ -1,4 +1,7 @@
 import { chemicalsSpanish } from './locales/es.js';
+import { chemicalsSimplifiedChinese } from './locales/zh-Hans.js';
+import { chemicalsTraditionalChinese } from './locales/zh-Hant.js';
+import { chemicalsJapanese } from './locales/ja.js';
 import { createPresentation } from '../../lib/i18n/presentation.js';
 const statusPresentation = createPresentation('chemicals');
 import { i18n } from '../../lib/i18n/index.js';
@@ -9,6 +12,9 @@ import { chemicalsEnglish } from './locales/en.js';
 
 i18n.registerMessages('en', 'chemicals', chemicalsEnglish);
 i18n.registerMessages('es', 'chemicals', chemicalsSpanish);
+i18n.registerMessages('zh-Hans', 'chemicals', chemicalsSimplifiedChinese);
+i18n.registerMessages('zh-Hant', 'chemicals', chemicalsTraditionalChinese);
+i18n.registerMessages('ja', 'chemicals', chemicalsJapanese);
 export const chemicalText = i18n.scope('chemicals');
 export const chemicalMessage = (key, params) => messageSpan(`chemicals.${key}`, params);
 export const chemicalAttributes = (bindings, params) => messageAttributes(

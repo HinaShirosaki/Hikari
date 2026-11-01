@@ -16,8 +16,6 @@ export const chemicalsEnglish = Object.freeze({
   "sort.expiration_asc": "Expiration (Soonest)",
   "sort.expiration_desc": "Expiration (Latest)",
   "list.title": "Chemicals",
-  "list.initial": "Showing 0 chemicals.",
-  "list.summary": "Showing {visible} of {total} chemicals.",
   "list.emptySearch": "No chemicals match current search/filter.",
   "list.code": "Code",
   "detail.title": "Chemical Details",
@@ -77,7 +75,6 @@ export const chemicalsEnglish = Object.freeze({
   "import.nameColumn.failed": "Import failed: Could not find a chemical name column.",
   "import.parseError.failed": "Import failed: Could not parse chemical import file.",
   "import.desktopOnly.failed": "Import failed: This build can only import Excel files through the desktop parser.",
-  "full.5891b961": "Showing 0 chemicals.",
   "full.48a331e3": "Chemical Details",
   "full.9846de53": " chemical-detail-item-wide",
   "full.943cf80c": " list-row-selected"

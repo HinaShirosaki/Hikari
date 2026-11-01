@@ -114,6 +114,8 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
 
   const mapHover = attachMapHoverLabel({
     allowLibrarySave: true,
+    allowPcr: true,
+    allowDigestion: true,
     host: () => elements.vectorBuilderMap,
     rootDocument,
     getFeature: (index) => getFeatureByIndex(getSelectedRecord(), index),
@@ -520,6 +522,7 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
 
   return {
     applyProteinConstruct,
+    getFeatureByIndex,
     bindEvents,
     clearInsertTarget: () => {
       vb().insertTarget = null;

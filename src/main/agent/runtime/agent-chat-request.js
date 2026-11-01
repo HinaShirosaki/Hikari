@@ -2,6 +2,7 @@
 
 const { extractHtmlArtifactFromToolEvent, mergeHtmlArtifacts } = require('./tool-artifacts/html-output.js');
 const { extractImageArtifactFromToolEvent, mergeImageArtifacts } = require('./tool-artifacts/image-output.js');
+const { extractPlotlyGraphArtifactFromToolEvent } = require('./tool-artifacts/plotly-graph.js');
 const { createAgentSessionService } = require('../context/chat-log/session-service.js');
 const { createPersistedDisplayRowBuilders } = require('../context/chat-log/persisted-display-rows.js');
 const { isAgentRequestAbortError, runWithAgentRequestContext } = require('../../lib/llm/request-context.js');
@@ -61,11 +62,14 @@ function createAgentChatRequestHandler({
       : null;
     let htmlArtifacts = [];
     let imageArtifacts = [];
+    let plotlyArtifacts = [];
     const emitAgentProgress = (lifecycleEvent) => {
       const html = extractHtmlArtifactFromToolEvent(lifecycleEvent);
       if (html) htmlArtifacts = mergeHtmlArtifacts(htmlArtifacts, [html]);
       const image = extractImageArtifactFromToolEvent(lifecycleEvent);
       if (image) imageArtifacts = mergeImageArtifacts(imageArtifacts, [image]);
+      const plot = extractPlotlyGraphArtifactFromToolEvent(lifecycleEvent);
+      if (plot) plotlyArtifacts = [plot];
       if (!progressSender) {
         return;
       }
@@ -223,11 +227,12 @@ function createAgentChatRequestHandler({
           });
           const activityTraceRows = buildPersistedActivityTraceRows(lifecycleRecorder.events);
           const codexCliDisplayRows = buildPersistedCodexCliDisplayRows(lifecycleRecorder.events);
-          if (htmlArtifacts.length || imageArtifacts.length || activityTraceRows.length || codexCliDisplayRows.length) {
+          if (htmlArtifacts.length || imageArtifacts.length || plotlyArtifacts.length || activityTraceRows.length || codexCliDisplayRows.length) {
             assistantMessage.meta = {
               ...(assistantMessage.meta && typeof assistantMessage.meta === 'object' ? assistantMessage.meta : {}),
               ...(htmlArtifacts.length ? { html_artifacts: htmlArtifacts } : {}),
               ...(imageArtifacts.length ? { image_artifacts: imageArtifacts } : {}),
+              ...(plotlyArtifacts.length ? { plotly_graph_artifacts: plotlyArtifacts } : {}),
               ...(activityTraceRows.length ? { activity_trace_rows: activityTraceRows } : {}),
               ...(codexCliDisplayRows.length ? { codex_cli_display_rows: codexCliDisplayRows } : {})
             };
@@ -266,6 +271,7 @@ function createAgentChatRequestHandler({
             ...result,
             html_artifacts: htmlArtifacts,
             image_artifacts: imageArtifacts,
+            plotly_graph_artifacts: plotlyArtifacts,
             request_id: requestId,
             client_request_id: clientRequestId,
             chat_session: sessionService.getSession()
@@ -274,6 +280,7 @@ function createAgentChatRequestHandler({
             ...result,
             html_artifacts: htmlArtifacts,
             image_artifacts: imageArtifacts,
+            plotly_graph_artifacts: plotlyArtifacts,
             request_id: requestId,
             client_request_id: clientRequestId
           };
@@ -317,11 +324,12 @@ function createAgentChatRequestHandler({
             });
           const activityTraceRows = buildPersistedActivityTraceRows(lifecycleRecorder.events);
           const codexCliDisplayRows = buildPersistedCodexCliDisplayRows(lifecycleRecorder.events);
-          if (htmlArtifacts.length || imageArtifacts.length || activityTraceRows.length || codexCliDisplayRows.length) {
+          if (htmlArtifacts.length || imageArtifacts.length || plotlyArtifacts.length || activityTraceRows.length || codexCliDisplayRows.length) {
             assistantMessage.meta = {
               ...(assistantMessage.meta && typeof assistantMessage.meta === 'object' ? assistantMessage.meta : {}),
               ...(htmlArtifacts.length ? { html_artifacts: htmlArtifacts } : {}),
               ...(imageArtifacts.length ? { image_artifacts: imageArtifacts } : {}),
+              ...(plotlyArtifacts.length ? { plotly_graph_artifacts: plotlyArtifacts } : {}),
               ...(activityTraceRows.length ? { activity_trace_rows: activityTraceRows } : {}),
               ...(codexCliDisplayRows.length ? { codex_cli_display_rows: codexCliDisplayRows } : {})
             };
@@ -361,6 +369,7 @@ function createAgentChatRequestHandler({
             canceled,
             html_artifacts: htmlArtifacts,
             image_artifacts: imageArtifacts,
+            plotly_graph_artifacts: plotlyArtifacts,
             error: errorMessage,
             request_id: requestId,
             client_request_id: clientRequestId,
@@ -371,6 +380,7 @@ function createAgentChatRequestHandler({
             canceled,
             html_artifacts: htmlArtifacts,
             image_artifacts: imageArtifacts,
+            plotly_graph_artifacts: plotlyArtifacts,
             error: errorMessage,
             request_id: requestId,
             client_request_id: clientRequestId

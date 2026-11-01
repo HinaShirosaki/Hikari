@@ -543,9 +543,7 @@ test('biology-notebook quick sample submit is a compact accessible icon', () => 
     __dirname,
     'src',
     'renderer',
-    'modules',
-    'biology-notebook',
-    'samples',
+    'lib',
     'quick-sample-controller.js'
   ), 'utf8');
   const submitStart = html.indexOf('<button id="biology-notebook-quick-sample-submit-btn"');
@@ -555,7 +553,7 @@ test('biology-notebook quick sample submit is a compact accessible icon', () => 
   assert.match(stripI18nMarkup(submitButton), /<svg[^>]*aria-hidden="true"[\s\S]*?<span class="sr-only">Add Sample<\/span>/);
   assert.doesNotMatch(stripI18nMarkup(submitButton), />\s*Add Sample\s*<\/button>/);
   assert.match(css, /\.biology-notebook-quick-sample-submit-btn\s*\{[^}]*width:\s*34px;[^}]*min-width:\s*34px;[^}]*height:\s*34px;[^}]*padding:\s*0;/s);
-  assert.match(controllerSource, /function setBusy\(isBusy\)[\s\S]*?setAttribute\?\.\('aria-label', label\)[\s\S]*?querySelector\?\.\('\.sr-only'\)/);
+  assert.match(controllerSource, /function setBusy\(isBusy\)[\s\S]*?i18nUi\.setAttribute\(submitBtn, 'aria-label', i18nUi\.message\(label\)\)[\s\S]*?querySelector\?\.\('\.sr-only'\)/);
   assert.doesNotMatch(controllerSource, /submitBtn\.textContent\s*=/);
 });
 test('biology-notebook buffer preparer floats one autocomplete menu and appends ingredients beyond its starter rows', () => {

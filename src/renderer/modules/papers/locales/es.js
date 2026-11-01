@@ -18,7 +18,6 @@ export const papersSpanish = Object.freeze({
   "menu.nameEmpty": "El nombre de la carpeta no puede estar vacío.",
   "menu.nameDuplicate": "Ya existe una carpeta con ese nombre.",
   "menu.confirmDelete": "¿Eliminar esta carpeta del club de lectura y sus artículos?",
-  "viewer.empty": "Los PDF científicos se abren aquí con navegación por páginas y zoom.",
   "viewer.commentPins": "Marcadores de comentarios del artículo",
   "viewer.commentBy": "Comentario de {author}",
   "viewer.pageLinks": "Enlaces de la página {page} del artículo",

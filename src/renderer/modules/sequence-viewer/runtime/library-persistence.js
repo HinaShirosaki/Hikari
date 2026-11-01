@@ -114,6 +114,43 @@ export function createLibraryPersistenceActions(ctx) {
     }
   }
 
+  async function saveDerivedDnaFragment(template, fragment) {
+    return (await saveDerivedDnaFragments(template, [fragment]))[0];
+  }
+
+  async function saveDerivedDnaFragments(template, fragments, persistOptions = {}) {
+    if (actions.getSelectedRecord() !== template) throw new Error('The template changed. Please try again.');
+    if (!fragments?.length) throw new Error('Choose at least one DNA fragment to save.');
+    // A saved child must have a durable, visible template in the same rail.
+    const parent = await persistRecordToLibrary(template, {
+      id: state.activeEntryId, status: LIBRARY_STATUS_SAVED, name: template.name
+    });
+    controllers.detail?.syncActionButtonsState?.();
+    const entries = [];
+    try {
+      for (const [index, fragment] of fragments.entries()) {
+        const response = await actions.getBridge().sequenceLibraryUpsert({
+          storagePath: actions.getStoragePath(), id: persistOptions.entryIds?.[index],
+          name: fragment.name, status: LIBRARY_STATUS_SAVED, parentEntryId: parent.id,
+          sourceFormat: 'genbank', topology: 'linear', sequenceLength: fragment.sequence.length,
+          featureCount: fragment.features.length, sequence: fragment.sequence, features: fragment.features,
+          gbkText: buildRecordGenbankText(fragment), alignmentSessions: []
+        });
+        if (!response?.ok || !response?.entry) throw new Error(response?.error || 'Failed to save DNA fragment.');
+        entries.push(response.entry);
+      }
+    } catch (error) {
+      await controllers.home?.refreshLibraryEntries({ selectedId: parent.id, filter: LIBRARY_STATUS_SAVED, silent: true });
+      throw error;
+    }
+    await controllers.home?.refreshLibraryEntries({ selectedId: entries[0].id, filter: LIBRARY_STATUS_SAVED, silent: true });
+    await controllers.home?.openLibraryEntryInDetail(entries[0].id);
+    actions.setStatus(entries.length === 1
+      ? i18nUi.text('Saved {name} under {parent} as GenBank DNA.', { name: entries[0].name, parent: parent.name })
+      : i18nUi.text('Saved {count} DNA fragments under {parent} as GenBank DNA.', { count: entries.length, parent: parent.name }));
+    return entries;
+  }
+
   async function renameLibraryEntry(entryId, requestedName) {
     const bridge = actions.getBridge();
     const storagePath = actions.getStoragePath();
@@ -307,6 +344,8 @@ export function createLibraryPersistenceActions(ctx) {
     persistRecordToLibrary,
     renameLibraryEntry,
     saveCurrentRecordToLibrary,
+    saveDerivedDnaFragment,
+    saveDerivedDnaFragments,
     upsertLibraryFolder
   };
 }

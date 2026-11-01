@@ -865,6 +865,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-primer-copy-btn,
+.sequence-viewer-protein-copy-btn,
 .sequence-viewer-primer-library-save-btn {
   flex: 0 0 auto;
   width: 24px;
@@ -879,8 +880,17 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   cursor: pointer;
 }
 
+.sequence-viewer-primer-copy-btn,
+.sequence-viewer-protein-copy-btn {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
 .sequence-viewer-primer-copy-btn:hover,
 .sequence-viewer-primer-copy-btn:focus-visible,
+.sequence-viewer-protein-copy-btn:hover,
+.sequence-viewer-protein-copy-btn:focus-visible,
 .sequence-viewer-primer-library-save-btn:hover,
 .sequence-viewer-primer-library-save-btn:focus-visible {
   border-color: var(--theme-border);
@@ -888,6 +898,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-primer-copy-btn svg,
+.sequence-viewer-protein-copy-btn svg,
 .sequence-viewer-primer-library-save-btn svg {
   width: 14px;
   height: 14px;

@@ -121,6 +121,7 @@ scratch canvases migrate automatically.
 | --- | --- |
 | `storage`, `files` | The figure and asset library |
 | `downloads` | Export through a save dialog |
+| `clipboard:read` | Pasting chemical structure previews from ChemDraw using Sample's native clipboard reader |
 | `agent:chat` | Sending your prompt to the figure's chat |
 | `agent:canvas` | Letting Codex read, edit and render the canvas |
 | `layout` | Remembering the left rail's width and folded state |

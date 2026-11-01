@@ -336,14 +336,14 @@ export function createAssayAnalysisView({
     }, 600);
   }
 
-  function renderAnalysis() {
+  function renderAnalysis({ syncResults = true } = {}) {
     if (!assayAnalysisTable) {
       return;
     }
 
     unmountAnalysisChart();
     purgeAgentPlotly();
-    syncCurrentResultsFromGrid();
+    if (syncResults) syncCurrentResultsFromGrid();
     refreshDerivedPlate();
     const spec = getAnalysisSpec();
     const { observations, nonNumericCount } = collectNumericObservations(getAnalysisDataSource());
@@ -521,7 +521,7 @@ export function createAssayAnalysisView({
       methodLabel: describeAnalysisSpec(getAnalysisSpec()),
       ...getAnalysisContext()
     }),
-    redrawChart: () => { if (lastModel) renderAnalysisChart(lastModel); },
+    redrawChart: () => chartSurface.redrawChart(lastModel),
     clearOutput,
     renderAnalysis,
     onAnalysisMethodChange,

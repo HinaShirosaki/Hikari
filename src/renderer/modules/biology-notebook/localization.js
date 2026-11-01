@@ -1,4 +1,7 @@
 import { notebookSpanish } from './locales/es.js';
+import { notebookSimplifiedChinese } from './locales/zh-Hans.js';
+import { notebookTraditionalChinese } from './locales/zh-Hant.js';
+import { notebookJapanese } from './locales/ja.js';
 import { i18n } from '../../lib/i18n/index.js';
 import { messageSpan, messageAttributes } from '../../lib/i18n/markup.js';
 import { setTranslatedText, setTranslatedAttribute } from '../../lib/i18n/dom.js';
@@ -7,6 +10,9 @@ import { notebookEnglish } from './locales/en.js';
 
 i18n.registerMessages('en', 'notebook', notebookEnglish);
 i18n.registerMessages('es', 'notebook', notebookSpanish);
+i18n.registerMessages('zh-Hans', 'notebook', notebookSimplifiedChinese);
+i18n.registerMessages('zh-Hant', 'notebook', notebookTraditionalChinese);
+i18n.registerMessages('ja', 'notebook', notebookJapanese);
 export const notebookText = i18n.scope('notebook');
 export const notebookMessage = (key, params) => messageSpan(`notebook.${key}`, params);
 export const notebookAttributes = (bindings, params) => messageAttributes(

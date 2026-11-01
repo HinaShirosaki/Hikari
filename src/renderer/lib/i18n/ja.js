@@ -1,0 +1,25 @@
+// Japanese preview. Missing entries use the English catalog.
+export const commonJapanese = Object.freeze({
+  "full.dea0fcd6": "サンプルを追加中",
+  "full.462bc166": "サンプルを追加",
+  "full.3167540a": "コンテナ {p0} 個",
+  "full.3ea9fa7b": "コンテナ {p0} 個",
+  "full.3f2b02dd": "サンプル {p0} 個",
+  "full.1eb537ea": "{p0} 個のサンプル",
+  "full.9ab0051c": "コンテナを選択",
+  "full.b23d4718": "コンテナ",
+  "full.54989f84": "グリッドボックス",
+  "full.2b4775ec": "この場所にコンテナはありません。",
+  "full.f1776509": "単一",
+  "full.dc269d7b": "サンプル名を入力してください。",
+  "full.a618ccf9": "このサンプルのコンテナを選択してください。",
+  "full.9179142e": "サンプルコード {p0} は既に存在します。",
+  "full.7d028cc3": "サンプルを追加できませんでした。",
+  "action.discard": "変更を破棄",
+  "action.saveChanges": "変更を保存",
+  "status.saved": "すべての変更を保存しました",
+  "status.unsaved": "未保存の変更があります",
+  "status.saving": "保存中…",
+  "status.saveSuccess": "変更を保存しました",
+  "status.saveError": "変更を保存できませんでした。もう一度お試しください。"
+});
