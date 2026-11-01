@@ -59,6 +59,7 @@ conversation and its unsent draft.
   use **Import asset…** for SVG, PNG, JPEG or WebP files, or use
   **Generate asset…** to have Codex make one (SVG or image generation, per the
   figure's Image generation settings) without touching the canvas.
+- **Colors** in Layers recolor an SVG layer one color at a time.
 - **Crop selected image** crops a raster layer in place; the saved asset is left
   untouched.
 - **Canvas size** presets or **Custom…** dimensions; zoom and **Fit** change only

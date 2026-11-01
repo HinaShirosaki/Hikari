@@ -28,6 +28,7 @@ import { createArtworkHitTester } from './hit-testing.mjs';
 import { createCanvasTextEditor } from './text-editor.mjs';
 import { createSelectionToolbar } from './selection-toolbar.mjs';
 import { createOpacityControl } from './opacity-control.mjs';
+import { recolorVector, vectorColors } from './vector-colors.mjs';
 
 const { hikari } = window.HikariPlugin;
 const $ = id => document.getElementById(id);
@@ -463,6 +464,13 @@ function renderProperties() {
     else input.value = object[input.name] ?? '';
   }
   $('text-properties').hidden = object.type !== 'text';
+  const colors = object.type === 'vector' ? vectorColors(object) : [];
+  $('vector-colors').hidden = !colors.length;
+  $('vector-color-swatches').replaceChildren(...colors.map(value => {
+    const swatch = document.createElement('input'); swatch.type = 'color'; swatch.value = swatch.dataset.color = value;
+    i18nUi.setAttribute(swatch, 'title', i18nUi.message('Color {p0}', { p0: value })); i18nUi.setAttribute(swatch, 'aria-label', i18nUi.message('Color {p0}', { p0: value }));
+    return swatch;
+  }));
   properties.querySelectorAll('[data-text-style]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.textStyle === 'bold' ? object.fontWeight >= 700 : Boolean(object[button.dataset.textStyle]))));
   properties.querySelectorAll('[data-align]').forEach(button => button.setAttribute('aria-pressed', String(object.align === button.dataset.align)));
   const siblings = state.objects.filter(item => item.canvas === object.canvas);
@@ -505,6 +513,18 @@ properties.addEventListener('change', event => {
     return;
   }
   void edit([{ op: 'update', id: object.id, patch }]);
+});
+// Preview every picker move; the picker's change commits one undoable edit.
+$('vector-color-swatches').addEventListener('input', event => {
+  const object = selected(); if (object?.type !== 'vector') return;
+  const patch = recolorVector(object, event.target.dataset.color, event.target.value);
+  renderCanvas('main', { ...state, objects: state.objects.map(item => item.id === object.id ? { ...item, ...patch } : item) });
+});
+$('vector-color-swatches').addEventListener('change', event => {
+  const object = selected(); if (object?.type !== 'vector') return;
+  const patch = recolorVector(object, event.target.dataset.color, event.target.value);
+  if (Object.keys(patch).length) void edit([{ op: 'update', id: object.id, patch }]);
+  else renderCanvas('main');
 });
 $('canvas-properties').addEventListener('submit', event => event.preventDefault());
 $('canvas-size').addEventListener('change', event => {

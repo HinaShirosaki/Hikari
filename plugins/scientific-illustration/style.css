@@ -332,6 +332,8 @@ fieldset { min-width: 0; margin: 0 0 8px; padding: 0; border: 0; }
 .size-field input { padding-right: 20px !important; }
 .size-field > span:last-child, .unit-field > span { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); font-size: 0.625rem; pointer-events: none; color: var(--theme-text-muted); }
 input[type="color"] { width: 28px; height: 28px; padding: 3px !important; cursor: pointer; }
+#vector-colors legend { padding: 0; margin-bottom: 4px; color: var(--theme-text-muted); font-size: 0.625rem; }
+.color-swatches { display: flex; flex-wrap: wrap; gap: 5px; }
 .text-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .format-group { display: flex; align-items: center; gap: 1px; }
 .format-group button { display: grid; place-items: center; width: 29px; height: 28px; padding: 5px; }

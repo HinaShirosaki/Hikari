@@ -413,5 +413,7 @@
   "full.9e942f9a": "隱藏素材庫",
   "full.fccae825": "聊天列中有草稿或附件。請先傳送或清除草稿。",
   "full.25a85a52": "請描述要產生的元件。",
-  "full.61f7f64e": "Codex 正在產生素材。儲存後會顯示在「素材」中。"
+  "full.61f7f64e": "Codex 正在產生素材。儲存後會顯示在「素材」中。",
+  "full.25bb4ed1": "顏色",
+  "full.f808a904": "顏色 {p0}"
 }};if(typeof module==='object'&&module.exports)module.exports=all;}(typeof window==='object'?window:globalThis));

@@ -50,5 +50,7 @@
   "full.ad93995a": "Renderizado 3D",
   "full.2c80a95": "Fotorrealista",
   "full.9f0aff47": "Acuarela",
-  "full.178bfbc9": "Pluma y tinta"
+  "full.178bfbc9": "Pluma y tinta",
+  "full.25bb4ed1": "Colores",
+  "full.f808a904": "Color {p0}"
 }};if(typeof module==='object'&&module.exports)module.exports=root.HikariUiSpanish;}(typeof window==='object'?window:globalThis));

@@ -153,6 +153,9 @@ canvas object and open **Layers** from the toolbar, or select its layer row. Sel
 on the canvas keeps the current panel layout steady. Double-click a label to
 edit its text inline without changing the canvas zoom. Open Layers for the compact font,
 size, color, bold/italic/underline, alignment, weight and anchor controls.
+An SVG layer lists its colors as swatches; pick a new color for one swatch to
+recolor every part painted with it, as one undoable edit. Only hex colors get a
+swatch.
 Opacity has a slider and a linked percentage field. Drag the handle for a live
 preview, or enter an exact percentage from 0 to 100. Releasing the slider saves
 one undoable adjustment; Escape cancels an unfinished preview.

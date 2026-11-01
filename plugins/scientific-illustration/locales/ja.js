@@ -413,5 +413,7 @@
   "full.9e942f9a": "ライブラリを非表示",
   "full.fccae825": "チャットレールに下書きまたは添付ファイルがあります。先に送信するか、下書きを消去してください。",
   "full.25a85a52": "生成するコンポーネントを説明してください。",
-  "full.61f7f64e": "Codex が素材を生成しています。保存されると「素材」に表示されます。"
+  "full.61f7f64e": "Codex が素材を生成しています。保存されると「素材」に表示されます。",
+  "full.25bb4ed1": "色",
+  "full.f808a904": "色 {p0}"
 }};if(typeof module==='object'&&module.exports)module.exports=all;}(typeof window==='object'?window:globalThis));

@@ -413,4 +413,6 @@
   "full.fccae825": "The chat rail has a draft or attachments. Send or clear that draft first.",
   "full.25a85a52": "Describe the component to generate.",
   "full.61f7f64e": "Codex is generating the asset. It appears in Assets once saved.",
+  "full.25bb4ed1": "Colors",
+  "full.f808a904": "Color {p0}",
 } }; if (typeof module === 'object' && module.exports) module.exports = root.HikariUiEnglish; }(typeof window === "object" ? window : globalThis));
