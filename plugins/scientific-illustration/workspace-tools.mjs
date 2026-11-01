@@ -3,13 +3,13 @@
 const definitions = [
   ['pointer-tool', 'pointer', 'selection'], ['freehand-tool', 'lasso', 'selection'],
   ['add-menu', 'plus', 'edit'],
-  ['crop-raster', 'crop', 'edit'],
+  ['palette-menu', 'palette', 'edit'], ['crop-raster', 'crop', 'edit'],
   ['group-selection', 'group', 'group'], ['ungroup-selection', 'ungroup', 'group'],
   ['align-menu', 'align', 'group'],
   ['layers-tab', 'layers', 'panels'],
   ['zoom-out', 'minus', 'zoom'], ['zoom-level', '', 'zoom'], ['zoom-in', 'plus', 'zoom'], ['zoom-fit', 'fit', 'zoom']
 ];
-const menuIds = ['add-menu', 'align-menu'];
+const menuIds = ['add-menu', 'palette-menu', 'align-menu'];
 export function createWorkspaceTools({ hikari, document, onHosted = () => {} }) {
   const $ = id => document.getElementById(id), win = document.defaultView;
   let supported = false, hosted = false, signature = '', scheduled = false, inFlight = false;

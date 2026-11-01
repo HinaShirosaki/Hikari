@@ -415,4 +415,9 @@
   "full.61f7f64e": "Codex is generating the asset. It appears in Assets once saved.",
   "full.25bb4ed1": "Colors",
   "full.f808a904": "Color {p0}",
+  "full.a1ce8a12": "Figure palette",
+  "full.27c217e3": "Add color",
+  "full.dae286e5": "Palette color {p0}",
+  "full.9a031c2b": "Remove {p0}",
+  "full.74865f3d": "Codex uses these main colors for new artwork. Color pickers offer them too.",
 } }; if (typeof module === 'object' && module.exports) module.exports = root.HikariUiEnglish; }(typeof window === "object" ? window : globalThis));

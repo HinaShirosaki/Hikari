@@ -41,8 +41,14 @@ export function color(value, allowNone = false) {
   if ((allowNone && value === 'none') || /^#[\da-f]{6}(?:[\da-f]{2})?$/i.test(value)) return value;
   throw new Error('Use a hex color (#rrggbb or #rrggbbaa).');
 }
+// The figure's main colors, chosen by the user; empty lets Codex choose.
+export const MAX_PALETTE = 8;
+export function palette(value) {
+  if (!Array.isArray(value) || value.length > MAX_PALETTE || value.some(item => !/^#[\da-f]{6}$/i.test(item))) throw new Error(`palette must list at most ${MAX_PALETTE} #rrggbb colors.`);
+  return value.map(item => item.toLowerCase());
+}
 export function createDocument() {
-  return { version: 1, revision: crypto.randomUUID(), title: 'Untitled figure', complexity: DEFAULT_COMPLEXITY, imageGenerationPercent: null, imageGenerationStyle: imageGenerationStyle(), imageStyleLine: '',
+  return { version: 1, revision: crypto.randomUUID(), title: 'Untitled figure', complexity: DEFAULT_COMPLEXITY, imageGenerationPercent: null, imageGenerationStyle: imageGenerationStyle(), imageStyleLine: '', palette: [],
     canvases: { main: { width: 1200, height: 800, background: '#ffffff' } },
     objects: [], groups: [], receipts: [] };
 }
@@ -117,7 +123,7 @@ export function normalizeDocument(raw, validateSvg) {
     complexity: choice(raw.complexity ?? DEFAULT_COMPLEXITY, COMPLEXITY_LEVELS, 'complexity'),
     imageGenerationPercent: imageGenerationPercent(raw.imageGenerationPercent),
     imageGenerationStyle: imageGenerationStyle(raw.imageGenerationStyle),
-    imageStyleLine: string(raw.imageStyleLine ?? '', 'Image style line', MAX_IMAGE_STYLE_LINE),
+    imageStyleLine: string(raw.imageStyleLine ?? '', 'Image style line', MAX_IMAGE_STYLE_LINE), palette: palette(raw.palette ?? []),
     canvases: Object.fromEntries(CANVASES.map(key => [key, normalizeCanvas(raw.canvases?.[key])])), objects, groups, receipts: (raw.receipts || []).slice(-64) };
   if (raw.source !== undefined) result.source = normalizeSourceContext(raw.source);
   if (raw.pendingAssetGroups !== undefined) {
@@ -163,7 +169,7 @@ export function validateRequest(args) {
 }
 export function applyOperations(document, operations, validateSvg) {
   const next = clone(document);
-  next.groups ??= [];
+  next.groups ??= []; next.palette ??= [];
   const pruneGroups = () => {
     next.groups = next.groups.map(group => ({ ...group, ids: group.ids.filter(id => next.objects.some(object => object.id === id && object.canvas === group.canvas)) })).filter(group => group.ids.length >= 2);
   };
@@ -179,7 +185,7 @@ export function applyOperations(document, operations, validateSvg) {
   };
   for (const operation of operations) {
     record(operation, 'Operation');
-    fields(operation, ['op', 'object', 'id', 'patch', 'canvas', 'ids', 'copy', 'new_id', 'title', 'complexity', 'imageGenerationPercent', 'imageGenerationStyle', 'imageStyleLine', 'name', 'degrees', 'pivot']);
+    fields(operation, ['op', 'object', 'id', 'patch', 'canvas', 'ids', 'copy', 'new_id', 'title', 'complexity', 'imageGenerationPercent', 'imageGenerationStyle', 'imageStyleLine', 'palette', 'name', 'degrees', 'pivot']);
     if (operation.op !== 'rotate' && (operation.degrees !== undefined || operation.pivot !== undefined)) throw new Error('Rotation fields require the rotate operation.');
     const group = next.groups.find(item => item.id === operation.id);
     if (operation.op === 'group') {
@@ -276,6 +282,12 @@ export function applyOperations(document, operations, validateSvg) {
       next.imageGenerationStyle = style;
     }
     else if (operation.op === 'image_style_line') next.imageStyleLine = string(operation.imageStyleLine, 'Image style line', MAX_IMAGE_STYLE_LINE).trim();
+    else if (operation.op === 'palette') {
+      const colors = palette(operation.palette);
+      // The saved style line names a hex palette; let the agent rewrite it.
+      if (colors.join() !== next.palette.join()) next.imageStyleLine = '';
+      next.palette = colors;
+    }
     else throw new Error(`Unknown operation: ${operation.op}.`);
     pruneGroups();
   }

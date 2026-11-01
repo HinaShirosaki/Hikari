@@ -29,6 +29,7 @@ import { createCanvasTextEditor } from './text-editor.mjs';
 import { createSelectionToolbar } from './selection-toolbar.mjs';
 import { createOpacityControl } from './opacity-control.mjs';
 import { recolorVector, vectorColors } from './vector-colors.mjs';
+import { MAX_PALETTE } from './model.mjs';
 
 const { hikari } = window.HikariPlugin;
 const $ = id => document.getElementById(id);
@@ -142,7 +143,7 @@ document.addEventListener('click', event => {
     // The select's finishing click must not dismiss the custom-size form it opened.
     const sizeControl = menu.classList.contains('canvas-options') && event.target.closest('#canvas-size');
     const selectionControl = menu.id === 'align-menu' && event.target.closest('#selection-align');
-    if ((!menu.contains(event.target) && !sizeControl && !selectionControl) || event.target.closest('.popover-panel button:not(.image-generation-info-button)')) menu.open = false;
+    if ((!menu.contains(event.target) && !sizeControl && !selectionControl) || event.target.closest('.popover-panel button:not(.image-generation-info-button, .palette-panel button)')) menu.open = false;
   });
 });
 document.querySelectorAll('.popover').forEach(menu => menu.addEventListener('toggle', () => {
@@ -309,6 +310,7 @@ function render(next, id = illustrationId) {
   i18nUi.setAttribute($('complexity'), "title", i18nUi.owned(COMPLEXITY_PROFILES[state.complexity].summary));
   renderImagePreference(pendingImagePreference?.id === id ? pendingImagePreference.percent : state.imageGenerationPercent);
   renderImageStyle(pendingImagePreference?.id === id ? pendingImagePreference.style : state.imageGenerationStyle);
+  renderPalette();
   syncComposer();
   renderLayers(); renderProperties();
   if (!$('assets-panel').hidden) assetsPanel?.render();
@@ -468,6 +470,7 @@ function renderProperties() {
   $('vector-colors').hidden = !colors.length;
   $('vector-color-swatches').replaceChildren(...colors.map(value => {
     const swatch = document.createElement('input'); swatch.type = 'color'; swatch.value = swatch.dataset.color = value;
+    swatch.setAttribute('list', 'palette-suggestions');
     i18nUi.setAttribute(swatch, 'title', i18nUi.message('Color {p0}', { p0: value })); i18nUi.setAttribute(swatch, 'aria-label', i18nUi.message('Color {p0}', { p0: value }));
     return swatch;
   }));
@@ -514,6 +517,34 @@ properties.addEventListener('change', event => {
   }
   void edit([{ op: 'update', id: object.id, patch }]);
 });
+// Palette edits are figure settings: each change saves one undoable edit.
+const PALETTE_STARTERS = ['#4169d8', '#e07a3f', '#3a9d6e', '#c94f6d', '#8a5fbf', '#d4a72c', '#2a9db0', '#6b7280'];
+function renderPalette() {
+  $('palette-colors').replaceChildren(...state.palette.map((value, index) => {
+    const item = document.createElement('span'); item.className = 'palette-color';
+    const swatch = document.createElement('input'); swatch.type = 'color'; swatch.value = value; swatch.dataset.index = index;
+    i18nUi.setAttribute(swatch, 'title', i18nUi.message('Palette color {p0}', { p0: value })); i18nUi.setAttribute(swatch, 'aria-label', i18nUi.message('Palette color {p0}', { p0: value }));
+    const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'icon-button'; remove.dataset.removeIndex = index; remove.append(icon('close'));
+    i18nUi.setAttribute(remove, 'title', i18nUi.message('Remove {p0}', { p0: value })); i18nUi.setAttribute(remove, 'aria-label', i18nUi.message('Remove {p0}', { p0: value }));
+    item.append(swatch, remove);
+    return item;
+  }));
+  $('palette-add').hidden = state.palette.length >= MAX_PALETTE;
+  $('palette-suggestions').replaceChildren(...state.palette.map(value => Object.assign(document.createElement('option'), { value })));
+}
+// Queued so quick clicks each build on the palette the previous one saved.
+let paletteSave = Promise.resolve();
+const savePalette = change => { if (state) paletteSave = paletteSave.then(() => edit([{ op: 'palette', palette: change(state.palette) }])).catch(error => status(error.message)); };
+$('palette-colors').addEventListener('change', event => {
+  const index = Number(event.target.dataset.index), { value } = event.target;
+  if (event.target.type === 'color') savePalette(palette => palette.map((color, at) => at === index ? value : color));
+});
+$('palette-colors').addEventListener('click', event => {
+  const remove = event.target.closest('[data-remove-index]');
+  if (remove) savePalette(palette => palette.filter((_color, at) => at !== Number(remove.dataset.removeIndex)));
+});
+$('palette-add').addEventListener('click', () => savePalette(palette => palette.length >= MAX_PALETTE ? palette
+  : [...palette, PALETTE_STARTERS.find(value => !palette.includes(value)) || '#808080']));
 // Preview every picker move; the picker's change commits one undoable edit.
 $('vector-color-swatches').addEventListener('input', event => {
   const object = selected(); if (object?.type !== 'vector') return;
@@ -935,7 +966,7 @@ document.addEventListener('keydown', event => {
     const menu = document.querySelector('.popover[open]');
     if (menu) {
       menu.open = false;
-      if (['add-menu', 'align-menu'].includes(menu.id)) workspaceTools.focus(menu.id);
+      if (['add-menu', 'palette-menu', 'align-menu'].includes(menu.id)) workspaceTools.focus(menu.id);
       else menu.querySelector('summary').focus();
       event.preventDefault(); return;
     }

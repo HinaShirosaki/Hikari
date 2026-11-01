@@ -334,6 +334,14 @@ fieldset { min-width: 0; margin: 0 0 8px; padding: 0; border: 0; }
 input[type="color"] { width: 28px; height: 28px; padding: 3px !important; cursor: pointer; }
 #vector-colors legend { padding: 0; margin-bottom: 4px; color: var(--theme-text-muted); font-size: 0.625rem; }
 .color-swatches { display: flex; flex-wrap: wrap; gap: 5px; }
+.palette-panel { width: 214px; padding: 10px; }
+.palette-heading { margin: 0 0 8px; font-weight: 600; font-size: 0.75rem; }
+.palette-color { display: flex; flex-direction: column; align-items: center; }
+.palette-color .icon-button { width: 18px; height: 16px; padding: 0; color: var(--theme-text-muted); }
+.palette-color .icon-button svg { width: 11px; height: 11px; }
+.palette-panel > #palette-add { justify-content: flex-start; margin-top: 6px; }
+.palette-panel > #palette-add .ui-icon { width: 15px; height: 15px; }
+.palette-hint { margin: 4px 0 0; color: var(--theme-text-muted); font-size: 0.625rem; line-height: 1.4; white-space: normal; }
 .text-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 .format-group { display: flex; align-items: center; gap: 1px; }
 .format-group button { display: grid; place-items: center; width: 29px; height: 28px; padding: 5px; }

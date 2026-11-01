@@ -1,7 +1,7 @@
 // This request contract belongs to the portable plugin, not the host.
 import { COMPLEXITY_LEVELS } from '../complexity.mjs';
 import { IMAGE_STYLE_IDS, MAX_IMAGE_STYLE_PROMPT, MAX_IMAGE_STYLE_LINE } from '../image-style.mjs';
-import { MAX_OBJECTS } from '../model.mjs';
+import { MAX_OBJECTS, MAX_PALETTE } from '../model.mjs';
 const objectProperties = {
   id: { type: 'string', maxLength: 100, description: 'Logical object ID, unchanged by rendering. DOM and SVG fragment IDs are namespaced separately.' }, name: { type: 'string', maxLength: 200, description: 'Layer name shown to the user; defaults to id.' },
   type: { type: 'string', enum: ['vector', 'raster', 'text', 'plot'] }, canvas: { type: 'string', enum: ['main'] },
@@ -50,7 +50,7 @@ export const CANVAS_TOOL_CONTRACT = Object.freeze({
       expected_revision: { type: 'string', maxLength: 100 }, request_id: { type: 'string', maxLength: 100 },
       operations: { type: 'array', minItems: 1, maxItems: MAX_OBJECTS, items: {
         type: 'object', additionalProperties: false, required: ['op'], properties: {
-          op: { type: 'string', enum: ['upsert', 'update', 'delete', 'transfer', 'canvas', 'order', 'title', 'complexity', 'image_generation', 'image_generation_style', 'image_style_line', 'group', 'ungroup', 'transform', 'rotate', 'insert_asset'] },
+          op: { type: 'string', enum: ['upsert', 'update', 'delete', 'transfer', 'canvas', 'order', 'title', 'complexity', 'image_generation', 'image_generation_style', 'image_style_line', 'palette', 'group', 'ungroup', 'transform', 'rotate', 'insert_asset'] },
           asset_id: { type: 'string', maxLength: 100, description: 'insert_asset: saved reusable asset ID. Creates independent editable components with fresh IDs; multiple components become one named group. apply returns inserted_assets with ids, group_id and bounds. Deleting the saved asset never changes placed copies.' },
           x: { type: 'number', description: 'insert_asset: left of the rotated selection bounds, in destination canvas units. Defaults to centering.' },
           y: { type: 'number', description: 'insert_asset: top of the rotated selection bounds, in destination canvas units. Defaults to centering.' },
@@ -71,6 +71,7 @@ export const CANVAS_TOOL_CONTRACT = Object.freeze({
             preset: { type: 'string', enum: IMAGE_STYLE_IDS }, prompt: { type: 'string', maxLength: MAX_IMAGE_STYLE_PROMPT, description: 'Optional user style notes: palette, lighting, materials or other visual direction.' }
           } },
           imageStyleLine: { type: 'string', maxLength: MAX_IMAGE_STYLE_LINE, description: 'image_style_line operation: the figure\'s concrete style line (medium, hex palette, light direction, outline weight, shading, viewpoint), pasted verbatim into every image_gen prompt. Changing the image style clears it.' },
+          palette: { type: 'array', maxItems: MAX_PALETTE, items: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$' }, description: 'palette operation: the figure\'s main colors as #rrggbb, replacing the saved list; [] clears it. Change only when the user asks.' },
           raster_asset: { type: 'string', maxLength: 2400, description: 'ID of an image supplied in plugin_canvas assets. upsert/update only.' }
         }
       } }

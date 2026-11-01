@@ -60,6 +60,8 @@ conversation and its unsent draft.
   **Generate asset…** to have Codex make one (SVG or image generation, per the
   figure's Image generation settings) without touching the canvas.
 - **Colors** in Layers recolor an SVG layer one color at a time.
+- **Figure palette** (palette icon in the toolbar) holds up to 8 main colors.
+  Codex draws new artwork with them, and color pickers offer them.
 - **Crop selected image** crops a raster layer in place; the saved asset is left
   untouched.
 - **Canvas size** presets or **Custom…** dimensions; zoom and **Fit** change only

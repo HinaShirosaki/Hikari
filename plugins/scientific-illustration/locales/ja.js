@@ -415,5 +415,10 @@
   "full.25a85a52": "生成するコンポーネントを説明してください。",
   "full.61f7f64e": "Codex が素材を生成しています。保存されると「素材」に表示されます。",
   "full.25bb4ed1": "色",
-  "full.f808a904": "色 {p0}"
+  "full.f808a904": "色 {p0}",
+  "full.a1ce8a12": "図のパレット",
+  "full.27c217e3": "色を追加",
+  "full.dae286e5": "パレットの色 {p0}",
+  "full.9a031c2b": "{p0} を削除",
+  "full.74865f3d": "Codex は新しいアートワークにこれらのメインカラーを使います。カラーピッカーにも表示されます。"
 }};if(typeof module==='object'&&module.exports)module.exports=all;}(typeof window==='object'?window:globalThis));

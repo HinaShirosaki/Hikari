@@ -52,5 +52,10 @@
   "full.9f0aff47": "Acuarela",
   "full.178bfbc9": "Pluma y tinta",
   "full.25bb4ed1": "Colores",
-  "full.f808a904": "Color {p0}"
+  "full.f808a904": "Color {p0}",
+  "full.a1ce8a12": "Paleta de la figura",
+  "full.27c217e3": "Añadir color",
+  "full.dae286e5": "Color de la paleta {p0}",
+  "full.9a031c2b": "Quitar {p0}",
+  "full.74865f3d": "Codex usa estos colores principales en las nuevas ilustraciones. Los selectores de color también los ofrecen."
 }};if(typeof module==='object'&&module.exports)module.exports=root.HikariUiSpanish;}(typeof window==='object'?window:globalThis));

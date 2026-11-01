@@ -308,6 +308,14 @@ apply to new or requested artwork; existing layers keep their current appearance
 Complexity still sets the amount of scientific detail, and the image-generation
 percentage still controls renderer use. Choosing a style does not enable generation.
 
+**Figure palette** (the palette icon in the right toolbar) sets up to eight main
+colors for the figure. Add a color, click a swatch to change it, or remove it;
+each change saves with the figure and can be undone. Codex uses the palette for
+the main fills and accents of new SVG artwork, plots and generated images, and
+leaves existing artwork alone unless you ask it to recolor. The text color and
+SVG layer color pickers offer the palette colors. Codex can also set the palette
+when you ask in chat. An empty palette leaves the colors to Codex.
+
 Generated components are text-free and use transparency where appropriate.
 These rules are included in the submitted drawing prompt and the full canvas
 contract Codex reads. Hikari enables native image generation for

@@ -50,7 +50,7 @@ test('host advertises exactly the icons its workspace toolbar accepts', () => {
 function illustrationToolbarFixture(icons) {
   const calls = [], events = {}, classes = new Set();
   const classList = { toggle: (name, on) => on ? classes.add(name) : classes.delete(name) };
-  const ids = ['pointer-tool', 'freehand-tool', 'add-menu', 'crop-raster', 'group-selection',
+  const ids = ['pointer-tool', 'freehand-tool', 'add-menu', 'palette-menu', 'crop-raster', 'group-selection',
     'ungroup-selection', 'align-menu', 'layers-tab', 'assets-tab', 'zoom-out', 'zoom-level', 'zoom-in', 'zoom-fit', 'workspace-tools'];
   const nodes = Object.fromEntries(ids.map(id => [id, {
     title: id === 'crop-raster' ? 'Crop selected image' : id, textContent: '100%', disabled: id === 'crop-raster',

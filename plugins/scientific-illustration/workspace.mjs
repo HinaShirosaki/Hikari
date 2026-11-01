@@ -328,7 +328,7 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
         }
         return { ok: true, status: 'read', illustration_id: library.activeId, ...readDocument(documentState, args.include_assets), ...readLibrary(library), ...readAssetLibrary(assetLibrary),
           inspection: inspections.status(library.activeId, documentState.revision, inspectionRunId), asset_reuse: { required: true, checked: run.checked },
-          agent_contract: { request_schema: CANVAS_TOOL_CONTRACT.inputSchema, instructions: agentInstructions(documentState.complexity, documentState.imageGenerationPercent, documentState.imageGenerationStyle, documentState.imageStyleLine) } };
+          agent_contract: { request_schema: CANVAS_TOOL_CONTRACT.inputSchema, instructions: agentInstructions(documentState.complexity, documentState.imageGenerationPercent, documentState.imageGenerationStyle, documentState.imageStyleLine, documentState.palette) } };
       } catch (error) { onStatus(error.message); return failure('failed', error.message); }
     }).catch(error => failure('unavailable', error.message));
   }

@@ -415,5 +415,10 @@
   "full.25a85a52": "请描述要生成的组件。",
   "full.61f7f64e": "Codex 正在生成素材。保存后会显示在“素材”中。",
   "full.25bb4ed1": "颜色",
-  "full.f808a904": "颜色 {p0}"
+  "full.f808a904": "颜色 {p0}",
+  "full.a1ce8a12": "图形调色板",
+  "full.27c217e3": "添加颜色",
+  "full.dae286e5": "调色板颜色 {p0}",
+  "full.9a031c2b": "移除 {p0}",
+  "full.74865f3d": "Codex 会在新图稿中使用这些主色。取色器中也会提供这些颜色。"
 }};if(typeof module==='object'&&module.exports)module.exports=all;}(typeof window==='object'?window:globalThis));
