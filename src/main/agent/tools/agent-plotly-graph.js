@@ -1,6 +1,7 @@
 'use strict';
 
 const { asArray, cloneJson, ensureObject } = require('../../lib/normalize.js');
+const { fixPlotlyFigureSize } = require('../../../shared/plotly-figure.mjs');
 
 const {
   MAX_NAME_LENGTH,
@@ -69,7 +70,7 @@ function createAgentPlotlyGraphRuntime(deps = {}) {
 
   function create(input = {}) {
     const notes = [];
-    const figure = normalizeFigure(input, notes);
+    const figure = fixPlotlyFigureSize(normalizeFigure(input, notes));
     if (!figure.data.length) {
       return {
         ok: false,
@@ -130,6 +131,7 @@ function createAgentPlotlyGraphRuntime(deps = {}) {
       return missingGraph(input);
     }
     const replace = input.replace === true;
+    const previousLayout = graph.layout;
     const notes = [];
     const figure = normalizeFigure(input, notes);
     if (asArray(input.data || input.traces || input.figure?.data || input.figure?.traces).length) {
@@ -141,6 +143,9 @@ function createAgentPlotlyGraphRuntime(deps = {}) {
     if (Object.keys(ensureObject(input.config || input.figure?.config)).length) {
       graph.config = replace ? figure.config : mergeObjects(graph.config, figure.config);
     }
+    const fixed = fixPlotlyFigureSize(graph, previousLayout);
+    graph.layout = fixed.layout;
+    graph.config = fixed.config;
     if (asArray(input.frames || input.figure?.frames).length || replace) {
       graph.frames = figure.frames;
     }

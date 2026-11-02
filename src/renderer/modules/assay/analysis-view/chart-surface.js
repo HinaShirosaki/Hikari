@@ -220,8 +220,6 @@ function createChartSurface({
     // agent stated itself (colours, gridlines, its own frame) still wins.
     const themed = applyFigureDefaults(normalized.figure, getChartStyle());
     const layout = {
-      autosize: true,
-      height: Number(themed.layout?.height) || 360,
       margin: {
         l: 56,
         r: 24,
@@ -232,7 +230,6 @@ function createChartSurface({
       ...ensureObject(themed.layout)
     };
     const config = {
-      responsive: true,
       displayModeBar: true,
       ...ensureObject(themed.config),
       edits: { ...ensureObject(themed.config?.edits), annotationPosition: true, annotationText: true }
@@ -303,12 +300,7 @@ function createChartSurface({
         if (model) renderAnalysisChart(model);
         return;
       }
-      const target = agentPlotlyTarget;
-      agentReady.then(() => {
-        if (target === agentPlotlyTarget && target.getClientRects().length) {
-          return getPlotlyRuntime()?.Plots?.resize(target);
-        }
-      }).catch(() => {});
+      // Agent figures retain their stored dimensions when the viewport changes.
     },
     exportChartImage,
     getChartStyle,

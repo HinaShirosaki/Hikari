@@ -36,6 +36,23 @@ async function main() {
   assert.deepEqual(doseTrace.y, [5.2, 18.4, null, 91.3], 'blank well becomes a null gap');
   assert.deepEqual(doseTrace.error_y.array, [0.4, 1.1, 0.9, 2.2], 'error bar strings become numbers');
   assert.deepEqual(doseResponse.graph.inspection.issues, [], 'a clean dose response has no issues');
+  assert.equal(doseResponse.graph.figure.layout.width, 700, 'omitted dimensions get a fixed creation width');
+  assert.equal(doseResponse.graph.figure.layout.height, 500, 'omitted dimensions get a fixed creation height');
+  assert.equal(doseResponse.graph.figure.layout.autosize, false);
+  assert.equal(doseResponse.graph.figure.config.responsive, false);
+  const fixed = await runtime.execute({ action: 'create', name: 'custom dimensions',
+    data: [{ x: [1, 2], y: [3, 4] }], layout: { width: 620, height: 440, autosize: true }, config: { responsive: true } });
+  const formatted = await runtime.execute({ action: 'update', graph_id: fixed.graph.id, replace: true,
+    layout: { title: { text: 'Updated title' } }, config: { displaylogo: false, responsive: true } });
+  assert.equal(formatted.graph.figure.layout.width, 620, 'replacement formatting preserves creation width');
+  assert.equal(formatted.graph.figure.layout.height, 440, 'replacement formatting preserves creation height');
+  assert.equal(formatted.graph.figure.layout.autosize, false);
+  assert.equal(formatted.graph.figure.config.responsive, false);
+  const resized = await runtime.execute({ action: 'update', graph_id: fixed.graph.id, layout: { width: 800 } });
+  assert.equal(resized.graph.figure.layout.width, 800, 'an explicit resize still works');
+  assert.equal(resized.graph.figure.layout.height, 440, 'resizing one dimension preserves the other');
+  const reread = await runtime.execute({ action: 'read', graph_id: fixed.graph.id });
+  assert.deepEqual(reread.graph.figure, resized.graph.figure, 'stored figures include the fixed dimensions');
 
   // --- real category labels are left alone ---
   const conditions = await runtime.execute({

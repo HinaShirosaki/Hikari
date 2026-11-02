@@ -11,6 +11,8 @@ Turn the user's assay data into traceable calculations and an inspectable Plotly
 
 Use `assay_plot` to style the native plot in Analyze or add labels, reference lines and shaded bands within that plot. It saves formatting on the active assay and returns live rendering acknowledgements. It does not calculate values or change plate measurements.
 
+Fix a new custom figure's dimensions at creation: use `layout.width: 700`, `layout.height: 500`, `layout.autosize: false` and `config.responsive: false` by default. Honor user dimensions or choose appropriate fixed proportions for heatmaps and multiple panels. Keep the dimensions stable when the canvas changes and during formatting-only updates. Avoid a long, shallow plot. Resolve crowded axes through tick labels, hover detail, horizontal categorical comparisons or meaningful panels while preserving all observations and numeric spacing. See [plotly-recipes.md](references/plotly-recipes.md) for the layout and visual-review rules.
+
 ## Choose the relevant reference
 
 - Read [tool-reference.md](references/tool-reference.md) for action arguments, returned objects, update semantics, and limits. The connected tool schemas are authoritative.

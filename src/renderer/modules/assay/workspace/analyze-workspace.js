@@ -160,6 +160,12 @@ export function createAnalyzeWorkspace({ elements, runtime, resultsManager, anal
   });
   find('assay-workspace-format-btn').addEventListener('click', () => analysisView.openChartFormat());
   root.ownerDocument.defaultView.addEventListener('resize', redraw);
+  // Observe the available canvas, which also changes when either rail resizes
+  // or the chart header wraps without a window resize.
+  const ResizeObserver = root.ownerDocument.defaultView.ResizeObserver;
+  if (ResizeObserver && elements.assayAnalysisTable) {
+    new ResizeObserver(() => { if (activeView === 'chart') redraw(); }).observe(elements.assayAnalysisTable);
+  }
   refresh();
   return { refresh };
 }

@@ -751,9 +751,12 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
       assert.equal(plotlyCreateResult.graph.id, '1');
       assert.equal(plotlyCreateResult.graph.inspection.trace_count, 1);
       assert.deepEqual(plotlyCreateResult.graph.figure.config, {
-        responsive: true,
+        responsive: false,
         displaylogo: false
       });
+      assert.equal(plotlyCreateResult.graph.figure.layout.width, 700);
+      assert.equal(plotlyCreateResult.graph.figure.layout.height, 500);
+      assert.equal(plotlyCreateResult.graph.figure.layout.autosize, false);
       assert.equal(calls[calls.length - 1].toolId, 'plotly-graph');
 
       const plotlyInspectResult = await gateway.callGatewayTool('plotly_graph', {

@@ -1,5 +1,5 @@
 import { asArray, cloneJson, ensureObject } from '../../../lib/normalize.js';
-import { compactObject, normalizePlotlyFigure } from '../../../../shared/plotly-figure.mjs';
+import { compactObject, fixPlotlyFigureSize, normalizePlotlyFigure } from '../../../../shared/plotly-figure.mjs';
 
 function getPlotlyTitle(layout = {}) {
   const title = ensureObject(layout).title;
@@ -35,7 +35,7 @@ function normalizeAgentPlotlyGraphArtifact(value = {}) {
     summary: String(source.summary || source.result_summary || source.resultSummary || '').trim(),
     source: String(source.source || graphSource.source || '').trim(),
     inspection: cloneJson(source.inspection || graphSource.inspection, null),
-    figure: cloneJson(figure, {})
+    figure: fixPlotlyFigureSize(cloneJson(figure, {}))
   });
 }
 

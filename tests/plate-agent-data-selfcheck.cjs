@@ -57,6 +57,11 @@ test('1536 long-label wells reach the scratch table through the actual renderer 
   const prompt = buildCodexAgentPrompt(input);
   assert.match(prompt, /Plot every well, including AF48/);
   assert.match(prompt, /table_id="1", row_count=1536/);
+  assert.match(prompt, /fix the figure size at creation: use layout.width=700 and layout.height=500/);
+  assert.match(prompt, /layout.autosize=false and config.responsive=false/);
+  assert.match(prompt, /preserve all observations and numeric X spacing/);
+  assert.match(prompt, /Honor explicit user size requests/);
+  assert.match(prompt, /Structural inspection does not verify that labels fit/);
   const stored = tables.getTable({ table_id: '1' });
   assert.equal(stored.rows.length, 1536);
   assert.deepEqual(stored.rows.at(-1), { well: 'AF48', row: 'AF', column: '48', sample: 'S'.repeat(160), concentration: '47', result: '1535' });
