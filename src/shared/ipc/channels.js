@@ -20,9 +20,7 @@ const AGENT = Object.freeze({
   GENERATE_PROTOCOL: 'agent:generate-protocol',
   CHAT_LOG_CREATE_SESSION: 'agent:chat-log:create-session',
   CHAT_LOG_LIST_SESSIONS: 'agent:chat-log:list-sessions',
-  CHAT_LOG_GET_SESSION: 'agent:chat-log:get-session',
-  LOGS_LIST_REQUESTS: 'agent:logs:list-requests',
-  LOGS_REPLAY: 'agent:logs:replay'
+  CHAT_LOG_GET_SESSION: 'agent:chat-log:get-session'
 });
 
 const FILE_ACCESS = Object.freeze({

@@ -21,9 +21,7 @@ function registerAgentIpc(deps = {}) {
   const lifecycleService = createAgentLifecycleService({
     cleanText,
     observability: deps.observability || {},
-    controllerUtils: deps.controllerUtils || {},
-    agentToolRuntime: deps.agentToolRuntime || {},
-    appendAgentChatLogEntry: deps.appendAgentChatLogEntry
+    agentToolRuntime: deps.agentToolRuntime || {}
   });
 
   const { runAgentController } = createAgentControllerCore({
@@ -36,7 +34,6 @@ function registerAgentIpc(deps = {}) {
     codexAgentRuntime: deps.codexAgentRuntime,
     agentToolRuntime: deps.agentToolRuntime || {},
     agentChatLogRuntime: deps.agentChatLogRuntime,
-    getAgentChatLogPath: deps.getAgentChatLogPath,
     getDefaultDataFilePath: deps.getDefaultDataFilePath,
     setCodexCliModel: typeof deps.setCodexCliModel === 'function' ? deps.setCodexCliModel : (() => ''),
     setCodexCliReasoningEffort: typeof deps.setCodexCliReasoningEffort === 'function'
@@ -51,9 +48,7 @@ function registerAgentIpc(deps = {}) {
     controllerUtils: deps.controllerUtils || {},
     observability: deps.observability || {},
     agentChatLogRuntime: deps.agentChatLogRuntime,
-    getAgentChatLogPath: deps.getAgentChatLogPath,
     getAgentChatSessionStoragePath: deps.getAgentChatSessionStoragePath,
-    appendAgentChatLogEntry: deps.appendAgentChatLogEntry,
     lifecycleService,
     runAgentController
   });
@@ -62,9 +57,7 @@ function registerAgentIpc(deps = {}) {
     ipcMain: deps.ipcMain,
     cleanText,
     getStorageRoot: deps.getStorageRoot,
-    observability: deps.observability || {},
     agentChatLogRuntime: deps.agentChatLogRuntime,
-    getAgentChatLogPath: deps.getAgentChatLogPath,
     getAgentChatSessionStoragePath: deps.getAgentChatSessionStoragePath,
     agentToolRuntime: deps.agentToolRuntime || {},
     runAgentController,

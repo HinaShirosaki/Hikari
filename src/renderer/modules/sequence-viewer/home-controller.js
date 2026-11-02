@@ -148,7 +148,8 @@ export function createSequenceViewerHomeController(config = {}) {
   const {
     renderPreview,
     renderLibraryList,
-    toggleLibraryFolder
+    toggleLibraryFolder,
+    toggleDnaEntry
   } = createLibraryRendering({
     elements,
     state,
@@ -332,6 +333,23 @@ export function createSequenceViewerHomeController(config = {}) {
         return;
       }
       libraryList.addEventListener('click', (event) => {
+        const disclosure = event.target?.closest?.('[data-sequence-dna-toggle]');
+        if (disclosure) {
+          event.preventDefault?.();
+          clearLibraryPreviewTimer();
+          toggleDnaEntry(disclosure.dataset.sequenceDnaToggle);
+          [...libraryList.querySelectorAll('[data-sequence-dna-toggle]')]
+            .find(button => button.dataset.sequenceDnaToggle === disclosure.dataset.sequenceDnaToggle)?.focus();
+          return;
+        }
+        const sampleButton = event.target?.closest?.('[data-sequence-sample-position]');
+        if (sampleButton) {
+          event.preventDefault?.();
+          clearLibraryPreviewTimer();
+          const entry = state.libraryEntries?.find((item) => item.id === sampleButton.dataset.sequenceSamplePosition);
+          config.onRecordSamplePosition?.(entry);
+          return;
+        }
         const entryId = resolveLibraryEntryIdFromEvent(event);
         if (!entryId) {
           const folderId = resolveLibraryFolderIdFromEvent(event);
@@ -352,6 +370,7 @@ export function createSequenceViewerHomeController(config = {}) {
       // Entries keep double-click to open; folders have nothing else to do with
       // it, so it starts the rename there.
       libraryList.addEventListener('dblclick', (event) => {
+        if (event.target?.closest?.('[data-sequence-sample-position], [data-sequence-dna-toggle]')) return;
         const entryId = resolveLibraryEntryIdFromEvent(event);
         if (entryId) {
           openLibraryEntryFromList(entryId);

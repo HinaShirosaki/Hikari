@@ -1303,7 +1303,7 @@
       },
       {
         "name": "assay_table",
-        "description": "Use for calculations over supplied or active Assay data, including replicate means, blank correction, normalization, curve fitting, grouped statistics, or derived columns. Create scratch assay tables, derive calculated tables, add calculated columns, and run Python-backed table transforms. Use supplied rows or the hidden Assay plate TSV (map its header and rows to explicit row objects, preserving empty cells) and never local lookup tools for active plate rows; if rows are missing from the TSV, ask for or await refreshed context. Create the table before calculating or graphing. These are scratch tables, not edits to saved plate measurements.",
+        "description": "Use for calculations over supplied or active Assay data, including replicate means, blank correction, normalization, curve fitting, grouped statistics, or derived columns. Active Plate context supplies an already-created complete scratch table ID; use it directly for derive/python. read returns at most 50 rows: pass offset=table.next_offset until null to read all rows. Python staging includes every stored row. For user-supplied rows, create a table first. A hidden TSV preview is not a complete plate; never substitute local lookup data for current UI values. These are scratch tables, not edits to saved plate measurements.",
         "annotations": {
           "title": "Assay table",
           "readOnlyHint": false,
@@ -1334,6 +1334,17 @@
             "table_id": {
               "type": "string",
               "maxLength": 40
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Zero-based row offset for read; follow table.next_offset until null."
+            },
+            "max_rows": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "description": "Rows per read page, at most 50."
             },
             "name": {
               "type": "string",
@@ -1618,7 +1629,7 @@
       },
       {
         "name": "plotly_graph",
-        "description": "Use when the user asks for a custom chart, dose-response graph, heatmap, error bars, or changes to an existing chat figure. Create, update, read, and inspect scratch Plotly.js graph specifications using canonical data, layout, and optional config arguments. Use actual calculation/table data and inspect after create/update. Styling the active native Assay plot uses assay_plot.",
+        "description": "Use when the user asks for a custom chart, dose-response graph, heatmap, error bars, or changes to an existing chat figure. Create, update, read, and inspect scratch Plotly.js graph specifications using canonical data, layout, and optional config arguments. Fix new Plate figure dimensions at creation: default layout.width=700, layout.height=500, layout.autosize=false and config.responsive=false; honor user dimensions or choose appropriate fixed heatmap/panel proportions. Dimensions persist across canvas changes and formatting-only updates. Resolve crowded axes with readable ticks, hover labels or meaningful panels, preserving all data and numeric spacing; do not widen a figure just to fit labels. Use actual calculation/table data and inspect after create/update; inspection does not check rendered proportions or clipping. Styling the active native Assay plot uses assay_plot.",
         "annotations": {
           "title": "Plotly graph",
           "readOnlyHint": false,

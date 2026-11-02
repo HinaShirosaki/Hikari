@@ -7,7 +7,15 @@ const CHEMICAL_CLIPBOARD_FORMAT_HINTS = [
 
 const IMAGE_CLIPBOARD_FORMAT_HINTS = [
   'image/', 'public.png', 'public.jpeg', 'public.jpg', 'public.tiff', 'public.tif',
-  'public.pdf', 'com.adobe.pdf', 'portable document format', 'enhanced metafile', 'windows metafile'
+  'public.pdf', 'com.adobe.pdf', 'apple pdf pasteboard type', 'public.svg-image',
+  'portable document format', 'enhanced metafile', 'windows metafile'
+];
+
+// On macOS, availableFormats() can list only a synthesized image/png even
+// when the pasteboard contains an original PDF. readBuffer() can still read
+// these native types directly; do not rely on the web-facing format list.
+const NATIVE_VECTOR_CLIPBOARD_FORMATS = [
+  'com.adobe.pdf', 'public.pdf', 'Apple PDF pasteboard type', 'public.svg-image', 'image/svg+xml'
 ];
 
 const MAX_IMAGE_DATA_URL_LENGTH = 12_000_000;
@@ -37,17 +45,29 @@ function readChemicalClipboard(clipboard, nativeImage = null) {
   if (!clipboard) {
     return { ok: false, formats: [], candidates: [] };
   }
-  const formats = safeAvailableFormats(clipboard);
+  const formats = [...safeAvailableFormats(clipboard)];
   const candidates = [];
+  const pdfSources = new Set();
   addCandidate(candidates, 'text/plain', safeReadText(clipboard));
   addCandidate(candidates, 'text/html', safeReadHtml(clipboard));
   addImageCandidate(candidates, 'image/native', safeReadImageDataUrl(clipboard));
-  formats
+  [...new Set([...formats, ...NATIVE_VECTOR_CLIPBOARD_FORMATS])]
     .filter((format) => isPotentialChemicalFormat(format) || isPotentialImageFormat(format))
     .forEach((format) => {
       const buffer = safeReadBuffer(clipboard, format);
+      if (/pdf/i.test(format) && buffer?.length <= 5 * 1024 * 1024
+        && buffer.subarray(0, 5).toString('ascii') === '%PDF-') {
+        // Keep the original vector PDF. NativeImage is only a bitmap preview.
+        const pdfDataBase64 = buffer.toString('base64');
+        if (!formats.includes(format)) formats.push(format);
+        if (!pdfSources.has(pdfDataBase64)) candidates.push({ format, pdfDataBase64 });
+        pdfSources.add(pdfDataBase64);
+        return;
+      }
       if (isPotentialImageFormat(format)) {
-        addImageCandidate(candidates, format, imageBufferToDataUrl(buffer, format, nativeImage));
+        const imageDataUrl = imageBufferToDataUrl(buffer, format, nativeImage);
+        if (imageDataUrl && !formats.includes(format)) formats.push(format);
+        addImageCandidate(candidates, format, imageDataUrl);
       }
       if (isPotentialChemicalFormat(format)) {
         decodeClipboardBuffer(buffer, format).forEach((text) => addCandidate(candidates, format, text));
@@ -104,7 +124,7 @@ function imageBufferToDataUrl(buffer, format, nativeImage) {
   const lower = String(format || '').toLowerCase();
   if (lower.includes('svg')) {
     const svgText = normalizeClipboardText(buffer.toString('utf8'));
-    if (/^\s*<svg[\s>]/i.test(svgText)) return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgText)}`;
+    if (/<svg[\s>]/i.test(svgText)) return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgText)}`;
   }
   if (lower.includes('png')) return `data:image/png;base64,${buffer.toString('base64')}`;
   if (lower.includes('jpeg') || lower.includes('jpg')) return `data:image/jpeg;base64,${buffer.toString('base64')}`;
@@ -214,7 +234,7 @@ function normalizeImageDataUrl(value) {
 function dedupeCandidates(candidates) {
   const seen = new Set();
   return candidates.filter((candidate) => {
-    const key = `${candidate.format.toLowerCase()}::${candidate.imageDataUrl || candidate.text}`;
+    const key = `${candidate.format.toLowerCase()}::${candidate.pdfDataBase64 || candidate.imageDataUrl || candidate.text}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;

@@ -51,7 +51,6 @@ function createAgentControllerUtils(deps = {}) {
     buildAgentLogRequestId,
     summarizeLlmForAgentLog,
     createAgentLlmTraceContext,
-    formatAgentChatLogEntry,
     recordAgentLlmTrace
   } = createAgentTracing({ asArray, cleanText });
 
@@ -92,7 +91,6 @@ function createAgentControllerUtils(deps = {}) {
     createAgentLlmTraceContext,
     recordAgentLlmTrace,
     summarizeAgentResultForLog,
-    formatAgentChatLogEntry,
     resolveAgentApiKey,
     resolveAgentProvider,
     resolveAgentEndpoint,

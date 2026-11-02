@@ -35,14 +35,14 @@ Each Codex turn receives a bounded MCP request context built by `codex-agent/pro
 
 ## `shared/agent-observability.js`
 
-Observability provides lifecycle recorder creation, event recording, log rotation, request listing, replay, and failure classification. The Agent IPC layer records controller selection, Codex execution, tool activity, completion, and errors through this service.
+Observability provides lifecycle recorder creation, event recording, failure classification, and the rotating appender behind `Logs/errors.log`. The Agent IPC layer records controller selection, Codex execution, tool activity, completion, and errors through this service.
 
 ## Debugging order
 
 When a turn behaves unexpectedly:
 
 1. inspect the session rows to confirm the renderer request and final projection;
-2. replay the lifecycle request to locate the failing stage;
+2. read that request's `agent-lifecycle` rows in the session log to locate the failing stage;
 3. inspect the Codex/MCP tool events and request context;
 4. only then change prompts or tool behavior.
 

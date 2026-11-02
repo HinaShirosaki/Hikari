@@ -7,8 +7,10 @@ import { createSequenceHoverTooltipController } from '../src/renderer/modules/se
 import { bindSequenceHostEvents } from '../src/renderer/modules/sequence-viewer/detail-events/sequence-host-bindings.js';
 import { attachMapHoverLabel } from '../src/renderer/modules/sequence-viewer/vector-builder/map-hover.js';
 import runtime from './support/runtime.js';
+import { copyProteinValueFromEvent } from '../src/renderer/modules/sequence-viewer/protein-copy.js';
 
 const { createMockDocument, trigger } = runtime;
+const textContent = html => stripI18nMarkup(html).replace(/<[^>]*>/g, '');
 const cds = { name: 'CDS readout', type: 'cds', strand: 1, segments: [{ start: 0, end: 9 }] };
 const expected = getCdsProteinProperties(cds, 'ATGAAATAA');
 assert.equal(expected.sequence, 'MK');
@@ -28,10 +30,24 @@ for (const [feature, sequence] of [
 }
 
 const unknown = formatProteinPropertySummary(getCdsProteinProperties(cds, 'ATGNNNTAA'));
-assert.match(stripI18nMarkup(unknown), /Monoisotopic MW n\/a/);
-assert.match(stripI18nMarkup(unknown), /pI n\/a/);
+assert.match(textContent(unknown), /Monoisotopic MW n\/a/);
+assert.match(textContent(unknown), /pI n\/a/);
 assert.match(stripI18nMarkup(unknown), /unknown residue\(s\) X/);
 assert.doesNotMatch(stripI18nMarkup(unknown), /0\.00 Da|pI 0\.00/);
+assert.match(unknown, /data-sequence-protein-copy="MX"/);
+assert.doesNotMatch(unknown, /data-sequence-protein-copy-kind="(?:mw|pi)"/);
+
+const longSequence = 'MK'.repeat(8000);
+let copiedValue = '';
+const copyEvent = value => ({ target: { closest: selector => selector === '[data-sequence-protein-copy]'
+  ? { dataset: { sequenceProteinCopy: value, sequenceProteinCopyKind: 'sequence' } } : null } });
+const navigatorRef = { clipboard: { writeText: async value => { copiedValue = value; } } };
+assert.equal((await copyProteinValueFromEvent(copyEvent(longSequence), { navigatorRef })).copied, true);
+assert.equal(copiedValue, longSequence, 'Copy never truncates a large protein');
+assert.equal((await copyProteinValueFromEvent(copyEvent('MK'), { navigatorRef: {} })).copied, false);
+assert.equal((await copyProteinValueFromEvent(copyEvent('MK'), {
+  navigatorRef: { clipboard: { writeText: async () => { throw new Error('denied'); } } }
+})).copied, false);
 
 function makeDocument() {
   const document = createMockDocument();
@@ -85,17 +101,23 @@ for (const surface of ['sequence', 'map']) {
   const tooltip = document.querySelector('[data-sequence-hover-tooltip]');
   assert.equal(tooltip.hidden, false, surface);
   assert.match(tooltip.innerHTML, /2 aa/);
-  assert.match(tooltip.innerHTML, /Monoisotopic MW 277\.15 Da/);
+  assert.match(textContent(tooltip.innerHTML), /Monoisotopic MW 277\.15 Da/);
   assert.match(tooltip.innerHTML, /derived from CDS DNA/);
-  assert.doesNotMatch(tooltip.innerHTML, /<details|<pre/);
-  assert.equal(tooltip.classList.contains('is-interactive'), false);
+  assert.doesNotMatch(tooltip.innerHTML, /<details/);
+  assert.match(tooltip.innerHTML, /data-sequence-protein-copy="MK"/);
+  assert.match(tooltip.innerHTML, /data-sequence-protein-copy="277\.15"/);
+  assert.match(textContent(tooltip.innerHTML), /Amino acid sequence/);
+  assert.equal(tooltip.classList.contains('is-interactive'), true);
 
   trigger(host, 'mouseleave');
+  assert.equal(tooltip.hidden, false, 'Allow time to move to the copy buttons');
+  hide();
   assert.equal(tooltip.hidden, true);
   show('focusin');
   assert.equal(tooltip.hidden, false);
   assert.match(tooltip.style.top, /^13\dpx$/, 'keyboard readout is anchored below the focused feature');
   trigger(host, 'focusout');
+  hide();
   assert.equal(tooltip.hidden, true);
 
   record = { ...record, sequence: 'ATGTAATAA' };
@@ -110,8 +132,8 @@ for (const surface of ['sequence', 'map']) {
 
   record.features = [{ ...cds, translation: 'MX*' }];
   show();
-  assert.match(tooltip.innerHTML, /Monoisotopic MW n\/a/);
-  assert.match(tooltip.innerHTML, /pI n\/a/);
+  assert.match(textContent(tooltip.innerHTML), /Monoisotopic MW n\/a/);
+  assert.match(textContent(tooltip.innerHTML), /pI n\/a/);
 
   record.features = [{ ...cds, type: 'primer_bind', primerSequence: 'ATGAAATAA' }];
   show();

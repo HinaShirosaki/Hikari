@@ -22,7 +22,6 @@ export function createLabCommonInventoryContext({ state, persist, createId, safe
     chemicalCancelBtn: document.getElementById('chemical-cancel-btn'),
     chemicalList: document.getElementById('chemical-list'),
     chemicalSearch: document.getElementById('chemical-search'),
-    chemicalResultsSummary: document.getElementById('chemical-results-summary'),
     chemicalFilterLocation: document.getElementById('chemical-filter-location'),
     chemicalSort: document.getElementById('chemical-sort'),
     chemicalDetailPanel: document.getElementById('chemical-detail-panel'),

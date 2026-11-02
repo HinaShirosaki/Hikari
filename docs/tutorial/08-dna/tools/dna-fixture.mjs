@@ -15,6 +15,8 @@ state.projects = [{ id: 'demo-project', name: 'DNA practice · example' }];
 state.protocols = [];
 state.notebookEntries = [];
 state.primerLibrary = [];
+state.samples = [];
+state.inventory = { ...state.inventory, '-20 Degree': [{ id: 'dna-box', name: 'Plasmid box 1', type: 'box25', wells: [] }] };
 let seed = 7261;
 const randomDna = length => Array.from({ length }, () => { seed = (1664525 * seed + 1013904223) >>> 0; return 'ACGT'[seed >>> 30]; }).join('');
 const coding = 'ATG' + 'GCTGGTGAACTGAAACAG'.repeat(22) + 'TAA';
@@ -49,7 +51,8 @@ const bridge = {
     const previous = entries.get(id);
     const entry = { ...previous?.entry, id, name: request.name, status: request.status, topology: request.topology,
       sequenceLength: request.sequenceLength, featureCount: request.featureCount, sourceFormat: request.sourceFormat,
-      folderId: previous?.entry.folderId || '', createdAt: previous?.entry.createdAt || iso(0), updatedAt: iso(0) };
+      folderId: previous?.entry.folderId || entries.get(request.parentEntryId)?.entry.folderId || '',
+      parentEntryId: request.parentEntryId ?? previous?.entry.parentEntryId ?? '', createdAt: previous?.entry.createdAt || iso(0), updatedAt: iso(0) };
     const value = { entry, gbkText: request.gbkText, alignments: request.alignmentSessions || previous?.alignments || [] };
     entries.set(id, value); calls.push({ kind: 'save', name: entry.name, status: entry.status });
     return { ok: true, ...clone(value) };

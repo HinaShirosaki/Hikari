@@ -238,12 +238,6 @@
   display: none !important;
 }
 
-.papers-viewer-empty p {
-  margin: 0;
-  max-width: 28rem;
-  line-height: 1.6;
-}
-
 .papers-viewer-stage {
   height: 100%;
   max-height: none;

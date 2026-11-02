@@ -2,6 +2,7 @@
 
 const { extractHtmlArtifactFromToolEvent, mergeHtmlArtifacts } = require('./tool-artifacts/html-output.js');
 const { extractImageArtifactFromToolEvent, mergeImageArtifacts } = require('./tool-artifacts/image-output.js');
+const { extractPlotlyGraphArtifactFromToolEvent } = require('./tool-artifacts/plotly-graph.js');
 const { createAgentSessionService } = require('../context/chat-log/session-service.js');
 const { createPersistedDisplayRowBuilders } = require('../context/chat-log/persisted-display-rows.js');
 const { isAgentRequestAbortError, runWithAgentRequestContext } = require('../../lib/llm/request-context.js');
@@ -13,16 +14,13 @@ function createAgentChatRequestHandler({
   controllerUtils,
   observability,
   agentChatLogRuntime,
-  getAgentChatLogPath,
   getAgentChatSessionStoragePath,
-  appendAgentChatLogEntry,
   lifecycleService,
   runAgentController
 } = {}) {
   const {
     normalizeJsonPayload,
     buildAgentProgressPayload,
-    flushLifecycleRecorderEvents,
     asArray
   } = lifecycleService;
   const {
@@ -50,7 +48,6 @@ function createAgentChatRequestHandler({
       normalizedPayload?.clientRequestId || normalizedPayload?.client_request_id,
       120
     );
-    const logPath = getAgentChatLogPath();
     const chatSessionStoragePath = getAgentChatSessionStoragePath(normalizedPayload);
     const sessionService = createAgentSessionService({
       cleanText,
@@ -65,11 +62,14 @@ function createAgentChatRequestHandler({
       : null;
     let htmlArtifacts = [];
     let imageArtifacts = [];
+    let plotlyArtifacts = [];
     const emitAgentProgress = (lifecycleEvent) => {
       const html = extractHtmlArtifactFromToolEvent(lifecycleEvent);
       if (html) htmlArtifacts = mergeHtmlArtifacts(htmlArtifacts, [html]);
       const image = extractImageArtifactFromToolEvent(lifecycleEvent);
       if (image) imageArtifacts = mergeImageArtifacts(imageArtifacts, [image]);
+      const plot = extractPlotlyGraphArtifactFromToolEvent(lifecycleEvent);
+      if (plot) plotlyArtifacts = [plot];
       if (!progressSender) {
         return;
       }
@@ -142,7 +142,6 @@ function createAgentChatRequestHandler({
         conversation: controllerUtils.extractConversation(normalizedPayload?.conversation),
         llm: controllerUtils.summarizeLlmForAgentLog(normalizedPayload?.llm)
       };
-      await appendAgentChatLogEntry(logPath, controllerUtils.formatAgentChatLogEntry(requestLogEntry));
       if (sessionService.getSession()?.id) {
         await sessionService.appendRows([
           {
@@ -219,8 +218,6 @@ function createAgentChatRequestHandler({
           failure_reasons: failureReasons,
           ...controllerUtils.summarizeAgentResultForLog(result)
         };
-        await flushLifecycleRecorderEvents(logPath, lifecycleRecorder);
-        await appendAgentChatLogEntry(logPath, controllerUtils.formatAgentChatLogEntry(resultLogEntry));
         if (sessionService.getSession()?.id) {
           const assistantMessage = agentChatLogRuntime.buildAssistantMessageFromResult({
             result,
@@ -230,11 +227,12 @@ function createAgentChatRequestHandler({
           });
           const activityTraceRows = buildPersistedActivityTraceRows(lifecycleRecorder.events);
           const codexCliDisplayRows = buildPersistedCodexCliDisplayRows(lifecycleRecorder.events);
-          if (htmlArtifacts.length || imageArtifacts.length || activityTraceRows.length || codexCliDisplayRows.length) {
+          if (htmlArtifacts.length || imageArtifacts.length || plotlyArtifacts.length || activityTraceRows.length || codexCliDisplayRows.length) {
             assistantMessage.meta = {
               ...(assistantMessage.meta && typeof assistantMessage.meta === 'object' ? assistantMessage.meta : {}),
               ...(htmlArtifacts.length ? { html_artifacts: htmlArtifacts } : {}),
               ...(imageArtifacts.length ? { image_artifacts: imageArtifacts } : {}),
+              ...(plotlyArtifacts.length ? { plotly_graph_artifacts: plotlyArtifacts } : {}),
               ...(activityTraceRows.length ? { activity_trace_rows: activityTraceRows } : {}),
               ...(codexCliDisplayRows.length ? { codex_cli_display_rows: codexCliDisplayRows } : {})
             };
@@ -273,6 +271,7 @@ function createAgentChatRequestHandler({
             ...result,
             html_artifacts: htmlArtifacts,
             image_artifacts: imageArtifacts,
+            plotly_graph_artifacts: plotlyArtifacts,
             request_id: requestId,
             client_request_id: clientRequestId,
             chat_session: sessionService.getSession()
@@ -281,6 +280,7 @@ function createAgentChatRequestHandler({
             ...result,
             html_artifacts: htmlArtifacts,
             image_artifacts: imageArtifacts,
+            plotly_graph_artifacts: plotlyArtifacts,
             request_id: requestId,
             client_request_id: clientRequestId
           };
@@ -308,8 +308,6 @@ function createAgentChatRequestHandler({
           failure_reasons: failureReasons,
           error: cleanText(errorMessage, 2000)
         };
-        await flushLifecycleRecorderEvents(logPath, lifecycleRecorder);
-        await appendAgentChatLogEntry(logPath, controllerUtils.formatAgentChatLogEntry(errorLogEntry));
         if (sessionService.getSession()?.id) {
           const assistantMessage = canceled
             ? agentChatLogRuntime.buildAssistantMessageFromCancellation({
@@ -326,11 +324,12 @@ function createAgentChatRequestHandler({
             });
           const activityTraceRows = buildPersistedActivityTraceRows(lifecycleRecorder.events);
           const codexCliDisplayRows = buildPersistedCodexCliDisplayRows(lifecycleRecorder.events);
-          if (htmlArtifacts.length || imageArtifacts.length || activityTraceRows.length || codexCliDisplayRows.length) {
+          if (htmlArtifacts.length || imageArtifacts.length || plotlyArtifacts.length || activityTraceRows.length || codexCliDisplayRows.length) {
             assistantMessage.meta = {
               ...(assistantMessage.meta && typeof assistantMessage.meta === 'object' ? assistantMessage.meta : {}),
               ...(htmlArtifacts.length ? { html_artifacts: htmlArtifacts } : {}),
               ...(imageArtifacts.length ? { image_artifacts: imageArtifacts } : {}),
+              ...(plotlyArtifacts.length ? { plotly_graph_artifacts: plotlyArtifacts } : {}),
               ...(activityTraceRows.length ? { activity_trace_rows: activityTraceRows } : {}),
               ...(codexCliDisplayRows.length ? { codex_cli_display_rows: codexCliDisplayRows } : {})
             };
@@ -370,6 +369,7 @@ function createAgentChatRequestHandler({
             canceled,
             html_artifacts: htmlArtifacts,
             image_artifacts: imageArtifacts,
+            plotly_graph_artifacts: plotlyArtifacts,
             error: errorMessage,
             request_id: requestId,
             client_request_id: clientRequestId,
@@ -380,6 +380,7 @@ function createAgentChatRequestHandler({
             canceled,
             html_artifacts: htmlArtifacts,
             image_artifacts: imageArtifacts,
+            plotly_graph_artifacts: plotlyArtifacts,
             error: errorMessage,
             request_id: requestId,
             client_request_id: clientRequestId

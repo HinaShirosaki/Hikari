@@ -1,7 +1,5 @@
-import { createPresentation } from "../i18n.mjs";
-const i18nUi = createPresentation("gel");
-// Window placement is presentation state. It never enters the saved gel or its
-// undo history, and opening a window never changes the viewer's dimensions.
+// Result windows stay anchored within the image stage. Opening a window never
+// changes the viewer's dimensions or the saved gel and its undo history.
 export function createFloatingWindows({ documentObject, onOpen = {}, onClose = {} }) {
   const main = documentObject.querySelector?.('.gel-main');
   const stage = documentObject.getElementById('gel-viewer-stage');
@@ -20,7 +18,6 @@ export function createFloatingWindows({ documentObject, onOpen = {}, onClose = {
   const windows = new Map();
   const disposers = [];
   let order = 0;
-  let drag = null;
   let destroyed = false;
 
   function listen(target, event, callback, options) {
@@ -33,11 +30,11 @@ export function createFloatingWindows({ documentObject, onOpen = {}, onClose = {
     entry.layer.style.zIndex = String(5 + order);
   }
 
-  function clamp(entry, x = entry.node.offsetLeft, y = entry.node.offsetTop) {
+  function position(entry) {
     const { node, layer: bounds } = entry;
     if (node.hidden) return;
-    node.style.left = `${Math.max(0, Math.min(x, bounds.clientWidth - node.offsetWidth))}px`;
-    node.style.top = `${Math.max(0, Math.min(y, bounds.clientHeight - node.offsetHeight))}px`;
+    node.style.left = `${Math.max(0, Math.min(12, bounds.clientWidth - node.offsetWidth))}px`;
+    node.style.top = `${Math.max(0, Math.min(12, bounds.clientHeight - node.offsetHeight))}px`;
     node.style.right = 'auto';
     node.style.bottom = 'auto';
   }
@@ -48,7 +45,7 @@ export function createFloatingWindows({ documentObject, onOpen = {}, onClose = {
     entry.trigger?.classList.toggle('is-active', visible);
     if (visible && !entry.visible) {
       raise(entry);
-      clamp(entry);
+      position(entry);
     }
     entry.visible = visible;
   }
@@ -60,63 +57,30 @@ export function createFloatingWindows({ documentObject, onOpen = {}, onClose = {
     entry.node.hidden = false;
     sync(entry);
     raise(entry);
-    clamp(entry);
-    entry.handle?.focus({ preventScroll: true });
+    position(entry);
+    entry.header?.focus({ preventScroll: true });
   }
 
   function close(key, restoreFocus = true) {
     const entry = windows.get(key);
     if (!entry || entry.node.hidden) return;
-    if (drag?.entry === entry) endDrag();
     onClose[key]?.();
     entry.node.hidden = true;
     sync(entry);
     if (restoreFocus) entry.trigger?.focus({ preventScroll: true });
   }
 
-  function endDrag() {
-    if (!drag) return;
-    const { handle, pointerId } = drag;
-    drag = null;
-    if (handle.hasPointerCapture?.(pointerId)) handle.releasePointerCapture(pointerId);
-  }
-
   main.querySelectorAll('[data-gel-window]').forEach((node) => {
     const key = node.dataset.gelWindow;
-    const handle = node.querySelector('[data-gel-window-handle]');
+    const header = node.querySelector('[data-gel-window-header]');
     const trigger = documentObject.getElementById(triggers[key]);
-    const entry = { node, handle, trigger, visible: false, layer: key === 'intensity' ? intensityLayer : layer };
+    const entry = { node, header, trigger, visible: false, layer: key === 'intensity' ? intensityLayer : layer };
     windows.set(key, entry);
     entry.layer.append(node);
     node.classList.add('gel-floating-window');
-    if (handle) {
-      handle.tabIndex = 0;
-      i18nUi.setAttribute(handle, "title", i18nUi.message("Drag to move. Use arrow keys when this title bar is focused."));
-    }
+    if (header) header.tabIndex = -1;
     listen(trigger, 'click', () => node.hidden ? open(key) : close(key));
     listen(node, 'pointerdown', () => raise(entry));
-    listen(handle, 'pointerdown', (event) => {
-      if (event.button !== 0 || event.target.closest('button, input, select, textarea, a')) return;
-      event.preventDefault();
-      endDrag();
-      handle.focus({ preventScroll: true });
-      drag = { entry, handle, pointerId: event.pointerId, x: event.clientX,
-        y: event.clientY, left: node.offsetLeft, top: node.offsetTop };
-      handle.setPointerCapture(event.pointerId);
-    });
-    listen(handle, 'pointermove', (event) => {
-      if (drag?.entry !== entry || drag.pointerId !== event.pointerId) return;
-      clamp(entry, drag.left + event.clientX - drag.x, drag.top + event.clientY - drag.y);
-    });
-    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((event) => listen(handle, event, endDrag));
-    listen(handle, 'keydown', (event) => {
-      if (event.target !== handle) return;
-      const delta = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[event.key];
-      if (!delta) return;
-      event.preventDefault();
-      const step = event.shiftKey ? 40 : 10;
-      clamp(entry, node.offsetLeft + delta[0] * step, node.offsetTop + delta[1] * step);
-    });
     node.querySelectorAll('[data-gel-window-close]').forEach((button) => listen(button, 'click', () => close(key)));
   });
 
@@ -137,7 +101,7 @@ export function createFloatingWindows({ documentObject, onOpen = {}, onClose = {
     intensityLayer.style.top = `${Math.max(0, viewport.top - bounds.top)}px`;
     intensityLayer.style.width = `${Math.max(0, viewport.width)}px`;
     intensityLayer.style.height = `${Math.max(0, viewport.height)}px`;
-    windows.forEach((entry) => { sync(entry); clamp(entry); });
+    windows.forEach((entry) => { sync(entry); position(entry); });
   }
 
   listen(main, 'keydown', (event) => {
@@ -171,7 +135,6 @@ export function createFloatingWindows({ documentObject, onOpen = {}, onClose = {
     closeAll() { windows.forEach((_entry, key) => close(key, false)); },
     destroy() {
       destroyed = true;
-      endDrag();
       resizeObserver?.disconnect();
       mutationObserver?.disconnect();
       disposers.forEach((dispose) => dispose());

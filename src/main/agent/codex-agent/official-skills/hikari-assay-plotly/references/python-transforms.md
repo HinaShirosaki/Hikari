@@ -10,13 +10,7 @@ The public inputs for this action are `action`, `table_id`, `code`, and optional
 
 ## Check completeness before calculating
 
-Current staging calls the preview serializer, which caps each table at **50 rows** even when asked for more. Check both `preview_truncated` and `row_count == len(rows)` before using a staged source. Check each table separately in `tables.json`. A correct transform over incomplete inputs is still incomplete analysis.
-
-When data exceeds that cap:
-
-- Built-in `derive` still processes all stored rows; use it if it expresses the operation and its complete output fits the response.
-- If complete user/context rows are already available, embed those exact rows as a JSON literal in the Python code, within the 40,000-character code limit. Record that source explicitly in the response and validate its count. Do not reconstruct missing rows from the preview.
-- Otherwise request complete data through an available authorized input path or explain the missing-data limitation. Repeated `read`, an unsupported `max_rows`, and `tables.json` do not recover omitted rows.
+Staging includes **all stored rows**, up to the 5,000-row table limit, in both `input_table.json` and `tables.json`. This is independent of the 50-row MCP response preview. Still check `preview_truncated` is false and `row_count == len(rows)` before using a staged source, and check each table separately in `tables.json`. A mismatch is an error; do not continue with partial data or reconstruct omitted rows from a preview.
 
 Output is stored with the same 5,000-row/200-column limits and returned with a 50-row preview. Check output size before writing, and do not silently slice data to fit.
 

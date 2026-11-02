@@ -1,0 +1,25 @@
+// Traditional Chinese preview. Missing entries use the English catalog.
+export const commonTraditionalChinese = Object.freeze({
+  "full.dea0fcd6": "正在新增樣品",
+  "full.462bc166": "新增樣本",
+  "full.3167540a": "{p0} 個容器",
+  "full.3ea9fa7b": "{p0} 個容器",
+  "full.3f2b02dd": "{p0} 個樣本",
+  "full.1eb537ea": "{p0} 個樣本",
+  "full.9ab0051c": "選擇容器",
+  "full.b23d4718": "容器",
+  "full.54989f84": "網格盒",
+  "full.2b4775ec": "此位置沒有容器。",
+  "full.f1776509": "單一",
+  "full.dc269d7b": "請輸入樣本名稱。",
+  "full.a618ccf9": "請為此樣本選擇容器。",
+  "full.9179142e": "樣本代碼 {p0} 已存在。",
+  "full.7d028cc3": "無法新增樣本。",
+  "action.discard": "捨棄變更",
+  "action.saveChanges": "儲存變更",
+  "status.saved": "所有變更已儲存",
+  "status.unsaved": "有未儲存的變更",
+  "status.saving": "正在儲存…",
+  "status.saveSuccess": "變更已儲存",
+  "status.saveError": "無法儲存變更，請重試。"
+});

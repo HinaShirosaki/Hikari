@@ -11,6 +11,8 @@ Turn the user's assay data into traceable calculations and an inspectable Plotly
 
 Use `assay_plot` to style the native plot in Analyze or add labels, reference lines and shaded bands within that plot. It saves formatting on the active assay and returns live rendering acknowledgements. It does not calculate values or change plate measurements.
 
+Fix a new custom figure's dimensions at creation: use `layout.width: 700`, `layout.height: 500`, `layout.autosize: false` and `config.responsive: false` by default. Honor user dimensions or choose appropriate fixed proportions for heatmaps and multiple panels. Keep the dimensions stable when the canvas changes and during formatting-only updates. Avoid a long, shallow plot. Resolve crowded axes through tick labels, hover detail, horizontal categorical comparisons or meaningful panels while preserving all observations and numeric spacing. See [plotly-recipes.md](references/plotly-recipes.md) for the layout and visual-review rules.
+
 ## Choose the relevant reference
 
 - Read [tool-reference.md](references/tool-reference.md) for action arguments, returned objects, update semantics, and limits. The connected tool schemas are authoritative.
@@ -26,7 +28,7 @@ Load only the references needed for the current task.
 
 | User intent | Starting point |
 | --- | --- |
-| Calculate or plot the active plate | Parse the current Assay context TSV; create an original `assay_table` with explicit rows |
+| Calculate or plot the active plate | Use the complete, already-staged `assay_table` ID in the current context; TSV is a preview |
 | Summarize replicate columns | `assay_table` → `derive` with row-wise `operands` |
 | Summarize replicate wells | `assay_table` → `derive` with `group_by` and calculation-column `source` |
 | Normalize, join controls, pivot, or fit | Built-in calculations when sufficient; otherwise `assay_table` → `python` after checking input completeness |
@@ -37,16 +39,16 @@ Load only the references needed for the current task.
 
 ## Establish the actual data
 
-Use the active Assay right-rail context or user-provided rows. The current context can include unsaved plate mappings and pasted results. Parse its `Assay plate data (TSV...)` block directly; preserve `well`, `row`, `column`, `sample`, `concentration`, and `result` when present. A `Latest analysis table (TSV)` is already derived data: use it only when it matches the requested analysis, and avoid normalizing it twice.
+Use the complete active-plate scratch table ID supplied by the current Assay right-rail context. Hikari stages current UI rows before this turn; use that ID directly for calculations. It includes `well`, `row`, `column`, `sample`, `concentration`, and `result`. The TSV is only a preview and must not replace this table. For explicit user-supplied rows, create a scratch table first. A `Latest analysis table (TSV)` is already derived data: use it only when it matches the requested analysis, and avoid normalizing it twice.
 
-Do not replace active plate context with local lookup results or a saved file that may be stale. If the context announces rows but supplies no body, request refreshed context or explicit rows. An assay name alone is not the data, and `create` does not retrieve the active plate implicitly.
+Do not replace active plate context with local lookup results or a saved file that may be stale. If the context supplies neither a staged table ID nor complete explicit rows, request refreshed context or explicit rows. An assay name alone is not the data, and `create` does not retrieve the active plate implicitly.
 
 Identify the measurement, units, grouping keys, controls, and meaning of replicates from the supplied data. Resolve only missing choices that materially change the calculation. Keep missing wells missing, keep measured zeroes, and do not invent control values or exclusions.
 
 ## Calculate, plot, and review
 
-1. Create an original table when starting from assay rows, then derive named outputs. Reuse an existing verified table for follow-up work. `derive` and `add_column` both create a new table; capture each returned `table.id`.
-2. Check `row_count`, `preview_truncated`, group counts, and a representative calculation. Table responses show at most 50 rows. Python staging currently has the same cap: read [python-transforms.md](references/python-transforms.md) before processing larger inputs.
+1. Use the current staged original table, or create one from explicitly supplied assay rows, then derive named outputs. Reuse a verified table for follow-up work only when its data still matches the current context. `derive` and `add_column` both create a new table; capture each returned `table.id`.
+2. Check `row_count`, `preview_truncated`, group counts, and a representative calculation. Table responses show at most 50 rows per page; use `read` with `offset=table.next_offset` until null for complete graph arrays. Python staging includes all stored rows; read [python-transforms.md](references/python-transforms.md).
 3. Build traces from the actual calculation output. Label quantities and units, state whether error bars show SD, SEM, or an interval, and distinguish raw points from summaries and fitted predictions.
 4. Call `inspect` after every graph creation or meaningful update. Review the returned figure and fix relevant issues; the inspector is a structural check, not proof of scientific validity or rendered appearance.
 5. Use `read` when the full figure is needed after inspection. Report the returned table and graph IDs, transformation, replicate/error-bar definition, and material remaining limitations. Never use example IDs as live handles.

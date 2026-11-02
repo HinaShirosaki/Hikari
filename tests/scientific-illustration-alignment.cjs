@@ -67,7 +67,7 @@ async function verifyAlignment({ tool, evaluate, check, win, pause, temp }) {
       const after = await read(), moved = await bounds(ids), target = start + (end - start) * factor;
       check(moved.every(b => Math.abs(b[axis] + b[size] * factor - target) < .2), `${canvas} ${action} aligns rendered bounds for vector, raster and rotated text: ${JSON.stringify({ target, original, moved, objects: after.objects, status: await evaluate('document.getElementById("status").textContent'), selected: await evaluate('[...document.querySelectorAll(".canvas-stage [data-object-id][aria-pressed=true]")].map(n=>n.dataset.objectId)') })}`);
       check(after.objects.every((object, i) => JSON.stringify({ ...object, x: before.objects[i].x, y: before.objects[i].y }) === JSON.stringify(before.objects[i])), 'Alignment preserves sizes, fonts, rotation, artwork and every unrelated component');
-      check(await evaluate('!document.getElementById("align-menu").open && Boolean(document.querySelector(".selection")) && !document.getElementById("delete").disabled'), 'The menu closes while retaining an editable selection');
+      check(await evaluate('!document.getElementById("align-menu").open && !document.getElementById("selection-toolbar").hidden && !document.getElementById("delete").disabled'), 'The menu closes while retaining the floating selection toolbar');
       await undo(before);
     }
     for (const [action, axis, size] of [['distribute-horizontal', 'x', 'width'], ['distribute-vertical', 'y', 'height']]) {

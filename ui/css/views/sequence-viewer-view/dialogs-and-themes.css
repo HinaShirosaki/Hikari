@@ -149,14 +149,34 @@
 
 .sequence-viewer-primer-design-result {
   display: grid;
+  min-width: 0;
   gap: var(--space-10);
   max-height: min(60vh, 520px);
   overflow: auto;
 }
 
 .sequence-viewer-primer-design-summary {
-  display: grid;
-  gap: var(--space-6);
+  color: var(--theme-text-muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.sequence-viewer-primer-design-table th:first-child {
+  width: 20%;
+}
+
+.sequence-viewer-primer-design-table th:nth-child(2) {
+  width: 16%;
+}
+
+.sequence-viewer-primer-design-table th:nth-last-child(-n + 3) {
+  width: 4rem;
+}
+
+.sequence-viewer-primer-design-table td {
+  padding-block: var(--space-10);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .sequence-viewer-primer-design-summary p,

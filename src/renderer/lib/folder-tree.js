@@ -235,6 +235,7 @@ export function renderFolderTreeLeaf({
   wrapperClass = '',
   controlClass = '',
   contentHtml = '',
+  actionsHtml = '',
   controlTag = 'button',
   wrapperAttributes = {},
   controlAttributes = {}
@@ -247,6 +248,7 @@ export function renderFolderTreeLeaf({
         class="${joinClassNames(controlClass, 'folder-tree-template__leaf-control', active && 'is-active')}"
         ${renderAttributes(controlAttributes)}
       >${contentHtml}</${safeControlTag}>
+      ${actionsHtml}
     </div>
   `;
 }

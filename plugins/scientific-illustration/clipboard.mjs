@@ -39,8 +39,8 @@ export function parseClipboard(text, validateSvg) {
 // Native copy/paste events expose clipboard data without adding host permissions.
 // The private snapshot also supports Ctrl shortcuts on macOS and hosts where
 // a browser clipboard command is unavailable. Native text pastes take priority.
-export function installCanvasClipboard({ document, canHandle, getSelection, paste, validateSvg, status }) {
-  let snapshot = null, pasted = 0, pasteEventSeen = false;
+export function installCanvasClipboard({ document, canHandle, getSelection, getPasteContext = () => null, paste, readExternal, pasteExternal, validateSvg, status }) {
+  let snapshot = null, pasted = 0, pasteEventSeen = false, pasteAttempt = 0;
   function command(action) {
     try { return document.execCommand(action); } catch { return false; }
   }
@@ -55,6 +55,23 @@ export function installCanvasClipboard({ document, canHandle, getSelection, past
     const offset = (++pasted) * 15;
     void paste(value, offset).catch(error => status(error.message));
   }
+  function insertReadClipboard(data = null, fallback = false, attempt = pasteAttempt) {
+    // Invoke the reader now so it captures DataTransfer while it is readable.
+    // Native reads happen only in response to Paste, never in the background.
+    const context = getPasteContext(), pending = readExternal?.(data);
+    if (!pending) { if (fallback) insert(snapshot); return; }
+    void Promise.resolve(pending).then(async clipboard => {
+      if (attempt !== pasteAttempt || context !== getPasteContext() || !canHandle({ target: document.activeElement })) return;
+      if (!clipboard) { if (fallback) insert(snapshot); return; }
+      const value = parseClipboard(clipboard.text, validateSvg);
+      if (value) {
+        if (JSON.stringify(value) !== JSON.stringify(snapshot)) { snapshot = value; pasted = 0; }
+        insert(value); return;
+      }
+      snapshot = null; pasted = 0;
+      await pasteExternal?.(clipboard);
+    }).catch(error => { if (attempt === pasteAttempt) status(error.message); });
+  }
   document.addEventListener('copy', event => {
     if (!canHandle(event)) { snapshot = null; pasted = 0; return; }
     try {
@@ -64,9 +81,14 @@ export function installCanvasClipboard({ document, canHandle, getSelection, past
   });
   document.addEventListener('paste', event => {
     if (!canHandle(event)) return;
+    pasteAttempt++;
     pasteEventSeen = true;
     const value = parseClipboard(event.clipboardData?.getData('text/plain'), validateSvg);
-    if (!value) { snapshot = null; pasted = 0; return; }
+    if (!value) {
+      snapshot = null; pasted = 0;
+      if (readExternal) { event.preventDefault(); insertReadClipboard(event.clipboardData); }
+      return;
+    }
     if (JSON.stringify(value) !== JSON.stringify(snapshot)) { snapshot = value; pasted = 0; }
     event.preventDefault(); insert(snapshot);
   });
@@ -77,15 +99,22 @@ export function installCanvasClipboard({ document, canHandle, getSelection, past
       command('copy'); status('Components copied'); return true;
     } catch (error) { status(error.message); return false; }
   }
-  function pasteSelection() {
+  function pasteSelection(nativeKey = false) {
     if (!canHandle({ target: document.activeElement })) return false;
+    const attempt = ++pasteAttempt;
     pasteEventSeen = false;
     command('paste');
-    if (!pasteEventSeen) insert(snapshot);
-    return true;
+    if (!pasteEventSeen) {
+      const fallback = () => { if (attempt === pasteAttempt && !pasteEventSeen) insertReadClipboard(null, true, attempt); };
+      // execCommand can be refused in the sandbox. Let the trusted keyboard
+      // action deliver its real paste event before trying the host fallback.
+      if (nativeKey) (document.defaultView || globalThis).setTimeout(fallback, 0);
+      else fallback();
+    }
+    return pasteEventSeen;
   }
   return {
-    copy, paste: pasteSelection,
+    copy, paste: () => { pasteSelection(); return true; },
     handleKey(event) {
       if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey || !canHandle(event)) return false;
       const key = event.key.toLowerCase(); if (!['c', 'v'].includes(key)) return false;
@@ -94,8 +123,7 @@ export function installCanvasClipboard({ document, canHandle, getSelection, past
           if (!copy()) return false;
           event.preventDefault();
         } else {
-          pasteSelection();
-          event.preventDefault();
+          if (pasteSelection(true)) event.preventDefault();
         }
       } catch (error) { event.preventDefault(); status(error.message); }
       return true;

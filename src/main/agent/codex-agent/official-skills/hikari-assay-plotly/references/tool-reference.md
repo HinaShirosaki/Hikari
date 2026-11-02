@@ -4,7 +4,7 @@
 
 Call `assay_table` and `plotly_graph` using the names exposed by the connected server. Examples use `{ "tool": "...", "arguments": {...} }` to identify the call; pass only `arguments` as its input. Replace example IDs with returned IDs.
 
-Both schemas reject unknown top-level fields. Internal runtime aliases are not necessarily MCP arguments. Do not send `id`, `source`, `tableId`, `max_rows`, `limit`, `figure`, `traces`, `frames`, `output_path`, or `python_executable` unless a future connected schema explicitly exposes them.
+Both schemas reject unknown top-level fields. Internal runtime aliases are not necessarily MCP arguments. Do not send `id`, `source`, `tableId`, `limit`, `figure`, `traces`, `frames`, `output_path`, or `python_executable` unless the connected schema explicitly exposes them. `assay_table` read supports `offset` and `max_rows` (1–50).
 
 Prefer IDs for existing targets. Names can be duplicated and name lookup chooses the first case-insensitive match. A failed ID can fall back to a supplied name, so omit unrelated names when reading a known target.
 
@@ -13,7 +13,7 @@ Prefer IDs for existing targets. Names can be duplicated and name lookup chooses
 | Action | Supported input for the action | Result |
 | --- | --- | --- |
 | `create` | Nonempty `rows`; optional `name`, `columns` | New `table`, status `created` |
-| `read` | `table_id` or existing `name` | `table`, status `read` |
+| `read` | `table_id` or existing `name`; optional `offset`, `max_rows` | `table`, status `read`; follow `table.next_offset` until null |
 | `list` | `action` only | Metadata `items`, `count`, `total_count`; no rows |
 | `derive` | `table_id`, calculation `columns`; optional `output_name`, `group_by`, `keep_columns`, `include_source_columns` | New `table`, `source_table_id`, status `derived` |
 | `add_column` | `table_id`, calculation `columns`; optional `output_name` | New table retaining source columns, status `derived` |
@@ -45,8 +45,8 @@ Returned `table` fields are `id`, `name`, `source`, `columns`, `row_count`, `col
 
 - Up to 5,000 input rows and 200 columns; up to 20 grouping fields.
 - Table names: 160 characters; column names: 120; cells: 4,000; Python code: 40,000.
-- Serialized tables expose at most **50 rows**, even when stored `row_count` is larger. `read` has no public pagination or larger-preview parameter.
-- Built-in `derive` processes the full stored table. Python staging currently serializes only the first 50 rows of each table; `tables.json` is not a full-data workaround.
+- Serialized tables expose at most **50 rows** per page. Read the returned table ID with `offset=table.next_offset` until null to retrieve every row; preserve page order.
+- Built-in `derive` and Python staging process the full stored table. `input_table.json` and each entry of `tables.json` include all stored rows, independently of response previews.
 - `list` returns the first 50 objects, with `total_count` indicating whether more exist. It exposes no paging parameter. Keep IDs from successful calls.
 
 Do not construct a supposedly complete graph from a truncated preview. Use complete source rows already supplied, a valid smaller aggregate, or explicit complete data in Python as described in [python-transforms.md](python-transforms.md). Reject silent truncation beyond storage limits; splitting data requires preserving the analysis across all parts.

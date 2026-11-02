@@ -147,6 +147,7 @@ export function getSequenceViewerElements(rootDocument) {
     primerDesignCloseBtn: rootDocument?.getElementById?.('sequence-viewer-primer-design-close'),
     primerDesignDismissBtn: rootDocument?.getElementById?.('sequence-viewer-primer-design-dismiss'),
     primerDesignOrderBtn: rootDocument?.getElementById?.('sequence-viewer-primer-design-order'),
+    primerDesignSaveBtn: rootDocument?.getElementById?.('sequence-viewer-primer-design-save'),
     primerOrderOverlay: rootDocument?.getElementById?.('sequence-viewer-primer-order-overlay'),
     homePrimerLibraryBtn: rootDocument?.getElementById?.('sequence-viewer-primer-library-open'),
     detailPrimerLibraryBtn: rootDocument?.getElementById?.('sequence-viewer-detail-primer-library-open'),

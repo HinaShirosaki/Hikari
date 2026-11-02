@@ -120,6 +120,8 @@ async function deleteSequenceEntry({ storagePath, id }) {
   await ensureLibraryDirectories(paths);
   const db = await openDatabase(paths.sqlitePath);
   try {
+    // Keep derived DNA when its template is removed.
+    db.run("UPDATE sequence_entries SET parent_entry_id = '' WHERE parent_entry_id = ?", [safeId]);
     db.run('DELETE FROM sequence_feature_occurrences WHERE host_vector_id = ?', [safeId]);
     db.run('DELETE FROM sequence_entries WHERE id = ?', [safeId]);
     deleteOrphanFeatures(db);

@@ -1,0 +1,189 @@
+.primer-annealing {
+  min-width: 0;
+}
+
+.primer-annealing-head,
+.primer-annealing-navigation,
+.primer-annealing-modes,
+.primer-annealing-dna-label,
+.primer-annealing-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.primer-annealing-head {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-bottom: var(--space-16);
+}
+
+.primer-annealing-navigation {
+  min-width: 0;
+  flex: 1 1 20rem;
+  max-width: 38rem;
+}
+
+.primer-annealing-navigation select {
+  width: 100%;
+  min-width: 0;
+  text-overflow: ellipsis;
+}
+
+.primer-annealing-navigation button {
+  flex: 0 0 auto;
+}
+
+.primer-annealing-modes .sequence-viewer-mode-btn {
+  padding: var(--space-6) var(--space-12);
+}
+
+.primer-annealing-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-12);
+  margin: 0 0 var(--space-16);
+}
+
+.primer-annealing-metrics > div {
+  border-left: 0.125rem solid var(--theme-border);
+  padding-left: var(--space-12);
+}
+
+.primer-annealing-metrics dt {
+  color: var(--theme-text-muted);
+  font-size: var(--text-sm);
+}
+
+.primer-annealing-metrics dd {
+  margin: var(--space-4) 0 0;
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+  color: var(--theme-text-strong);
+}
+
+.primer-annealing-dna-label {
+  flex-wrap: wrap;
+  font-size: var(--text-sm);
+}
+
+.primer-annealing-dna-label span {
+  color: var(--theme-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.primer-annealing-scroll {
+  width: 100%;
+  overflow-x: auto;
+  margin: var(--space-8) 0;
+  border: 1px solid var(--theme-border);
+  border-radius: var(--radius-sm);
+  background: var(--theme-surface-alt, var(--theme-surface));
+}
+
+.primer-annealing-scroll:focus-visible {
+  outline: 0.125rem solid var(--theme-accent);
+  outline-offset: 0.125rem;
+}
+
+.primer-annealing-duplex {
+  display: block;
+  max-width: none;
+  font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  text-anchor: middle;
+}
+
+.primer-annealing-base,
+.primer-annealing-end {
+  fill: var(--theme-text);
+}
+
+.primer-annealing-coordinate {
+  fill: var(--theme-text-muted);
+  font-size: 10px;
+}
+
+.primer-annealing-dna-bond {
+  stroke: var(--theme-border);
+}
+
+.primer-annealing-pair-bond {
+  stroke: var(--theme-accent);
+}
+
+.primer-annealing-outline {
+  fill: var(--theme-accent-wash);
+  stroke: var(--theme-accent);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+
+.primer-annealing-oligo-base {
+  font-weight: 700;
+}
+
+.primer-annealing-oligo-base.is-paired {
+  fill: var(--theme-accent);
+}
+
+.primer-annealing-oligo-base.is-mismatch,
+.primer-annealing-oligo-base.is-gap,
+.primer-annealing-oligo-base.is-overhang {
+  fill: var(--theme-warning-ink);
+  text-decoration: underline;
+}
+
+.primer-annealing-legend {
+  flex-wrap: wrap;
+  gap: var(--space-8) var(--space-20);
+  color: var(--theme-text-muted);
+  font-size: var(--text-sm);
+}
+
+.primer-annealing-legend .is-paired {
+  color: var(--theme-accent);
+}
+
+.primer-annealing-warning,
+.primer-annealing-legend .is-unpaired {
+  color: var(--theme-warning-ink);
+}
+
+.primer-annealing-handle {
+  cursor: ew-resize;
+  touch-action: none;
+  outline: none;
+}
+
+.primer-annealing-handle-hit {
+  fill: transparent;
+}
+
+.primer-annealing-handle-grip {
+  fill: var(--theme-accent);
+  stroke: var(--theme-surface);
+  stroke-width: 1;
+}
+
+.primer-annealing-handle-line {
+  stroke: var(--theme-text-on-accent);
+  pointer-events: none;
+}
+
+.primer-annealing-handle:focus-visible .primer-annealing-handle-hit {
+  stroke: var(--theme-accent);
+  stroke-width: 2;
+  stroke-dasharray: 3 2;
+}
+
+.is-resizing-primer,
+.is-resizing-primer * {
+  cursor: ew-resize !important;
+  user-select: none;
+}
+
+@media (max-width: 720px) {
+  .primer-annealing-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

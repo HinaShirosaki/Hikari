@@ -1,5 +1,6 @@
 import { eventTargetsElement } from './shared.js';
 import { isOrfFeature } from '../orf-analysis.js';
+import { copyProteinValueFromEvent } from '../protein-copy.js';
 
 // Pointer work inside the sequence workspace: selection drags, hover tooltips,
 // feature rail clicks, and the context menu.
@@ -34,7 +35,8 @@ function bindSequenceHostEvents(context = {}) {
     if ((Number.isFinite(button) && button !== 0)
       || !Number.isFinite(state.selectedFeatureIndex)
       || state.selectedFeatureIndex < 0
-      || event.target?.closest?.('[data-feature-index]')) {
+      || event.target?.closest?.('[data-feature-index]')
+      || eventTargetsElement(event, elements.featureDetail)) {
       return;
     }
     const featureInteractionSurfaces = [
@@ -55,6 +57,10 @@ function bindSequenceHostEvents(context = {}) {
     state.selectedFeatureIndex = -1;
     hideFeatureContextMenu();
     renderActiveRecord({ preserveScroll: true });
+  });
+
+  elements.featureDetail?.addEventListener('click', (event) => {
+    void copyProteinValueFromEvent(event);
   });
 
   function selectFeature(index, options = {}) {
@@ -168,7 +174,7 @@ function bindSequenceHostEvents(context = {}) {
       return;
     }
     const rect = event.type === 'focusin' ? trigger.getBoundingClientRect?.() : null;
-    showSequenceHoverTooltip(rect ? { clientX: rect.left, clientY: rect.bottom } : event, feature, record.sequence.length);
+    showSequenceHoverTooltip(rect ? { type: event.type, clientX: rect.left, clientY: rect.bottom } : event, feature, record.sequence.length);
   }
 
   elements.sequenceHost?.addEventListener('mouseover', showFeatureReadout);
@@ -218,7 +224,7 @@ function bindSequenceHostEvents(context = {}) {
     renderSelectedFeatureDetail(getSelectedRecord());
   });
 
-  elements.sequenceHost?.addEventListener('contextmenu', (event) => {
+  function showSequenceContextMenu(event) {
     const record = getSelectedRecord();
     hideSequenceHoverTooltip();
     if (state.isSelectingSequence) {
@@ -241,14 +247,16 @@ function bindSequenceHostEvents(context = {}) {
         return;
       }
     }
-    if (!context?.selectionRange && !context?.featureContext) {
+    if (!context?.selectionRange && !context?.featureContext && !context?.restrictionFeature && !context?.fragmentRange) {
       hideFeatureContextMenu();
       return;
     }
     event.preventDefault?.();
     renderSelectedFeatureDetail(record);
     renderFeatureContextMenu(context, event);
-  });
+  }
+  elements.sequenceHost?.addEventListener('contextmenu', showSequenceContextMenu);
+  elements.featureRailHost?.addEventListener('contextmenu', showSequenceContextMenu);
 }
 
 export { bindSequenceHostEvents };

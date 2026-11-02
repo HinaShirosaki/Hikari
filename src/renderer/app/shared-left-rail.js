@@ -1,6 +1,4 @@
-import { createPresentation } from "../lib/i18n/presentation.js";
-import "../lib/i18n/shell.js";
-const i18nUi = createPresentation("shell");
+import { setShellAttribute } from '../lib/i18n/shell.js';
 const STORAGE_KEY = 'hikari_shared_left_rail_width_v2';
 const DEFAULT_WIDTH = 280;
 const MIN_WIDTH = 240;
@@ -9,17 +7,8 @@ const MOBILE_BREAKPOINT = 980;
 const HANDLE_CLASS = 'app-left-rail-handle';
 const HANDLE_ATTR = 'data-shared-left-rail-handle';
 const FOLDABLE_ATTR = 'data-left-rail-foldable';
-const FOLD_TOGGLE_CLASS = 'app-left-rail-fold-toggle';
 const FOLDED_CLASS = 'is-left-rail-folded';
 export const SHARED_LEFT_RAIL_CHANGED_EVENT = 'hikari:left-rail-width-changed';
-
-function foldToggleIconMarkup() {
-  return `
-    <svg class="app-left-rail-fold-toggle__icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-      <path class="app-left-rail-fold-toggle__chevron" d="m16 4-8 8 8 8"></path>
-    </svg>
-  `;
-}
 
 function getResponsiveMaxWidth(windowObject) {
   const viewportWidth = Number(windowObject?.innerWidth) || 0;
@@ -119,12 +108,41 @@ export function initSharedLeftRailResizers({
   if (!rootDocument?.documentElement || !windowObject?.getComputedStyle) {
     return {
       ensureHandles: () => {},
-      syncWidth: () => {}
+      syncWidth: () => {},
+      syncToggle: () => {}
     };
   }
 
   const root = rootDocument.documentElement;
+  const toggle = rootDocument.getElementById('topbar-left-rail-toggle');
   let activeResize = null;
+
+  function getActiveRail() {
+    const activeView = rootDocument.querySelector('.view.is-active');
+    if (!activeView) return null;
+    return [...activeView.querySelectorAll('[data-sync-left-rail]')].find((rail) => {
+      const layout = rail.parentElement;
+      return layout?.getAttribute(FOLDABLE_ATTR) === 'true'
+        && !layout.closest('[hidden]') && layout.getClientRects().length > 0;
+    }) || null;
+  }
+
+  function syncToggle() {
+    const rail = getActiveRail();
+    const layout = rail?.parentElement;
+    const folded = Boolean(rail && (layout.classList.contains(FOLDED_CLASS)
+      || windowObject.getComputedStyle(rail).display === 'none'));
+    if (toggle) {
+      toggle.hidden = !rail;
+      toggle.setAttribute('aria-expanded', String(Boolean(rail) && !folded));
+      if (rail) toggle.setAttribute('aria-controls', rail.id);
+      else toggle.removeAttribute('aria-controls');
+      const label = folded ? 'leftRail.show' : 'leftRail.hide';
+      setShellAttribute(toggle, 'aria-label', label);
+      setShellAttribute(toggle, 'title', label);
+    }
+    rootDocument.body?.classList?.toggle('has-folded-shared-left-rail', folded);
+  }
 
   function applyWidth(width) {
     return setSharedLeftRailWidth(width, {
@@ -198,31 +216,25 @@ export function initSharedLeftRailResizers({
     rootDocument.addEventListener('pointercancel', onPointerUp);
   }
 
-  function syncFoldState(layout, rail, toggle, resizeHandle) {
+  function syncFoldState(layout, rail, resizeHandle) {
     const folded = layout.classList.contains(FOLDED_CLASS);
+    if (folded && rail.contains(rootDocument.activeElement)) {
+      toggle?.focus({ preventScroll: true });
+    }
     layout.dataset.leftRailState = folded ? 'folded' : 'expanded';
     rail.setAttribute('aria-hidden', folded ? 'true' : 'false');
     rail.inert = folded;
     if (resizeHandle) {
       resizeHandle.hidden = folded;
     }
-    toggle.classList.toggle('is-folded', folded);
-    toggle.setAttribute('aria-expanded', String(!folded));
-    i18nUi.setAttribute(toggle, "aria-label", (folded ? i18nUi.message("Open left rail") : i18nUi.message("Fold left rail")));
-    i18nUi.setAttribute(toggle, "title", (folded ? i18nUi.message("Open left rail") : i18nUi.message("Fold left rail")));
-
-    const closestView = layout.closest?.('.view');
-    if (!closestView || closestView.classList?.contains('is-active')) {
-      rootDocument.body?.classList?.toggle('has-folded-shared-left-rail', folded);
-    }
   }
 
-  function ensureFoldToggle(layout, rail, resizeHandle) {
+  function ensureFoldState(layout, rail, resizeHandle) {
+    if (!layout.hasAttribute(FOLDABLE_ATTR)) layout.setAttribute(FOLDABLE_ATTR, 'true');
     const foldable = layout.getAttribute(FOLDABLE_ATTR) === 'true';
-    const existingToggles = [...layout.querySelectorAll(`.${FOLD_TOGGLE_CLASS}`)];
+    layout.querySelectorAll('[data-left-rail-fold-toggle]').forEach((button) => button.remove());
 
     if (!foldable) {
-      existingToggles.forEach((toggle) => toggle.remove());
       layout.classList.remove(FOLDED_CLASS);
       layout.removeAttribute('data-left-rail-state');
       rail.removeAttribute('aria-hidden');
@@ -230,39 +242,28 @@ export function initSharedLeftRailResizers({
       if (resizeHandle) {
         resizeHandle.hidden = false;
       }
-      const closestView = layout.closest?.('.view');
-      if (!closestView || closestView.classList?.contains('is-active')) {
-        rootDocument.body?.classList?.remove('has-folded-shared-left-rail');
-      }
       return;
     }
 
-    if (windowObject.innerWidth <= MOBILE_BREAKPOINT) {
-      layout.classList.remove(FOLDED_CLASS);
-    }
-
-    const toggle = existingToggles.shift() || rootDocument.createElement('button');
-    existingToggles.forEach((extraToggle) => extraToggle.remove());
-    if (!toggle.isConnected) {
-      toggle.type = 'button';
-      toggle.className = FOLD_TOGGLE_CLASS;
-      i18nUi.setHtml(toggle, foldToggleIconMarkup());
-      toggle.setAttribute('data-left-rail-fold-toggle', 'true');
-      toggle.addEventListener('click', () => {
-        layout.classList.toggle(FOLDED_CLASS);
-        syncFoldState(layout, rail, toggle, resizeHandle);
-      });
-      layout.append(toggle);
-    }
-    if (rail.id) {
-      toggle.setAttribute('aria-controls', rail.id);
-    }
-    syncFoldState(layout, rail, toggle, resizeHandle);
+    syncFoldState(layout, rail, resizeHandle);
   }
+
+  toggle?.addEventListener('click', () => {
+    const rail = getActiveRail();
+    if (!rail) return;
+    finishResize();
+    const layout = rail.parentElement;
+    const folded = layout.classList.contains(FOLDED_CLASS)
+      || windowObject.getComputedStyle(rail).display === 'none';
+    layout.classList.toggle(FOLDED_CLASS, !folded);
+    layout.classList.toggle('is-left-rail-expanded', folded);
+    syncFoldState(layout, rail, layout.querySelector(`[${HANDLE_ATTR}="true"]`));
+    syncToggle();
+  });
 
   function ensureHandles() {
     const rails = [...rootDocument.querySelectorAll('[data-sync-left-rail]')];
-    rails.forEach((rail) => {
+    rails.forEach((rail, index) => {
       if (!(rail instanceof HTMLElement)) {
         return;
       }
@@ -270,6 +271,7 @@ export function initSharedLeftRailResizers({
       if (!(layout instanceof HTMLElement)) {
         return;
       }
+      if (!rail.id) rail.id = `shared-left-rail-${index + 1}`;
 
       [...rail.querySelectorAll(`.${HANDLE_CLASS}`)].forEach((node) => node.remove());
 
@@ -284,8 +286,9 @@ export function initSharedLeftRailResizers({
         resizeHandle.addEventListener('pointerdown', (event) => onPointerDown(event, rail));
         layout.append(resizeHandle);
       }
-      ensureFoldToggle(layout, rail, resizeHandle);
+      ensureFoldState(layout, rail, resizeHandle);
     });
+    syncToggle();
   }
 
   applyWidth(readStoredWidth(windowObject));
@@ -293,6 +296,7 @@ export function initSharedLeftRailResizers({
 
   return {
     ensureHandles,
-    syncWidth
+    syncWidth,
+    syncToggle
   };
 }

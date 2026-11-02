@@ -12,6 +12,17 @@
 
 Connecting observed means does not fit a dose-response model. Avoid lines across unordered conditions or separate biological subjects. Keep raw observations available when useful for interpreting variation.
 
+## Set a fixed figure size
+
+Choose dimensions when creating the figure. Use `layout.width: 700`, `layout.height: 500`, `layout.autosize: false` and `config.responsive: false` for an ordinary chart. Honor explicit user dimensions; choose appropriate fixed proportions for heatmaps or multiple panels. Hikari also supplies these fixed defaults when dimensions are omitted. Opening rails or resizing the canvas changes the viewport, not the figure or export dimensions; a smaller viewport can scroll. During formatting-only updates, preserve existing dimensions unless the user asks to resize. Do not make a figure wider or shallower merely to fit many X values.
+
+Keep the chart readable within those fixed dimensions:
+
+- For numeric dose/time axes, preserve the actual X values and spacing. Use automatic or selective ticks instead of labeling every point. Keep every observation in the traces and full values in hover text. Do not truncate the data, change the axis range, or aggregate replicates solely to reduce crowding.
+- For long categorical labels, prefer horizontal bars/dots when appropriate, concise display labels with full hover labels, or separate panels for meaningful conditions. Preserve category identity and intended order; do not merge distinct categories to shorten the axis. Keep numeric dose/time axes numeric.
+- Use concise titles, readable text, and `automargin: true` on both axes so titles and tick labels have room. Arrange legends to avoid squeezing the plot. Avoid excessive padding and arbitrary equal-axis constraints; different X/Y quantities do not require equal physical scales. Heatmaps retain their meaningful physical row/column geometry.
+- Run `inspect` for structural issues, then inspect the rendered result through an available view/export path for stretched proportions, overlapping labels, clipped titles and legends. Fix layout issues without changing scientific data. If no rendered view is available, report structural verification only. Do not claim that an empty issues list proves visual readability.
+
 ## Dose-response means with SD
 
 This synthetic figure uses the two groups from [table-workflows.md](table-workflows.md). For this example only, supplied units are nM and RFU. Use actual returned values and actual units for a live request.
@@ -32,12 +43,13 @@ This synthetic figure uses the two groups from [table-workflows.md](table-workfl
       "hovertemplate": "Dose %{x:g} nM<br>Mean %{y:.2f} RFU<br>n=%{customdata[0]} wells<extra>%{fullData.name}</extra>"
     }],
     "layout": {
+      "width": 700, "height": 500, "autosize": false,
       "title": {"text": "Example dose response — mean ± SD"},
       "xaxis": {"title": {"text": "Concentration (nM)"}, "type": "log", "automargin": true},
       "yaxis": {"title": {"text": "Response (RFU)"}, "automargin": true},
       "showlegend": true
     },
-    "config": {"responsive": true, "displaylogo": false}
+    "config": {"responsive": false, "displaylogo": false}
   }
 }
 ```
@@ -74,11 +86,12 @@ Build `z[rowIndex][columnIndex]` from physical coordinates. Fill unmeasured cell
       "hovertemplate": "Well %{y}%{x}<br>Response %{z:.2f} RFU<extra></extra>"
     }],
     "layout": {
+      "width": 700, "height": 500, "autosize": false,
       "title": {"text": "Example plate response (crop)"},
       "xaxis": {"title": {"text": "Plate column"}, "type": "category", "side": "top"},
       "yaxis": {"title": {"text": "Plate row"}, "type": "category", "autorange": "reversed"}
     },
-    "config": {"responsive": true, "displaylogo": false}
+    "config": {"responsive": false, "displaylogo": false}
   }
 }
 ```
@@ -96,7 +109,7 @@ Read the graph first. A layout-only patch preserves traces; this example changes
     "action": "update",
     "graph_id": "GRAPH_ID",
     "layout": {"yaxis": {"title": {"text": "Measured response (RFU)"}, "tickformat": ".1f", "automargin": true}},
-    "config": {"responsive": true, "displaylogo": false}
+    "config": {"responsive": false, "displaylogo": false}
   }
 }
 ```

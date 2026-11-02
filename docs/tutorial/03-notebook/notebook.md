@@ -56,7 +56,7 @@ Fields to fill in appear as small chips in the steps, such as **[buffer]** or **
 1. Click a field.
 2. Type the value.
 3. Press **Enter**, or click elsewhere, to keep it. Press **Escape** to cancel the change.
-4. For a sample field, such as **[protein]** or **[plasmid]**, type part of the sample's name or code, then click the matching sample. The field is linked to that sample.
+4. For a sample field, such as **[protein]** or **[plasmid]**, type part of the sample's name or code, then click the matching sample. The field is linked to that sample, and a line under **Notes** records where the sample is stored.
 5. A grey value in italics is a suggestion from your recent runs of the same protocol. Click the field and press **Tab** to accept it, or type a different value.
 
 Hikari suggests a value only when your recent runs of the protocol all used the same one. It never suggests sample names; choose those yourself.

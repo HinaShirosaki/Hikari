@@ -159,23 +159,106 @@
         </div>
       </div>
 
-      <div class="assay-results-layout assay-mode-results-panel left-rail-template" hidden>
+      <div class="assay-results-layout assay-mode-results-panel left-rail-template left-rail-template--preserve-columns-on-narrow" data-left-rail-foldable="true" hidden>
         <div class="assay-results-sheet-panel assay-results-controls-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
           <div class="assay-results-rail-scroll left-rail-template__scroll">
-            <details id="assay-results-browser-panel" class="foldable-section" open>
-              <summary class="foldable-section__summary">
-                <span data-i18n="plate.browser.title">Existing Assays</span>
+            <section id="assay-results-browser-panel" aria-labelledby="assay-results-browser-title">
+              <header class="assay-results-browser-heading">
+                <h3 id="assay-results-browser-title" data-i18n="plate.browser.title">Existing Assays</h3>
                 <span id="assay-results-browser-count" class="small-note">0</span>
-              </summary>
-              <div class="foldable-section__body">
+              </header>
+              <div class="assay-browser-body">
                 <label>
                   <span class="sr-only" data-i18n="plate.browser.search">Search Assays</span>
                   <input id="assay-results-search" type="search" placeholder="Search assay plates, projects, or notes" data-i18n-placeholder="plate.browser.searchPlaceholder" />
                 </label>
                 <div id="assay-results-list" class="assay-browser-list assay-results-browser-list"></div>
               </div>
-            </details>
+            </section>
+          </div>
+        </div>
 
+        <div id="assay-analyze-workspace" class="panel assay-results-analysis-panel assay-results-workspace left-rail-template__main" data-data-tab="raw" data-workspace-view="chart">
+          <header class="assay-workspace-header">
+            <div><h2 id="assay-workspace-title" data-i18n="plate.workspace.title">Assay analysis</h2><p id="assay-workspace-meta" class="small-note"></p></div>
+                      <button type="button" id="assay-save-results-btn" class="ghost-btn assay-workspace-save-btn" aria-label="Save results" data-hover-caption="Save results" data-i18n-aria-label="plate.workspace.saveResults" data-i18n-hover-caption="plate.workspace.saveResults">
+                        <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                          <path d="M5 3h12l3 3v15H4V3Z"></path>
+                          <path d="M8 3v6h8V3"></path>
+                          <path d="M8 21v-7h8v7"></path>
+                        </svg><span data-i18n="plate.action.save">Save</span>
+                      </button>
+          </header>
+          <section id="assay-workspace-chart" class="assay-workspace-chart" role="tabpanel" aria-labelledby="assay-workspace-view-chart" aria-label="Analysis chart" data-i18n-aria-label="plate.workspace.chart">
+            <header class="assay-workspace-chart-header">
+              <div><h3 id="assay-workspace-chart-title" data-i18n="plate.method.summary">Summary statistics</h3><p id="assay-workspace-chart-source" class="small-note"></p></div>
+              <div class="assay-workspace-chart-actions">
+                <button type="button" id="assay-workspace-format-btn" class="row-action-icon-btn" aria-label="Format chart" data-i18n-aria-label="plate.workspace.formatChart"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></svg></button>
+                    <div class="form-actions assay-chart-export-actions">
+                      <span class="sr-only" data-i18n="plate.workspace.exportChart">Export chart</span><svg class="btn-icon assay-chart-export-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3M7 10l5 5 5-5M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
+                      <button type="button" id="assay-chart-export-png-btn" class="ghost-btn">PNG</button>
+                      <button type="button" id="assay-chart-export-svg-btn" class="ghost-btn">SVG</button>
+                    </div>
+              </div>
+            </header>
+            <div id="assay-analysis-table" class="list-table"></div>
+          </section>
+          <section id="assay-workspace-data" class="assay-workspace-data" role="tabpanel" aria-labelledby="assay-workspace-view-data" aria-label="Analysis data" hidden data-i18n-aria-label="plate.workspace.data">
+            <div class="assay-workspace-data-header">
+              <div id="assay-data-tabs" class="assay-workspace-tabs" role="tablist" aria-label="Assay data" data-i18n-aria-label="plate.workspace.tabs">
+                <button type="button" id="assay-data-tab-raw" role="tab" aria-controls="assay-result-table-panel" aria-selected="true" data-assay-data-tab="raw" data-i18n="plate.workspace.tabRaw">Plate results</button>
+                <button type="button" id="assay-data-tab-transformed" role="tab" aria-controls="assay-transformed-data-panel" aria-selected="false" tabindex="-1" data-assay-data-tab="transformed" hidden><span data-i18n="plate.workspace.tabTransformed">Transformed</span> <span id="assay-transform-error-count" class="assay-workspace-error-count" hidden></span></button>
+                <button type="button" id="assay-data-tab-summary" role="tab" aria-controls="assay-summary-panel" aria-selected="false" tabindex="-1" data-assay-data-tab="summary" data-i18n="plate.workspace.tabSummary">Summary</button>
+              </div>
+            </div>
+            <div class="assay-workspace-data-options">
+              <span id="assay-workspace-table-label" class="small-note"><span data-i18n="plate.full.d7566bca">Table1</span></span>
+              <label id="assay-show-empty-rows-field" class="assay-workspace-check"><input id="assay-show-empty-rows" type="checkbox" /><span data-i18n="plate.workspace.showEmptyRows">Show empty rows</span></label>
+            </div>
+            <section id="assay-result-table-panel" class="assay-workspace-table-panel" role="tabpanel" aria-labelledby="assay-data-tab-raw">
+              <h4 class="assay-workspace-compare-label" data-i18n="plate.source.raw">Plate results · Table1</h4>
+              <div id="assay-result-table" class="assay-plate-preview"></div>
+            </section>
+            <section id="assay-transformed-data-panel" class="assay-workspace-table-panel" role="tabpanel" aria-labelledby="assay-data-tab-transformed" hidden>
+              <div id="assay-derived-plate-panel" hidden>
+                <div class="assay-workspace-transform-header">
+                  <h4 class="assay-workspace-compare-label" data-i18n="plate.workspace.transformedHeading">Transformed · Table2</h4>
+                  <p id="assay-transform-error-notice" class="small-note" role="status" hidden></p>
+                  <button type="button" id="assay-transform-clear-btn" class="row-action-icon-btn row-action-icon-btn-danger" aria-label="Remove transform" data-i18n-aria-label="plate.workspace.removeTransform"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg></button>
+                </div>
+                <div id="assay-derived-plate-table" class="assay-plate-preview"></div>
+              </div>
+            </section>
+            <section id="assay-summary-panel" class="assay-workspace-table-panel" role="tabpanel" aria-labelledby="assay-data-tab-summary" hidden>
+              <div id="assay-analysis-summary-table" class="list-table"></div>
+            </section>
+            <p id="assay-workspace-row-status" class="small-note" aria-live="polite"></p>
+          </section>
+        </div>
+      </div>
+
+      <div id="assay-workspace-tools" class="assay-workspace-tools" hidden>
+        <div class="assay-workspace-view-switch" role="tablist" aria-orientation="vertical" aria-label="Workspace view" data-i18n-aria-label="plate.workspace.view">
+          <button type="button" id="assay-workspace-view-chart" class="assay-context-toggle" role="tab" aria-controls="assay-workspace-chart" aria-selected="true" data-assay-workspace-view="chart" aria-label="Chart" title="Chart" data-i18n-aria-label="plate.workspace.viewChart" data-i18n-title="plate.workspace.viewChart">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 3v17h17M7 14l4-5 4 3 5-7"/></svg>
+          </button>
+          <button type="button" id="assay-workspace-view-data" class="assay-context-toggle" role="tab" aria-controls="assay-workspace-data" aria-selected="false" tabindex="-1" data-assay-workspace-view="data" aria-label="Data" title="Data" data-i18n-aria-label="plate.workspace.viewData" data-i18n-title="plate.workspace.viewData">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16M15 10v10"/></svg>
+          </button>
+        </div>
+        <button type="button" id="assay-analysis-toggle-btn" class="assay-context-toggle" aria-controls="assay-context-rail" aria-expanded="false" aria-label="Data Analysis" title="Data Analysis" data-i18n-aria-label="plate.analysis.title" data-i18n-title="plate.analysis.title">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V10M12 20V4M19 20v-7M3 20h18"/></svg>
+        </button>
+        <button type="button" id="assay-format-toggle-btn" class="assay-context-toggle" aria-controls="assay-context-rail" aria-expanded="false" aria-label="Chart Format" title="Chart Format" data-i18n-aria-label="plate.chart.formatTitle" data-i18n-title="plate.chart.formatTitle">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></svg>
+        </button>
+      </div>
+      <aside id="assay-context-rail" class="assay-context-rail" aria-labelledby="assay-context-title" hidden>
+        <header class="assay-context-header">
+          <h3 id="assay-context-title" data-i18n="plate.analysis.title">Data Analysis</h3>
+          <button type="button" id="assay-context-close-btn" class="row-action-icon-btn" aria-label="Close" title="Close" data-i18n-aria-label="plate.action.close" data-i18n-title="plate.action.close"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg></button>
+        </header>
+        <div class="assay-context-scroll">
             <details id="assay-analysis-panel" class="foldable-section" open>
               <summary class="foldable-section__summary">
                 <span data-i18n="plate.analysis.title">Data Analysis</span>
@@ -364,69 +447,8 @@
               </div>
             </details>
 
-          </div>
         </div>
-
-        <div id="assay-analyze-workspace" class="panel assay-results-analysis-panel assay-results-workspace left-rail-template__main" data-data-tab="raw">
-          <header class="assay-workspace-header">
-            <div><h2 id="assay-workspace-title" data-i18n="plate.workspace.title">Assay analysis</h2><p id="assay-workspace-meta" class="small-note"></p></div>
-                      <button type="button" id="assay-save-results-btn" class="ghost-btn assay-workspace-save-btn" aria-label="Save results" data-hover-caption="Save results" data-i18n-aria-label="plate.workspace.saveResults" data-i18n-hover-caption="plate.workspace.saveResults">
-                        <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                          <path d="M5 3h12l3 3v15H4V3Z"></path>
-                          <path d="M8 3v6h8V3"></path>
-                          <path d="M8 21v-7h8v7"></path>
-                        </svg><span data-i18n="plate.action.save">Save</span>
-                      </button>
-          </header>
-          <section class="assay-workspace-chart" aria-label="Analysis chart" data-i18n-aria-label="plate.workspace.chart">
-            <header class="assay-workspace-chart-header">
-              <div><h3 id="assay-workspace-chart-title" data-i18n="plate.method.summary">Summary statistics</h3><p id="assay-workspace-chart-source" class="small-note"></p></div>
-              <div class="assay-workspace-chart-actions">
-                <button type="button" id="assay-workspace-format-btn" class="row-action-icon-btn" aria-label="Format chart" data-i18n-aria-label="plate.workspace.formatChart"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></svg></button>
-                    <div class="form-actions assay-chart-export-actions">
-                      <span class="sr-only" data-i18n="plate.workspace.exportChart">Export chart</span><svg class="btn-icon assay-chart-export-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 15V3M7 10l5 5 5-5M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/></svg>
-                      <button type="button" id="assay-chart-export-png-btn" class="ghost-btn">PNG</button>
-                      <button type="button" id="assay-chart-export-svg-btn" class="ghost-btn">SVG</button>
-                    </div>
-                <button type="button" id="assay-chart-focus-btn" class="row-action-icon-btn" aria-pressed="false" aria-label="Focus chart" data-i18n-aria-label="plate.workspace.focusChart"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></button>
-              </div>
-            </header>
-            <div id="assay-analysis-table" class="list-table"></div>
-          </section>
-          <section class="assay-workspace-data" aria-label="Analysis data" data-i18n-aria-label="plate.workspace.data">
-            <div class="assay-workspace-data-header">
-              <div id="assay-data-tabs" class="assay-workspace-tabs" role="tablist" aria-label="Assay data" data-i18n-aria-label="plate.workspace.tabs">
-                <button type="button" id="assay-data-tab-raw" role="tab" aria-controls="assay-result-table-panel" aria-selected="true" data-assay-data-tab="raw" data-i18n="plate.workspace.tabRaw">Plate results</button>
-                <button type="button" id="assay-data-tab-transformed" role="tab" aria-controls="assay-transformed-data-panel" aria-selected="false" tabindex="-1" data-assay-data-tab="transformed" hidden><span data-i18n="plate.workspace.tabTransformed">Transformed</span> <span id="assay-transform-error-count" class="assay-workspace-error-count" hidden></span></button>
-                <button type="button" id="assay-data-tab-summary" role="tab" aria-controls="assay-summary-panel" aria-selected="false" tabindex="-1" data-assay-data-tab="summary" data-i18n="plate.workspace.tabSummary">Summary</button>
-              </div>
-              <button type="button" id="assay-data-order-btn" class="ghost-btn" aria-pressed="false" data-i18n="plate.workspace.dataFirst">Data first</button>
-            </div>
-            <div class="assay-workspace-data-options">
-              <span id="assay-workspace-table-label" class="small-note"><span data-i18n="plate.full.d7566bca">Table1</span></span>
-              <label id="assay-show-empty-rows-field" class="assay-workspace-check"><input id="assay-show-empty-rows" type="checkbox" /><span data-i18n="plate.workspace.showEmptyRows">Show empty rows</span></label>
-            </div>
-            <section id="assay-result-table-panel" class="assay-workspace-table-panel" role="tabpanel" aria-labelledby="assay-data-tab-raw">
-              <h4 class="assay-workspace-compare-label" data-i18n="plate.source.raw">Plate results · Table1</h4>
-              <div id="assay-result-table" class="assay-plate-preview"></div>
-            </section>
-            <section id="assay-transformed-data-panel" class="assay-workspace-table-panel" role="tabpanel" aria-labelledby="assay-data-tab-transformed" hidden>
-              <div id="assay-derived-plate-panel" hidden>
-                <div class="assay-workspace-transform-header">
-                  <h4 class="assay-workspace-compare-label" data-i18n="plate.workspace.transformedHeading">Transformed · Table2</h4>
-                  <p id="assay-transform-error-notice" class="small-note" role="status" hidden></p>
-                  <button type="button" id="assay-transform-clear-btn" class="row-action-icon-btn row-action-icon-btn-danger" aria-label="Remove transform" data-i18n-aria-label="plate.workspace.removeTransform"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg></button>
-                </div>
-                <div id="assay-derived-plate-table" class="assay-plate-preview"></div>
-              </div>
-            </section>
-            <section id="assay-summary-panel" class="assay-workspace-table-panel" role="tabpanel" aria-labelledby="assay-data-tab-summary" hidden>
-              <div id="assay-analysis-summary-table" class="list-table"></div>
-            </section>
-            <p id="assay-workspace-row-status" class="small-note" aria-live="polite"></p>
-          </section>
-        </div>
-      </div>
+      </aside>
 
       <div id="assay-serial-dilution-overlay" class="assay-serial-dilution-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
         <div class="assay-serial-dilution-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="assay-serial-dilution-title">

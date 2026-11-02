@@ -220,9 +220,17 @@ async function moveSequenceEntryToFolder(payload = {}) {
     }
 
     const now = new Date().toISOString();
+    // Moving a derived entry out of its family makes it a root; moving a
+    // template carries its complete subtree into the destination folder.
+    if (folderId !== cleanText(entry.folder_id, 200)) {
+      db.run("UPDATE sequence_entries SET parent_entry_id = '' WHERE id = ?", [entryId]);
+    }
     db.run(
-      'UPDATE sequence_entries SET folder_id = ?, updated_at = ? WHERE id = ?',
-      [folderId, now, entryId]
+      `WITH RECURSIVE family(id) AS (
+         SELECT id FROM sequence_entries WHERE id = ?
+         UNION SELECT e.id FROM sequence_entries e JOIN family f ON e.parent_entry_id = f.id
+       ) UPDATE sequence_entries SET folder_id = ?, updated_at = ? WHERE id IN (SELECT id FROM family)`,
+      [entryId, folderId, now]
     );
     await persistDatabase(paths.sqlitePath, db);
     return {

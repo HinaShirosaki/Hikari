@@ -60,9 +60,9 @@ async function main() {
     const handlers = new Map(); const events = []; let failed = false;
     registerAgentChatHandler({
       ipcMain: { handle: (key, handler) => handlers.set(key, handler) }, cleanText,
-      controllerUtils: { buildAgentLogRequestId: () => failed ? 'failed' : 'html-request', extractConversation: () => [], summarizeLlmForAgentLog: () => ({}), formatAgentChatLogEntry: JSON.stringify, summarizeAgentResultForLog: () => ({ ok: true }) },
-      observability, agentChatLogRuntime: createAgentChatLogRuntime(), getAgentChatLogPath: () => path.join(storagePath, 'agent.log'), getAgentChatSessionStoragePath: () => storagePath,
-      appendAgentChatLogEntry: async () => {}, lifecycleService: { ...createAgentLifecycleService({ cleanText }), flushLifecycleRecorderEvents: async () => {} },
+      controllerUtils: { buildAgentLogRequestId: () => failed ? 'failed' : 'html-request', extractConversation: () => [], summarizeLlmForAgentLog: () => ({}), summarizeAgentResultForLog: () => ({ ok: true }) },
+      observability, agentChatLogRuntime: createAgentChatLogRuntime(), getAgentChatSessionStoragePath: () => storagePath,
+      lifecycleService: createAgentLifecycleService({ cleanText }),
       runAgentController: async (_payload, runtime) => {
         const stream = createCodexStreamProgressHandler({ cleanText, emitAgentProgress: runtime.emitAgentProgress, lifecycleRecorder: runtime.lifecycleRecorder, recordLifecycleEvent: observability.recordLifecycleEvent });
         stream.emitStreamProgress(toolEvent); stream.emitStreamProgress(toolEvent);

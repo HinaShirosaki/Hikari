@@ -12,9 +12,11 @@ import {
 import { copyPrimerValueFromEvent } from './primer-copy.js';
 import { showTransientNotice } from '../../lib/notify.js';
 import { renderCdsProteinHoverSection } from './rendering/protein-summary.js';
+import { copyProteinValueFromEvent } from './protein-copy.js';
+import { renderDigestionActions } from './digestion-actions.js';
 
 function buildFeatureHoverTooltipHtml(feature, sequenceLength, recordSequence) {
-  const primerCard = renderPrimerHoverSection(feature, recordSequence, { allowLibrarySave: true });
+  const primerCard = renderPrimerHoverSection(feature, recordSequence, { allowLibrarySave: true, allowPcr: true });
   if (primerCard) return primerCard;
   const strand = feature?.strand === -1 ? '-' : '+';
   const location = buildFeatureLocationText(feature, sequenceLength);
@@ -34,6 +36,7 @@ function buildFeatureHoverTooltipHtml(feature, sequenceLength, recordSequence) {
     <p>${escapeHtml(location)}</p>
     <p>${escapeHtml(meta)}</p>
     ${renderCdsProteinHoverSection(feature, recordSequence)}
+    ${renderDigestionActions(feature)}
   `;
 }
 
@@ -56,6 +59,7 @@ export function createSequenceHoverTooltipController(rootDocument) {
   })();
 
   function hideNow() {
+    interactivity.reset();
     if (tooltip) {
       tooltip.hidden = true;
     }
@@ -63,14 +67,17 @@ export function createSequenceHoverTooltipController(rootDocument) {
 
   const interactivity = createHoverTooltipInteractivity(tooltip, hideNow);
 
-  // Deferred while a primer readout is up, so the pointer can cross the gap to
-  // the copy button; immediate for every other feature, as before.
+  // Give the pointer time to reach a readout's copy buttons.
   function hide() {
     interactivity.requestHide();
   }
 
   tooltip?.addEventListener?.('click', (event) => {
     void (async () => {
+      if (event.target?.closest?.('[data-sequence-protein-copy]')) {
+        await copyProteinValueFromEvent(event);
+        return;
+      }
       const result = await copyPrimerValueFromEvent(event);
       if (!result.handled) {
         return;
@@ -90,12 +97,15 @@ export function createSequenceHoverTooltipController(rootDocument) {
       return;
     }
 
+    const html = buildFeatureHoverTooltipHtml(feature, sequenceLength, recordSequence);
+    if (interactivity.shouldPreserve(event, html)) return;
     interactivity.cancelHide();
     rootDocument?.querySelectorAll?.('[data-sequence-hover-tooltip]').forEach(node => {
       if (node !== tooltip) node.hidden = true;
     });
-    i18nUi.setHtml(tooltip, buildFeatureHoverTooltipHtml(feature, sequenceLength, recordSequence));
-    interactivity.setInteractive(tooltip.innerHTML.includes('sequence-viewer-primer-copy-btn'));
+    i18nUi.setHtml(tooltip, html);
+    interactivity.setInteractive(/data-sequence-(?:(?:primer|protein)-copy=|digest-action=)/.test(tooltip.innerHTML));
+    interactivity.anchor(event, html);
     tooltip.hidden = false;
 
     const rawX = Number(event?.clientX);

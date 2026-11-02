@@ -47,6 +47,7 @@ export function createInitialSequenceViewerState() {
     libraryEntries: [],
     libraryFolders: [],
     expandedLibraryFolderIds: [],
+    expandedDnaEntryIds: [],
     libraryFolderExpansionInitialized: false,
     libraryStoragePath: '',
     selectedLibraryEntryId: '',

@@ -197,6 +197,21 @@
   border: 0;
 }
 
+.assay-results-browser-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  min-height: 44px;
+  padding: var(--space-10) 0;
+}
+
+.assay-results-browser-heading h3 {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 650;
+}
+
 .assay-browser-summary {
   list-style: none;
   display: flex;

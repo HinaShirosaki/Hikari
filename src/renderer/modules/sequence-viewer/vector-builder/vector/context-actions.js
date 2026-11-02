@@ -3,6 +3,8 @@ import "../../localization.js";
 const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../../../lib/html.js';
 import { cleanText } from '../../shared.js';
+import { renderDigestionActions } from '../../digestion-actions.js';
+import { getFeatureDnaFragmentRange } from '../../dna-fragments.js';
 
 // The vector map's right-click menu: what the click landed on, which range it
 // covers, and the edit each menu item runs.
@@ -20,7 +22,8 @@ function createVectorContextActions({
   formatRangeLabel,
   positionFloatingMenu,
   onRequestPrimerDesign,
-  onRequestProteinInsert
+  onRequestProteinInsert,
+  onSaveDnaFragment = () => {}
 } = {}) {
   function getFeatureRange(feature, sequenceLength) {
     const segments = Array.isArray(feature?.segments) ? feature.segments : [];
@@ -78,6 +81,11 @@ function createVectorContextActions({
     return getActionContext(record)?.range || null;
   }
 
+  function getFragmentContext(record) {
+    const feature = getFeatureByIndex(record, vb().selectedFeatureIndex);
+    return { feature, range: feature ? getFeatureDnaFragmentRange(feature, record) : getSelectionRange(record) };
+  }
+
   // 5'/3' are read in the target's own orientation: a reverse-strand feature's
   // 5' end sits at the higher coordinate, so inserting "before 5'" there means
   // inserting at the end of its span, not the start. A bare drag selection has
@@ -123,7 +131,9 @@ function createVectorContextActions({
       : `<button type="button" class="sequence-viewer-context-item" data-vector-action="protein-insert">${i18nUi.html("Insert Protein Construct...")}</button>`;
 
     i18nUi.setHtml(menu, `
+      ${renderDigestionActions(getFeatureByIndex(record, vb().selectedFeatureIndex), { menu: true })}
       ${rangeLabel ? `<p class="small-note">${escapeHtml(rangeLabel)}</p>` : ''}
+      ${getFragmentContext(record).range ? `<button type="button" class="sequence-viewer-context-item" data-vector-action="save-fragment">${i18nUi.html('Save DNA Fragment…')}</button>` : ''}
       ${insertBaseItems}
       <button type="button" class="sequence-viewer-context-item" data-vector-action="design-primer"${disabledRange}>${i18nUi.html("Design Primer")}</button>
       <button type="button" class="sequence-viewer-context-item" data-vector-action="replace-feature"${disabledRange}>${i18nUi.html("Replace Feature...")}</button>
@@ -154,6 +164,15 @@ function createVectorContextActions({
     const insertAt = insertSide ? resolveInsertAnchor(context, insertSide) : caret;
     const sideLabel = insertSide === 'five' ? "5'" : (insertSide === 'three' ? "3'" : '');
     const targetName = cleanText(context?.feature?.name, 120);
+
+    if (action === 'save-fragment') {
+      const fragment = getFragmentContext(record);
+      if (fragment.range) {
+        hideContextMenu();
+        onSaveDnaFragment(fragment.range, fragment.feature);
+      }
+      return;
+    }
 
     if (action.startsWith('protein-insert') || action === 'protein-replace') {
       const isReplace = action === 'protein-replace';

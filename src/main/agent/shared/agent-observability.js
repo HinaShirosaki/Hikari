@@ -73,7 +73,6 @@ function createLifecycleRecorder({ requestId, onEvent = null } = {}) {
     requestId: cleanText(requestId),
     created_at: new Date().toISOString(),
     events: [],
-    flushed_count: 0,
     onEvent: typeof onEvent === 'function' ? onEvent : null
   };
 }
@@ -187,45 +186,6 @@ async function appendLogWithRotation({
   await fs.appendFile(targetPath, payload, 'utf8');
 }
 
-async function readLifecycleLogs({ logPath, requestId = '', limit = 1000 } = {}) {
-  const targetPath = cleanText(logPath);
-  if (!targetPath) {
-    return [];
-  }
-  const files = [];
-  for (let index = DEFAULT_MAX_ROTATIONS; index >= 1; index -= 1) {
-    files.push(`${targetPath}.${index}`);
-  }
-  files.push(targetPath);
-
-  const rows = [];
-  for (const filePath of files) {
-    if (!await pathExists(filePath)) {
-      continue;
-    }
-    const raw = await fs.readFile(filePath, 'utf8');
-    raw.split('\n').forEach((line) => {
-      const trimmed = line.trim();
-      if (!trimmed) {
-        return;
-      }
-      try {
-        const parsed = JSON.parse(trimmed);
-        if (!requestId || cleanText(parsed?.requestId) === cleanText(requestId)) {
-          rows.push(parsed);
-        }
-      } catch {
-        // Ignore malformed log lines.
-      }
-    });
-  }
-
-  if (limit > 0 && rows.length > limit) {
-    return rows.slice(rows.length - limit);
-  }
-  return rows;
-}
-
 function classifyFailureReasons({
   result,
   routing,
@@ -289,80 +249,9 @@ function classifyFailureReasons({
   return uniqueStrings(reasons);
 }
 
-async function replayRequestLifecycle({ requestId, logPath } = {}) {
-  const normalizedRequestId = cleanText(requestId);
-  if (!normalizedRequestId) {
-    return {
-      ok: false,
-      error: 'requestId is required.',
-      requestId: '',
-      events: [],
-      summary: {}
-    };
-  }
-
-  const rows = await readLifecycleLogs({
-    logPath,
-    requestId: normalizedRequestId,
-    limit: 5000
-  });
-  const events = rows.filter((row) => cleanText(row?.type) === 'agent-lifecycle');
-  const traces = rows
-    .filter((row) => cleanText(row?.type) === 'agent-llm-trace')
-    .map((row) => ({
-      type: 'agent-llm-trace',
-      requestId: cleanText(row?.requestId),
-      stage: cleanText(row?.stage),
-      provider: cleanText(row?.provider),
-      model: cleanText(row?.model),
-      summary: cleanText(row?.summary),
-      timestamp: cleanText(row?.timestamp),
-      request_payload: row?.request_payload && typeof row.request_payload === 'object'
-        ? sanitizeJsonValue(row.request_payload)
-        : sanitizeJsonValue(row?.request_payload),
-      response_payload: row?.response_payload && typeof row.response_payload === 'object'
-        ? sanitizeJsonValue(row.response_payload)
-        : sanitizeJsonValue(row?.response_payload)
-    }));
-  const request = rows.find((row) => cleanText(row?.type) === 'agent-chat-request') || null;
-  const result = rows.find((row) => cleanText(row?.type) === 'agent-chat-result')
-    || rows.find((row) => cleanText(row?.type) === 'agent-chat-error')
-    || null;
-  const failureReasons = classifyFailureReasons({
-    result,
-    routing: result?.routing,
-    validation: result?.validation,
-    error: result?.error,
-    lifecycleEvents: events
-  });
-
-  return {
-    ok: true,
-    requestId: normalizedRequestId,
-    request,
-    result,
-    events,
-    traces,
-    summary: {
-      request_id: normalizedRequestId,
-      event_count: events.length,
-      trace_count: traces.length,
-      stages: uniqueStrings(events.map((event) => cleanText(event?.stage))),
-      trace_stages: uniqueStrings(traces.map((trace) => cleanText(trace?.stage))),
-      trace_request_payload_count: traces.reduce((sum, trace) => sum + (trace?.request_payload ? 1 : 0), 0),
-      trace_response_payload_count: traces.reduce((sum, trace) => sum + (trace?.response_payload ? 1 : 0), 0),
-      started_at: cleanText(rows[0]?.timestamp),
-      ended_at: cleanText(rows[rows.length - 1]?.timestamp),
-      failure_reasons: failureReasons
-    }
-  };
-}
-
 module.exports = {
   createLifecycleRecorder,
   recordLifecycleEvent,
   classifyFailureReasons,
-  appendLogWithRotation,
-  readLifecycleLogs,
-  replayRequestLifecycle
+  appendLogWithRotation
 };

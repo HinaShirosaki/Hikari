@@ -397,6 +397,9 @@ export function initAssay({
     analysisView.loadTransformSpec(assay.transformSpec);
     analysisView.loadAnalysisDataSource(assay.analysisDataSource);
     analysisView.clearOutput();
+    // Chart is the initial Analyze view. Render from the restored model while
+    // Tabulator may still be building or replacing the previous assay's rows.
+    analysisView.renderAnalysis({ syncResults: false });
     markLoadedAssayDraftsSaved();
     renderList();
     notifyActiveAssayChanged();

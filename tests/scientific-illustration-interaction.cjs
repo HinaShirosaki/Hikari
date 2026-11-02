@@ -3,6 +3,8 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 
 async function verifyCanvasInteraction({ tool, evaluate, check, win, pause, temp }) {
+  // This suite checks exact pointer-coordinate mapping without magnetic offsets.
+  await evaluate('document.getElementById("smart-guides").checked=false');
   win.setSize(1300, 1000); await pause(100);
   const read = () => tool({ action: 'read' });
   const apply = async operations => {
@@ -98,15 +100,6 @@ async function verifyCanvasInteraction({ tool, evaluate, check, win, pause, temp
   } finally { win.webContents.debugger.detach(); }
   await apply([{ op: 'update', id: 'resize-fixture', patch: { rotation: 0, width: 130, height: 80,
     svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 80" preserveAspectRatio="xMidYMid meet"><rect width="130" height="80" fill="#ff0000"/></svg>' } }]);
-  await evaluate('(()=>{const width=document.querySelector("#properties [name=width]");width.value="260";width.dispatchEvent(new Event("change",{bubbles:true}))})()'); await pause(80);
-  let resized = (await read()).objects.find(object => object.id === 'resize-fixture');
-  check(resized.width === 260 && resized.height === 80 && resized.svg.includes('preserveAspectRatio="none"'), 'Numeric width also stretches artwork independently of height');
-  await evaluate('illustrationWorkspace.history("undo")'); await pause(80);
-  resized = (await read()).objects.find(object => object.id === 'resize-fixture');
-  check(resized.width === 130 && resized.height === 80 && resized.svg.includes('preserveAspectRatio="xMidYMid meet"'), 'Undo restores the original source aspect ratio with its geometry');
-  await evaluate('illustrationWorkspace.history("redo")'); await pause(80);
-  resized = (await read()).objects.find(object => object.id === 'resize-fixture');
-  check(resized.width === 260 && resized.svg.includes('preserveAspectRatio="none"'), 'Redo restores free stretching and its geometry');
   await evaluate('document.getElementById("main-canvas").scrollTo(120,100)');
   const pan = await evaluate('({x:document.getElementById("main-canvas").scrollLeft,y:document.getElementById("main-canvas").scrollTop})');
   await evaluate('document.querySelector("[data-layer-id=resize-fixture] .layer-select").click()');
@@ -115,5 +108,6 @@ async function verifyCanvasInteraction({ tool, evaluate, check, win, pause, temp
   check(await evaluate('(()=>{const stage=document.getElementById("main-canvas"),area=stage.getBoundingClientRect(),svg=stage.querySelector("svg").getBoundingClientRect();return stage.scrollLeft>0 && stage.scrollTop>0 && svg.right<=area.right && svg.bottom<=area.bottom})()'), 'Scrolling can reach the bottom-right canvas corner at high zoom');
   await evaluate('document.getElementById("zoom-fit").click()');
   check(await evaluate('document.getElementById("main-canvas").scrollLeft===0 && document.getElementById("main-canvas").scrollTop===0 && document.getElementById("zoom-fit").getAttribute("aria-pressed")==="true"'), 'Fit restores the complete canvas and resets pan');
+  await evaluate('document.getElementById("smart-guides").checked=true');
 }
 module.exports = { verifyCanvasInteraction };

@@ -24,7 +24,7 @@ async function verifyImportCrop({ tool, evaluate, check, win, pause, temp }) {
     window.importQaJpeg = canvas.toDataURL('image/jpeg'); window.importQaWebp = canvas.toDataURL('image/webp');
     ctx.fillStyle = '#0000ff'; ctx.fillRect(0, 0, 160, 100); window.importQaBlue = canvas.toDataURL('image/png');
     document.getElementById('asset-input').click = () => {};
-    if(document.getElementById('assets-panel').hidden)document.getElementById('assets-tab').click();
+    if(document.getElementById('assets-panel').hidden)document.getElementById('assets-view-tab').click();
   })()`);
   const choose = async (button, data, name, type) => {
     await evaluate(`(async () => {
@@ -116,9 +116,7 @@ async function verifyImportCrop({ tool, evaluate, check, win, pause, temp }) {
   await evaluate('document.getElementById("crop-raster").click()'); await cropReady();
   await apply([{ op: 'title', title: 'Concurrent edit' }]);
   check(await evaluate('!document.getElementById("canvas-crop-overlay")') && (await read()).objects[0].dataUrl === croppedBytes, 'Concurrent scene edits cancel stale crops before they can overwrite artwork');
-  await choose('replace-raster', 'window.importQaBlue', 'Replacement.png', 'image/png'); await submit();
-  check((await read()).objects[0].id === placed.id && (await read()).objects[0].width === 160 && (await read()).objects[0].height === 100 && (await read()).objects[0].rotation === 40, 'Replacement keeps layer identity and width while adopting the image proportions');
-  await evaluate('if(document.getElementById("assets-panel").hidden)document.getElementById("assets-tab").click()');
+  await evaluate('if(document.getElementById("assets-panel").hidden)document.getElementById("assets-view-tab").click()');
   await choose('import-asset', 'window.importQaBlue', 'Blue.png', 'image/png');
   const beforeFailure = await list(); await win.webContents.executeJavaScript('window.qaFailAssets=true'); await submit();
   check((await list()).assets_revision === beforeFailure.assets_revision && await evaluate('document.getElementById("raster-dialog").open && /disk failure/.test(document.getElementById("raster-error").textContent) && !document.getElementById("confirm-raster").disabled'), 'An index write failure retains the committed library and offers retry');

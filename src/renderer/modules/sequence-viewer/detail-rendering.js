@@ -1,4 +1,6 @@
 import { createPresentation } from "../../lib/i18n/presentation.js";
+import { renderPrimerPcrButton } from './primer-hover.js';
+import { renderDigestionActions } from './digestion-actions.js';
 import "./localization.js";
 const i18nUi = createPresentation("dna");
 import { escapeHtml } from '../../lib/html.js';
@@ -67,6 +69,7 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
   const getAlignmentHighlightSegments = config?.getAlignmentHighlightSegments || (() => []);
   const hideSequenceHoverTooltip = config?.hideSequenceHoverTooltip || (() => {});
   const buildSelectionDetailHtml = config?.buildSelectionDetailHtml || (() => '');
+  const onFeaturesRendered = config?.onFeaturesRendered || (() => {});
 
   function renderFeatureRail(record) {
     if (!elements.featureRailHost) {
@@ -138,6 +141,7 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
         <span style="left:100%;">${sequenceLength.toLocaleString()}</span>
       </div>
     `);
+    onFeaturesRendered();
   }
 
   function renderSelectedFeatureDetail(record) {
@@ -154,7 +158,7 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
     const selected = features[state.selectedFeatureIndex] || null;
     i18nUi.setHtml(elements.featureDetail, formatSelectedFeatureDetailHtml(selected, record.sequence.length, {
       sequence: record.sequence
-    }));
+    }) + renderPrimerPcrButton(selected) + renderDigestionActions(selected));
   }
 
   function renderSequence(record, options = {}) {
@@ -217,6 +221,7 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
       alignmentSequenceTrack,
       orfTranslationContext
     }));
+    onFeaturesRendered();
 
     if (preserveScroll) {
       if (!restoreScrollAnchor(elements.sequenceHost, scrollAnchor)) {

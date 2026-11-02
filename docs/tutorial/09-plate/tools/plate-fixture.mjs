@@ -5,6 +5,7 @@ import { parseCsvLine } from '../../../../src/renderer/modules/assay/shared.js';
 import { APP_REGISTRY, APP_DOCK_ORDER } from '../../../../src/renderer/modules/app-registry.generated.js';
 import { createAppDock } from '../../../../src/renderer/app/navigation-shell/app-dock.js';
 import { applyAppearanceToDocument } from '../../../../src/renderer/app/appearance.js';
+import { createAgentChatRail } from '../../../../src/renderer/app/navigation-shell/agent-rail.js';
 
 const RealDate = Date;
 const fixedNow = new RealDate('2026-10-25T10:30:00-05:00').getTime();
@@ -71,6 +72,10 @@ const dock = createAppDock({ documentObject: document, windowObject: window, TIT
 dock.renderAppNavigation('assay-view'); dock.syncNavigationState('assay-view');
 document.getElementById('app-more-btn').addEventListener('click', () => dock.toggleMoreMenu());
 document.getElementById('assay-view').classList.add('is-active');
+// Analyze's Data Analysis and Chart Format panels live in the shell's right rail.
+const getAppForView = id => APP_REGISTRY.find(app => app.viewId === id);
+createAgentChatRail({ VIEWS: {}, documentObject: document, getActiveViewId: () => 'assay-view', getAppForView,
+  resolveNavigationViewId: id => id, moduleRuntime: {}, sharedLeftRailRuntime: { syncWidth() {} } }).init();
 assay.render();
 document.getElementById('assay-browser-panel').open = true;
 const matrixCsv = ['Result matrix 1', ',1,2,3,4,5,6', ...matrix.map((row, i) => String.fromCharCode(65 + i) + ',' + row.join(',')),

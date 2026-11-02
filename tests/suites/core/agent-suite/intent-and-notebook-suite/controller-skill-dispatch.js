@@ -83,7 +83,6 @@ module.exports = function registerAgentIntentAndNotebookSuiteControllerSkillDisp
         executeNotebookLookup: async () => {
           throw new Error('Notebook lookup should not run for direct skill commands.');
         },
-        getAgentChatLogPath: () => '',
         getDefaultDataFilePath: () => '',
         setCodexCliModel: () => {},
         setCodexCliReasoningEffort: () => {},

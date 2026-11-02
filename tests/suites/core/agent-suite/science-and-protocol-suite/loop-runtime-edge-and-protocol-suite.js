@@ -158,9 +158,7 @@ module.exports = function registerLoopRuntimeEdgeAndProtocolSuite(context = {}) 
           }
         },
         cleanText,
-        observability: {},
         agentChatLogRuntime: {},
-        getAgentChatLogPath: () => '',
         getAgentChatSessionStoragePath: () => '',
         agentToolRuntime: {},
         runAgentController: async (payload) => {

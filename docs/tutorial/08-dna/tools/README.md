@@ -2,7 +2,7 @@
 
 The operating guide is [dna.md](../dna.md), and its generated offline reading view is [index.html](../index.html).
 
-The capture loads the repository's actual DNA HTML, styles, and controllers into a disposable Electron profile. Sequence library requests use an in-memory adapter with fictional circular and linear sequences. Primer saves, base edits, alignments, and builders run through the renderer controllers. The example vector is not a validated biological construct. No personal workspace, live database search, external order, or research file is used.
+The capture loads the repository's actual DNA HTML, styles, and controllers into a disposable Electron profile. Sequence library requests use an in-memory adapter with fictional circular and linear sequences. Primer saves and primer design, base edits, alignments, fragment, PCR and digestion saves, sample positions, and builders run through the renderer controllers. The example vector is not a validated biological construct. No personal workspace, live database search, external order, or research file is used.
 
 Screenshots use a 1600 × 1000 CSS-pixel viewport and day appearance, with example data dated 25 October 2026 in America/Chicago. The source package version, screenshot targets, and interaction checks are recorded in [capture-manifest.json](../capture-manifest.json). This verifies the source renderer rather than an installed package or native storage durability.
 

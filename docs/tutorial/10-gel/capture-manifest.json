@@ -1,5 +1,5 @@
 {
-  "sourceVersion": "1.1.0-beta.9",
+  "sourceVersion": "1.1.0-beta.11",
   "exampleDate": "2026-10-25",
   "timezone": "America/Chicago",
   "viewport": [
@@ -65,7 +65,7 @@
           "label": "Inspect the image",
           "rect": {
             "x": 298,
-            "y": 190,
+            "y": 216,
             "width": 916,
             "height": 620
           }
@@ -77,7 +77,7 @@
             "x": 1522,
             "y": 22,
             "width": 56,
-            "height": 527
+            "height": 481
           }
         }
       ]
@@ -163,7 +163,7 @@
         "x": 280,
         "y": 0,
         "width": 1244,
-        "height": 828
+        "height": 854
       },
       "targets": [
         {
@@ -205,7 +205,7 @@
         "x": 280,
         "y": 0,
         "width": 1244,
-        "height": 828
+        "height": 854
       },
       "targets": [
         {
@@ -237,7 +237,7 @@
         "x": 280,
         "y": 0,
         "width": 1244,
-        "height": 828
+        "height": 854
       },
       "targets": [
         {
@@ -245,7 +245,7 @@
           "label": "Inspect and adjust lane boundaries",
           "rect": {
             "x": 298,
-            "y": 190,
+            "y": 216,
             "width": 916,
             "height": 620
           }
@@ -269,7 +269,7 @@
         "x": 280,
         "y": 0,
         "width": 1244,
-        "height": 828
+        "height": 854
       },
       "targets": [
         {
@@ -287,7 +287,7 @@
           "label": "Drag a lane corner horizontally",
           "rect": {
             "x": 298,
-            "y": 190,
+            "y": 216,
             "width": 916,
             "height": 620
           }
@@ -301,7 +301,7 @@
         "x": 280,
         "y": 0,
         "width": 1244,
-        "height": 828
+        "height": 854
       },
       "targets": [
         {
@@ -343,7 +343,7 @@
         "x": 280,
         "y": 0,
         "width": 1244,
-        "height": 828
+        "height": 854
       },
       "targets": [
         {
@@ -361,7 +361,7 @@
           "label": "Enter the known band size",
           "rect": {
             "x": 383,
-            "y": 282,
+            "y": 308,
             "width": 88,
             "height": 30
           }
@@ -375,7 +375,7 @@
         "x": 280,
         "y": 0,
         "width": 1244,
-        "height": 828
+        "height": 854
       },
       "targets": [
         {
@@ -403,7 +403,7 @@
           "label": "Review the selected band window",
           "rect": {
             "x": 298,
-            "y": 190,
+            "y": 216,
             "width": 916,
             "height": 620
           }
@@ -417,7 +417,7 @@
         "x": 280,
         "y": 0,
         "width": 1244,
-        "height": 828
+        "height": 854
       },
       "targets": [
         {
@@ -435,7 +435,7 @@
           "label": "Place each lane window",
           "rect": {
             "x": 298,
-            "y": 190,
+            "y": 216,
             "width": 916,
             "height": 620
           }
@@ -531,7 +531,7 @@
       "title": "Define a peak integration baseline",
       "crop": {
         "x": 292,
-        "y": 12,
+        "y": 210,
         "width": 816,
         "height": 576
       },
@@ -541,7 +541,7 @@
           "label": "Choose the lane",
           "rect": {
             "x": 360,
-            "y": 90,
+            "y": 288,
             "width": 112,
             "height": 37
           }
@@ -551,7 +551,7 @@
           "label": "Use Baseline mode",
           "rect": {
             "x": 478,
-            "y": 90,
+            "y": 288,
             "width": 77,
             "height": 37
           }
@@ -561,7 +561,7 @@
           "label": "Click two baseline endpoints",
           "rect": {
             "x": 323,
-            "y": 137,
+            "y": 335,
             "width": 754,
             "height": 274
           }
@@ -573,7 +573,7 @@
       "title": "Split a selected integration region",
       "crop": {
         "x": 292,
-        "y": 12,
+        "y": 210,
         "width": 816,
         "height": 576
       },
@@ -583,7 +583,7 @@
           "label": "Add a vertical divider",
           "rect": {
             "x": 561,
-            "y": 90,
+            "y": 288,
             "width": 69,
             "height": 37
           }
@@ -593,7 +593,7 @@
           "label": "Read the calculated peak areas",
           "rect": {
             "x": 323,
-            "y": 420,
+            "y": 618,
             "width": 754,
             "height": 137
           }
@@ -603,7 +603,7 @@
           "label": "Clear this lane if needed",
           "rect": {
             "x": 636,
-            "y": 90,
+            "y": 288,
             "width": 87,
             "height": 37
           }
@@ -615,39 +615,39 @@
       "title": "Add lane labels to the figure",
       "crop": {
         "x": 280,
-        "y": 143,
+        "y": 142,
         "width": 952,
-        "height": 713
+        "height": 715
       },
       "targets": [
         {
-          "selector": "[data-gel-table-role=label]",
+          "selector": "#gel-lane-table-shell .gel-table-input.is-label",
           "label": "Name the table row",
           "rect": {
-            "x": 299,
-            "y": 244,
-            "width": 116,
-            "height": 40
+            "x": 298,
+            "y": 257,
+            "width": 118,
+            "height": 31
           }
         },
         {
-          "selector": ".gel-lane-table-grid-shell",
+          "selector": "#gel-lane-table-shell .gel-table-strip-lanes",
           "label": "Enter each lane label",
           "rect": {
             "x": 416,
-            "y": 243,
-            "width": 798,
-            "height": 42
+            "y": 200,
+            "width": 787,
+            "height": 94
           }
         },
         {
           "selector": "[data-gel-table-add-row]",
           "label": "Add another table row",
           "rect": {
-            "x": 442,
-            "y": 197,
-            "width": 76,
-            "height": 37
+            "x": 374,
+            "y": 166,
+            "width": 65,
+            "height": 28
           }
         }
       ]
@@ -723,7 +723,7 @@
         "x": 0,
         "y": 0,
         "width": 1597,
-        "height": 358
+        "height": 360
       },
       "targets": [
         {
@@ -741,9 +741,9 @@
           "label": "Drag blots to arrange the figure",
           "rect": {
             "x": 311,
-            "y": 62,
+            "y": 100,
             "width": 890,
-            "height": 203
+            "height": 242
           }
         },
         {
@@ -765,7 +765,7 @@
         "x": 293,
         "y": 0,
         "width": 1231,
-        "height": 283
+        "height": 322
       },
       "targets": [
         {
@@ -775,7 +775,7 @@
             "x": 464,
             "y": 62,
             "width": 24,
-            "height": 203
+            "height": 242
           }
         },
         {
@@ -785,7 +785,7 @@
             "x": 1170,
             "y": 62,
             "width": 24,
-            "height": 203
+            "height": 242
           }
         },
         {
@@ -793,9 +793,9 @@
           "label": "Apply trim",
           "rect": {
             "x": 1241,
-            "y": 210,
-            "width": 89,
-            "height": 37
+            "y": 111,
+            "width": 76,
+            "height": 30
           }
         }
       ]
@@ -804,19 +804,29 @@
       "name": "22-export-menu",
       "title": "Export a gel or the current stack",
       "crop": {
-        "x": 1333,
+        "x": 1325,
         "y": 330,
-        "width": 196,
-        "height": 139
+        "width": 204,
+        "height": 175
       },
       "targets": [
+        {
+          "selector": "#gel-export-ladder-labels",
+          "label": "Ladder labels (optional)",
+          "rect": {
+            "x": 1464,
+            "y": 361,
+            "width": 30,
+            "height": 18
+          }
+        },
         {
           "selector": "#gel-export-image-btn",
           "label": "Export Image (PNG)",
           "rect": {
-            "x": 1356,
-            "y": 353,
-            "width": 150,
+            "x": 1348,
+            "y": 388,
+            "width": 158,
             "height": 31
           }
         },
@@ -824,9 +834,9 @@
           "selector": "#gel-export-pptx-btn",
           "label": "Export PowerPoint (PPTX)",
           "rect": {
-            "x": 1356,
-            "y": 383,
-            "width": 150,
+            "x": 1348,
+            "y": 419,
+            "width": 158,
             "height": 31
           }
         },
@@ -834,9 +844,9 @@
           "selector": "#gel-export-csv-btn",
           "label": "Export Bands (CSV)",
           "rect": {
-            "x": 1356,
-            "y": 414,
-            "width": 150,
+            "x": 1348,
+            "y": 450,
+            "width": 158,
             "height": 31
           }
         }

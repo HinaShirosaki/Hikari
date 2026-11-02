@@ -14,9 +14,7 @@ function registerAgentChatHandler({
   controllerUtils,
   observability,
   agentChatLogRuntime,
-  getAgentChatLogPath,
   getAgentChatSessionStoragePath,
-  appendAgentChatLogEntry,
   lifecycleService,
   runAgentController
 } = {}) {
@@ -28,9 +26,7 @@ function registerAgentChatHandler({
     controllerUtils,
     observability,
     agentChatLogRuntime,
-    getAgentChatLogPath,
     getAgentChatSessionStoragePath,
-    appendAgentChatLogEntry,
     lifecycleService,
     runAgentController
   });

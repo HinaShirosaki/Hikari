@@ -164,12 +164,80 @@
   margin-top: 0;
 }
 
+.sequence-viewer-protein-card {
+  display: grid;
+  gap: var(--space-8);
+  min-width: 0;
+}
+
+.sequence-viewer-protein-heading,
+.sequence-viewer-protein-sequence-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+}
+
+.sequence-viewer-protein-heading > span,
+.sequence-viewer-protein-source {
+  color: var(--theme-text-muted);
+}
+
+.sequence-viewer-protein-metrics {
+  display: grid;
+  margin: 0;
+  padding: var(--space-4) 0;
+  border-block: 1px solid var(--theme-border);
+  font-variant-numeric: tabular-nums;
+}
+
+.sequence-viewer-protein-metrics > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-4) 0;
+}
+
+.sequence-viewer-protein-metrics dt {
+  color: var(--theme-text-muted);
+}
+
+.sequence-viewer-protein-metrics dd {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-8);
+  min-width: 0;
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.sequence-viewer-protein-mass {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.sequence-viewer-protein-mass small {
+  color: var(--theme-text-muted);
+  font-size: 0.9em;
+}
+
 .sequence-viewer-protein-details > summary {
   cursor: pointer;
 }
 
 .sequence-viewer-protein-sequence {
-  margin: var(--space-4) 0 0;
+  min-width: 0;
+  max-height: 192px;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   font-family: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, monospace;
   font-size: var(--text-2xs);
   line-height: 1.5;

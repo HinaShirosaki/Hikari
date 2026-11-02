@@ -109,8 +109,8 @@ if (!process.versions.electron) {
     const edit = async (key,value) => { await js(`qa.set(${JSON.stringify(key)},${JSON.stringify(value)})`); await settle(); };
     const shot = async (name) => { await settle(); fs.writeFileSync(path.join(output,name+'.png'), (await win.webContents.capturePage()).toPNG()); };
     if (phase.startsWith('workspace')) {
+      assert.equal(await js('qa.initialChartRendered'),true,'opening an assay renders Chart view before any control changes');
       assert.equal(await js('Boolean(qa.host?.data?.length)'),true,'the production Assay module renders the saved plate');
-      assert.equal(await js("Boolean(document.querySelector('#assay-result-table .tabulator-row'))"),true,'the production spreadsheet is loaded');
       const rawBefore=await js('JSON.stringify(qa.state.assays[0].resultValues)');
       const dataBefore=await js('JSON.stringify(qa.host.data.map(trace=>({x:trace.x,y:trace.y})))');
       const tableBefore=await js("document.querySelector('#assay-analysis-summary-table table')?.textContent");
@@ -118,6 +118,13 @@ if (!process.versions.electron) {
       assert.equal(await js("document.getElementById('assay-analysis-data-source').value"),'raw');
       assert.equal(await js("document.querySelector('#assay-analysis-data-source option[value=transformed]').disabled"),true,'Table2 is unavailable until a transform exists');
       assert.equal(await js("document.querySelector('#assay-result-table-panel').hidden"),false);
+      assert.equal(await js("document.getElementById('assay-workspace-data').hidden"),true,'Chart view excludes the data workspace');
+      assert.equal(await js("document.querySelector('.assay-results-controls-panel #assay-analysis-panel')"),null,'the left rail contains navigation only');
+      assert.equal(await js("document.querySelector('#universal-agent-chat-rail #assay-analysis-panel') !== null"),true,'analysis controls share the host chat rail');
+      await js("document.getElementById('assay-workspace-view-data').click()");await settle();
+      assert.equal(await js("Boolean(document.querySelector('#assay-result-table .tabulator-row'))"),true,'the spreadsheet renders when Data becomes visible');
+      assert.equal(await js("document.getElementById('assay-workspace-chart').hidden"),true,'Data view excludes the chart workspace');
+      assert.equal(await js("document.getElementById('assay-workspace-data').hidden"),false);
       await js("document.querySelector('#assay-data-tab-summary').click()");await settle();
       assert.equal(await js("document.querySelector('#assay-result-table-panel').hidden"),true);
       assert.equal(await js("document.querySelector('#assay-summary-panel').hidden"),false);
@@ -127,6 +134,9 @@ if (!process.versions.electron) {
       await js("document.querySelector('#assay-show-empty-rows').click()");await settle();
       assert.equal(await js("Tabulator.findTable(document.querySelector('#assay-result-table .tabulator'))[0].getRows('active').length"),2);
       assert.equal(await js('qa.module.hasUnsavedChanges()'),false,'view filtering preserves the clean plate snapshot');
+      await js("document.getElementById('assay-workspace-view-chart').click()");await settle();
+      assert.equal(await js("document.getElementById('assay-workspace-data').hidden"),true);
+      assert.equal(await js('JSON.stringify(qa.host.data.map(trace=>({x:trace.x,y:trace.y})))'),dataBefore,'view switching preserves chart data');
       if (phase === 'workspace') {
         await js("qa.tab('frame')");await edit('frameStrokeWidth',2.25);
         assert.equal(await js('qa.state.assays[0].chartStyle.frameStrokeWidth'),3,'real Assay onChartStyleChanged persists the target record');
@@ -135,6 +145,7 @@ if (!process.versions.electron) {
         assert.equal(await js('JSON.stringify(qa.host.data.map(trace=>({x:trace.x,y:trace.y})))'),dataBefore,'formatting preserves plotted scientific data');
         assert.equal(await js("document.querySelector('#assay-analysis-summary-table table')?.textContent"),tableBefore,'formatting preserves analysis results');
         await shot('08-assay-workspace');
+        await require('./support/assay-workspace-layout.cjs')({ js, settle, shot, win });
         fs.writeFileSync(path.join(temp,'workspace-expected.json'),JSON.stringify(await js('qa.getStyle()')));
       } else {
         const expected=JSON.parse(fs.readFileSync(path.join(temp,'workspace-expected.json'),'utf8'));
@@ -146,11 +157,12 @@ if (!process.versions.electron) {
         // scroll the workspace down to it or take focus from the control in use.
         win.setContentSize(1280,640);
         await js("document.querySelector('#assay-show-empty-rows').click();document.getElementById('assay-transform-open-btn').click()");await settle();
-        await js("document.getElementById('assay-analyze-workspace').scrollTop=0;document.getElementById('assay-workspace-format-btn').focus();const k=document.getElementById('assay-analysis-kind');k.value='summary';k.dispatchEvent(new Event('change',{bubbles:true}))");
+        await js("document.getElementById('assay-analyze-workspace').scrollTop=0;document.getElementById('assay-analysis-toggle-btn').focus();const k=document.getElementById('assay-analysis-kind');k.value='summary';k.dispatchEvent(new Event('change',{bubbles:true}))");
         await settle();await new Promise(resolve=>setTimeout(resolve,300));
         assert.ok(await js("document.getElementById('assay-analyze-workspace').scrollHeight>document.getElementById('assay-analyze-workspace').clientHeight"),'the workspace can scroll');
         assert.equal(await js("document.getElementById('assay-analyze-workspace').scrollTop"),0,'an analysis re-render keeps the workspace scroll');
-        assert.equal(await js('document.activeElement.id'),'assay-workspace-format-btn','an analysis re-render keeps focus on the control in use');
+        assert.equal(await js('document.activeElement.id'),'assay-analysis-toggle-btn','an analysis re-render keeps focus on the control in use');
+        assert.equal(await js("document.getElementById('assay-workspace-data').hidden"),false,'creating a transform opens the data workspace');
         assert.equal(await js("document.getElementById('assay-analysis-data-source').value"),'transformed','a new transformed plate becomes the analysis source');
         await js("Tabulator.findTable(document.querySelector('#assay-derived-plate-table .tabulator'))[0].getRow(0).getCell('c1').setValue('=Table1:A1*2')");await settle();
         const firstMean = () => js("(() => { const a=qa.state.assays[0].latestAnalysis; return Number(a.rows[0][a.headers.indexOf('Mean')]); })()");
@@ -172,7 +184,7 @@ if (!process.versions.electron) {
         await setSource('transformed');
         assert.equal(await firstMean(),188,'the saved formulas remain selectable after reload');
         assert.equal(await js('qa.state.assays[0].latestAnalysis.dataSource'),'transformed','saved analysis metadata identifies the source');
-        await js("document.getElementById('assay-analysis-panel').open=true;document.getElementById('assay-chart-format-panel').open=false;document.querySelector('.assay-results-rail-scroll').scrollTop=0");
+        await js("document.getElementById('assay-analysis-toggle-btn').click();document.getElementById('assay-workspace-view-data').click()");
         await shot('14-analysis-data-source');
         await js("document.getElementById('assay-transform-clear-btn').click()");await settle();
         assert.equal(await js("document.getElementById('assay-analysis-data-source').value"),'raw','removing Table2 restores Table1');

@@ -1,0 +1,410 @@
+import { createPresentation } from './i18n/presentation.js';
+import { showTransientNotice } from './notify.js';
+import {
+  getContainerLayout,
+  getContainerWellName,
+  isMultiWellContainer
+} from './inventory-containers.js';
+import {
+  getEditableSampleTypeEntries,
+  getSampleInventoryLocationDisplay,
+  getSampleInventoryLocationNames
+} from './inventory-settings.js';
+import { buildSampleLocation, makeDefaultSampleCode, normalizeSampleCode } from './sample-records.js';
+import { asArray } from './normalize.js';
+
+const i18nUi = createPresentation('common');
+
+function listContainers(inventory = {}) {
+  return Object.entries(inventory || {}).flatMap(([section, containers]) => (
+    asArray(containers).map((container) => ({
+      section,
+      container,
+      key: `${section}::${container?.id || ''}`
+    }))
+  )).filter((item) => item.container?.id);
+}
+
+function findContainer(containers, key) {
+  return asArray(containers).find((item) => item.key === String(key || '')) || null;
+}
+
+function linkedSamplesAt(state, selectedContainer, wellIndex) {
+  if (!selectedContainer) {
+    return [];
+  }
+  return asArray(state?.samples).filter((sample) => {
+    const link = sample?.inventoryLink;
+    if (link?.section !== selectedContainer.section || link?.containerId !== selectedContainer.container.id) {
+      return false;
+    }
+    if (wellIndex === null) {
+      return link.wellIndex === null || link.wellIndex === undefined;
+    }
+    return Number(link.wellIndex) === wellIndex;
+  });
+}
+
+// Compact storage picker shared by notebook capture and DNA sample recording.
+export function createQuickSampleController({
+  doc = (typeof document !== 'undefined' ? document : null),
+  state,
+  safeText = (value) => String(value || ''),
+  createId,
+  idPrefix = 'biology-notebook-quick-sample',
+  prepareCreate,
+  onCreated
+} = {}) {
+  const overlay = doc?.getElementById?.(`${idPrefix}-overlay`);
+  const form = doc?.getElementById?.(`${idPrefix}-form`);
+  const closeBtn = doc?.getElementById?.(`${idPrefix}-close-btn`);
+  const cancelBtn = doc?.getElementById?.(`${idPrefix}-cancel-btn`);
+  const locationList = doc?.getElementById?.(`${idPrefix}-location-list`);
+  const containerSelect = doc?.getElementById?.(`${idPrefix}-container`);
+  const grid = doc?.getElementById?.(`${idPrefix}-grid`);
+  const gridLabel = doc?.getElementById?.(`${idPrefix}-grid-label`);
+  const nameInput = doc?.getElementById?.(`${idPrefix}-name`);
+  const codeInput = doc?.getElementById?.(`${idPrefix}-code`);
+  const typeInput = doc?.getElementById?.(`${idPrefix}-type`);
+  const lotInput = doc?.getElementById?.(`${idPrefix}-lot`);
+  const concentrationInput = doc?.getElementById?.(`${idPrefix}-concentration`);
+  const status = doc?.getElementById?.(`${idPrefix}-status`);
+  const submitBtn = doc?.getElementById?.(`${idPrefix}-submit-btn`);
+  let containers = [];
+  let locationNames = [];
+  let selectedLocation = '';
+  let selectedContainer = null;
+  let selectedWellIndex = null;
+  let defaults = {};
+  let busy = false;
+
+  function setStatus(message, isError = false) {
+    if (isError && message) {
+      showTransientNotice(String(message), { type: 'error' });
+    }
+    if (!status) {
+      return;
+    }
+    i18nUi.setOwnedText(status, String(message || ''));
+    status.classList?.toggle?.('is-error', Boolean(isError));
+  }
+
+  function setBusy(isBusy) {
+    busy = Boolean(isBusy);
+    if (submitBtn) {
+      submitBtn.disabled = Boolean(isBusy);
+      const label = isBusy ? 'Adding sample' : 'Add Sample';
+      i18nUi.setAttribute(submitBtn, 'aria-label', i18nUi.message(label));
+      i18nUi.setAttribute(submitBtn, 'title', i18nUi.message(label));
+      if (isBusy) {
+        submitBtn.setAttribute?.('aria-busy', 'true');
+      } else {
+        submitBtn.removeAttribute?.('aria-busy');
+      }
+      const screenReaderLabel = submitBtn.querySelector?.('.sr-only');
+      if (screenReaderLabel) {
+        i18nUi.setText(screenReaderLabel, label);
+      }
+    }
+  }
+
+  function getWellCount(container) {
+    if (!container || !isMultiWellContainer(container)) {
+      return 1;
+    }
+    const layout = getContainerLayout(container);
+    return layout.rows * layout.cols;
+  }
+
+  // First empty well, falling back to well 0 when the box is full.
+  function firstAvailableWell(containerItem) {
+    if (!containerItem || !isMultiWellContainer(containerItem.container)) {
+      return null;
+    }
+    const count = getWellCount(containerItem.container);
+    for (let index = 0; index < count; index += 1) {
+      if (!linkedSamplesAt(state, containerItem, index).length) {
+        return index;
+      }
+    }
+    return count ? 0 : null;
+  }
+
+  function renderLocationList() {
+    if (!locationList) {
+      return;
+    }
+    i18nUi.setHtml(locationList, locationNames.map((locationName) => {
+      const display = getSampleInventoryLocationDisplay(locationName);
+      const containerCount = asArray(state?.inventory?.[locationName]).length;
+      const sampleCount = asArray(state?.samples).filter((sample) => sample?.inventoryLink?.section === locationName).length;
+      const selected = locationName === selectedLocation;
+      return `
+        <button type="button" class="biology-notebook-quick-sample-location${selected ? ' is-selected' : ''}" data-quick-sample-location="${safeText(locationName)}" role="option" aria-selected="${selected ? 'true' : 'false'}">
+          <span class="biology-notebook-quick-sample-location-badge">${safeText(display.short)}</span>
+          <span class="biology-notebook-quick-sample-location-copy">
+            <strong>${safeText(display.title)}</strong>
+            <small>${i18nUi.render(i18nUi.message((containerCount === 1 ? "{p0} container" : "{p0} containers"), { p0: containerCount }))}</small>
+          </span>
+          <span class="biology-notebook-quick-sample-location-count" ${i18nUi.attributeMessage("aria-label", i18nUi.message((sampleCount === 1 ? "{p0} sample" : "{p0} samples"), { p0: sampleCount }))}>${safeText(String(sampleCount))}</span>
+        </button>
+      `;
+    }).join(''));
+  }
+
+  function renderGridLabel() {
+    if (!gridLabel || !selectedContainer) {
+      return;
+    }
+    const containerName = selectedContainer.container.name || 'Container';
+    const positionLabel = isMultiWellContainer(selectedContainer.container)
+      ? (Number.isInteger(selectedWellIndex) ? getContainerWellName(selectedContainer.container, selectedWellIndex) : 'Select position')
+      : 'Single position';
+    i18nUi.setText(gridLabel, `${containerName} · ${positionLabel}`);
+  }
+
+  function renderGrid() {
+    if (!grid || !gridLabel) {
+      return;
+    }
+    if (!selectedContainer) {
+      i18nUi.setText(gridLabel, (selectedLocation ? i18nUi.message("Choose a container") : i18nUi.message("Grid box")));
+      grid.className = 'biology-notebook-quick-sample-grid is-empty';
+      grid.removeAttribute?.('style');
+      i18nUi.setHtml(grid, `<p class="small-note">${i18nUi.html("No containers in this location.")}</p>`);
+      return;
+    }
+
+    const container = selectedContainer.container;
+    if (!isMultiWellContainer(container)) {
+      const occupied = linkedSamplesAt(state, selectedContainer, null).length;
+      grid.className = 'biology-notebook-quick-sample-grid is-single';
+      grid.removeAttribute?.('style');
+      i18nUi.setHtml(grid, `
+        <button type="button" class="biology-notebook-quick-sample-well is-selected${occupied ? ' is-occupied' : ''}" data-quick-sample-well="single" aria-pressed="true">
+          ${i18nUi.html("Single")}
+          ${occupied ? `<span>${safeText(String(occupied))}</span>` : ''}
+        </button>
+      `);
+      selectedWellIndex = null;
+      renderGridLabel();
+      return;
+    }
+
+    const layout = getContainerLayout(container);
+    const count = layout.rows * layout.cols;
+    grid.className = 'biology-notebook-quick-sample-grid';
+    grid.style.setProperty('--quick-sample-grid-cols', String(layout.cols));
+    grid.style.setProperty('--quick-sample-grid-rows', String(layout.rows));
+    grid.style.setProperty('--quick-sample-grid-aspect-x', String(layout.cols));
+    grid.style.setProperty('--quick-sample-grid-aspect-y', String(layout.rows));
+    i18nUi.setHtml(grid, Array.from({ length: count }, (_item, index) => {
+      const label = getContainerWellName(container, index);
+      const occupied = linkedSamplesAt(state, selectedContainer, index).length;
+      const selected = index === selectedWellIndex;
+      return `
+        <button type="button" class="biology-notebook-quick-sample-well${selected ? ' is-selected' : ''}${occupied ? ' is-occupied' : ''}" data-quick-sample-well="${index}" aria-label="${safeText(`${label}${occupied ? `, ${occupied} sample${occupied === 1 ? '' : 's'}` : ', empty'}`)}" aria-pressed="${selected ? 'true' : 'false'}">
+          ${safeText(label)}
+          ${occupied ? `<span>${safeText(String(occupied))}</span>` : ''}
+        </button>
+      `;
+    }).join(''));
+    renderGridLabel();
+  }
+
+  function selectContainer(key) {
+    selectedContainer = findContainer(containers, key);
+    selectedWellIndex = firstAvailableWell(selectedContainer);
+    if (containerSelect) {
+      containerSelect.value = selectedContainer?.key || '';
+    }
+    renderGrid();
+  }
+
+  function renderContainerOptions(previousKey = '') {
+    const locationContainers = containers.filter((item) => item.section === selectedLocation);
+    if (containerSelect) {
+      i18nUi.setHtml(containerSelect, locationContainers
+        .map((item) => `<option value="${safeText(item.key)}">${i18nUi.render((item.container.name || i18nUi.message("Container")))}</option>`)
+        .join(''));
+    }
+    const next = findContainer(locationContainers, previousKey) || locationContainers[0] || null;
+    selectContainer(next?.key || '');
+  }
+
+  function selectLocation(locationName) {
+    selectedLocation = locationNames.includes(locationName) ? locationName : '';
+    const previousKey = selectedContainer?.section === selectedLocation ? selectedContainer.key : '';
+    renderLocationList();
+    renderContainerOptions(previousKey);
+  }
+
+  function renderLocationOptions() {
+    containers = listContainers(state?.inventory);
+    locationNames = getSampleInventoryLocationNames(state?.settings, state?.inventory);
+    const nextLocation = (selectedLocation && locationNames.includes(selectedLocation) ? selectedLocation : '')
+      || locationNames.find((locationName) => containers.some((item) => item.section === locationName))
+      || locationNames[0]
+      || '';
+    selectLocation(nextLocation);
+  }
+
+  function renderSampleTypes(preferredType = 'plasmid') {
+    if (!typeInput) {
+      return;
+    }
+    const entries = getEditableSampleTypeEntries(state?.settings);
+    i18nUi.setHtml(typeInput, entries.map((entry) => (
+      `<option value="${safeText(entry.type)}">${safeText(entry.label)}</option>`
+    )).join(''));
+    typeInput.value = entries.some((entry) => entry.type === preferredType) ? preferredType : (entries[0]?.type || '');
+  }
+
+  function resetFields() {
+    for (const [input, key] of [[nameInput, 'name'], [codeInput, 'code'], [lotInput, 'lot'], [concentrationInput, 'concentration']]) {
+      if (input) input.value = String(defaults[key] || '');
+    }
+    renderSampleTypes(defaults.type || 'plasmid');
+    setStatus('');
+    setBusy(false);
+  }
+
+  function open(initialValues = {}) {
+    if (!overlay || busy) {
+      return;
+    }
+    defaults = { ...initialValues };
+    resetFields();
+    renderLocationOptions();
+    overlay.hidden = false;
+    if (typeof overlay.showModal === 'function' && !overlay.open) overlay.showModal();
+    nameInput?.focus?.();
+  }
+
+  function close() {
+    if (busy) return;
+    if (overlay) {
+      if (overlay.open && typeof overlay.close === 'function') overlay.close();
+      overlay.hidden = true;
+    }
+    setStatus('');
+    setBusy(false);
+  }
+
+  function uniqueGeneratedCode() {
+    let code = makeDefaultSampleCode();
+    let attempt = 1;
+    while (asArray(state?.samples).some((sample) => sample?.code === code)) {
+      code = `${makeDefaultSampleCode()}-${attempt}`;
+      attempt += 1;
+    }
+    return code;
+  }
+
+  async function submit(event) {
+    event?.preventDefault?.();
+    if (busy) return null;
+    const name = String(nameInput?.value || '').trim();
+    if (!name) {
+      setStatus(i18nUi.text("Enter a sample name."), true);
+      nameInput?.focus?.();
+      return null;
+    }
+    if (!selectedContainer) {
+      setStatus(i18nUi.text("Choose a container for this sample."), true);
+      return null;
+    }
+    const requestedCode = normalizeSampleCode(codeInput?.value);
+    if (requestedCode && asArray(state?.samples).some((sample) => sample?.code === requestedCode)) {
+      setStatus(i18nUi.text("Sample code {p0} already exists.", { p0: requestedCode }), true);
+      codeInput?.focus?.();
+      return null;
+    }
+
+    setBusy(true);
+    setStatus('');
+    try {
+      const context = await prepareCreate?.();
+      const nowIso = new Date().toISOString();
+      const wellIndex = isMultiWellContainer(selectedContainer.container) ? selectedWellIndex : null;
+      const record = {
+        id: String(createId?.() || `sample-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`),
+        code: requestedCode || uniqueGeneratedCode(),
+        name,
+        type: String(typeInput?.value || 'plasmid').trim() || 'plasmid',
+        lot: String(lotInput?.value || '').trim(),
+        concentration: String(concentrationInput?.value || '').trim(),
+        notes: '',
+        cellPassage: null,
+        location: buildSampleLocation(selectedContainer.section, selectedContainer.container, wellIndex),
+        inventoryLink: { section: selectedContainer.section, containerId: selectedContainer.container.id, wellIndex },
+        chemicalLinks: [],
+        compoundStructure: null,
+        updatedAt: nowIso
+      };
+      if (record.type === defaults.type && defaults.details) {
+        record.details = { ...defaults.details };
+      }
+      state.samples = asArray(state.samples);
+      state.samples.push(record);
+      // A failed persistence or capture must leave no sample behind.
+      try {
+        await onCreated?.({ record, context });
+      } catch (error) {
+        state.samples = state.samples.filter((sample) => sample !== record);
+        throw error;
+      }
+      setBusy(false);
+      close();
+      return record;
+    } catch (error) {
+      setStatus((((((error?.message || i18nUi.text("Could not add the sample.")))))), true);
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  locationList?.addEventListener?.('click', (event) => {
+    const location = event?.target?.closest?.('[data-quick-sample-location]');
+    if (!location) {
+      return;
+    }
+    selectLocation(String(location.dataset?.quickSampleLocation || ''));
+  });
+  containerSelect?.addEventListener?.('change', () => selectContainer(containerSelect.value));
+  grid?.addEventListener?.('click', (event) => {
+    const well = event?.target?.closest?.('[data-quick-sample-well]');
+    if (!well || !selectedContainer) {
+      return;
+    }
+    const rawIndex = String(well.dataset?.quickSampleWell || '');
+    selectedWellIndex = rawIndex === 'single' ? null : Number(rawIndex);
+    renderGrid();
+  });
+  form?.addEventListener?.('submit', submit);
+  closeBtn?.addEventListener?.('click', close);
+  cancelBtn?.addEventListener?.('click', close);
+  overlay?.addEventListener?.('click', (event) => {
+    if (event?.target === overlay) {
+      close();
+    }
+  });
+  overlay?.addEventListener?.('cancel', (event) => {
+    event.preventDefault?.();
+    close();
+  });
+  overlay?.addEventListener?.('keydown', (event) => {
+    if (event?.key === 'Escape') {
+      event.preventDefault?.();
+      close();
+    }
+  });
+
+  return {
+    open,
+    close,
+    submit,
+    isOpen: () => Boolean(overlay && !overlay.hidden)
+  };
+}

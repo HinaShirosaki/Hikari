@@ -174,11 +174,11 @@ async function main() {
   // 2. Start a process
   await click('#workflow-add-run-btn');
   await waitFor('document.getElementById("workflow-process-dialog").open');
-  await check(`document.getElementById('workflow-process-template').value === 'demo-template-protein'`, 'New process starts from the selected template');
+  await check(`document.getElementById('workflow-process-template').value === 'demo-template-protein' && document.getElementById('workflow-process-template-field').hidden`, 'New process uses the selected template without showing a template picker');
   await input('#workflow-process-project', 'demo-stability');
   await input('#workflow-process-name', 'Protein prep · buffer C');
-  await shot('02-new-process', 'Start a process', 'Click + (New process), choose the template and project, and click Create process.', '#workflow-process-form',
-    [['#workflow-process-template', 'Workflow template', 'right'], ['#workflow-process-project', 'Project', 'right'], ['#workflow-process-name', 'Process name', 'right'], ['#workflow-process-form button[type="submit"]', 'Create process', 'right']], { side: true });
+  await shot('02-new-process', 'Start a process', 'Click + (New process), choose the project, and click Create process.', '#workflow-process-form',
+    [['#workflow-process-project', 'Project', 'right'], ['#workflow-process-name', 'Process name', 'right'], ['#workflow-process-form button[type="submit"]', 'Create process', 'right']], { side: true });
   await click('#workflow-process-form button[type="submit"]');
   await waitFor(`!document.getElementById('workflow-process-dialog').open && ${run('Protein prep · buffer C')}`);
   await check(`${run('Protein prep · buffer C')}.projectId === 'demo-stability' && ${run('Protein prep · buffer C')}.blocks.length === 5 && document.querySelector('.workflow-drawer-name').value === 'Protein prep · buffer C'`, 'Create process adds the process to its project and opens it');

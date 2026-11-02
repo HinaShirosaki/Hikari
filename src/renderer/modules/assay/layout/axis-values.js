@@ -99,8 +99,15 @@ function createAxisValues({
     );
   }
 
+  // isMappedWell runs once per grid cell, so rebuilding the set each call made a
+  // 1536-well plate O(n^2). Layout writers always assign a new array, so the
+  // array's identity is the cache key.
+  let mappedWells = { layout: null, set: new Set() };
   function getMappedWellSet() {
-    return buildMappedWellSet(runtime.currentLayout);
+    if (mappedWells.layout !== runtime.currentLayout) {
+      mappedWells = { layout: runtime.currentLayout, set: buildMappedWellSet(runtime.currentLayout) };
+    }
+    return mappedWells.set;
   }
 
   function isMappedWell(wellId) {

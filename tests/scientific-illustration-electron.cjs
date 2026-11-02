@@ -17,6 +17,9 @@ const { verifyTextEditing } = require('./scientific-illustration-text-editing.cj
 const { verifyRailFolding } = require('./scientific-illustration-rail.cjs');
 const { verifyCanvasLayout } = require('./scientific-illustration-layout.cjs');
 const { verifyGrouping } = require('./scientific-illustration-grouping.cjs');
+const { verifySelectionToolbar } = require('./scientific-illustration-selection-toolbar.cjs');
+const { verifyOpacity } = require('./scientific-illustration-opacity.cjs');
+const { verifyShiftDrag } = require('./scientific-illustration-shift-drag.cjs');
 const { verifyReusableAssets } = require('./scientific-illustration-assets.cjs');
 const { verifyAreaSelection } = require('./scientific-illustration-selection.cjs');
 const { verifySharedWorkspaceTools } = require('./scientific-illustration-workspace-tools.cjs');
@@ -27,9 +30,11 @@ const { verifyImportCrop } = require('./scientific-illustration-import-crop.cjs'
 const { verifyPowerPoint } = require('./scientific-illustration-powerpoint.cjs');
 const { verifyRotation } = require('./scientific-illustration-rotation.cjs');
 const { verifyClipboard } = require('./scientific-illustration-clipboard.cjs');
+const { verifyChemicalPaste } = require('./scientific-illustration-chemical-paste.cjs');
 const { verifyContextMenu } = require('./scientific-illustration-context-menu.cjs');
 const { verifySystemHistory } = require('./scientific-illustration-history.cjs');
 const { verifyAlignment } = require('./scientific-illustration-alignment.cjs');
+const { verifySmartGuides } = require('./scientific-illustration-smart-guides.cjs');
 const { verifySingleCanvas } = require('./scientific-illustration-single-canvas.cjs');
 const { verifyLibraryNavigation } = require('./scientific-illustration-library-navigation.cjs');
 const { verifyArtworkHitTesting } = require('./scientific-illustration-hit-testing.cjs');
@@ -115,7 +120,7 @@ async function run() {
     const bridge=createPluginBridge({state:qaState,windowObject:window,persist:()=>{},onPluginPrompt:prompt,onPluginChatContext:setChatContext,
       onFrameHistoryChanged:()=>historyService?.syncButtons(),
       onPluginActivate:plugin=>{document.body.dataset.activeView='plugin-'+plugin.id+'-view';railRuntime.syncState(document.body.dataset.activeView);},
-      api:{...hikariApi,writePluginFile:payload=>failSave||(failIndex&&payload.path==='library.json')||(window.qaFailAssets&&payload.path==='reusable-assets.json')||(window.qaFailGroupAck&&payload.path.startsWith('illustrations/'))?Promise.resolve({ok:false,error:'Injected disk failure'}):hikariApi.writePluginFile(payload)}});
+      api:{...hikariApi,readChemicalClipboard:async()=>{window.qaNativeClipboardReads=(window.qaNativeClipboardReads||0)+1;return window.qaNativeClipboard||{ok:false,formats:[],candidates:[]};},writePluginFile:payload=>failSave||(failIndex&&payload.path==='library.json')||(window.qaFailAssets&&payload.path==='reusable-assets.json')||(window.qaFailGroupAck&&payload.path.startsWith('illustrations/'))?Promise.resolve({ok:false,error:'Injected disk failure'}):hikariApi.writePluginFile(payload)}});
     window.qaBridge=bridge;
     window.qaHostHistoryState={value:0};
     window.qaHistoryDelegate=createPluginHistoryDelegate({documentObject:document,windowObject:window,bridge,onChange:()=>historyService?.syncButtons()});
@@ -155,7 +160,7 @@ async function run() {
   }
   check(frame, `Plugin failed to load: ${errors.join('\n')}`);
   await evaluate('illustrationWorkspace.ready.then(()=>true)');
-  check(await evaluate('!document.querySelector("#undo,#redo") && !document.getElementById("canvas-empty").hidden') && await win.webContents.executeJavaScript('document.getElementById("global-undo-btn").disabled && document.getElementById("global-redo-btn").disabled'), 'Empty workspace uses disabled system history controls without duplicate plugin buttons');
+  check(await evaluate('!document.querySelector("#undo,#redo,#canvas-empty")') && await win.webContents.executeJavaScript('document.getElementById("global-undo-btn").disabled && document.getElementById("global-redo-btn").disabled'), 'Empty workspace keeps the canvas clear and uses disabled system history controls without duplicate plugin buttons');
   check(await evaluate('document.getElementById("layer-inspector").hidden && document.getElementById("layer-inspector").inert'), 'New illustrations start with the canvas dominant and Layers folded');
   await fs.writeFile(path.join(temp, 'empty.png'), (await win.webContents.capturePage()).toPNG());
   check(await win.webContents.executeJavaScript('qaInspected.permissions.includes("agent:chat") && qaInspected.permissions.includes("agent:canvas") && qaInspected.permissions.includes("layout")'), 'Installer IPC accepts agent and existing layout permissions');
@@ -174,6 +179,21 @@ async function run() {
     const result = await client.callTool({ name: 'plugin_canvas', arguments: { plugin_id: 'scientific-illustration', request, ...(assets ? { assets } : {}) } });
     return { ...result.structuredContent, content: result.content };
   };
+  if (process.env.HIKARI_SHIFT_DRAG_QA_ONLY === '1') {
+    await verifyShiftDrag({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura Shift selection and movement: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
+  if (process.env.HIKARI_OPACITY_QA_ONLY === '1') {
+    await verifyOpacity({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura opacity slider: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
+  if (process.env.HIKARI_SELECTION_TOOLBAR_QA_ONLY === '1') {
+    await verifySelectionToolbar({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura floating selection toolbar: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
   if (process.env.HIKARI_TEXT_EDITING_QA_ONLY === '1') {
     await verifyTextResize({ tool, evaluate, check, win, pause, temp });
     await verifyTextBounds({ tool, evaluate, check, win, pause, temp });
@@ -214,6 +234,11 @@ async function run() {
     check(errors.length === 0, errors.join('\n'));
     console.log(`Figura Plotly: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
   }
+  if (process.env.HIKARI_SMART_GUIDES_QA_ONLY === '1') {
+    await verifySmartGuides({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura smart guides: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
   if (process.env.HIKARI_ALIGNMENT_QA_ONLY === '1') {
     await verifyAlignment({ tool, evaluate, check, win, pause, temp });
     check(errors.length === 0, errors.join('\n'));
@@ -249,6 +274,11 @@ async function run() {
     await verifyContextMenu({ tool, evaluate, check, win, pause, temp });
     check(errors.length === 0, errors.join('\n'));
     console.log(`Figura context menu: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
+  if (process.env.HIKARI_CHEMICAL_PASTE_QA_ONLY === '1') {
+    await verifyChemicalPaste({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura ChemDraw paste: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
   }
   if (process.env.HIKARI_CLIPBOARD_QA_ONLY === '1') {
     await verifyClipboard({ tool, evaluate, check, win, pause, temp });
@@ -410,7 +440,7 @@ async function run() {
   await evaluate('document.querySelector("[data-layer-id=label] .layer-select").click();const input=document.querySelector("#properties [name=fontSize]");input.value="36";input.dispatchEvent(new Event("change",{bubbles:true}))');
   current = await tool({ action: 'read' });
   check(current.objects.find(object => object.id === 'label').fontSize === 36, 'User controls and agent share editable text objects');
-  check(await evaluate('!document.getElementById("text-properties").hidden && document.getElementById("vector-properties").hidden && !document.querySelector(".geometry-options").open'), 'Selected text shows formatting before optional geometry');
+  check(await evaluate('!document.getElementById("text-properties").hidden && !document.getElementById("vector-properties") && !document.querySelector(".geometry-options")'), 'Selected text shows formatting without vector controls or geometry');
   check(await win.webContents.executeJavaScript('(()=>{const history=qaBridge.getFrameHistory(document.querySelector("iframe.plugin-frame").contentWindow);return history.canUndo && !history.canRedo})()'), 'Plugin API reports available edits to system history');
   for (const style of ['bold', 'italic', 'underline']) {
     await evaluate(`document.querySelector('[data-text-style="${style}"]').click()`);
@@ -433,11 +463,10 @@ async function run() {
   await evaluate('document.querySelector("[data-layer-id=label] .layer-visibility").click()');
   current = await tool({ action: 'read' });
   check(current.objects.find(object => object.id === 'label').visible, 'Hidden layers remain selectable and can be shown');
-  await evaluate('document.querySelector("[data-layer-id=cell-main] .layer-select").click();const fill=document.querySelector("#properties [name=fill]");fill.value="#ff0000";fill.dispatchEvent(new Event("change",{bubbles:true}))');
-  current = await tool({ action: 'read' });
-  check(current.objects.find(object => object.id === 'cell-main').fill === '#ff0000', 'Vector color override updates artwork');
-  await evaluate('(()=>{const fill=document.querySelector("#properties [name=fill]");fill.value="";fill.dispatchEvent(new Event("change",{bubbles:true}))})()');
-  current = await tool({ action: 'read' });
+  await evaluate('document.querySelector("[data-layer-id=cell-main] .layer-select").click()');
+  current = await tool(apply([{ op: 'update', id: 'cell-main', patch: { fill: '#ff0000' } }]));
+  check(current.objects.find(object => object.id === 'cell-main').fill === '#ff0000', 'Agent vector color overrides remain supported');
+  current = await tool(apply([{ op: 'update', id: 'cell-main', patch: { fill: null } }]));
   check(!Object.hasOwn(current.objects.find(object => object.id === 'cell-main'), 'fill') && await evaluate('document.querySelector("#main-canvas [data-object-id=cell-main] circle").getAttribute("fill")==="#dce9e0"'), 'Clearing a vector override restores its original colors');
   await evaluate('document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}))');
   check(await evaluate('document.getElementById("properties").hidden'), 'Escape clears the current selection');

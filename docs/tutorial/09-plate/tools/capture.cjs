@@ -216,13 +216,16 @@ async function main() {
   await check('tutorial.state.assays.length === 2 && tutorial.state.assays.some(a=>a.name.includes("Plate tutorial")&&a.wellLayout.length===24)', 'Layout CSV import and Save create a plate with all 24 well mappings');
   await click('#assay-mode-results-btn');
   await waitFor('tutorial.grid()?.getRows().length === 4');
-  await shot('08-analyze-workspace', 'Open Analyze for the selected plate', 'The left rail controls analysis; the main area shows the chart and plate tables.', null,
-    [['#assay-analysis-panel', 'Data and analysis settings'], ['.assay-workspace-chart', 'Analysis chart'], ['.assay-workspace-data', 'Result and summary tables']]);
+  await check('!document.getElementById("assay-context-rail").hidden && !document.getElementById("assay-analysis-panel").hidden', 'Analyze opens with the Data Analysis panel in the right rail');
+  await shot('08-analyze-workspace', 'Open Analyze for the selected plate', 'Switch between Chart and Data on the right; Data Analysis holds the analysis settings.', ['#assay-analyze-workspace', '#assay-workspace-tools'],
+    [['#assay-workspace-chart', 'Analysis chart'], ['#assay-context-rail', 'Analysis settings'], ['.assay-workspace-view-switch', 'Chart or Data view'], ['#assay-analysis-toggle-btn', 'Data Analysis']], { side: true });
+  await click('#assay-workspace-view-data');
+  await check('!document.getElementById("assay-workspace-data").hidden && document.getElementById("assay-workspace-chart").hidden', 'The Data view replaces the chart with the plate tables');
   await pointerClick('#assay-result-table .tabulator-row [tabulator-field=c1]');
   await waitFor('document.querySelector("#assay-result-table .tabulator-cell.tabulator-editing input")');
   await editingInput('#assay-result-table .tabulator-editing input', '3');
   await shot('09-enter-results', 'Enter numeric results in the plate grid', 'Edit a result cell, or paste a rectangular block starting at the selected cell.', ['#assay-result-table', '#assay-save-results-btn'],
-    [['#assay-result-table .tabulator-cell.tabulator-editing', 'Enter the result value'], ['#assay-save-results-btn', 'Save the current results']]);
+    [['#assay-result-table .tabulator-cell.tabulator-editing', 'Enter the result value'], ['#assay-save-results-btn', 'Save the results']]);
   await key('#assay-result-table .tabulator-editing input', 'Enter');
   await waitFor('tutorial.activeAssay().resultValues.A1 === "3"');
   manifest.checks.push('Editing a Table1 cell saves the numeric result on the active plate');
@@ -259,17 +262,23 @@ async function main() {
   await check('document.getElementById("assay-analysis-row-groups").value.includes("A,B")', 'A selected range can become a custom row group');
   await input('#assay-analysis-group-by', 'sample_concentration');
   await input('#assay-analysis-kind', 'summary');
+  await click('#assay-workspace-view-chart');
   await scrollTo('#assay-analysis-settings-panel');
   await shot('14-summary-analysis', 'Choose grouping and a summary method', 'Settings update the analysis; use the Summary tab to read the calculated table.', ['#assay-analysis-settings-panel', '#assay-analysis-table'],
     [['#assay-analysis-group-by', 'Choose how to group wells'], ['#assay-analysis-kind', 'Choose the analysis method'], ['#assay-analysis-table', 'Inspect the resulting chart']]);
   await input('#assay-analysis-group-by', 'sample');
   await input('#assay-analysis-kind', 'linear');
   await input('#assay-analysis-x-axis', 'concentration');
-  await evaluate('document.getElementById("assay-analysis-panel").open=false;');
-  await shot('15-curve-fit', 'Inspect a fitted curve and its summary', 'Choose a fitting method and X axis, then compare the plotted data and fitted curves.', null,
-    [['.assay-workspace-chart', 'Inspect data and fitted curves'], ['#assay-data-tab-summary', 'Open the analysis summary'], ['#assay-workspace-format-btn', 'Format the chart']]);
+  await click('#assay-context-close-btn');
+  await check('document.getElementById("assay-context-rail").hidden', 'Close hides the Data Analysis panel');
+  await shot('15-curve-fit', 'Inspect a fitted curve and its summary', 'Choose a fitting method and X axis, then compare the plotted data and fitted curves.', ['#assay-analyze-workspace', '#assay-workspace-tools'],
+    [['#assay-workspace-chart', 'Inspect data and fitted curves'], ['#assay-workspace-view-data', 'Data view for the Summary'], ['#assay-workspace-format-btn', 'Format the chart']], { side: true });
+  const chartSize = 'JSON.stringify((({width,height})=>[Math.round(width),Math.round(height)])(document.querySelector("#assay-analysis-table .main-svg").getBoundingClientRect()))';
+  const closedSize = await evaluate(`return ${chartSize};`);
   await check('document.querySelector("[data-assay-analysis-chart]")?.data?.length > 0', 'The analysis renders real Plotly traces for the example plate');
   await click('#assay-workspace-format-btn');
+  await check('!document.getElementById("assay-context-rail").hidden && !document.getElementById("assay-chart-format-panel").hidden', 'Format chart opens Chart Format in the right rail');
+  await check(`${chartSize} === ${JSON.stringify(closedSize)}`, 'Opening the right rail leaves the chart size unchanged');
   await scrollTo('#assay-chart-format-panel');
   await shot('16-format-frame', 'Format the chart frame and canvas', 'Use Chart Format tabs to adjust the frame, axes, data series, text, and elements.', '#assay-chart-format-panel',
     [['.assay-chart-style-tabs', 'Choose a format section'], ['[data-cc=backgroundColor]', 'Set the chart background'], ['[data-cc=presetSaveBtn]', 'Save formatting as a preset']]);
@@ -278,11 +287,9 @@ async function main() {
   await shot('17-format-axis', 'Set axis scale and range', 'Choose a scale, use automatic limits, or enter your own axis settings.', '#assay-chart-format-panel',
     [['[data-cc=xScale]', 'Choose the X-axis scale'], ['[data-cc=yScale]', 'Choose the Y-axis scale'], ['[data-cc=xRangeAuto]', 'Keep automatic range or set limits']]);
   await check('tutorial.activeAssay().chartStyle.xScale === "log10"', 'Changing the chart scale saves formatting on the active assay');
-  await shot('18-export-chart', 'Export or focus the chart', 'Save an image as PNG or SVG, or expand the chart for a closer look.', '.assay-workspace-chart-header',
-    [['#assay-chart-export-png-btn', 'Export PNG'], ['#assay-chart-export-svg-btn', 'Export SVG'], ['#assay-chart-focus-btn', 'Focus the chart']]);
-  await click('#assay-chart-focus-btn');
-  await check('document.getElementById("assay-chart-focus-btn").getAttribute("aria-pressed")==="true"', 'Focus chart expands the analysis chart');
-  await click('#assay-chart-focus-btn');
+  await click('#assay-context-close-btn');
+  await shot('18-export-chart', 'Export the chart', 'Save the chart as a PNG image or an SVG vector file.', '.assay-workspace-chart-header',
+    [['#assay-chart-export-png-btn', 'Export PNG'], ['#assay-chart-export-svg-btn', 'Export SVG']]);
   await click('#assay-mode-create-btn');
   await evaluate('document.getElementById("assay-browser-panel").open=true;');
   await scrollTo('#assay-browser-panel');

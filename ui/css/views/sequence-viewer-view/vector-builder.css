@@ -342,7 +342,9 @@
 }
 
 .sequence-viewer-feature-hover-tooltip:has(.sequence-viewer-primer-hover-card),
-.vector-map__tooltip:has(.sequence-viewer-primer-hover-card) {
+.vector-map__tooltip:has(.sequence-viewer-primer-hover-card),
+.sequence-viewer-feature-hover-tooltip:has(.sequence-viewer-protein-card),
+.vector-map__tooltip:has(.sequence-viewer-protein-card) {
   box-sizing: border-box;
   width: 340px;
   min-width: 0;
@@ -350,6 +352,10 @@
   max-height: calc(100vh - 16px);
   overflow: auto;
   padding: var(--space-12);
+}
+
+.sequence-viewer-protein-hover .sequence-viewer-protein-sequence {
+  max-height: 128px;
 }
 
 .sequence-viewer-primer-hover-card {

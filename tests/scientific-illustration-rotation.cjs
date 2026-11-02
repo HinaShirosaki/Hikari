@@ -112,19 +112,8 @@ async function verifyRotation({ tool, evaluate, check, win, pause, temp }) {
     check(angularError(object(after, 'rotate-text').rotation, object(before, 'rotate-text').rotation + 4) < 0.01, 'Rapid keyboard repeats each save without revision conflicts');
 
     await apply([{ op: 'group', id: 'rotation-group', name: 'Editable assembly', ids: ['rotate-vector', 'rotate-raster', 'rotate-text'] }]);
-    await select('rotation-group'); before = await read(); g = await geometry(); end = destination(g, 70);
-    await mouse('mousePressed', g.handle); await mouse('mouseMoved', end);
-    check(Math.hypot((await geometry()).pivot.x - g.pivot.x, (await geometry()).pivot.y - g.pivot.y) < 0.01, 'Group preview retains its original rotation pivot');
-    await fs.writeFile(path.join(temp, 'rotation-group-preview.png'), (await win.webContents.capturePage()).toPNG());
-    await mouse('mouseReleased', end); after = await waitForChange(before.revision);
-    const center = o => ({ x: o.x + o.width / 2, y: o.y + o.height / 2 });
-    const distance = (a, b) => Math.hypot(center(a).x - center(b).x, center(a).y - center(b).y);
-    check(['rotate-vector', 'rotate-raster', 'rotate-text'].every(id => angularError(object(after, id).rotation, object(before, id).rotation + 70) < 0.01
-      && object(after, id).width === object(before, id).width && object(after, id).height === object(before, id).height), 'Mixed group rotation turns each independent component without scaling');
-    check(Math.abs(distance(object(before, 'rotate-vector'), object(before, 'rotate-text')) - distance(object(after, 'rotate-vector'), object(after, 'rotate-text'))) < 0.01
-      && ['id', 'name', 'canvas', 'ids'].every(key => JSON.stringify(before.groups[0][key]) === JSON.stringify(after.groups[0][key])), 'Group rotation preserves spacing and membership');
-    await evaluate('illustrationWorkspace.history("undo")'); after = await waitForChange(after.revision);
-    check(JSON.stringify(after.objects) === JSON.stringify(before.objects), 'Group rotation is one undoable edit');
+    await select('rotation-group');
+    check(await evaluate('!document.querySelector(".selection,.rotation-handle") && !document.getElementById("selection-toolbar").hidden'), 'Grouped selection uses floating actions instead of a shared resize/rotation frame');
 
     await apply([{ op: 'ungroup', id: 'rotation-group' }, { op: 'update', id: 'rotate-vector', patch: { x: 0, y: 0, rotation: 0 } }]);
     await select('rotate-vector');

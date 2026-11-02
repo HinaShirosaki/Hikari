@@ -1,4 +1,4 @@
-import { createPresentation } from "../../i18n.mjs";
+import { createPresentation, i18n } from "../../i18n.mjs";
 const i18nUi = createPresentation("gel");
 import { decodeImageFile } from '../images/image-io.js';
 import { downloadBinaryFile, downloadDataUrlFile, downloadTextFile } from '../export.js';
@@ -32,6 +32,9 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
   stage.insertAdjacentHTML('beforeend', blotFigureMarkup);
   navigation.insertAdjacentHTML('beforeend', blotNavigationMarkup);
   inspector.insertAdjacentHTML('beforeend', blotToolsMarkup);
+  // These templates are built when the module loads, before host preferences
+  // arrive. Refresh their bindings after insertion using the active locale.
+  i18n.refresh(documentObject);
   const panel = documentObject.getElementById('gel-blot-figure');
   const get = id => documentObject.getElementById(`gel-figure-${id}`);
   const launcher = documentObject.getElementById('gel-open-figure-btn');

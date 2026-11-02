@@ -209,7 +209,7 @@ export const settingsSpanish = Object.freeze({
   "codex.preparing": "Preparando…",
   "codex.copied": "Copiado",
   "appearance.language": "Idioma",
-  "appearance.languageDescription": "Elige el idioma de los menús y controles. El español está en vista previa; algunos textos siguen en inglés.",
+  "appearance.languageDescription": "Elige el idioma de los menús y controles. Los idiomas en vista previa pueden mostrar algunos textos en inglés.",
   "appearance.languageEnglish": "English",
   "appearance.languageSpanish": "Español (vista previa)"
 });

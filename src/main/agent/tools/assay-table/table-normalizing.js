@@ -101,7 +101,9 @@ function normalizeRows(rows = [], columns = []) {
 }
 
 function serializeTable(table = {}, options = {}) {
-  const maxRows = Math.max(1, Math.min(MAX_PREVIEW_ROWS, Number(options.maxRows) || MAX_PREVIEW_ROWS));
+  const rowLimit = options.complete === true ? MAX_ROWS : MAX_PREVIEW_ROWS;
+  const maxRows = Math.max(1, Math.min(rowLimit, Number(options.maxRows) || rowLimit));
+  const offset = Math.max(0, Math.trunc(Number(options.offset) || 0));
   const includeRows = options.includeRows !== false;
   const rows = asArray(table.rows);
   return {
@@ -113,8 +115,12 @@ function serializeTable(table = {}, options = {}) {
     column_count: asArray(table.columns).length,
     created_at: cleanText(table.created_at, 80),
     updated_at: cleanText(table.updated_at, 80),
-    ...(includeRows ? { rows: cloneJson(rows.slice(0, maxRows), []) } : {}),
-    preview_truncated: includeRows ? rows.length > maxRows : undefined
+    ...(includeRows ? {
+      rows: cloneJson(rows.slice(offset, offset + maxRows), []),
+      offset,
+      next_offset: offset + maxRows < rows.length ? offset + maxRows : null
+    } : {}),
+    preview_truncated: includeRows ? offset > 0 || rows.length > maxRows : undefined
   };
 }
 

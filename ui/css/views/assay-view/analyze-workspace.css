@@ -3,6 +3,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-20);
+  margin: 0;
   padding: var(--space-24);
   min-width: 0;
   container-type: inline-size;
@@ -36,24 +37,42 @@
   background: var(--theme-surface-elevated);
   overflow: hidden;
 }
+#assay-analyze-workspace > .assay-workspace-chart {
+  display: flex;
+  flex-direction: column;
+  flex: 1 0 360px;
+  min-height: 360px;
+}
 .assay-workspace-chart-header { padding: 14px 16px 4px; }
+#assay-analyze-workspace .assay-workspace-chart-header { flex: 0 0 auto; }
 .assay-workspace-chart-header h3 { margin: 0; font-size: var(--text-base); font-weight: 600; }
 .assay-workspace-chart-actions { flex-wrap: wrap; gap: 4px; }
 #assay-analyze-workspace button { font-size: var(--text-xs); }
 .assay-workspace-chart-actions .ghost-btn,
 .assay-workspace-data-header > button { padding: 5px 8px; min-height: 30px; }
-#assay-chart-focus-btn[aria-pressed="true"] {
-  background: var(--theme-accent-wash);
-  color: var(--theme-accent);
-}
 #assay-analyze-workspace .assay-chart-export-actions { margin: 0 0 0 var(--space-6); gap: 3px; }
 .assay-chart-export-icon { color: var(--theme-text-muted); }
-#assay-analyze-workspace #assay-analysis-table { margin: 0; border: 0; padding: 0; }
-#assay-analyze-workspace .assay-analysis-chart {
-  border: 0; border-radius: 0; padding: 8px 12px;
+#assay-analyze-workspace #assay-analysis-table {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  margin: 0; border: 0; padding: 0;
 }
-#assay-analyze-workspace .assay-analysis-chart[data-assay-analysis-chart] {
-  --assay-chart-canvas-height: clamp(320px, 43vh, 440px);
+#assay-analyze-workspace #assay-analysis-table > .assay-analysis-results {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+}
+#assay-analyze-workspace .assay-analysis-chart {
+  flex: 1 1 0;
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  border: 0; border-radius: 0; padding: 8px 12px;
+  overflow: auto;
 }
 #assay-analyze-workspace .assay-analysis-chart > .plot-container { width: max-content; }
 #assay-analyze-workspace #assay-analysis-table > .small-note { padding: 28px 16px; }
@@ -160,12 +179,6 @@
 #assay-analysis-summary-table { overflow: auto; margin: 0; }
 #assay-analysis-summary-table .assay-plate-table th,
 #assay-analysis-summary-table .assay-plate-table td { padding: 8px 10px; font-variant-numeric: tabular-nums; }
-#assay-analyze-workspace.is-data-first .assay-workspace-data { order: -1; }
-#assay-analyze-workspace .assay-workspace-header { order: -2; }
-#assay-analyze-workspace.is-chart-focused .assay-workspace-data { display: none; }
-#assay-analyze-workspace.is-chart-focused .assay-analysis-chart[data-assay-analysis-chart] {
-  --assay-chart-canvas-height: max(440px, calc(100vh - 280px));
-}
 @container (max-width: 640px) {
   .assay-workspace-chart-header { align-items: flex-start; }
   .assay-workspace-chart-actions { width: 100%; }

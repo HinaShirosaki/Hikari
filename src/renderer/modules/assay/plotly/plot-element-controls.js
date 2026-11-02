@@ -10,22 +10,23 @@ export function mountPlotElementControls(root, { store, apply, notice }) {
     if (text !== undefined) i18nUi.setText(node, text);
     return node;
   };
+  const uiElement = (tag, text) => element(tag, i18nUi.owned(text));
   const fields = {};
   const fieldset = element('fieldset');
   fieldset.className = 'assay-plot-element-fields';
   function field(key, label, type = 'text', options) {
-    const wrap = element('label', label);
+    const wrap = uiElement('label', label);
     if (type === 'checkbox') wrap.className = 'assay-chart-style-checkbox';
     const input = element(options ? 'select' : 'input');
-    if (options) options.forEach(([value, title]) => { const option = element('option', title); option.value = value; input.append(option); });
+    if (options) options.forEach(([value, title]) => { const option = uiElement('option', title); option.value = value; input.append(option); });
     else { input.type = type; if (type === 'number') input.step = 'any'; }
     input.dataset.plotElement = key;
-    input.setAttribute('aria-label', label);
+    i18nUi.setAttribute(input, 'aria-label', i18nUi.owned(label));
     wrap.append(input); fieldset.append(wrap); fields[key] = input;
     return input;
   }
   field('newType', 'Add plot element', 'text', [['label', 'Label / callout'], ['line', 'Reference line'], ['band', 'Shaded band']]);
-  const add = element('button', 'Add element'); add.type = 'button'; add.className = 'ghost-btn'; add.dataset.plotElement = 'add'; fieldset.append(add);
+  const add = uiElement('button', 'Add element'); add.type = 'button'; add.className = 'ghost-btn'; add.dataset.plotElement = 'add'; fieldset.append(add);
   const selected = field('selected', 'Selected element', 'text', []);
   field('text', 'Label text').maxLength = 500;
   field('coordinates', 'Coordinates', 'text', [['plot', 'Plot position (0–1)'], ['data', 'Data values']]);
@@ -39,8 +40,8 @@ export function mountPlotElementControls(root, { store, apply, notice }) {
   field('width', 'Line width (px)', 'number');
   field('dash', 'Line pattern', 'text', [['solid', 'Solid'], ['dash', 'Dashed'], ['dot', 'Dotted']]);
   field('opacity', 'Band opacity', 'number');
-  const remove = element('button', 'Remove element'); remove.type = 'button'; remove.className = 'ghost-btn'; remove.dataset.plotElement = 'remove'; fieldset.append(remove);
-  const hint = element('p', 'Labels can be dragged on the plot. Lines and bands use data values; on category X axes, use the category index (0, 1, …).');
+  const remove = uiElement('button', 'Remove element'); remove.type = 'button'; remove.className = 'ghost-btn'; remove.dataset.plotElement = 'remove'; fieldset.append(remove);
+  const hint = uiElement('p', 'Labels can be dragged on the plot. Lines and bands use data values; on category X axes, use the category index (0, 1, …).');
   hint.className = 'assay-chart-style-note'; root.append(fieldset, hint);
   let selectedId = '';
   let busy = false;
@@ -53,7 +54,9 @@ export function mountPlotElementControls(root, { store, apply, notice }) {
     const items = store.getStyle().plotElements || [];
     if (!items.some((item) => item.id === selectedId)) selectedId = items[0]?.id || '';
     selected.replaceChildren(...items.map((item, index) => {
-      const option = element('option', item.type === 'label' ? item.text || `Label ${index + 1}` : `${item.type === 'line' ? 'Line' : 'Band'} · ${item.axis.toUpperCase()} ${item.value ?? `${item.start}–${item.end}`}`);
+      const label = item.type === 'label' ? item.text || i18nUi.message('Label {p0}', { p0: index + 1 })
+        : i18nUi.compose([i18nUi.owned(item.type === 'line' ? 'Line' : 'Band'), ' · ', item.axis.toUpperCase(), ' ', String(item.value ?? `${item.start}–${item.end}`)]);
+      const option = element('option', label);
       option.value = item.id; return option;
     }));
     selected.value = selectedId;

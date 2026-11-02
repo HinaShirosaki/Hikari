@@ -7,10 +7,11 @@ import { icon, mountIcons } from './icons.mjs';
 import { COMPLEXITY_PROFILES } from './complexity.mjs';
 import { imageGenerationSummary } from './image-generation.mjs';
 import { IMAGE_STYLE_PRESETS } from './image-style.mjs';
-import { resizeObject, scaleTextObject, resizeAnchor } from './geometry.mjs';
+import { resizeObject, resizeAnchor } from './geometry.mjs';
 import { createCanvasViewport } from './viewport.mjs';
 import { selectionBounds, resizeSelection, transformSelection } from './grouping.mjs';
 import { alignmentOperations, selectionLayoutUnits } from './alignment.mjs';
+import { smartGuideTargets, snapTranslation } from './smart-guides.mjs';
 import { initAssetsPanel } from './assets-panel.mjs';
 import { initArtworkImport } from './artwork-import.mjs';
 import { initCanvasCrop } from './canvas-crop.mjs';
@@ -21,9 +22,14 @@ import { installSourceActions } from './source-context.mjs';
 import { exportPowerPoint } from './powerpoint.mjs';
 import { angleDelta, rotateComponents } from './rotation.mjs';
 import { installCanvasClipboard } from './clipboard.mjs';
+import { readChemicalClipboard, prepareChemicalImage, prepareChemicalVector, chemicalStructureSnapshot } from './chemical-clipboard.mjs';
 import { installCanvasContextMenu } from './context-menu.mjs';
 import { createArtworkHitTester } from './hit-testing.mjs';
 import { createCanvasTextEditor } from './text-editor.mjs';
+import { createSelectionToolbar } from './selection-toolbar.mjs';
+import { createOpacityControl } from './opacity-control.mjs';
+import { highlightVectorColor, recolorVector, vectorColors } from './vector-colors.mjs';
+import { MAX_PALETTE } from './model.mjs';
 
 const { hikari } = window.HikariPlugin;
 const $ = id => document.getElementById(id);
@@ -36,7 +42,7 @@ const componentRail = createComponentRail({ document, focusTab: name => workspac
 } });
 mountIcons();
 const activeCanvas = 'main';
-let selectedId = '', selectedIds = [], illustrationId = '', state, drag = null, sourceTarget = null;
+let selectedId = '', selectedIds = [], illustrationId = '', state, drag = null;
 let chatExpanded = false, canDraw = true;
 let imagePreferenceSave = Promise.resolve(), pendingImagePreference = null;
 let imageStyleSaveTimer = null;
@@ -59,20 +65,44 @@ const leftRail = initPluginLeftRailResizer({ commitWidth: width => hikari.call('
 const selected = () => selectedIds.length === 1 ? state?.objects.find(obj => obj.id === selectedId) : undefined;
 const selectedObjects = () => state?.objects.filter(object => selectedIds.includes(object.id)) || [];
 const selectedGroup = () => state?.groups.find(group => group.ids.length === selectedIds.length && group.ids.every(id => selectedIds.includes(id)));
+const opacityControl = createOpacityControl({ document,
+  getContext: () => ({ illustrationId, revision: state?.revision, object: selected() }),
+  preview: (context, opacity) => {
+    if (!state || context.illustrationId !== illustrationId || context.object.id !== selectedId) return;
+    renderCanvas('main', { ...state, objects: state.objects.map(object => object.id === context.object.id ? { ...object, opacity } : object) });
+  },
+  save: ({ illustrationId: targetId, id, value, revision }) => workspace.request({ action: 'apply', illustration_id: targetId,
+    expected_revision: revision, request_id: crypto.randomUUID(), operations: [{ op: 'update', id, patch: { opacity: value } }] }),
+  status
+});
+const selectionToolbar = createSelectionToolbar({ document,
+  onAction: (action, button) => {
+    if (action === 'align') workspaceTools.toggleMenu('align-menu', button);
+    else $(action === 'group' ? 'group-selection' : 'ungroup-selection').click();
+  },
+  onHide: () => { if ($('align-menu').classList.contains('is-selection-menu')) $('align-menu').open = false; },
+  onLayout: () => workspaceTools?.layoutMenu()
+});
+function syncSelectionToolbar() {
+  selectionToolbar.sync({ visible: selectedIds.length > 1 && !drag && !areaDrag && !textEditor?.isActive(),
+    group: !$('group-selection').disabled, ungroup: !$('ungroup-selection').disabled,
+    align: [...document.querySelectorAll('[data-layout-action]')].some(button => !button.disabled) });
+}
 assetsPanel = initAssetsPanel({ workspace, getSelection: () => ({ ids: selectedIds, name: selectionTarget()?.name || 'Component' }),
   getCanvas: () => activeCanvas, getIllustrationId: () => illustrationId, selectCopies: ids => select(ids, { reveal: false }), showAssets: () => showLibrary('assets'),
   // Save a just-changed image generation setting first; Codex reads it to pick SVG or image generation.
   sendToChat: async message => { await flushImagePreferences(); return sendToChat(message, { illustration_id: illustrationId, title: state?.title || '' }); }, status });
 artworkImport = initArtworkImport({ workspace, getCanvas: () => activeCanvas, getIllustrationId: () => illustrationId,
-  getSelected: selected, select, showAssets: () => showLibrary('assets'), status });
+  select, showAssets: () => showLibrary('assets'), status });
 canvasCrop = initCanvasCrop({ workspace, getSelected: selected, getCanvas: () => activeCanvas, getIllustrationId: () => illustrationId,
   onStart: () => { artworkImport.close(); componentRail.close(); },
   onActiveChange: (active, focus) => { $('crop-raster').setAttribute('aria-pressed', String(active)); workspaceTools?.sync(); if (focus) workspaceTools?.focus('crop-raster'); },
   select: id => select(id, { reveal: false }), status });
 function setSelection(ids) { selectedIds = [...new Set(ids)]; selectedId = selectedIds[0] || ''; }
-function cancelRotation() {
-  if (!drag?.rotating) return;
+function cancelDrag({ restoreSelection = false } = {}) {
+  if (!drag) return;
   const stage = $(`${drag.canvas}-canvas`), pointerId = drag.pointerId;
+  if (restoreSelection && drag.shiftClick) setSelection(drag.shiftClick.previousIds);
   drag = null;
   if (stage.hasPointerCapture(pointerId)) stage.releasePointerCapture(pointerId);
 }
@@ -106,13 +136,14 @@ document.querySelectorAll('[data-layout-action]').forEach(button => button.addEv
   workspaceTools?.focus('align-menu');
 }));
 const newId = () => `object-${crypto.randomUUID()}`;
-const numeric = new Set(['x', 'y', 'width', 'height', 'rotation', 'opacity', 'fontSize', 'fontWeight', 'strokeWidth']);
+const numeric = new Set(['fontSize', 'fontWeight']);
 // Native disclosures keep less-used actions out of the canvas workspace.
 document.addEventListener('click', event => {
   document.querySelectorAll('.popover[open]').forEach(menu => {
     // The select's finishing click must not dismiss the custom-size form it opened.
     const sizeControl = menu.classList.contains('canvas-options') && event.target.closest('#canvas-size');
-    if ((!menu.contains(event.target) && !sizeControl) || event.target.closest('.popover-panel button:not(.image-generation-info-button)')) menu.open = false;
+    const selectionControl = menu.id === 'align-menu' && event.target.closest('#selection-align');
+    if ((!menu.contains(event.target) && !sizeControl && !selectionControl) || event.target.closest('.popover-panel button:not(.image-generation-info-button, .palette-panel button)')) menu.open = false;
   });
 });
 document.querySelectorAll('.popover').forEach(menu => menu.addEventListener('toggle', () => {
@@ -163,15 +194,13 @@ function renderZoom() {
   $('zoom-fit').setAttribute('aria-pressed', String(view.zoom === null));
   workspaceTools?.sync();
 }
-const viewport = createCanvasViewport(stage => { syncSelectionSize(stage); renderZoom(); textEditor?.layout(); });
+const viewport = createCanvasViewport(stage => { syncSelectionSize(stage); renderZoom(); textEditor?.layout(); syncSelectionToolbar(); });
 function renderCanvas(canvas, documentState = state) {
   const stage = $(`${canvas}-canvas`), focusedId = document.activeElement?.dataset.objectId,
     focusedRotation = document.activeElement?.dataset.rotateId;
   const pan = { x: stage.scrollLeft, y: stage.scrollTop };
   artworkHitTester.prepare(documentState.objects.filter(object => object.canvas === canvas));
-  const selectionBox = drag?.rotating && drag.canvas === canvas && drag.objects.length > 1
-    ? { ...drag.bounds, id: 'selection', rotation: drag.rotationDelta || 0 } : undefined;
-  stage.replaceChildren(scene(documentState, canvas, { interactive: true, selectedId: selectedIds.length === 1 ? selectedId : '', selectedIds, selectionBox }));
+  stage.replaceChildren(scene(documentState, canvas, { interactive: true, selectedId: selectedIds.length === 1 ? selectedId : '', selectedIds }));
   stage.classList.toggle('is-rotating', Boolean(drag?.rotating && drag.canvas === canvas));
   viewport.layout(stage);
   if (viewport.get(stage).zoom !== null) { stage.scrollLeft = pan.x; stage.scrollTop = pan.y; }
@@ -179,7 +208,46 @@ function renderCanvas(canvas, documentState = state) {
   if (focusedId && selectedIds.includes(focusedId)) stage.querySelector(`[data-object-id="${focusedId}"]`)?.focus({ preventScroll: true });
   if (focusedRotation) stage.querySelector(`[data-rotate-id="${focusedRotation}"]`)?.focus({ preventScroll: true });
   if (areaDrag?.canvas === canvas) renderSelectionRegion();
+  renderSmartGuides(stage);
   textEditor?.layout();
+  syncSelectionToolbar();
+  syncColorHighlight();
+}
+// The focused Colors swatch shows where its color is used on the canvas.
+function syncColorHighlight() {
+  const stage = $('main-canvas'), swatch = document.activeElement?.closest('#vector-color-swatches input'), object = selected();
+  for (const node of stage.querySelectorAll('.color-dim, .color-dim-fill, .color-dim-stroke')) node.classList.remove('color-dim', 'color-dim-fill', 'color-dim-stroke');
+  for (const node of stage.querySelectorAll('.color-ants')) node.remove();
+  const artwork = swatch && object?.type === 'vector' && stage.querySelector(`g[data-object-id="${CSS.escape(object.id)}"] > svg`);
+  if (artwork) highlightVectorColor(artwork, swatch.value);
+}
+function renderSmartGuides(stage) {
+  if (!drag?.guides?.length || drag.canvas !== stage.dataset.canvas) return;
+  const svg = stage.querySelector('svg'), matrix = svg.getScreenCTM(), scale = Math.hypot(matrix.a, matrix.b);
+  const overlay = element('g', { class: 'smart-guides', 'pointer-events': 'none', 'aria-hidden': 'true' });
+  const line = (guide, from, to, cross) => {
+    const horizontal = guide.axis === 'x';
+    overlay.append(element('line', { class: `smart-guide-${guide.kind}`, 'vector-effect': 'non-scaling-stroke',
+      x1: horizontal ? from : cross, y1: horizontal ? cross : from,
+      x2: horizontal ? to : cross, y2: horizontal ? cross : to }));
+  };
+  for (const guide of drag.guides) {
+    if (guide.kind === 'alignment') {
+      // An x alignment is a vertical line, and vice versa.
+      line({ ...guide, axis: guide.axis === 'x' ? 'y' : 'x' }, guide.from, guide.to, guide.value);
+      continue;
+    }
+    for (const { from, to } of guide.segments) {
+      line(guide, from, to, guide.cross);
+      for (const value of [from, to]) line({ ...guide, axis: guide.axis === 'x' ? 'y' : 'x' }, guide.cross - 4 / scale, guide.cross + 4 / scale, value);
+      const horizontal = guide.axis === 'x';
+      overlay.append(element('text', { class: 'smart-guide-label', 'font-size': 11 / scale, 'stroke-width': 3 / scale,
+        'text-anchor': horizontal ? 'middle' : 'start',
+        x: horizontal ? (from + to) / 2 : guide.cross + 6 / scale,
+        y: horizontal ? guide.cross - 5 / scale : (from + to) / 2 }, String(Math.round((to - from) * 10) / 10)));
+    }
+  }
+  svg.append(overlay);
 }
 document.fonts.addEventListener('loadingdone', () => {
   clearTextBounds();
@@ -219,7 +287,7 @@ const canvasObserver = new ResizeObserver(entries => {
   });
 });
 canvasObserver.observe($('main-canvas'));
-$('main-canvas').addEventListener('scroll', () => syncSelectionSize($('main-canvas')), { passive: true });
+$('main-canvas').addEventListener('scroll', () => { syncSelectionSize($('main-canvas')); syncSelectionToolbar(); }, { passive: true });
 
 async function edit(operations, revision = state?.revision) {
   if (!revision) return status(i18nUi.text("The illustration is still opening."));
@@ -230,8 +298,8 @@ async function edit(operations, revision = state?.revision) {
 function render(next, id = illustrationId) {
   textEditor?.sync(next, id);
   canvasContextMenu?.close(true);
-  if (drag?.rotating && (next.revision !== drag.revision || id !== illustrationId
-    || activeCanvas !== drag.canvas || JSON.stringify(selectedIds) !== JSON.stringify(drag.ids))) cancelRotation();
+  if (drag && (next.revision !== drag.revision || id !== illustrationId
+    || activeCanvas !== drag.canvas || JSON.stringify(selectedIds) !== JSON.stringify(drag.ids))) cancelDrag();
   canvasCrop?.onDocumentChange(next, id);
   if (areaDrag && (id !== illustrationId || activeCanvas !== areaDrag.canvas || next.revision !== areaDrag.revision)) cancelAreaSelection();
   if (id !== illustrationId) {
@@ -240,7 +308,7 @@ function render(next, id = illustrationId) {
     assetsPanel?.closeSave();
     artworkImport?.close();
     viewport.reset();
-    $('source-dialog').close(); $('raster-dialog').close(); $('prompt').value = ''; $('prompt').style.height = '';
+    $('raster-dialog').close(); $('prompt').value = ''; $('prompt').style.height = '';
   }
   state = next;
   syncChatContext(illustrationId, state.title);
@@ -251,9 +319,9 @@ function render(next, id = illustrationId) {
   i18nUi.setAttribute($('complexity'), "title", i18nUi.owned(COMPLEXITY_PROFILES[state.complexity].summary));
   renderImagePreference(pendingImagePreference?.id === id ? pendingImagePreference.percent : state.imageGenerationPercent);
   renderImageStyle(pendingImagePreference?.id === id ? pendingImagePreference.style : state.imageGenerationStyle);
-  $('canvas-empty').hidden = state.objects.some(object => object.canvas === 'main');
+  renderPalette();
   syncComposer();
-  renderLayers(); renderProperties();
+  renderLayers(); renderProperties(); syncColorHighlight();
   if (!$('assets-panel').hidden) assetsPanel?.render();
   renderCanvasProperties();
   renderZoom();
@@ -344,15 +412,16 @@ function renderLayers() {
     row.append(button); $('layers').append(row);
   }
   const row = document.createElement('div'); row.className = `layer${selectedIds.includes(object.id) ? ' is-selected' : ''}${object.visible ? '' : ' is-hidden'}${group ? ' group-child' : ''}`; row.setAttribute('role', 'listitem'); row.dataset.layerId = object.id;
+  const layerLabel = object.type === 'text' ? object.text.replace(/\s+/g, ' ').trim() || i18nUi.message("Text") : object.name;
   const button = document.createElement('button'); button.type = 'button'; button.className = 'layer-select'; button.dataset.layerAction = 'select';
-  i18nUi.setAttribute(button, "aria-label", i18nUi.message("Select {p0}", { p0: object.name })); i18nUi.setAttribute(button, "title", object.name);
+  i18nUi.setAttribute(button, "aria-label", i18nUi.message("Select {p0}", { p0: layerLabel })); i18nUi.setAttribute(button, "title", layerLabel);
   const preview = document.createElement('span'); preview.className = `layer-preview ${object.type}`; preview.setAttribute('aria-hidden', 'true');
   if (object.type === 'text') i18nUi.setText(preview, 'T');
   else {
     const thumbnail = element('svg', { viewBox: `0 0 ${object.width} ${object.height}`, 'aria-hidden': 'true' });
     thumbnail.append(objectGroup({ ...object, x: 0, y: 0, rotation: 0, opacity: 1 })); preview.append(thumbnail);
   }
-  const name = document.createElement('span'); name.className = 'layer-name'; i18nUi.setText(name, object.name);
+  const name = document.createElement('span'); name.className = 'layer-name'; i18nUi.setText(name, layerLabel);
   button.append(preview, name);
   button.setAttribute('aria-pressed', String(selectedIds.includes(object.id)));
   button.addEventListener('click', event => {
@@ -367,7 +436,7 @@ function renderLayers() {
   });
   if (object.type === 'text') button.addEventListener('dblclick', () => editLabel(object.id));
   const visibility = document.createElement('button'); visibility.type = 'button'; visibility.className = 'layer-visibility icon-button'; visibility.dataset.layerAction = 'visibility';
-  i18nUi.setAttribute(visibility, "title", i18nUi.message(object.visible ? 'Hide {name}' : 'Show {name}', { name: object.name })); i18nUi.setAttribute(visibility, 'aria-label', i18nUi.message(object.visible ? 'Hide {name}' : 'Show {name}', { name: object.name })); visibility.setAttribute('aria-pressed', String(object.visible));
+  i18nUi.setAttribute(visibility, "title", i18nUi.message(object.visible ? 'Hide {name}' : 'Show {name}', { name: layerLabel })); i18nUi.setAttribute(visibility, 'aria-label', i18nUi.message(object.visible ? 'Hide {name}' : 'Show {name}', { name: layerLabel })); visibility.setAttribute('aria-pressed', String(object.visible));
   visibility.append(icon(object.visible ? 'eye' : 'hidden'));
   visibility.addEventListener('click', () => void edit([{ op: 'update', id: object.id, patch: { visible: !object.visible } }]));
   row.append(button, visibility); $('layers').append(row);
@@ -388,9 +457,12 @@ function renderProperties() {
   });
   $('crop-raster').disabled = object?.type !== 'raster';
   workspaceTools?.sync();
+  syncSelectionToolbar();
+  opacityControl.sync();
   if (!object) return;
   i18nUi.setText($('selection-type'), (object.type === 'group' ? i18nUi.message("{p0} layers", { p0: selectedIds.length }) : (object.type === 'text' ? i18nUi.message("Text") : (object.type === 'vector' ? i18nUi.message("Vector") : (object.type === 'plot' ? i18nUi.message("Plot") : i18nUi.message("Image"))))));
   properties.elements.name.disabled = object.type === 'group' && !group;
+  properties.querySelector('.property-heading').hidden = object.type === 'text';
   properties.querySelector('.object-basics').hidden = object.type === 'group';
   const weights = properties.elements.fontWeight;
   weights.querySelector('[data-custom-weight]')?.remove();
@@ -398,16 +470,19 @@ function renderProperties() {
     const option = document.createElement('option'); option.value = object.fontWeight; i18nUi.setText(option, object.fontWeight); option.dataset.customWeight = ''; weights.append(option);
   }
   for (const input of properties.elements) {
-    if (!input.name) continue;
-    if (['width', 'height'].includes(input.name)) {
-      i18nUi.setAttribute(input, "title", (object.type === 'group' ? i18nUi.message("Resize selected layers proportionally") : (object.type === 'text' ? i18nUi.message("Resize text proportionally") : i18nUi.message("{p0} in pixels", { p0: input.name === 'width' ? 'Width' : 'Height' }))));
-      input.max = object.type === 'group' ? '64000' : '8000';
-    }
+    if (!input.name || input.name === 'opacity') continue;
     if (input.type === 'checkbox') input.checked = Boolean(object[input.name]);
     else input.value = object[input.name] ?? '';
   }
-  $('text-properties').hidden = object.type !== 'text'; $('vector-properties').hidden = object.type !== 'vector';
-  $('replace-raster').hidden = object.type !== 'raster';
+  $('text-properties').hidden = object.type !== 'text';
+  const colors = object.type === 'vector' ? vectorColors(object) : [];
+  $('vector-colors').hidden = !colors.length;
+  $('vector-color-swatches').replaceChildren(...colors.map(value => {
+    const swatch = document.createElement('input'); swatch.type = 'color'; swatch.value = swatch.dataset.color = value;
+    swatch.setAttribute('list', 'palette-suggestions');
+    i18nUi.setAttribute(swatch, 'title', i18nUi.message('Color {p0}', { p0: value })); i18nUi.setAttribute(swatch, 'aria-label', i18nUi.message('Color {p0}', { p0: value }));
+    return swatch;
+  }));
   properties.querySelectorAll('[data-text-style]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.textStyle === 'bold' ? object.fontWeight >= 700 : Boolean(object[button.dataset.textStyle]))));
   properties.querySelectorAll('[data-align]').forEach(button => button.setAttribute('aria-pressed', String(object.align === button.dataset.align)));
   const siblings = state.objects.filter(item => item.canvas === object.canvas);
@@ -442,18 +517,64 @@ properties.querySelectorAll('[data-text-style], [data-align]').forEach(button =>
 }));
 properties.addEventListener('change', event => {
   const input = event.target, object = selectionTarget();
-  if (!input.name || !object || !input.validity.valid) return;
-  let value = input.type === 'checkbox' ? input.checked : numeric.has(input.name) ? Number(input.value) : input.value;
-  if (['fill', 'stroke', 'strokeWidth'].includes(input.name) && !input.value) value = null;
+  if (!input.name || input.name === 'opacity' || !object || !input.validity.valid) return;
+  const value = input.type === 'checkbox' ? input.checked : numeric.has(input.name) ? Number(input.value) : input.value;
   const patch = { [input.name]: value };
   if (object.type === 'group') {
     if (input.name === 'name') { const group = selectedGroup(); if (group) void edit([{ op: 'update', id: group.id, patch }]); }
-    else if (['x', 'y', 'width', 'height'].includes(input.name)) void edit([transformOperation(patch)]);
     return;
   }
-  if (object.type === 'text' && ['width', 'height'].includes(input.name)) Object.assign(patch, scaleTextObject(object, value / object[input.name]));
-  if (object.type === 'vector' && ['width', 'height'].includes(input.name)) patch.svg = stretchSvg(object.svg);
   void edit([{ op: 'update', id: object.id, patch }]);
+});
+// Palette edits are figure settings: each change saves one undoable edit.
+const PALETTE_STARTERS = ['#4169d8', '#e07a3f', '#3a9d6e', '#c94f6d', '#8a5fbf', '#d4a72c', '#2a9db0', '#6b7280'];
+function renderPalette() {
+  $('palette-colors').replaceChildren(...state.palette.map((value, index) => {
+    const item = document.createElement('span'); item.className = 'palette-color';
+    const swatch = document.createElement('input'); swatch.type = 'color'; swatch.value = value; swatch.dataset.index = index;
+    i18nUi.setAttribute(swatch, 'title', i18nUi.message('Palette color {p0}', { p0: value })); i18nUi.setAttribute(swatch, 'aria-label', i18nUi.message('Palette color {p0}', { p0: value }));
+    const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'icon-button'; remove.dataset.removeIndex = index; remove.append(icon('close'));
+    i18nUi.setAttribute(remove, 'title', i18nUi.message('Remove {p0}', { p0: value })); i18nUi.setAttribute(remove, 'aria-label', i18nUi.message('Remove {p0}', { p0: value }));
+    item.append(swatch, remove);
+    return item;
+  }));
+  $('palette-add').hidden = state.palette.length >= MAX_PALETTE;
+  $('palette-suggestions').replaceChildren(...state.palette.map(value => Object.assign(document.createElement('option'), { value })));
+}
+// Queued so quick clicks each build on the palette the previous one saved.
+let paletteSave = Promise.resolve();
+const savePalette = change => {
+  if (state) paletteSave = paletteSave.then(() => { const next = change(state.palette); if (next !== state.palette) return edit([{ op: 'palette', palette: next }]); }).catch(error => status(error.message));
+};
+$('palette-colors').addEventListener('change', event => {
+  const index = Number(event.target.dataset.index), { value } = event.target;
+  if (event.target.type === 'color') savePalette(palette => palette.map((color, at) => at === index ? value : color));
+});
+$('palette-colors').addEventListener('click', event => {
+  const remove = event.target.closest('[data-remove-index]');
+  if (remove) savePalette(palette => palette.filter((_color, at) => at !== Number(remove.dataset.removeIndex)));
+});
+// A typed code (with or without #, 3 or 6 digits) is added as is; an empty field adds the next starter color.
+$('palette-add').addEventListener('submit', event => {
+  event.preventDefault();
+  const code = $('palette-code').value.trim().replace(/^#/, '').toLowerCase(), typed = code && `#${code.length === 3 ? code.replace(/./g, '$&$&') : code}`;
+  $('palette-code').value = '';
+  savePalette(palette => palette.length >= MAX_PALETTE || palette.includes(typed) ? palette
+    : [...palette, typed || PALETTE_STARTERS.find(value => !palette.includes(value)) || '#808080']);
+});
+// Preview every picker move; the picker's change commits one undoable edit.
+$('vector-color-swatches').addEventListener('input', event => {
+  const object = selected(); if (object?.type !== 'vector') return;
+  const patch = recolorVector(object, event.target.dataset.color, event.target.value);
+  renderCanvas('main', { ...state, objects: state.objects.map(item => item.id === object.id ? { ...item, ...patch } : item) });
+});
+$('vector-color-swatches').addEventListener('focusin', syncColorHighlight);
+$('vector-color-swatches').addEventListener('focusout', () => queueMicrotask(syncColorHighlight));
+$('vector-color-swatches').addEventListener('change', event => {
+  const object = selected(); if (object?.type !== 'vector') return;
+  const patch = recolorVector(object, event.target.dataset.color, event.target.value);
+  if (Object.keys(patch).length) void edit([{ op: 'update', id: object.id, patch }]);
+  else renderCanvas('main');
 });
 $('canvas-properties').addEventListener('submit', event => event.preventDefault());
 $('canvas-size').addEventListener('change', event => {
@@ -524,16 +645,6 @@ function reorder(offset) {
   void edit([{ op: 'order', canvas: activeCanvas, ids: rest }]);
 }
 $('raise').addEventListener('click', () => reorder(1)); $('lower').addEventListener('click', () => reorder(-1));
-$('edit-artwork').addEventListener('click', () => {
-  const object = selected(); if (object?.type !== 'vector') return;
-  sourceTarget = { id: object.id, revision: state.revision }; $('svg-source').value = object.svg; i18nUi.setText($('source-error'), ''); $('source-dialog').showModal();
-});
-$('cancel-source').addEventListener('click', () => $('source-dialog').close());
-$('source-form').addEventListener('submit', async event => {
-  event.preventDefault();
-  const result = await edit([{ op: 'update', id: sourceTarget.id, patch: { svg: $('svg-source').value } }], sourceTarget.revision);
-  if (result?.ok) $('source-dialog').close(); else i18nUi.setOwnedText($('source-error'), (result?.error || i18nUi.message("Could not update the artwork.")));
-});
 
 // Drag previews are transient. The final edit uses the revision captured on
 // pointer-down, so an intervening agent edit cannot be silently overwritten.
@@ -544,6 +655,7 @@ function cancelAreaSelection() {
   const stage = $(`${canvas}-canvas`);
   stage.classList.remove('is-area-selecting'); stage.querySelector('.selection-region')?.remove();
   if (stage.hasPointerCapture(pointerId)) stage.releasePointerCapture(pointerId);
+  syncSelectionToolbar();
 }
 function renderSelectionRegion() {
   if (!areaDrag) return;
@@ -595,7 +707,7 @@ setSelectionTool('pointer');
     const mode = $('selection-tool').value;
     // Select & move uses a rectangle on empty space. Freehand still permits
     // moving selected members, and resize handles always take precedence.
-    const movingSelection = activeCanvas === key && (selectedIds.includes(hit?.dataset.objectId) || Boolean(hit?.dataset.moveId)) && !event.shiftKey;
+    const movingSelection = activeCanvas === key && (selectedIds.includes(hit?.dataset.objectId) || Boolean(hit?.dataset.moveId));
     if (!hit || mode === 'freehand' && !hit.dataset.resizeDirection && !hit.dataset.rotateId && !movingSelection) {
       lastClick = null;
       const start = point(stage.querySelector('svg'), event);
@@ -603,23 +715,33 @@ setSelectionTool('pointer');
         screen: { x: event.clientX, y: event.clientY }, moved: false, revision: state.revision, ids: [...selectedIds], additive: event.shiftKey, individual: event.altKey,
         hitId: hit?.dataset.objectId || '' };
       stage.classList.add('is-area-selecting'); renderSelectionRegion();
+      syncSelectionToolbar();
       stage.focus({ preventScroll: true }); stage.setPointerCapture(event.pointerId); event.preventDefault(); return;
     }
     const id = hit.dataset.objectId || hit.dataset.resizeId || hit.dataset.rotateId || hit.dataset.moveId;
     const start = point(stage.querySelector('svg'), event);
+    let shiftClick = null;
     if (hit.dataset.objectId) {
       const group = !event.altKey && state.groups.find(group => group.ids.includes(id));
       const ids = group?.ids || [id];
       // Preserve a multi-selection when dragging one of its members.
-      if (event.shiftKey || !ids.every(id => selectedIds.includes(id)) || activeCanvas !== key || event.altKey) select(ids, { reveal: false, additive: event.shiftKey });
-      if (event.shiftKey) { lastClick = null; event.preventDefault(); return; }
+      if (event.shiftKey) {
+        // Defer removing an already-selected member until a click completes:
+        // dragging that same member with Shift should move the selection.
+        shiftClick = { ids, previousIds: [...selectedIds] };
+        if (!ids.every(id => selectedIds.includes(id))) select(ids, { reveal: false, additive: true });
+      } else if (!ids.every(id => selectedIds.includes(id)) || activeCanvas !== key || event.altKey) select(ids, { reveal: false });
     }
     const objects = selectedObjects(), object = objects.length === 1 ? objects[0] : selectionTarget();
     if (!object) return;
     const boxes = objects.map(interactionBox);
     drag = { canvas: key, pointerId: event.pointerId, id, object: { ...object }, objects: objects.map(object => ({ ...object })), bounds: objects.length === 1 ? boxes[0] : selectionBounds(boxes), ids: [...selectedIds], start,
       screen: { x: event.clientX, y: event.clientY }, textClick: Boolean(hit.dataset.objectId && state.objects.find(object => object.id === id)?.type === 'text'),
-      revision: state.revision, resizing: hit.dataset.resizeDirection, rotating: Boolean(hit.dataset.rotateId), gap: Boolean(hit.dataset.moveId), preview: null };
+      revision: state.revision, resizing: hit.dataset.resizeDirection, rotating: Boolean(hit.dataset.rotateId), gap: Boolean(hit.dataset.moveId), shiftClick, preview: null };
+    if (!drag.resizing && !drag.rotating) {
+      drag.snapBounds = selectionBounds(boxes);
+      drag.snapTargets = smartGuideTargets(state, drag.ids, interactionBox);
+    }
     if (drag.rotating) {
       drag.pivot = { x: drag.bounds.x + drag.bounds.width / 2, y: drag.bounds.y + drag.bounds.height / 2 };
       drag.lastAngle = Math.atan2(start.y - drag.pivot.y, start.x - drag.pivot.x) * 180 / Math.PI;
@@ -633,9 +755,9 @@ setSelectionTool('pointer');
   stage.addEventListener('pointermove', event => {
     if (areaDrag?.canvas === key && areaDrag.pointerId === event.pointerId) { updateSelectionRegion(event); return; }
     if (!drag || drag.pointerId !== event.pointerId) return;
-    // The first text click reveals handles beneath the second click. Ignore
-    // pointer jitter on those handles so a double-click cannot resize the font.
-    if ((drag.textClick || drag.resizing && drag.objects.some(object => object.type === 'text')) && !drag.preview && !drag.rotating
+    // Ignore click jitter before moving or snapping. Text handles need the same
+    // guard because a second click can land on a newly revealed resize handle.
+    if ((!drag.resizing || drag.objects.some(object => object.type === 'text')) && !drag.preview && !drag.rotating
       && Math.hypot(event.clientX - drag.screen.x, event.clientY - drag.screen.y) < 4) return;
     const current = point(stage.querySelector('svg'), event), dx = current.x - drag.start.x, dy = current.y - drag.start.y;
     if (drag.rotating) {
@@ -662,7 +784,20 @@ setSelectionTool('pointer');
       // A proportional resize keeps the artwork's fit; only free stretching changes it.
       if (drag.resizeSvg && !event.shiftKey && (patch.width !== drag.object.width || patch.height !== drag.object.height)) patch.svg = drag.resizeSvg;
     }
-    else patch = { x: Math.max(-16000, Math.min(16000, drag.object.x + dx)), y: Math.max(-16000, Math.min(16000, drag.object.y + dy)) };
+    else {
+      // Cmd/Ctrl bypasses snapping; Alt at pointer-down already selects a single group member.
+      const matrix = stage.querySelector('svg').getScreenCTM();
+      if (event.shiftKey) drag.axis ||= Math.abs(dx) >= Math.abs(dy) ? 'x' : 'y';
+      else drag.axis = null;
+      const snapped = snapTranslation(drag.snapBounds, drag.snapTargets, state.canvases[key], drag.axis === 'y' ? 0 : dx, drag.axis === 'x' ? 0 : dy,
+        { scale: Math.hypot(matrix.a, matrix.b), axis: drag.axis, disabled: event.metaKey || event.ctrlKey || !$('smart-guides').checked });
+      // Preserve the relative positions of a multi-selection at model limits.
+      const limit = (axis, delta) => Math.max(-16000 - Math.min(...drag.objects.map(object => object[axis])),
+        Math.min(16000 - Math.max(...drag.objects.map(object => object[axis])), delta));
+      const moveX = limit('x', snapped.dx), moveY = limit('y', snapped.dy);
+      drag.guides = snapped.guides.filter(guide => guide.axis === 'x' ? moveX === snapped.dx : moveY === snapped.dy);
+      patch = { x: drag.object.x + moveX, y: drag.object.y + moveY };
+    }
     drag.preview = patch;
     const previews = drag.objects.length > 1 ? transformSelection(drag.objects, patch) : [{ ...drag.object, ...patch }];
     renderCanvas(key, { ...state, objects: state.objects.map(obj => previews.find(preview => preview.id === obj.id) || obj) });
@@ -679,9 +814,15 @@ setSelectionTool('pointer');
       setSelection(finished.additive ? [...finished.ids, ...ids] : ids); render(state); return;
     }
     if (!drag || drag.pointerId !== event.pointerId) return;
+    // Chromium can report capture loss when the SVG under the pointer is
+    // replaced. Keep movement/resize alive until pointer-up or cancellation.
     if (event.type === 'lostpointercapture' && !drag.rotating) return;
     const finished = drag; drag = null;
-    if (event.type === 'pointercancel' || event.type === 'lostpointercapture') { lastClick = null; render(state); return; }
+    stage.querySelector('.smart-guides')?.remove();
+    if (event.type === 'pointercancel' || event.type === 'lostpointercapture') {
+      if (finished.shiftClick) setSelection(finished.shiftClick.previousIds);
+      lastClick = null; render(state); return;
+    }
     if (finished.rotating) {
       lastClick = null;
       const degrees = angleDelta(0, finished.rotationDelta || 0);
@@ -690,6 +831,11 @@ setSelectionTool('pointer');
       return;
     }
     if (!finished.preview) {
+      if (finished.shiftClick) {
+        const { ids, previousIds } = finished.shiftClick;
+        setSelection(ids.every(id => previousIds.includes(id)) ? previousIds.filter(id => !ids.includes(id)) : [...previousIds, ...ids]);
+        lastClick = null; render(state); return;
+      }
       // A click (not a drag) in a gap still clears the selection, as empty canvas does.
       if (finished.gap) { lastClick = null; setSelection([]); render(state); return; }
       render(state);
@@ -768,6 +914,38 @@ const canvasClipboard = installCanvasClipboard({ document, validateSvg, status,
       && !target?.isContentEditable;
   },
   getSelection: () => ({ scene: state, ids: [...selectedIds] }),
+  getPasteContext: () => illustrationId,
+  readExternal: data => {
+    const id = illustrationId, canvas = activeCanvas;
+    return readChemicalClipboard(hikari, data).then(clipboard => clipboard && ({ ...clipboard, illustrationId: id, canvas }));
+  },
+  pasteExternal: async clipboard => {
+    if (!clipboard.images?.length && !clipboard.vectors?.length) {
+      if (clipboard.vectorError) { status(clipboard.vectorError); return; }
+      if (clipboard.nativeError) {
+        status(i18nUi.text("Clipboard access is unavailable in this Hikari install. Copy the structure as an image and use Edit → Paste."));
+      } else if (clipboard.formats?.some(format => /chemical|chemdraw|cambridge|cdx|molfile/i.test(format))) {
+        status(i18nUi.text("The clipboard has structure data but no image preview. In ChemDraw, copy the structure as an image and paste again."));
+      }
+      return;
+    }
+    if (clipboard.illustrationId !== illustrationId || clipboard.canvas !== activeCanvas) return;
+    let image;
+    const candidates = [...(clipboard.vectors || []), ...(clipboard.images || [])];
+    for (const candidate of candidates) {
+      // Do not flatten a vector payload, even if a lower-quality image preview
+      // is also present. Molecular labels are part of the original SVG.
+      try { image = typeof candidate === 'string' ? await prepareChemicalImage(candidate) : prepareChemicalVector(candidate.svg); break; }
+      catch (error) { if (candidate === candidates.at(-1)) throw error; }
+    }
+    if (clipboard.illustrationId !== illustrationId || clipboard.canvas !== activeCanvas) return;
+    const snapshot = chemicalStructureSnapshot(image, state.canvases[activeCanvas]);
+    const result = await workspace.paste(snapshot, { illustrationId, canvas: activeCanvas, offset: 0 });
+    if (!result.ok) { status(result.error); return; }
+    if (clipboard.illustrationId === illustrationId && clipboard.canvas === activeCanvas) select(result.pasted_ids, { reveal: false });
+    status(image.svg ? i18nUi.text("Chemical structure pasted as vector artwork")
+      : i18nUi.text("Chemical structure pasted as an image. Copy as SVG or PDF in ChemDraw for vector quality."));
+  },
   paste: async (snapshot, offset) => {
     const id = illustrationId, canvas = activeCanvas;
     const result = await workspace.paste(snapshot, { illustrationId: id, canvas, offset });
@@ -799,22 +977,23 @@ document.addEventListener('keydown', event => {
   if (canvasClipboard.handleKey(event)) return;
   if (event.key === 'Escape') {
     if (areaDrag) { cancelAreaSelection(); event.preventDefault(); return; }
-    if (drag?.rotating) {
-      cancelRotation();
+    if (drag) {
+      cancelDrag({ restoreSelection: true });
       render(state); event.preventDefault(); return;
     }
     if (document.querySelector('dialog[open]')) return;
     const menu = document.querySelector('.popover[open]');
     if (menu) {
       menu.open = false;
-      if (['add-menu', 'align-menu'].includes(menu.id)) workspaceTools.focus(menu.id);
+      if (['add-menu', 'palette-menu', 'align-menu'].includes(menu.id)) workspaceTools.focus(menu.id);
       else menu.querySelector('summary').focus();
       event.preventDefault(); return;
     }
     if (selectedIds.length) { setSelection([]); drag = null; render(state); event.preventDefault(); }
     return;
   }
-  if (event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])') || event.target.isContentEditable) return;
+  if (event.defaultPrevented || document.querySelector('dialog[open]')
+    || event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])') || event.target.isContentEditable) return;
   if (event.target.closest('[data-rotate-id]') && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', ' '].includes(event.key)) {
     event.preventDefault();
     if (!drag) rotateWithKeyboard((['ArrowLeft', 'ArrowDown'].includes(event.key) ? -1 : 1)
@@ -984,7 +1163,6 @@ hikari.on('agent.canvas', async ({ id, request, assets, deadline, inspectionRunI
 function syncComposer() {
   const hasComponents = Boolean(state?.objects.length);
   $('prompt-form').hidden = !state || hasComponents || chatExpanded || !canDraw;
-  i18nUi.setText($('canvas-empty-hint'), (!canDraw ? i18nUi.message("Add a layer to start your figure.") : (hasComponents ? i18nUi.message("Continue your figure in the agent chat, or add a layer.") : (chatExpanded ? i18nUi.message("Describe your figure in the agent chat, or add a layer.") : i18nUi.message("Describe your figure below, or add a layer.")))));
 }
 function theme(info) {
   if (info?.locale) i18n.setLocale(info.locale);

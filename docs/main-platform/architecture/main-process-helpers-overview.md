@@ -45,7 +45,7 @@ The renderer-facing surface is split across eight registrars under `src/main/ipc
 | Registrar | Primary audience | What it exposes |
 | --- | --- | --- |
 | `register-data-ipc.js` + `register-data-ipc/` | renderer data and storage flows | save/load, storage-root helpers, grouped sequence endpoints, import parsers |
-| `register-agent-ipc/` | renderer chat/assistant flows | `agent:chat`, chat-log session helpers, log replay |
+| `register-agent-ipc/` | renderer chat/assistant flows | `agent:chat`, chat-log session helpers |
 | `register-system-ipc.js` | renderer settings/system panels | Codex CLI + direct LLM, Codex Desktop MCP prompt, error reporting, OS integrations |
 
 The rest are small and single-purpose: `register-plugin-ipc.js`, `register-genome-ipc.js`, `register-bioinformatics-ipc.js`, `register-scheduled-task-ipc.js`, and `register-python-ipc.js`.

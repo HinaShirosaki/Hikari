@@ -39,6 +39,7 @@ An empty issues list does **not** establish rendering, full Plotly property vali
 - Positive values on secondary log axes; the inspector's log checks use primary axes and do not fully resolve trace-axis assignments.
 - Rectangular heatmap matrices with matching labels and correct plate orientation.
 - Customdata/hover alignment, category labels, missing wells, and intentional point ordering.
+- Fixed sizing and readable proportions: new Plate figures retain their creation dimensions (normally 700 × 500, with autosize/responsive disabled). Check the rendered chart for crowded X ticks, overlapping legends and clipped axis titles. Preserve dimensions during formatting-only edits and canvas changes; honor requested resizing.
 - Actual fit/interval calculations when reporting modeled quantities.
 
 Inspect rendered output through an available view/export path when appearance is part of the request. Otherwise report structural verification only. Do not imply the MCP inspector examined a screenshot or that a graph artifact was saved as a file.

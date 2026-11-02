@@ -12,6 +12,7 @@ export const workspaceToolIconPaths = {
   scratch: ['M3 4h18v16H3zM15 4v16M3 14h12'],
   minus: ['M5 12h14'],
   crop: ['M6 3v15h15M3 6h15v15'],
+  palette: ['M12 3C7 3 3 6.6 3 11.5S7 20 11.5 20c1.4 0 2-.8 2-1.7 0-1.2-1-1.6-1-2.8 0-1 .8-1.5 1.8-1.5H17c2.4 0 4-1.6 4-4C21 6.6 17 3 12 3Z', 'M7.5 11.5h.01M9.5 7.5h.01M14.5 7.5h.01M17 11h.01'],
   align: ['M4 3v18M8 5h12v5H8zM8 14h8v5H8z'],
   fit: ['M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6']
 };

@@ -42,8 +42,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuiteObservability
         observability: {
           recordLifecycleEvent: () => {}
         },
-        controllerUtils: {},
-        appendAgentChatLogEntry: async () => {},
         agentToolRuntime: {
           normalizeToolInvocationArgs(args) {
             return args;

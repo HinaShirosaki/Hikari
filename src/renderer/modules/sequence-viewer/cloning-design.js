@@ -15,6 +15,8 @@ import { formatStrategyLabel } from './cloning-design/formatting.js';
 import { buildDisplayPlan } from './cloning-design/plan-building.js';
 import { isVisibleElement, renderPlanSummary, renderPrimerTable, renderProcedure, renderRestrictionEnzymes, renderWarnings } from './cloning-design/plan-rendering.js';
 import { RESTRICTION_LIGATION_STRATEGY, STRATEGIES, STRATEGY_WHOLE_PLASMID, canConfirmCloningDesignPlan, cloningStrategyUsesDonor, cloningStrategyUsesInsertRange, isCloningDesignPlanActionable } from './cloning-design/strategies.js';
+import { createPrimerAnnealingController } from './cloning-design/primer-annealing.js';
+import { replacePlanPrimer } from './cloning-design/primer-annealing-model.js';
 
 export function createSequenceViewerCloningDesignController(config = {}) {
   const elements = config?.elements || {};
@@ -61,7 +63,16 @@ export function createSequenceViewerCloningDesignController(config = {}) {
   // infeasible -- and that stale plan stays on screen once the donor arrives,
   // because a re-render does not re-run the design.
   let donorReady = Promise.resolve();
-
+  const primerAnnealing = createPrimerAnnealingController({
+    root: elements.cloningDesignResult,
+    getContext: () => ({
+      displayPlan: getDesignState().displayPlan,
+      source: getCloningDesignSource(), record: getSelectedRecord(), donor: getActiveDonor(),
+      locked: confirmPending || Boolean(getDesignState().storedAgentDesign)
+    }),
+    getBridge, getStoragePath,
+    onApply: applyPrimerLength
+  });
 
   function availableStrategies() {
     const supported = getCloningDesignSource()?.supportedStrategies;
@@ -200,6 +211,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
         </div>
         ${restrictionEnzymesHtml}
       </section>` : ''}
+      ${asArray(displayPlan.primers).length ? '<section class="sequence-viewer-cloning-design-result-section primer-annealing" data-primer-annealing-host></section>' : ''}
       <section class="sequence-viewer-cloning-design-result-section sequence-viewer-cloning-design-result-section-compact">
         <div class="result-card-head">
           <h4>${i18nUi.html("Primers")} <span class="sequence-viewer-cloning-design-count">${asArray(displayPlan.primers).length}</span></h4>
@@ -227,6 +239,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
       </section>` : ''}
 
     `);
+    primerAnnealing.render();
   }
 
   function syncControls() {
@@ -295,33 +308,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
     designState.displayPlan = displayPlan;
     const primers = asArray(displayPlan?.primers);
     const primerCount = primers.length;
-    let notebookResult = null;
-    let notebookError = '';
-    try {
-      notebookResult = source?.proteinBuilderDesign ? (displayPlan.feasible ? createProteinBuilderCloningNotebookPage({
-        state: appState, persist, createId, ensureProjectRecord, saveProtocolRecord, onNotebookEntriesChanged,
-        entryId: designState.notebookEntryId,
-        ...source.proteinBuilderDesign,
-        assembledRecord: record,
-        plan: displayPlan.plans[0]?.plan
-      }) : null) : createSequenceViewerCloningDesignNotebookPage({
-        state: appState,
-        persist,
-        createId,
-        ensureProjectRecord,
-        saveProtocolRecord,
-        onNotebookEntriesChanged,
-        entryId: designState.notebookEntryId,
-        source,
-        record,
-        displayPlan
-      });
-      if (notebookResult?.entry?.id) {
-        designState.notebookEntryId = notebookResult.entry.id;
-      }
-    } catch (error) {
-      notebookError = cleanText(error?.message || error, 400) || 'Unknown persistence error';
-    }
+    const { notebookResult, notebookError } = saveDesignNotebook(displayPlan);
     const notebookStatus = notebookResult?.entry
       ? ` Saved Notebook page “${notebookResult.entry.experimentName}”.`
       : (notebookError ? ` The Notebook page could not be saved: ${notebookError}.` : '');
@@ -339,6 +326,56 @@ export function createSequenceViewerCloningDesignController(config = {}) {
         label: `Annotated ${formatStrategyLabel(designState.strategy)} primers on the sequence.`
       });
     }
+  }
+
+  function saveDesignNotebook(displayPlan, { allowReviewDraft = false } = {}) {
+    const designState = getDesignState();
+    const source = getCloningDesignSource();
+    const record = getSelectedRecord();
+    let notebookResult = null;
+    let notebookError = '';
+    try {
+      notebookResult = source?.proteinBuilderDesign ? (displayPlan.feasible || allowReviewDraft ? createProteinBuilderCloningNotebookPage({
+        state: appState, persist, createId, ensureProjectRecord, saveProtocolRecord, onNotebookEntriesChanged,
+        entryId: designState.notebookEntryId,
+        ...source.proteinBuilderDesign,
+        assembledRecord: record,
+        plan: allowReviewDraft ? { ...displayPlan.plans[0]?.plan, feasible: displayPlan.feasible, warnings: displayPlan.warnings } : displayPlan.plans[0]?.plan
+      }) : null) : createSequenceViewerCloningDesignNotebookPage({
+        state: appState,
+        persist,
+        createId,
+        ensureProjectRecord,
+        saveProtocolRecord,
+        onNotebookEntriesChanged,
+        entryId: designState.notebookEntryId,
+        source,
+        record,
+        displayPlan,
+        allowReviewDraft
+      });
+      if (notebookResult?.entry?.id) {
+        designState.notebookEntryId = notebookResult.entry.id;
+      }
+    } catch (error) {
+      notebookError = cleanText(error?.message || error, 400) || 'Unknown persistence error';
+    }
+    return { notebookResult, notebookError };
+  }
+
+  function applyPrimerLength(index, primer, templateAlignment) {
+    const designState = getDesignState();
+    if (confirmPending || designState.storedAgentDesign || !designState.displayPlan?.primers?.[index]) return null;
+    const nextPlan = replacePlanPrimer(designState.displayPlan, index, primer, templateAlignment);
+    designState.displayPlan = nextPlan;
+    const { notebookError } = saveDesignNotebook(nextPlan, { allowReviewDraft: true });
+    void annotatePrimersOnSelectedRecord({ state, primers: nextPlan.primers, target: 'product', persistFeatureMutation });
+    setStatus(notebookError
+      ? i18nUi.text('Primer updated. The Notebook page could not be saved: {error}', { error: notebookError })
+      : i18nUi.text('Primer updated. Review primer-pair balance and the PCR program before use.'),
+    Boolean(notebookError) || !nextPlan.feasible);
+    render();
+    return nextPlan;
   }
 
   async function confirmDesign() {
@@ -431,6 +468,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
   }
 
   function bindEvents() {
+    primerAnnealing.bindEvents();
     elements.cloningDesignBackBtn?.addEventListener('click', (event) => {
       event.preventDefault();
       onReturnToDetail();

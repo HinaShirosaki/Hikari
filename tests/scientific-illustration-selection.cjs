@@ -26,7 +26,7 @@ async function verifyAreaSelection({ tool, evaluate, check, win, pause, temp }) 
     { op: 'upsert', object: { id: 'select-hidden', type: 'vector', x: 110, y: 110, width: 20, height: 20, visible: false, svg } },
   ]);
   win.setSize(1300, 1000); await pause(80);
-  await evaluate('document.getElementById("close-layers").click();document.getElementById("zoom-fit").click()');
+  await evaluate('document.getElementById("close-layers").click();document.getElementById("zoom-fit").click();document.getElementById("smart-guides").checked=false');
   const selection = () => evaluate('[...document.querySelectorAll("#layers .layer:not(.grouped-layer) .layer-select[aria-pressed=true]")].map(button=>button.closest("[data-layer-id]").dataset.layerId)');
   const selected = async (ids, message) => {
     const actual = (await selection()).sort(), expected = [...ids].sort();
@@ -72,19 +72,6 @@ async function verifyAreaSelection({ tool, evaluate, check, win, pause, temp }) 
       : JSON.stringify(o)===JSON.stringify(before.objects[i])), `${toolMode} immediately moves every selected ${canvas} component and leaves other components intact`);
     await selected(ids, 'Dragging a selected member retains the entire area selection');
     check(await evaluate(`document.getElementById('selection-tool').value===${JSON.stringify(toolMode)} && !document.querySelector('.selection-region')`), 'Movement needs no tool switch and does not start another selection box');
-    await undoTo(before);
-  };
-  const resizeWithoutSwitch = async (canvas, ids) => {
-    const handle = direction => evaluate(`(()=>{const r=document.querySelector('#${canvas}-canvas [data-resize-direction=${direction}]').getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()`);
-    const before = await read(), anchor = await handle('nw'), start = await handle('se');
-    const toolMode = await evaluate('document.getElementById("selection-tool").value');
-    await mouse('mousePressed', start); await mouse('mouseMoved', {x:start.x+24,y:start.y+14}); await mouse('mouseReleased', {x:start.x+24,y:start.y+14}); await pause(80);
-    const after = await read(), fixed = await handle('nw'), first = before.objects.find(o=>o.id===ids[0]), scale = after.objects.find(o=>o.id===first.id).width/first.width;
-    check(scale>1 && Math.hypot(fixed.x-anchor.x,fixed.y-anchor.y)<.1 && after.objects.every((o,i)=>ids.includes(o.id)
-      ? Math.abs(o.width/before.objects[i].width-scale)<1e-8 && Math.abs(o.height/before.objects[i].height-scale)<1e-8
-        && o.rotation===before.objects[i].rotation && (o.type!=='text'||Math.abs(o.fontSize/before.objects[i].fontSize-scale)<1e-8)
-      : JSON.stringify(o)===JSON.stringify(before.objects[i])), `${toolMode} resize handles scale the full selection and its text while fixing the opposite anchor`);
-    check(await evaluate(`document.getElementById('selection-tool').value===${JSON.stringify(toolMode)} && !document.querySelector('.selection-region')`), 'Resizing works without switching selection tools or drawing another region');
     await undoTo(before);
   };
   const snapshot = await read(), beforeImage = await tool({ action: 'render', canvas: 'main' });
@@ -154,17 +141,17 @@ async function verifyAreaSelection({ tool, evaluate, check, win, pause, temp }) 
 
     await mode('pointer'); await rectangle('main', [90, 90], [370, 180]);
     await moveWithoutSwitch('main', ['select-a', 'select-b'], [140, 130], [160, 145]);
-    await resizeWithoutSwitch('main', ['select-a', 'select-b']);
+    check(await evaluate('!document.querySelector(".selection") && !document.getElementById("selection-toolbar").hidden'), 'Rectangle multi-selection uses floating actions instead of a shared frame');
     await mode('freehand'); await gesture('main', lasso);
     check(await evaluate('getComputedStyle(document.querySelector("#main-canvas [data-object-id=select-a]")).cursor==="move" && getComputedStyle(document.querySelector("#main-canvas [data-object-id=select-c]")).cursor==="crosshair"'), 'Freehand uses a move cursor on selected members and a selection cursor on other components');
     await moveWithoutSwitch('main', ['select-a', 'select-b', 'select-d'], [140, 130], [160, 145]);
-    await resizeWithoutSwitch('main', ['select-a', 'select-b', 'select-d']);
+    check(await evaluate('!document.querySelector(".selection") && !document.getElementById("selection-toolbar").hidden'), 'Freehand multi-selection uses the same floating actions');
     await fs.writeFile(path.join(temp, 'select-move-resize.png'), (await win.webContents.capturePage()).toPNG());
 
     await apply([{ op: 'group', id: 'select-group', name: 'Cell and rotated component', ids: ['select-a', 'select-rotated'] }]);
     await mode('pointer'); await rectangle('main', [90, 90], [190, 175]);
     await selected(['select-a', 'select-rotated'], 'Touching a group member selects the entire group');
-    check(await evaluate('document.querySelectorAll("#main-canvas .selection-member").length===0 && document.querySelectorAll("#main-canvas .selection").length===1 && document.querySelectorAll("#main-canvas .resize-handle").length===8'), 'A selected group shows only its outer frame and shared resize handles');
+    check(await evaluate('document.querySelectorAll("#main-canvas .selection-member").length===2 && !document.querySelector("#main-canvas .selection") && !document.getElementById("selection-toolbar").hidden'), 'A selected group shows individual outlines and floating actions');
     await fs.writeFile(path.join(temp, 'selection-group-frame.png'), (await win.webContents.capturePage()).toPNG());
     await rectangle('main', [90, 90], [190, 175], 1);
     await selected(['select-a'], 'Alt selects only the touched group member');

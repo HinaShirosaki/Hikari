@@ -97,6 +97,7 @@ export function createProteinBuilderCloningNotebookPage({
       insertLength: Math.max(0, Number(dnaConstruct?.length || dnaConstruct?.sequence?.length) || 0),
       recommendedAssemblyStrategy: cloningPlan.recommendedAssemblyStrategy,
       primerCount: Math.max(0, Number(cloningPlan?.primerOligoPlan?.primerCount) || asArray(cloningPlan?.primerOligoPlan?.primers).length),
+      needsReview: !cloningPlan.feasible,
       pcrProgram
     }
   };

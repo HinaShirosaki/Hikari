@@ -1,5 +1,5 @@
 {
-  "sourceVersion": "1.1.0-beta.9",
+  "sourceVersion": "1.1.0-beta.11",
   "exampleDate": "2026-10-24",
   "timezone": "America/Chicago",
   "viewport": [
@@ -32,9 +32,9 @@
           "selector": ".workflow-ledger",
           "label": "Processes",
           "rect": {
-            "x": 316,
+            "x": 315,
             "y": 133,
-            "width": 1273,
+            "width": 1250,
             "height": 350
           }
         },
@@ -42,7 +42,7 @@
           "selector": ".workflow-drawer",
           "label": "Selected process",
           "rect": {
-            "x": 1189,
+            "x": 1165,
             "y": 133,
             "width": 400,
             "height": 863
@@ -55,28 +55,17 @@
       "title": "Start a process",
       "crop": {
         "x": 593,
-        "y": 334,
+        "y": 371,
         "width": 414,
-        "height": 331
+        "height": 257
       },
       "targets": [
-        {
-          "selector": "#workflow-process-template",
-          "label": "Workflow template",
-          "rect": {
-            "x": 611,
-            "y": 411,
-            "width": 378,
-            "height": 38
-          },
-          "badge": "right"
-        },
         {
           "selector": "#workflow-process-project",
           "label": "Project",
           "rect": {
             "x": 611,
-            "y": 485,
+            "y": 448,
             "width": 378,
             "height": 38
           },
@@ -87,7 +76,7 @@
           "label": "Process name",
           "rect": {
             "x": 611,
-            "y": 559,
+            "y": 522,
             "width": 378,
             "height": 39
           },
@@ -98,7 +87,7 @@
           "label": "Create process",
           "rect": {
             "x": 869,
-            "y": 610,
+            "y": 573,
             "width": 120,
             "height": 37
           },
@@ -110,27 +99,27 @@
       "name": "03-progress",
       "title": "Follow each process",
       "crop": {
-        "x": 298,
+        "x": 297,
         "y": 115,
-        "width": 1302,
+        "width": 1286,
         "height": 386
       },
       "targets": [
         {
-          "selector": "tr[data-workflow-run-open=\"f320c758-8469-4cec-9cee-7e62c2181c5d\"] .workflow-stepper",
+          "selector": "tr[data-workflow-run-open=\"1303b32c-a487-44a9-a391-fd2933ce667d\"] .workflow-stepper",
           "label": "Steps",
           "rect": {
-            "x": 573,
+            "x": 572,
             "y": 353,
-            "width": 454,
+            "width": 437,
             "height": 50
           }
         },
         {
-          "selector": "tr[data-workflow-run-open=\"f320c758-8469-4cec-9cee-7e62c2181c5d\"] .workflow-ledger-count",
+          "selector": "tr[data-workflow-run-open=\"1303b32c-a487-44a9-a391-fd2933ce667d\"] .workflow-ledger-count",
           "label": "Steps done",
           "rect": {
-            "x": 1035,
+            "x": 1017,
             "y": 369,
             "width": 24,
             "height": 19
@@ -138,20 +127,20 @@
           "badge": "right"
         },
         {
-          "selector": "tr[data-workflow-run-open=\"f320c758-8469-4cec-9cee-7e62c2181c5d\"] td:nth-child(3)",
+          "selector": "tr[data-workflow-run-open=\"1303b32c-a487-44a9-a391-fd2933ce667d\"] td:nth-child(3)",
           "label": "Next step",
           "rect": {
-            "x": 1070,
+            "x": 1056,
             "y": 344,
-            "width": 391,
+            "width": 378,
             "height": 69
           }
         },
         {
-          "selector": "tr[data-workflow-run-open=\"49b22bbc-bf37-49f5-b68f-2f08a64ac53c\"] .workflow-ledger-chip.is-bad",
+          "selector": "tr[data-workflow-run-open=\"737459aa-d775-44fb-a7db-916a6386acad\"] .workflow-ledger-chip.is-bad",
           "label": "Failed",
           "rect": {
-            "x": 1269,
+            "x": 1259,
             "y": 248,
             "width": 48,
             "height": 18
@@ -159,10 +148,10 @@
           "badge": "right"
         },
         {
-          "selector": "tr[data-workflow-run-open=\"a50426a8-835c-4967-891c-067b62c5d1a0\"] .workflow-ledger-chip.is-ok",
+          "selector": "tr[data-workflow-run-open=\"2436cbb5-8e00-4925-a888-5b9b2f3242a9\"] .workflow-ledger-chip.is-ok",
           "label": "Finished",
           "rect": {
-            "x": 1082,
+            "x": 1072,
             "y": 439,
             "width": 44,
             "height": 18
@@ -175,17 +164,17 @@
       "name": "04-record-step",
       "title": "Record a step",
       "crop": {
-        "x": 1171,
+        "x": 1147,
         "y": 115,
-        "width": 429,
+        "width": 436,
         "height": 885
       },
       "targets": [
         {
-          "selector": "[data-workflow-drawer-toggle=\"ec48a18d-05b5-4036-a268-4bdb49780121\"] + .workflow-drawer-step-body .workflow-placeholder-table",
+          "selector": "[data-workflow-drawer-toggle=\"c29e8c14-ca0a-4af2-ade7-c97cbb00c92b\"] + .workflow-drawer-step-body .workflow-placeholder-table",
           "label": "Protocol fields",
           "rect": {
-            "x": 1228,
+            "x": 1204,
             "y": 335,
             "width": 347,
             "height": 74
@@ -193,10 +182,10 @@
           "badge": "right"
         },
         {
-          "selector": "[data-workflow-drawer-toggle=\"ec48a18d-05b5-4036-a268-4bdb49780121\"] + .workflow-drawer-step-body .workflow-drawer-field",
+          "selector": "[data-workflow-drawer-toggle=\"c29e8c14-ca0a-4af2-ade7-c97cbb00c92b\"] + .workflow-drawer-step-body .workflow-drawer-field",
           "label": "Result",
           "rect": {
-            "x": 1228,
+            "x": 1204,
             "y": 419,
             "width": 347,
             "height": 107
@@ -204,10 +193,10 @@
           "badge": "right"
         },
         {
-          "selector": "[data-workflow-drawer-toggle=\"ec48a18d-05b5-4036-a268-4bdb49780121\"] + .workflow-drawer-step-body .workflow-drawer-actions",
+          "selector": "[data-workflow-drawer-toggle=\"c29e8c14-ca0a-4af2-ade7-c97cbb00c92b\"] + .workflow-drawer-step-body .workflow-drawer-actions",
           "label": "Complete, Fail, Notebook, Attach",
           "rect": {
-            "x": 1225,
+            "x": 1201,
             "y": 532,
             "width": 353,
             "height": 34
@@ -219,9 +208,9 @@
       "name": "05-branch",
       "title": "Add an optional branch",
       "crop": {
-        "x": 1172,
+        "x": 1148,
         "y": 236,
-        "width": 428,
+        "width": 435,
         "height": 214
       },
       "targets": [
@@ -229,7 +218,7 @@
           "selector": ".workflow-drawer-fork-card",
           "label": "Optional branch",
           "rect": {
-            "x": 1228,
+            "x": 1204,
             "y": 342,
             "width": 347,
             "height": 43
@@ -239,7 +228,7 @@
           "selector": ".workflow-drawer-fork-card [data-workflow-branch-toggle]",
           "label": "Activate",
           "rect": {
-            "x": 1499,
+            "x": 1475,
             "y": 349,
             "width": 69,
             "height": 29
@@ -328,7 +317,7 @@
       },
       "targets": [
         {
-          "selector": "[data-workflow-port-in=\"89288e78-91fd-4015-a290-ed30c2b42d4f\"]",
+          "selector": "[data-workflow-port-in=\"9f3f4c1f-4e00-41ea-9205-6d3ddf0dcba9\"]",
           "label": "Input dot",
           "rect": {
             "x": 634,
@@ -338,7 +327,7 @@
           }
         },
         {
-          "selector": "[data-workflow-port-out=\"89288e78-91fd-4015-a290-ed30c2b42d4f\"]",
+          "selector": "[data-workflow-port-out=\"9f3f4c1f-4e00-41ea-9205-6d3ddf0dcba9\"]",
           "label": "Output dot",
           "rect": {
             "x": 876,
@@ -349,7 +338,7 @@
           "badge": "right"
         },
         {
-          "selector": "[data-workflow-node=\"89288e78-91fd-4015-a290-ed30c2b42d4f\"] .workflow-node-remove",
+          "selector": "[data-workflow-node=\"9f3f4c1f-4e00-41ea-9205-6d3ddf0dcba9\"] .workflow-node-remove",
           "label": "Delete block",
           "rect": {
             "x": 632,
@@ -406,7 +395,7 @@
     }
   ],
   "checks": [
-    "New process starts from the selected template",
+    "New process uses the selected template without showing a template picker",
     "Create process adds the process to its project and opens it",
     "New process on a project heading starts in that project",
     "Typing a new name in the drawer renames the process",

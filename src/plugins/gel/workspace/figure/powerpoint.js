@@ -29,20 +29,34 @@ export async function createBlotFigurePowerPoint({ plan, blotCanvases, title }) 
         wrap: false, color: '000000', objectName: `${table.label} lane ${column.laneIndex} caption`
       });
     });
-    // Each lane is a native single-column table. Independent placement keeps
-    // its center exactly over a lane even with uneven widths or tilted lanes.
-    else table.columns.forEach((column, index) => {
-      slide.addTable(table.rows.map(row => [{ text: row.values[index].join('\n') }]), {
-        x: left + (plan.imageLeft + column.x) * scale, y: top + table.y * scale,
-        w: column.width * scale, h: table.height * scale,
-        colW: [column.width * scale], rowH: table.rows.map(row => row.height * scale),
+    // A table is one native table: the row labels, then one column per lane.
+    // Lane columns meet midway between lane centers, so each keeps its own
+    // width over its lane; the label column runs up to the first lane, its
+    // text ending where the PNG draws it.
+    else {
+      const centers = table.columns.map(column => column.center), last = centers.length - 1;
+      const edges = [
+        last ? centers[0] - (centers[1] - centers[0]) / 2 : table.columns[0].x,
+        ...centers.slice(1).map((center, index) => (centers[index] + center) / 2),
+        last ? centers[last] + (centers[last] - centers[last - 1]) / 2 : table.columns[0].x + table.columns[0].width
+      ];
+      const labelRight = plan.imageLeft + edges[0];
+      const labelGap = Math.max(0, labelRight - (FIGURE_MARGIN + LABEL_WIDTH - 20));
+      const colW = [labelRight - FIGURE_MARGIN, ...centers.map((_, index) => edges[index + 1] - edges[index])].map(width => width * scale);
+      slide.addTable(table.rows.map(row => [
+        { text: row.labelLines.join('\n'), options: { align: 'right', margin: [0, labelGap * scale, 0, 0] } },
+        ...row.values.map(lines => ({ text: lines.join('\n') }))
+      ]), {
+        x: left + FIGURE_MARGIN * scale, y: top + table.y * scale,
+        w: colW.reduce((sum, width) => sum + width, 0), h: table.height * scale,
+        colW, rowH: table.rows.map(row => row.height * scale),
         fontFace: 'Arial', fontSize: FIGURE_FONT_SIZE * scale * 72,
         align: 'center', valign: 'mid', margin: 0, color: '000000',
         border: { type: 'none' }, fill: { color: 'FFFFFF', transparency: 100 },
-        autoPage: false, objectName: `${table.label} lane ${column.laneIndex} table`
+        autoPage: false, objectName: `${table.label} lane table`
       });
-    });
-    table.rows.forEach((row, index) => slide.addText(row.labelLines.join('\n'), {
+    }
+    if (table.rotated) table.rows.forEach((row, index) => slide.addText(row.labelLines.join('\n'), {
       x: left + FIGURE_MARGIN * scale, y: top + row.labelY * scale,
       w: (LABEL_WIDTH - 20) * scale, h: row.labelHeight * scale,
       fontFace: 'Arial', fontSize: FIGURE_FONT_SIZE * scale * 72,

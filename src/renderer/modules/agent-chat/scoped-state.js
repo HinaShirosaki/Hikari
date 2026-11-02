@@ -1,4 +1,5 @@
 import { asArray, trimText } from './shared.js';
+import { normalizeAssayContextTable } from '../../../shared/assay-agent-context.mjs';
 import {
   normalizeAgentChatState,
   normalizePaperAgentChatSessions,
@@ -69,7 +70,8 @@ function buildAssayAgentSessionPrompt(context = {}) {
     return '';
   }
   const lines = [
-    'You are in an Assay right-rail chat session. Treat the active assay plate, result table, and analysis output as the default subject when the user says "this assay", "this plate", "these results", or "this graph".'
+    'You are in an Assay right-rail chat session. Treat the active assay plate, result table, and analysis output as the default subject when the user says "this assay", "this plate", "these results", or "this graph".',
+    'For new custom charts, fix the figure size at creation: use layout.width=700 and layout.height=500 by default, layout.autosize=false and config.responsive=false. Honor explicit user size requests and choose appropriate fixed proportions for heatmaps or multi-panel figures. The figure must retain its dimensions when rails or the canvas change; avoid a long, shallow plot. Handle crowded X axes with selective tick labels, full hover labels, horizontal categorical comparisons or meaningful panels; preserve all observations and numeric X spacing. During formatting-only edits, preserve existing dimensions unless the user asks to resize. Structural inspection does not verify that labels fit; check the rendered chart when a render/export path is available.'
   ];
   if (assayName) {
     lines.push(`Active assay name: ${assayName}`);
@@ -110,6 +112,7 @@ function normalizeHiddenContext(context = {}) {
     kind: trimText(source.kind || 'selection', 80),
     label: trimText(source.label || 'Hidden context', 120),
     text,
+    ...(source.assayTable ? { assayTable: normalizeAssayContextTable(source.assayTable) } : {}),
     paperId: trimText(source.paperId, 220),
     paperTitle: trimText(source.paperTitle, 320),
     pageNumber: Number.isFinite(Number(source.pageNumber))

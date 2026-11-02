@@ -2,6 +2,8 @@
 
 ## Active plate TSV
 
+Prefer the complete active-plate table ID in the current context. Hikari has already staged all current UI rows for this turn; use that ID directly for `derive`, `python`, or paginated `read`. The TSV is a preview for orientation, not the full input. The parsing instructions below apply only when complete rows were explicitly supplied without a staged table ID.
+
 Find the current `Assay plate data (TSV...)` section in the supplied Assay context. Read its header and following nonempty TSV lines until the section ends. Split on tabs, retaining empty cells, and map values by header name. Do not split on general whitespace or trim away trailing empty fields. Preserve identifiers as text and parse measurements only when their units and numeric format are known.
 
 Check the announced row count against the supplied rows. Keep well coordinates and sample/concentration metadata. Record which table is raw and which is a derived `Latest analysis table (TSV)`. Missing wells, nonnumeric flags, and excluded observations are different states; do not convert them all to zero.
@@ -113,4 +115,4 @@ Require a valid nonzero denominator. Do not clip to 0–100, delete outliers, im
 
 Read returned rows and counts before constructing traces. A graph takes explicit arrays, not `table_id` or column-binding expressions. Group traces by sample/condition and align means, errors, n, and hover values from the same rows. See [plotly-recipes.md](plotly-recipes.md).
 
-When the summary has more than 50 rows, the response is incomplete even though built-in grouping used all source rows. Use the complete source already supplied to construct the full output, or another valid route described in [tool-reference.md](tool-reference.md); never plot the preview as the entire result.
+When the summary has more than 50 rows, read its remaining pages using `offset=table.next_offset` until null before building complete traces. Built-in grouping and Python use all stored source rows; never plot just the first response page as the entire result.

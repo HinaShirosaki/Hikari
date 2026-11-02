@@ -83,9 +83,10 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
     if (!assetLibrary.assets.some(asset => asset.id === id)) throw new Error('This reusable asset does not exist. Refresh Assets.');
     return normalizeAsset(await readJson(assetPath(id)), validateSvg);
   }
-  function rasterComponent(raster, name) {
+  function rasterComponent(raster, name, source = null) {
     return normalizeAsset({ version: 1, name, objects: [{ id: `raster-${crypto.randomUUID()}`, name, type: 'raster', canvas: 'main',
-      x: 0, y: 0, ...fitRasterBox(raster.width, raster.height), textFree: true, dataUrl: raster.dataUrl }] });
+      x: 0, y: 0, ...fitRasterBox(raster.width, raster.height),
+      ...(source?.chemicalStructure ? { chemicalStructure: true, textFree: source.textFree } : { textFree: true }), dataUrl: raster.dataUrl }] });
   }
   const assetEntry = (asset, fingerprint, origin) => ({ id: crypto.randomUUID(), name: asset.name, width: asset.width, height: asset.height,
     objectCount: asset.objects.length, updatedAt: new Date().toISOString(), fingerprint, origin });
@@ -209,7 +210,7 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
       Object.assign(obj, fitRasterBox(raster.width, raster.height, obj.width));
       const { dataUrl, ...metadata } = raster;
       rasterImports.push({ object_id: obj.id, ...metadata });
-      if (agentRequest || importedSources[obj.id] === 'codex') snapshots.push({ asset: rasterComponent(raster, obj.name.trim() || 'Generated component'),
+      if (agentRequest || importedSources[obj.id] === 'codex') snapshots.push({ asset: rasterComponent(raster, obj.name.trim() || 'Generated component', obj),
         origin: importedSources[obj.id] === 'codex' ? 'codex' : importedSources[obj.id] === 'storage' ? 'storage' : 'agent', object_id: obj.id });
     }
     next = normalizeDocument(next, validateSvg);
@@ -327,7 +328,7 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
         }
         return { ok: true, status: 'read', illustration_id: library.activeId, ...readDocument(documentState, args.include_assets), ...readLibrary(library), ...readAssetLibrary(assetLibrary),
           inspection: inspections.status(library.activeId, documentState.revision, inspectionRunId), asset_reuse: { required: true, checked: run.checked },
-          agent_contract: { request_schema: CANVAS_TOOL_CONTRACT.inputSchema, instructions: agentInstructions(documentState.complexity, documentState.imageGenerationPercent, documentState.imageGenerationStyle, documentState.imageStyleLine) } };
+          agent_contract: { request_schema: CANVAS_TOOL_CONTRACT.inputSchema, instructions: agentInstructions(documentState.complexity, documentState.imageGenerationPercent, documentState.imageGenerationStyle, documentState.imageStyleLine, documentState.palette) } };
       } catch (error) { onStatus(error.message); return failure('failed', error.message); }
     }).catch(error => failure('unavailable', error.message));
   }

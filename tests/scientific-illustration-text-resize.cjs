@@ -63,21 +63,15 @@ async function verifyTextResize({ tool, evaluate, check, win, pause, temp }) {
   } finally { win.webContents.debugger.detach(); }
   await apply({});
   await evaluate('document.getElementById("zoom-fit").click()');
-  await numericChange('width', 360);
+  // Position & size fields were removed; font size is the remaining numeric text control.
+  await numericChange('fontSize', 30);
   let saved = await read();
-  check(saved.width === 360 && saved.height === 144 && saved.fontSize === 40 && saved.x === fixture.x && saved.y === fixture.y,
-    'Numeric text width proportionally scales height and font without moving the layer');
+  check(saved.fontSize === 30 && saved.width === 180 && saved.height === 72 && saved.x === fixture.x && saved.y === fixture.y,
+    'Font size remains independently editable without moving the layer');
   await evaluate('illustrationWorkspace.history("undo")'); await pause(80); saved = await read();
-  check(saved.width === 180 && saved.height === 72 && saved.fontSize === 20, 'Undo restores text geometry and font together');
+  check(saved.width === 180 && saved.height === 72 && saved.fontSize === 20, 'Undo restores the text font size');
   await evaluate('illustrationWorkspace.history("redo")'); await pause(80); saved = await read();
-  check(saved.width === 360 && saved.height === 144 && saved.fontSize === 40, 'Redo restores proportional text scaling');
-  await numericChange('height', 36); saved = await read();
-  check(saved.width === 90 && saved.height === 36 && saved.fontSize === 10, 'Numeric text height proportionally scales width and font');
-  await numericChange('fontSize', 30); saved = await read();
-  check(saved.fontSize === 30 && saved.width === 90 && saved.height === 36, 'Font size remains independently editable');
-  await numericChange('width', 1800); saved = await read();
-  check(saved.fontSize === 300 && saved.width === 900 && saved.height === 360,
-    'Numeric dimensions stop at the font limit without breaking the ratio');
+  check(saved.fontSize === 30, 'Redo restores the text font size');
   await apply({ width: 270, height: 108, fontSize: 30, rotation: 37 });
   const rendered = await tool({ action: 'render', canvas: 'main' });
   check(rendered.ok && rendered.content.filter(item => item.type === 'image').length === 1, 'Canvas agent images render after proportional text edits');

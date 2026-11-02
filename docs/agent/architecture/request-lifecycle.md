@@ -52,13 +52,11 @@ Tool wrappers own their schemas and annotations. Deterministic implementation ru
 After the Codex runtime returns, the chat handler:
 
 - classifies failures and records the final lifecycle event;
-- flushes lifecycle rows;
-- appends the normalized result or error to the Agent log;
 - projects the result into a renderer-friendly assistant message;
-- appends that message and its internal rows to the session log.
+- appends that message, the result or error, and the lifecycle and LLM-trace rows to the session log.
 
-The session's `messages` projection is UI-facing. Its `rows` preserve request, result, lifecycle, and LLM-trace detail for replay and debugging.
+Each chat's session log is its only log. The `messages` projection is UI-facing; the `rows` keep request, result, lifecycle, and LLM-trace detail for debugging.
 
 ## Related endpoints
 
-The registrar also exposes chat-session create/list/get endpoints, lifecycle request listing, lifecycle replay, skill listing, protocol generation, and background experiment suggestions (`agent:suggest-experiment`, see [notebook-suggestions.md](../mcp-contract/notebook-suggestions.md)). The HTML preview channel (`agent:html-preview`) is registered by `src/main/agent/html-output/preview-service.js`. Channel names are centralized in `src/shared/ipc/channels.js`.
+The registrar also exposes chat-session create/list/get endpoints, skill listing, protocol generation, and background experiment suggestions (`agent:suggest-experiment`, see [notebook-suggestions.md](../mcp-contract/notebook-suggestions.md)). The HTML preview channel (`agent:html-preview`) is registered by `src/main/agent/html-output/preview-service.js`. Channel names are centralized in `src/shared/ipc/channels.js`.

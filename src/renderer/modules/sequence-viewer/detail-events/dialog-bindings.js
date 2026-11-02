@@ -23,9 +23,11 @@ function bindDetailDialogEvents(context = {}, { closeToolbarMenus = () => {} } =
     openFeatureEditor,
     openPrimerDesignOverlay,
     orderDesignedPrimers,
+    saveDesignedPrimers,
     deleteFeatureFromContext,
     applyFeatureEditorChanges,
     getActiveFeatureActionContext,
+    onSaveDnaFragment = () => {},
     openSequenceEditFromKeyboardEvent,
     applySequenceEditDialog,
     hasOpenSequenceEditDialog
@@ -55,6 +57,11 @@ function bindDetailDialogEvents(context = {}, { closeToolbarMenus = () => {} } =
     }
 
     const context = getActiveFeatureActionContext();
+    if (action === 'save-fragment' && (context?.fragmentRange || context?.selectionRange)) {
+      hideFeatureContextMenu();
+      onSaveDnaFragment(context.fragmentRange || context.selectionRange, context.fragmentFeature);
+      return;
+    }
     if (action === 'add') {
       openFeatureEditor('add', context);
       return;
@@ -94,6 +101,11 @@ function bindDetailDialogEvents(context = {}, { closeToolbarMenus = () => {} } =
   elements.primerDesignOrderBtn?.addEventListener('click', (event) => {
     event.preventDefault();
     orderDesignedPrimers();
+  });
+
+  elements.primerDesignSaveBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    saveDesignedPrimers();
   });
 
   elements.primerDesignCloseBtn?.addEventListener('click', () => {

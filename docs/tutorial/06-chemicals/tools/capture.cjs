@@ -214,13 +214,13 @@ async function main() {
 
   // 5. Search, filter, sort
   await input('#chemical-search', '7647');
-  await check(`[...document.querySelectorAll('[data-chemical-open]')].map(b => b.textContent.trim()).sort().join() === 'Hydrochloric acid, 37%,Sodium chloride' && document.getElementById('chemical-results-summary').textContent === 'Showing 2 of 8 chemicals.'`, 'Search matches part of a CAS number');
+  await check(`[...document.querySelectorAll('[data-chemical-open]')].map(b => b.textContent.trim()).sort().join() === 'Hydrochloric acid, 37%,Sodium chloride'`, 'Search matches part of a CAS number');
   await input('#chemical-search', '');
   await input('#chemical-filter-location', 'Cold Room');
   await input('#chemical-sort', 'expiration_asc');
   await check(`[...document.querySelectorAll('[data-chemical-open]')].map(b => b.textContent.trim()).join() === 'Dithiothreitol (DTT),Bovine serum albumin'`, 'Filter Location and Sort By narrow and order the list');
   await shot('05-find-chemicals', 'Search, filter, and sort', 'Type in Search, choose a location, or change the order of the list.', ['.chemical-sidebar-stack', '.chemical-list-panel'],
-    [['.chemical-search-field', 'Search', 'right'], ['#chemical-filter-location', 'Filter Location', 'right'], ['#chemical-sort', 'Sort By', 'right'], ['#chemical-results-summary', 'How many are shown', 'right'], ['#chemical-list', 'Matching chemicals']]);
+    [['.chemical-search-field', 'Search', 'right'], ['#chemical-filter-location', 'Filter Location', 'right'], ['#chemical-sort', 'Sort By', 'right'], ['#chemical-list', 'Matching chemicals']]);
   await input('#chemical-filter-location', '');
   await input('#chemical-sort', 'updated_desc');
 

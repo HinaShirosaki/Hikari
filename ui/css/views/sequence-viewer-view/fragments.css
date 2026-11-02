@@ -1,0 +1,123 @@
+.sequence-viewer-fragment-dialog.app-dialog-surface {
+  --app-dialog-width: 560px;
+}
+
+.sequence-viewer-fragment-dialog fieldset,
+.sequence-viewer-fragment-dialog [data-fragment-pcr] {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-12);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.sequence-viewer-fragment-dialog label {
+  display: grid;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.sequence-viewer-fragment-dialog :is(input, select, textarea) {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sequence-viewer-fragment-dialog textarea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  resize: vertical;
+  overflow-wrap: anywhere;
+}
+
+.sequence-viewer-fragment-dialog [hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-fragment-dialog p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.sequence-viewer-fragment-error {
+  color: var(--theme-danger);
+  font-size: var(--text-sm);
+}
+
+.sequence-viewer-fragment-dialog .form-actions {
+  justify-content: flex-end;
+}
+
+.sequence-viewer-primer-pcr-btn {
+  padding: var(--space-4) var(--space-8);
+  white-space: nowrap;
+}
+
+[data-pcr-primer-state="feasible"] {
+  --sequence-viewer-primer-color: var(--theme-success, var(--theme-accent)) !important;
+  color: var(--theme-success, var(--theme-accent)) !important;
+  outline: 2px solid var(--theme-success, var(--theme-accent));
+  outline-offset: 2px;
+  background: color-mix(in srgb, var(--theme-success, var(--theme-accent)) 12%, transparent);
+  cursor: pointer;
+}
+
+[data-pcr-primer-state="selected"] {
+  --sequence-viewer-primer-color: var(--theme-accent) !important;
+  color: var(--theme-accent) !important;
+  outline: 3px solid var(--theme-accent);
+  outline-offset: 2px;
+}
+
+[data-pcr-primer-state="unavailable"] {
+  --sequence-viewer-primer-color: var(--theme-text-muted) !important;
+  color: var(--theme-text-muted) !important;
+  opacity: 0.35;
+  filter: grayscale(1);
+  cursor: not-allowed;
+}
+
+.sequence-viewer-pcr-picker {
+  position: fixed;
+  z-index: 2600;
+  right: var(--space-18);
+  bottom: var(--space-18);
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  max-width: min(620px, calc(100vw - 36px));
+  box-sizing: border-box;
+  padding: var(--space-12);
+  border: 1px solid var(--theme-accent);
+  border-radius: 8px;
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text-strong);
+  box-shadow: var(--theme-shadow-small);
+}
+
+.sequence-viewer-pcr-picker p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.sequence-viewer-pcr-picker .small-note {
+  margin-top: var(--space-6);
+}
+
+.sequence-viewer-pcr-picker button {
+  flex-shrink: 0;
+}
+
+.sequence-viewer-dna-row {
+  box-sizing: border-box;
+  grid-template-columns: 22px minmax(0, 1fr) 28px;
+}
+
+.sequence-viewer-dna-row > .sequence-viewer-library-item,
+.sequence-viewer-dna-row > .sequence-viewer-library-item:hover {
+  background: transparent;
+  padding-inline: var(--space-4);
+}
+
+.sequence-viewer-dna-children {
+  min-width: 0;
+}

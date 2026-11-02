@@ -46,6 +46,7 @@ function applySchema(db) {
       gbk_rel_path TEXT NOT NULL,
       html_rel_path TEXT NOT NULL,
       folder_id TEXT NOT NULL DEFAULT '',
+      parent_entry_id TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -112,6 +113,10 @@ function applySchema(db) {
   const entryColumns = readRows(db, 'PRAGMA table_info(sequence_entries)');
   const hadFolderIdColumn = entryColumns.some((row) => String(row?.name || '') === 'folder_id');
   const hadFeatureIndexVersionColumn = entryColumns.some((row) => String(row?.name || '') === 'feature_index_version');
+  const hadParentEntryIdColumn = entryColumns.some((row) => String(row?.name || '') === 'parent_entry_id');
+  if (!hadParentEntryIdColumn) {
+    db.run("ALTER TABLE sequence_entries ADD COLUMN parent_entry_id TEXT NOT NULL DEFAULT ''");
+  }
   if (!hadFolderIdColumn) {
     db.run("ALTER TABLE sequence_entries ADD COLUMN folder_id TEXT NOT NULL DEFAULT ''");
   }
@@ -133,8 +138,10 @@ function applySchema(db) {
   db.run(`
     CREATE INDEX IF NOT EXISTS idx_sequence_entries_folder
       ON sequence_entries(folder_id, status, updated_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_sequence_entries_parent
+      ON sequence_entries(parent_entry_id);
   `);
-  return !hadFolderTable || !hadFolderIdColumn || !hadFeatureIndexVersionColumn || featureIndexMarkersChanged > 0;
+  return !hadFolderTable || !hadFolderIdColumn || !hadFeatureIndexVersionColumn || !hadParentEntryIdColumn || featureIndexMarkersChanged > 0;
 }
 async function openDatabase(sqlitePath) {
   const SQL = await loadSqlJs();
@@ -182,6 +189,7 @@ function normalizeEntryRow(row) {
     gbkRelPath: cleanText(row.gbk_rel_path, 1200),
     htmlRelPath: cleanText(row.html_rel_path, 1200),
     folderId: cleanText(row.folder_id, 200),
+    parentEntryId: cleanText(row.parent_entry_id, 200),
     createdAt: cleanText(row.created_at, 60),
     updatedAt: cleanText(row.updated_at, 60)
   };

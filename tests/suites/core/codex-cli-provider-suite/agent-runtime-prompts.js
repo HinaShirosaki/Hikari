@@ -421,8 +421,8 @@ module.exports = function registerCodexCliProviderSuiteAgentRuntimePrompts(conte
       const describe = (name) => getDirectMcpToolDefinitions().find((tool) => tool.name === name).description;
       const agentsText = buildHikariCodexAgentsInstructions();
       assert.match(describe('protocol_generation'), /Author the complete protocol JSON yourself, then call this tool/);
-      assert.match(describe('assay_table'), /map its header and rows to explicit row objects, preserving empty cells/);
-      assert.match(describe('assay_table'), /never local lookup tools for active plate rows/);
+      assert.match(describe('assay_table'), /already-created complete scratch table ID/);
+      assert.match(describe('assay_table'), /never substitute local lookup data for current UI values/);
       assert.match(describe('literature_search'), /at most one delegation per turn/);
       assert.match(describe('literature_search'), /only the returned research_id until it completes/);
       assert.doesNotMatch(calls[0].prompt, /at most one `literature_search` call/);

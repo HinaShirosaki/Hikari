@@ -111,7 +111,7 @@ export async function checkLocalizedChemicals({ core, i18n, check }) {
     input('chemical-name', 'Discard this chemical draft'); byId('chemical-cancel-btn').click(); switchLocale();
     check(state.labInventory.chemicals.find(item => item.id === id).name === 'I18N chemical <&>' && byId('chemical-dialog-title').textContent === 'Añadir sustancia química', 'Translated cancel discards changes and resets the title binding');
     const search = input('chemical-search', 'NO_MATCH_I18N_CHEMICAL');
-    check(byId('chemical-list').textContent.includes('Ninguna sustancia química coincide') && byId('chemical-results-summary').textContent.includes('Mostrando 0'), 'Chemical search and count empty states translate');
+    check(byId('chemical-list').textContent.includes('Ninguna sustancia química coincide'), 'Chemical search empty state translates');
     input('chemical-search', '7732-18-5'); select('chemical-filter-location', rack); select('chemical-sort', 'name_desc');
     search.focus(); search.setSelectionRange(1, 4); const row = byId('chemical-list').querySelector('[data-chemical-open="' + id + '"]'); switchLocale();
     check(row.isConnected && document.activeElement === search && search.value === '7732-18-5' && search.selectionStart === 1

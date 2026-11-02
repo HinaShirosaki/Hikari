@@ -1,11 +1,17 @@
 import { i18n } from './index.js';
 import { shellEnglish } from './shell-en.js';
 import { shellSpanish } from './shell-es.js';
+import { shellSimplifiedChinese } from './shell-zh-Hans.js';
+import { shellTraditionalChinese } from './shell-zh-Hant.js';
+import { shellJapanese } from './shell-ja.js';
 import { setTranslatedText, setTranslatedAttribute } from './dom.js';
 import { showTransientNotice } from '../notify.js';
 
 i18n.registerMessages('en', 'shell', shellEnglish);
 i18n.registerMessages('es', 'shell', shellSpanish);
+i18n.registerMessages('zh-Hans', 'shell', shellSimplifiedChinese);
+i18n.registerMessages('zh-Hant', 'shell', shellTraditionalChinese);
+i18n.registerMessages('ja', 'shell', shellJapanese);
 export const shellText = i18n.scope('shell');
 export const setShellText = (element, key, params) => setTranslatedText(element, `shell.${key}`, params);
 export const setShellAttribute = (element, attribute, key, params) => setTranslatedAttribute(element, attribute, `shell.${key}`, params);

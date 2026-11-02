@@ -7,7 +7,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePythonSandbox
     path,
     test,
     agentToolSmokeTest,
-    agentObservability,
     agentPython
   } = scope;
     test('agent tool smoke-test runtime supports single-tool manual messages with inspectable raw output', async () => {
@@ -29,70 +28,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePythonSandbox
       assert.equal(typeof result.items[0].raw_result, 'object');
       assert.match(JSON.stringify(result.items[0].raw_result || {}), /manual tool test/i);
       assert.match(String(result.summary || ''), /python-sandbox/i);
-    });
-    test('agent observability replays lifecycle and llm traces in order', async () => {
-      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'agent-observability-'));
-      const logPath = path.join(tempDir, 'agent-chat.log');
-      try {
-        await agentObservability.appendLogWithRotation({
-          logPath,
-          entry: JSON.stringify({
-            type: 'agent-chat-request',
-            requestId: 'req-1',
-            timestamp: '2026-03-21T10:00:00.000Z',
-            message: 'Do we have PEI?'
-          })
-        });
-        await agentObservability.appendLogWithRotation({
-          logPath,
-          entry: JSON.stringify({
-            type: 'agent-lifecycle',
-            requestId: 'req-1',
-            stage: 'controller_codex_agent',
-            status: 'ok',
-            timestamp: '2026-03-21T10:00:01.000Z'
-          })
-        });
-        await agentObservability.appendLogWithRotation({
-          logPath,
-          entry: JSON.stringify({
-            type: 'agent-llm-trace',
-            requestId: 'req-1',
-            stage: 'codex_cli',
-            provider: 'codex',
-            model: 'gpt-5.4',
-            summary: 'Codex request completed.',
-            timestamp: '2026-03-21T10:00:02.000Z',
-            request_payload: { prompt: '...' },
-            response_payload: { primary_intent: 'inventory_lookup' }
-          })
-        });
-        await agentObservability.appendLogWithRotation({
-          logPath,
-          entry: JSON.stringify({
-            type: 'agent-chat-result',
-            requestId: 'req-1',
-            ok: true,
-            parser: { primary_intent: 'inventory_lookup' },
-            timestamp: '2026-03-21T10:00:03.000Z'
-          })
-        });
-
-        const replay = await agentObservability.replayRequestLifecycle({
-          requestId: 'req-1',
-          logPath
-        });
-        assert.equal(replay.ok, true);
-        assert.equal(Array.isArray(replay.events), true);
-        assert.equal(Array.isArray(replay.traces), true);
-        assert.equal(replay.events.length, 1);
-        assert.equal(replay.traces.length, 1);
-        assert.equal(replay.traces[0].stage, 'codex_cli');
-        assert.equal(Array.isArray(replay.summary.trace_stages), true);
-        assert.equal(replay.summary.trace_stages.includes('codex_cli'), true);
-      } finally {
-        await fsPromises.rm(tempDir, { recursive: true, force: true });
-      }
     });
     test('python sandbox executes deterministic readback payload and emits lifecycle callbacks', async () => {
       const lifecycle = {

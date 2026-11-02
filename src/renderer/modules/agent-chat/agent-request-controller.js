@@ -115,6 +115,7 @@ export function createAgentRequestController(deps) {
     return {
       htmlArtifacts: request?.liveAssistantMessage?.meta?.html_artifacts || [],
       imageArtifacts: request?.liveAssistantMessage?.meta?.image_artifacts || [],
+      plotlyArtifacts: request?.liveAssistantMessage?.meta?.plotly_graph_artifacts || [],
       sequenceActions: request?.liveAssistantMessage?.meta?.sequence_actions || [],
       thinking: cloneLiveThinkingRows(progress.thinking_rows),
       activity: cloneLiveActivityRows(progress.activity_rows),
@@ -125,10 +126,12 @@ export function createAgentRequestController(deps) {
   function appendStoppedAssistantMessage(request, requestText, message = 'Agent request stopped.') {
     const htmlArtifacts = request?.liveAssistantMessage?.meta?.html_artifacts || [];
     const imageArtifacts = request?.liveAssistantMessage?.meta?.image_artifacts || [];
+    const plotlyArtifacts = request?.liveAssistantMessage?.meta?.plotly_graph_artifacts || [];
     clearLiveAssistantState(request);
     const stoppedMessage = buildStoppedAssistantMessage(requestText, message, createId);
     stoppedMessage.meta.html_artifacts = htmlArtifacts;
     stoppedMessage.meta.image_artifacts = imageArtifacts;
+    stoppedMessage.meta.plotly_graph_artifacts = plotlyArtifacts;
     return persistAssistantMessage(request, stoppedMessage);
   }
   function persistAssistantMessage(request, message) {
@@ -147,6 +150,7 @@ export function createAgentRequestController(deps) {
     persist();
     sessionManager.renderSessionList();
     renderHistoryView({ forceScroll: true });
+    deps.onAssistantMessagePersisted?.();
     return true;
   }
 
@@ -169,7 +173,7 @@ export function createAgentRequestController(deps) {
     ensureAgentState();
     const scopeContext = state.agentChatContext ? { ...state.agentChatContext } : null;
     const scopeKey = normalizeScopeKey(scopeContext || {});
-    const originState = scopeContext?.scopeType === 'plugin' && state.__agentChatRootState
+    const originState = scopeContext?.scopeType && state.__agentChatRootState
       ? createScopedAgentChatState(state.__agentChatRootState, { getScopeContext: () => scopeContext }) : null;
     const agentFlags = payloadBuilder.buildAgentFlagsPayload({ hiddenContexts });
     runtime.stopRequested = false;

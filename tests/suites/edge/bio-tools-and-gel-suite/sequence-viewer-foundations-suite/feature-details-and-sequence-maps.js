@@ -55,8 +55,8 @@ test('[EDGE] sequence-viewer feature detail formatter calculates CDS protein pro
 
   assert.match(stripI18nMarkup(html), /<strong>Protein:<\/strong>/);
   assert.match(stripI18nMarkup(html), /1 aa/);
-  assert.match(stripI18nMarkup(html), /Monoisotopic MW 149\.05 Da/);
-  assert.match(stripI18nMarkup(html), /pI \d+\.\d{2}/);
+  assert.match(stripI18nMarkup(html).replace(/<[^>]*>/g, ''), /Monoisotopic MW 149\.05 Da/);
+  assert.match(stripI18nMarkup(html).replace(/<[^>]*>/g, ''), /pI \d+\.\d{2}/);
   assert.match(stripI18nMarkup(html), /from translation/);
 });
 test('[EDGE] sequence-viewer feature detail formatter derives CDS protein properties from DNA when translation is absent', () => {
@@ -71,7 +71,7 @@ test('[EDGE] sequence-viewer feature detail formatter derives CDS protein proper
 
   assert.match(stripI18nMarkup(html), /<strong>Protein:<\/strong>/);
   assert.match(stripI18nMarkup(html), /2 aa/);
-  assert.match(stripI18nMarkup(html), /Monoisotopic MW 277\.15 Da/);
+  assert.match(stripI18nMarkup(html).replace(/<[^>]*>/g, ''), /Monoisotopic MW 277\.15 Da/);
   assert.match(stripI18nMarkup(html), /derived from CDS DNA/);
 });
 test('[EDGE] sequence-viewer feature detail formatter exposes an expandable CDS protein detail block', () => {

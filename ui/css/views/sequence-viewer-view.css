@@ -2,7 +2,11 @@
  * Keep these imports in their original source order: several later rules
  * intentionally refine the same selectors declared by earlier sections. */
 @import url("./sequence-viewer-view/shell-and-builders.css");
+@import url("./sequence-viewer-view/primer-annealing.css");
 @import url("./sequence-viewer-view/detail-sequence.css");
 @import url("./sequence-viewer-view/dialogs-and-themes.css");
 @import url("./sequence-viewer-view/vector-builder.css");
 @import url("./sequence-viewer-view/primer-library.css");
+@import url("./sequence-viewer-view/sample-position.css");
+@import url("./sequence-viewer-view/fragments.css");
+@import url("./sequence-viewer-view/digestion.css");

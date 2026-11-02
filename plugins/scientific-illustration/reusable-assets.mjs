@@ -63,6 +63,7 @@ export function assetContent(asset) {
   if (asset.objects.length === 1 && asset.objects[0].type === 'raster') {
     const object = asset.objects[0];
     return { raster: object.dataUrl, rotation: object.rotation, opacity: object.opacity, visible: object.visible,
+      ...(object.chemicalStructure ? { chemicalStructure: true, textFree: object.textFree } : {}),
       aspectRatio: Math.round(object.width / object.height * 1e6) / 1e6 };
   }
   return asset.objects.map(({ id, name, canvas, ...object }) => {

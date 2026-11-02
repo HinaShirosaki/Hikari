@@ -188,9 +188,8 @@ export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
     // Everything below is sized in plot-area terms, and the margins are added back on
     // top at the end. Plotly's width/height are the whole figure, so sizing the figure
     // instead would let a pushed-out axis title eat the plot rather than grow the frame.
-    // The plot area follows the data: room per bar (or per point), and a height tied to
-    // that width. A flat 420x280 floor left the axis running well past the last bar on a
-    // two-group summary, and a flat 280 height turned a 24-category plot into a letterbox.
+    // Choose a frame from the data and style, independent of workspace changes.
+    // Compact previews may still constrain the frame to their available width.
     const yTickFont = figureTextFont(st, 'yTicks');
     const xTitleFont = figureTextFont(st, 'xTitle');
     const yTitleFont = figureTextFont(st, 'yTitle');
@@ -219,9 +218,9 @@ export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
     // Grouped bars share a category slot, so the slot grows with the series count -- but
     // only up to a point, past which the bars thin out instead of the plot getting wider.
     const slotWidth = isBar ? 34 + 30 * Math.min(chartModel.series.length, 4) : 44;
-    // Never wider than the fixed canvas it sits in: many categories thin the bars out
-    // rather than pushing the figure into a scrollbar.
-    const available = Math.floor((target.clientWidth || target.parentElement?.clientWidth || 0) - HOST_PADDING);
+    const inWorkspace = Boolean(target.closest?.('#assay-analyze-workspace'));
+    const available = inWorkspace ? 0
+      : Math.floor((target.clientWidth || target.parentElement?.clientWidth || 0) - HOST_PADDING);
     const widthCap = available > MIN_PLOT_WIDTH + marginLeft + marginRight
       ? Math.min(MAX_PLOT_WIDTH, available - marginLeft - marginRight)
       : available > 0 ? Math.max(MIN_PLOT_WIDTH, available - marginLeft - marginRight) : MAX_PLOT_WIDTH;
@@ -234,7 +233,6 @@ export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
     const exactSize = customPlotWidth !== null || customPlotHeight !== null;
     const plotAreaWidth = customPlotWidth ?? autoWidth;
     const autoHeight = clampNumber(Math.round(plotAreaWidth * 0.62), MIN_PLOT_HEIGHT, MAX_PLOT_HEIGHT);
-    const plotAreaHeight = customPlotHeight ?? autoHeight;
 
     const xStyle = resolveAxisStyle(st, 'x');
     const yStyle = resolveAxisStyle(st, 'y');
@@ -264,6 +262,9 @@ export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
     const angle = Math.abs(categoryTickAngle) * Math.PI / 180;
     const tickHeight = Math.sin(angle) * labelWidth + Math.cos(angle) * tickFont.size;
     const xShift = st.xTitleOffset ?? Math.max(34, tickHeight + xTitleFont.size / 2 + 12);
+    const marginBottom = Math.max(categoryTickAngle ? 96 : 56, xShift + xTitleFont.size + 12)
+      + (showLegend && st.legendPosition === 'bottom' ? legendFont.size * 2 + 38 : 0);
+    const plotAreaHeight = customPlotHeight ?? autoHeight;
 
     // An explicit axis title wins; otherwise the analysis names its own axes. Both are
     // drawn as annotations (see axisTitleAnnotation), so the axes themselves stay untitled.
@@ -315,14 +316,14 @@ export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
       r: marginRight,
       t: marginTop,
       // Only known once the tick angle is: tilted category labels need the deeper gutter.
-      b: Math.max(categoryTickAngle ? 96 : 56, xShift + xTitleFont.size + 12)
-        + (showlegend && st.legendPosition === 'bottom' ? legendFont.size * 2 + 38 : 0)
+      b: marginBottom
     };
     // The figure carries the margins on top of the plot, so pushing a title further out
     // grows the frame instead of squeezing the plot.
     const width = plotAreaWidth + margin.l + margin.r;
     const height = plotAreaHeight + margin.t + margin.b;
     const layout = {
+      autosize: false,
       width,
       height,
       margin,

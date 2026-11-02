@@ -70,6 +70,8 @@ function createChartSurface({
     if (!assayChartFormatPanel) {
       return;
     }
+    const EventCtor = assayChartFormatPanel.ownerDocument?.defaultView?.CustomEvent;
+    if (EventCtor) assayChartFormatPanel.dispatchEvent(new EventCtor('assay:open-chart-format'));
     assayChartFormatPanel.open = true;
     chartControls?.refresh();
     assayChartFormatPanel.scrollIntoView({ block: 'nearest' });
@@ -218,8 +220,6 @@ function createChartSurface({
     // agent stated itself (colours, gridlines, its own frame) still wins.
     const themed = applyFigureDefaults(normalized.figure, getChartStyle());
     const layout = {
-      autosize: true,
-      height: Number(themed.layout?.height) || 360,
       margin: {
         l: 56,
         r: 24,
@@ -230,7 +230,6 @@ function createChartSurface({
       ...ensureObject(themed.layout)
     };
     const config = {
-      responsive: true,
       displayModeBar: true,
       ...ensureObject(themed.config),
       edits: { ...ensureObject(themed.config?.edits), annotationPosition: true, annotationText: true }
@@ -296,6 +295,13 @@ function createChartSurface({
     unmountAnalysisChart,
     hasFittedCurve,
     renderAnalysisChart,
+    redrawChart(model) {
+      if (!agentPlotlyTarget) {
+        if (model) renderAnalysisChart(model);
+        return;
+      }
+      // Agent figures retain their stored dimensions when the viewport changes.
+    },
     exportChartImage,
     getChartStyle,
     loadChartStyle,

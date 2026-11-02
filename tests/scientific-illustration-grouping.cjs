@@ -26,7 +26,8 @@ async function verifyGrouping({ tool, evaluate, check, win, pause, temp }) {
   const initial = await read(), beforeImage = await tool({ action: 'render', canvas: 'main' });
   const selection = () => evaluate('[...document.querySelectorAll("#layers .layer-select[aria-pressed=true]")].map(b=>b.closest("[data-layer-id]").dataset.layerId)');
   const clickToolbar = async id => {
-    const target = await evaluate(`(()=>{const r=document.getElementById(${JSON.stringify(id)}).getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()`);
+    const action = id === 'group-selection' ? 'group' : 'ungroup';
+    const target = await evaluate(`(()=>{const r=document.querySelector('#selection-toolbar [data-selection-action="${action}"]').getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()`);
     win.webContents.debugger.attach('1.3');
     try {
       for (const type of ['mousePressed', 'mouseReleased']) await win.webContents.debugger.sendCommand('Input.dispatchMouseEvent', { type, ...target, button: 'left', buttons: type === 'mousePressed' ? 1 : 0, clickCount: 1 });
@@ -38,7 +39,7 @@ async function verifyGrouping({ tool, evaluate, check, win, pause, temp }) {
   check(await evaluate('document.getElementById("group-selection").disabled && document.getElementById("ungroup-selection").disabled'), 'An independent single layer cannot be grouped or ungrouped');
   await evaluate('document.querySelector("[data-layer-id=group-a] .layer-select").click();document.querySelector("[data-layer-id=group-b] .layer-select").dispatchEvent(new MouseEvent("click",{bubbles:true,shiftKey:true}));document.querySelector("[data-layer-id=group-text] .layer-select").dispatchEvent(new MouseEvent("click",{bubbles:true,shiftKey:true}));document.querySelector("[data-layer-id=group-image] .layer-select").dispatchEvent(new MouseEvent("click",{bubbles:true,shiftKey:true}))');
   check((await selection()).length === 4, 'Shift-click selects four independent layer types');
-  check(await evaluate('!document.getElementById("group-selection").disabled && document.querySelectorAll("#main-canvas .resize-handle").length===8'), 'Multi-selection has group controls and eight shared handles');
+  check(await evaluate('!document.getElementById("selection-toolbar").hidden && !document.querySelector("#main-canvas .selection") && document.querySelectorAll("#main-canvas .selection-member").length===4'), 'Multi-selection has a floating toolbar and individual outlines without a shared frame');
   await evaluate('document.getElementById("close-layers").click()');
   await clickToolbar('group-selection');
   let grouped = await read(), group = grouped.groups[0];
@@ -59,7 +60,6 @@ async function verifyGrouping({ tool, evaluate, check, win, pause, temp }) {
   check(group.name === 'ER component' && await evaluate(`Boolean(document.querySelector('[data-layer-id="${group.id}"] .layer-select'))`), 'Named group is shown above its independently selectable child rows');
   await evaluate('document.getElementById("close-layers").click();document.getElementById("zoom-fit").click();document.getElementById("zoom-in").click();document.getElementById("zoom-in").click()');
   const center = id => evaluate(`(()=>{const g=document.querySelector('#main-canvas [data-object-id="${id}"]'),r=g.querySelector('.object-hit'),m=g.getScreenCTM(),p=new DOMPoint(Number(r.getAttribute('width'))/2,Number(r.getAttribute('height'))/2).matrixTransform(m);return {x:p.x,y:p.y}})()`);
-  const handle = direction => evaluate(`(()=>{const h=document.querySelector('#main-canvas [data-resize-direction=${direction}]'),r=h.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()`);
   const zoom = await evaluate('(()=>{const m=document.querySelector("#main-canvas > svg").getScreenCTM();return Math.hypot(m.a,m.b)})()');
   win.webContents.debugger.attach('1.3');
   const mouse = async (type, p, modifiers = 0) => {
@@ -75,10 +75,9 @@ async function verifyGrouping({ tool, evaluate, check, win, pause, temp }) {
     await mouse('mousePressed', p); await mouse('mouseMoved', { x: p.x + 30, y: p.y + 18 }); await mouse('mouseReleased', { x: p.x + 30, y: p.y + 18 }); await pause(80);
     const moved = await read();
     check(moved.objects.every((o, i) => Math.abs(o.x - beforeMove.objects[i].x - 30 / zoom) < 0.01 && Math.abs(o.y - beforeMove.objects[i].y - 18 / zoom) < 0.01), 'Dragging a group at zoom translates each member exactly once in canvas units');
-    const anchor = await handle('nw'), start = await handle('se');
-    await mouse('mousePressed', start); await mouse('mouseMoved', { x: start.x + 36, y: start.y + 25 }); await mouse('mouseReleased', { x: start.x + 36, y: start.y + 25 }); await pause(80);
-    const resized = await read(), fixed = await handle('nw'), ratio = resized.objects[0].width / moved.objects[0].width;
-    check(Math.hypot(anchor.x - fixed.x, anchor.y - fixed.y) < 0.1, 'Group resize fixes its opposite anchor despite rotated children');
+    await apply([{ op: 'transform', id: group.id, patch: { width: moved.groups[0].bounds.width * 1.1 } }]);
+    const resized = await read(), ratio = resized.objects[0].width / moved.objects[0].width;
+    check(await evaluate('!document.querySelector("#main-canvas .selection,.selection-move") && !document.getElementById("selection-toolbar").hidden'), 'Grouped selection retains its floating actions without a shared frame after an agent resize');
     check(resized.objects.every((o, i) => Math.abs(o.width / moved.objects[i].width - ratio) < 1e-8 && Math.abs(o.height / moved.objects[i].height - ratio) < 1e-8 && o.rotation === moved.objects[i].rotation)
       && Math.abs(resized.objects.find(o => o.id === 'group-text').fontSize / 24 - ratio) < 1e-8, 'Mixed group resize preserves every member ratio, rotation and text typography');
     await fs.writeFile(path.join(temp, 'grouping-selection.png'), (await win.webContents.capturePage()).toPNG());

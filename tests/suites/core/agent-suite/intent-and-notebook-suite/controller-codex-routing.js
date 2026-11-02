@@ -120,7 +120,6 @@ module.exports = function registerAgentIntentAndNotebookSuiteControllerCodexRout
         executeNotebookLookup: async () => {
           throw new Error('Notebook lookup should not run before Codex agent runtime.');
         },
-        getAgentChatLogPath: () => '',
         getDefaultDataFilePath: () => '/tmp/hikari-data.json',
         setCodexCliModel: (model) => {
           setModelValue = model;
@@ -262,7 +261,6 @@ module.exports = function registerAgentIntentAndNotebookSuiteControllerCodexRout
             skills_catalog_prompt: ''
           })
         },
-        getAgentChatLogPath: () => '',
         getDefaultDataFilePath: () => '',
         setCodexCliModel: () => {},
         setCodexCliReasoningEffort: () => {},

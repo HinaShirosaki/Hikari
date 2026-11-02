@@ -1,5 +1,5 @@
 {
-  "sourceVersion": "1.1.0-beta.9",
+  "sourceVersion": "1.1.0-beta.11",
   "exampleDate": "2026-10-25",
   "timezone": "America/Chicago",
   "viewport": [
@@ -25,7 +25,7 @@
             "x": 16,
             "y": 293,
             "width": 236,
-            "height": 112
+            "height": 116
           }
         },
         {
@@ -172,8 +172,8 @@
       "crop": {
         "x": 478,
         "y": 179,
-        "width": 183,
-        "height": 229
+        "width": 232,
+        "height": 265
       },
       "targets": [
         {
@@ -181,8 +181,8 @@
           "label": "Add Feature",
           "rect": {
             "x": 503,
-            "y": 238,
-            "width": 133,
+            "y": 274,
+            "width": 182,
             "height": 36
           }
         },
@@ -191,8 +191,8 @@
           "label": "Design Primer",
           "rect": {
             "x": 503,
-            "y": 274,
-            "width": 133,
+            "y": 310,
+            "width": 182,
             "height": 36
           }
         }
@@ -286,7 +286,7 @@
       "name": "08-orf-options",
       "title": "Choose ORF display options",
       "crop": {
-        "x": 847,
+        "x": 729,
         "y": 112,
         "width": 246,
         "height": 443
@@ -296,7 +296,7 @@
           "selector": "#sequence-viewer-orf-menu",
           "label": "Choose display, stops, and frames",
           "rect": {
-            "x": 865,
+            "x": 747,
             "y": 130,
             "width": 210,
             "height": 407
@@ -308,7 +308,7 @@
       "name": "09-restriction-cutters",
       "title": "Show restriction cutters",
       "crop": {
-        "x": 935,
+        "x": 817,
         "y": 112,
         "width": 246,
         "height": 118
@@ -318,7 +318,7 @@
           "selector": "#sequence-viewer-restriction-neb-toggle",
           "label": "NEB sites",
           "rect": {
-            "x": 972,
+            "x": 854,
             "y": 145,
             "width": 18,
             "height": 18
@@ -328,7 +328,7 @@
           "selector": "#sequence-viewer-restriction-thermo-toggle",
           "label": "Thermo sites",
           "rect": {
-            "x": 972,
+            "x": 854,
             "y": 178,
             "width": 18,
             "height": 18
@@ -411,7 +411,7 @@
       ]
     },
     {
-      "name": "16-cloning-design",
+      "name": "19-cloning-design",
       "title": "Choose a cloning route and design primers",
       "crop": {
         "x": 0,
@@ -499,9 +499,9 @@
       "title": "Open actions for a map selection",
       "crop": {
         "x": 537,
-        "y": 617,
+        "y": 592,
         "width": 312,
-        "height": 382
+        "height": 408
       },
       "targets": [
         {
@@ -509,7 +509,7 @@
           "label": "Replace from stored features",
           "rect": {
             "x": 562,
-            "y": 784,
+            "y": 795,
             "width": 262,
             "height": 36
           }
@@ -519,7 +519,7 @@
           "label": "Delete selected bases",
           "rect": {
             "x": 562,
-            "y": 820,
+            "y": 831,
             "width": 262,
             "height": 36
           }
@@ -529,7 +529,7 @@
           "label": "Build a replacement protein",
           "rect": {
             "x": 562,
-            "y": 937,
+            "y": 948,
             "width": 262,
             "height": 36
           }
@@ -537,7 +537,133 @@
       ]
     },
     {
-      "name": "14-add-protein",
+      "name": "14-save-fragment",
+      "title": "Save a feature as a DNA fragment",
+      "crop": {
+        "x": 502,
+        "y": 362,
+        "width": 596,
+        "height": 333
+      },
+      "targets": [
+        {
+          "selector": "[data-fragment-parent]",
+          "label": "Template and range",
+          "rect": {
+            "x": 539,
+            "y": 455,
+            "width": 522,
+            "height": 19
+          }
+        },
+        {
+          "selector": "[data-fragment-name]",
+          "label": "Name the fragment",
+          "rect": {
+            "x": 539,
+            "y": 515,
+            "width": 522,
+            "height": 39
+          }
+        },
+        {
+          "selector": "[data-fragment-preview]",
+          "label": "Check the length",
+          "rect": {
+            "x": 539,
+            "y": 570,
+            "width": 522,
+            "height": 19
+          }
+        },
+        {
+          "selector": "[data-fragment-save]",
+          "label": "Save fragment",
+          "rect": {
+            "x": 945,
+            "y": 621,
+            "width": 116,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "15-pcr-partner",
+      "title": "Pick the PCR partner primer",
+      "crop": {
+        "x": 1038,
+        "y": 548,
+        "width": 562,
+        "height": 452
+      },
+      "targets": [
+        {
+          "selector": ".sequence-viewer-pcr-picker",
+          "label": "Read the PCR prompt",
+          "rect": {
+            "x": 1056,
+            "y": 912,
+            "width": 526,
+            "height": 70
+          }
+        },
+        {
+          "selector": "[data-tutorial-target=\"pcr-partner\"]",
+          "label": "Click a highlighted partner",
+          "rect": {
+            "x": 1350,
+            "y": 566,
+            "width": 187,
+            "height": 16
+          }
+        }
+      ]
+    },
+    {
+      "name": "16-digest",
+      "title": "Review a double digestion",
+      "crop": {
+        "x": 462,
+        "y": 116,
+        "width": 676,
+        "height": 825
+      },
+      "targets": [
+        {
+          "selector": "[data-digest-sites]",
+          "label": "Check the cut sites",
+          "rect": {
+            "x": 499,
+            "y": 244,
+            "width": 598,
+            "height": 137
+          }
+        },
+        {
+          "selector": "[data-digest-products]",
+          "label": "Choose and name fragments",
+          "rect": {
+            "x": 499,
+            "y": 442,
+            "width": 598,
+            "height": 377
+          }
+        },
+        {
+          "selector": "[data-digest-save]",
+          "label": "Confirm digestion and save",
+          "rect": {
+            "x": 906,
+            "y": 859,
+            "width": 195,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "17-add-protein",
       "title": "Add a protein block",
       "crop": {
         "x": 322,
@@ -579,7 +705,7 @@
       ]
     },
     {
-      "name": "15-protein-builder",
+      "name": "18-protein-builder",
       "title": "Arrange a protein construct",
       "crop": {
         "x": 0,
@@ -621,8 +747,8 @@
       ]
     },
     {
-      "name": "17-primer-library",
-      "title": "Select primers in Primer Library",
+      "name": "20-primer-design",
+      "title": "Design primers for a selected range",
       "crop": {
         "x": 322,
         "y": 329,
@@ -631,12 +757,44 @@
       },
       "targets": [
         {
+          "selector": "#sequence-viewer-primer-design-result",
+          "label": "Review the designed primers",
+          "rect": {
+            "x": 359,
+            "y": 457,
+            "width": 882,
+            "height": 182
+          }
+        },
+        {
+          "selector": "#sequence-viewer-primer-design-save",
+          "label": "Save to Primer Library",
+          "rect": {
+            "x": 359,
+            "y": 654,
+            "width": 163,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "21-primer-library",
+      "title": "Select primers in Primer Library",
+      "crop": {
+        "x": 322,
+        "y": 264,
+        "width": 956,
+        "height": 530
+      },
+      "targets": [
+        {
           "selector": "#sequence-viewer-primer-library-search",
           "label": "Search primers",
           "rect": {
             "x": 359,
-            "y": 422,
-            "width": 737,
+            "y": 357,
+            "width": 736,
             "height": 39
           }
         },
@@ -645,9 +803,9 @@
           "label": "Check names and sequences",
           "rect": {
             "x": 360,
-            "y": 520,
+            "y": 455,
             "width": 880,
-            "height": 118
+            "height": 248
           }
         },
         {
@@ -655,7 +813,7 @@
           "label": "Export Selected to IDT",
           "rect": {
             "x": 1077,
-            "y": 655,
+            "y": 719,
             "width": 164,
             "height": 37
           }
@@ -663,13 +821,13 @@
       ]
     },
     {
-      "name": "18-primer-order",
+      "name": "22-primer-order",
       "title": "Copy an order block",
       "crop": {
         "x": 322,
-        "y": 294,
+        "y": 285,
         "width": 956,
-        "height": 469
+        "height": 488
       },
       "targets": [
         {
@@ -677,7 +835,7 @@
           "label": "Choose order options",
           "rect": {
             "x": 359,
-            "y": 387,
+            "y": 378,
             "width": 882,
             "height": 61
           }
@@ -687,7 +845,7 @@
           "label": "Review the order block",
           "rect": {
             "x": 359,
-            "y": 502,
+            "y": 512,
             "width": 882,
             "height": 171
           }
@@ -697,7 +855,7 @@
           "label": "Copy IDT Block",
           "rect": {
             "x": 359,
-            "y": 689,
+            "y": 698,
             "width": 121,
             "height": 37
           }
@@ -705,22 +863,84 @@
       ]
     },
     {
-      "name": "19-library-actions",
+      "name": "23-sample-position",
+      "title": "Record where the DNA is stored",
+      "crop": {
+        "x": 332,
+        "y": 241,
+        "width": 936,
+        "height": 576
+      },
+      "targets": [
+        {
+          "selector": ".biology-notebook-quick-sample-location.is-selected",
+          "label": "Storage location",
+          "rect": {
+            "x": 380,
+            "y": 456,
+            "width": 164,
+            "height": 44
+          }
+        },
+        {
+          "selector": "#sequence-viewer-quick-sample-container",
+          "label": "Container",
+          "rect": {
+            "x": 380,
+            "y": 688,
+            "width": 166,
+            "height": 32
+          }
+        },
+        {
+          "selector": ".biology-notebook-quick-sample-well.is-selected",
+          "label": "Position",
+          "rect": {
+            "x": 580,
+            "y": 360,
+            "width": 71,
+            "height": 70
+          }
+        },
+        {
+          "selector": "#sequence-viewer-quick-sample-name",
+          "label": "Sample name",
+          "rect": {
+            "x": 983,
+            "y": 358,
+            "width": 235,
+            "height": 34
+          }
+        },
+        {
+          "selector": "#sequence-viewer-quick-sample-submit-btn",
+          "label": "Add the sample",
+          "rect": {
+            "x": 1197,
+            "y": 744,
+            "width": 34,
+            "height": 34
+          }
+        }
+      ]
+    },
+    {
+      "name": "24-library-actions",
       "title": "Organize the sequence library",
       "crop": {
-        "x": 38,
-        "y": 385,
-        "width": 246,
-        "height": 158
+        "x": 92,
+        "y": 387,
+        "width": 277,
+        "height": 194
       },
       "targets": [
         {
           "selector": "#sequence-viewer-library-context-menu [data-sequence-library-action=new-folder]",
           "label": "New Folder",
           "rect": {
-            "x": 63,
-            "y": 410,
-            "width": 196,
+            "x": 117,
+            "y": 412,
+            "width": 227,
             "height": 36
           }
         },
@@ -728,9 +948,9 @@
           "selector": "#sequence-viewer-library-context-menu [data-sequence-library-action=rename]",
           "label": "Rename",
           "rect": {
-            "x": 63,
-            "y": 446,
-            "width": 196,
+            "x": 117,
+            "y": 448,
+            "width": 227,
             "height": 36
           }
         },
@@ -738,21 +958,21 @@
           "selector": "#sequence-viewer-library-context-menu [data-sequence-library-action=move-entry]",
           "label": "Move to Folder",
           "rect": {
-            "x": 63,
-            "y": 482,
-            "width": 196,
+            "x": 117,
+            "y": 484,
+            "width": 227,
             "height": 36
           }
         }
       ]
     },
     {
-      "name": "20-rename-sequence",
+      "name": "25-rename-sequence",
       "title": "Rename a sequence",
       "crop": {
-        "x": 23,
-        "y": 351,
-        "width": 247,
+        "x": 52,
+        "y": 357,
+        "width": 187,
         "height": 64
       },
       "targets": [
@@ -760,9 +980,9 @@
           "selector": "#sequence-viewer-library-list input",
           "label": "Edit the name, then Enter",
           "rect": {
-            "x": 41,
-            "y": 369,
-            "width": 211,
+            "x": 70,
+            "y": 375,
+            "width": 151,
             "height": 28
           }
         }
@@ -774,9 +994,16 @@
     "New Sequence dialog is visible from the detail viewer as well as the home library",
     "Adding a feature updates the active saved record",
     "Applying an insertion adds the expected three bases",
+    "Save DNA Fragment on a feature saves its span as a child entry under the template",
+    "PCR highlights the opposite-strand primer as a compatible partner",
+    "A PCR product between Teaching F and Teaching R saves as a child entry",
+    "Double digestion of the circular vector at NdeI and BamHI offers two fragments",
+    "Confirm digestion saves both fragments under the template",
     "A manual protein and a common tag form an assembled chain",
     "Saving two annotated primers from their hover cards populates Primer Library",
+    "Save to Primer Library keeps the designed primers",
     "Copy IDT Block copies the selected primer names and sequences",
+    "Record sample position adds a DNA sample at the chosen box position",
     "Inline Rename updates the selected library record"
   ]
 }

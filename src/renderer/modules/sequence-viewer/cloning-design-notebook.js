@@ -18,9 +18,10 @@ export function createSequenceViewerCloningDesignNotebookPage({
   entryId: requestedEntryId = '',
   source = {},
   record = {},
-  displayPlan = {}
+  displayPlan = {},
+  allowReviewDraft = false
 } = {}) {
-  if (!state || typeof state !== 'object' || !displayPlan?.feasible || !asArray(displayPlan?.primers).length) {
+  if (!state || typeof state !== 'object' || (!displayPlan?.feasible && !allowReviewDraft) || !asArray(displayPlan?.primers).length) {
     return null;
   }
   const nowIso = new Date().toISOString();
@@ -91,6 +92,7 @@ export function createSequenceViewerCloningDesignNotebookPage({
       templateLength: Math.max(0, Number(displayPlan?.summary?.templateLength) || 0),
       resultLength: Math.max(0, Number(displayPlan?.summary?.resultLength) || 0),
       primerCount: asArray(displayPlan?.primers).length,
+      needsReview: !displayPlan.feasible,
       pcrPrograms
     }
   };

@@ -33,9 +33,13 @@ export async function loadPluginIcons({ plugins, appRegistry, api, documentObjec
     .map(async plugin => {
       const app = appRegistry.find(entry => entry.id === `plugin-${plugin.id}`);
       const inspected = await api.inspectPluginFolder(plugin.path);
+      // A newer manifest capability or a temporary inspection failure must not
+      // erase the verified icon already used by this installed plugin.
+      if (!inspected?.ok) return;
       const matches = inspected?.ok && inspected.id === plugin.id;
       if (app) app.iconMarkup = pluginIconMarkup(matches ? inspected.iconDataUrl : '');
       if (!matches || typeof inspected.name !== 'string' || !inspected.name.trim()) return;
+      plugin.iconDataUrl = inspected.iconDataUrl || '';
       plugin.name = inspected.name;
       if (app) app.label = inspected.name;
       const section = documentObject?.getElementById?.(app?.viewId

@@ -74,6 +74,7 @@ function formatNotebookResult({ source = {}, record = {}, displayPlan = {}, pcrP
   const warnings = asArray(displayPlan?.warnings).filter(Boolean);
   const lines = [
     'Sequence Viewer cloning design',
+    ...(!displayPlan.feasible ? ['Design status: Needs review — resolve the design warnings before using the PCR program.'] : []),
     '',
     `Sequence: ${cleanText(source?.recordName || record?.name, 160) || 'Edited sequence'}`,
     `Route: ${formatStrategy(displayPlan?.strategy)}`,

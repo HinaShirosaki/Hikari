@@ -2,7 +2,8 @@
 
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const { resolveMacSigningOptions } = require('../bin/mac-signing');
+const path = require('node:path');
+const { resolveMacSigningOptions, isDataFile } = require('../bin/mac-signing');
 
 const development = { hash: '1'.repeat(40), name: 'Apple Development: Local Developer (TESTTEAM01)' };
 const distribution = { hash: '2'.repeat(40), name: 'Developer ID Application: Local Developer (TESTTEAM01)' };
@@ -50,6 +51,15 @@ test('certificate-free builds remain possible and report their Keychain limitati
     assert.equal(options.optionsForFile().hardenedRuntime, false);
     assert.match(warning, /Rebuilt apps may ask for Keychain access again/);
   }
+});
+
+test('only Mach-O files and bundles get their own codesign pass', { skip: process.platform !== 'darwin' }, () => {
+  const options = resolveMacSigningOptions({ env: { HIKARI_MAC_SIGN_IDENTITY: '-' }, warn: () => {} });
+  assert.equal(options.ignore, isDataFile);
+  assert.equal(isDataFile(path.join(__dirname, '..', 'assets', 'icon.png')), true);
+  assert.equal(isDataFile(process.execPath), false, 'Mach-O executable');
+  assert.equal(isDataFile(__dirname), false, 'directories (.app, .framework) are signed');
+  assert.equal(isDataFile(path.join(__dirname, 'missing-file')), false, 'unreadable paths are signed, not skipped');
 });
 
 test('a Keychain inventory failure does not silently downgrade a build to ad hoc signing', () => {

@@ -82,6 +82,7 @@ function registerSequenceLibraryIpc(deps = {}) {
     storagePath: requireStoragePath(payload),
     id: cleanText(payload?.id, 200),
     name: cleanText(payload?.name, 140),
+    parentEntryId: payload?.parentEntryId === undefined ? undefined : cleanText(payload.parentEntryId, 200),
     status: cleanText(payload?.status, 40),
     sourceFormat: cleanText(payload?.sourceFormat, 80),
     topology: cleanText(payload?.topology, 40),

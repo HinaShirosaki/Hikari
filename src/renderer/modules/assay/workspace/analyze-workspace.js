@@ -3,6 +3,7 @@ import "../localization.js";
 const i18nUi = createPresentation("plate");
 import { setTranslatedText } from '../../../lib/i18n/dom.js';
 import { bindPlateMessage, setPlateAttribute, setPlateText } from '../localization.js';
+import { createAssayContextRail } from './context-rail.js';
 
 // Presentation state lives here, outside saved scientific data and chart models.
 export function createAnalyzeWorkspace({ elements, runtime, resultsManager, analysisView, getAssay, getDefinition }) {
@@ -10,16 +11,44 @@ export function createAnalyzeWorkspace({ elements, runtime, resultsManager, anal
   if (!root?.querySelector) return { refresh() {} };
   const find = (id) => root.querySelector(`#${id}`);
   const tabs = Array.from(root.querySelectorAll('[data-assay-data-tab]'));
+  const viewTabs = Array.from(root.ownerDocument.querySelectorAll('[data-assay-workspace-view]'));
+  const views = { chart: find('assay-workspace-chart'), data: find('assay-workspace-data') };
   const panels = {
     raw: find('assay-result-table-panel'),
     transformed: find('assay-transformed-data-panel'),
     summary: find('assay-summary-panel')
   };
   let activeTab = 'raw';
+  let activeView = 'chart';
   let lastAssayId = '';
+  let redrawFrame = 0;
+  const contextRail = createAssayContextRail({ elements, runtime, onViewChange: selectView, onLayoutChange: redraw });
+
+  function syncView() {
+    root.dataset.workspaceView = activeView;
+    Object.entries(views).forEach(([view, panel]) => { panel.hidden = view !== activeView; });
+    viewTabs.forEach(button => {
+      const selected = button.dataset.assayWorkspaceView === activeView;
+      button.setAttribute('aria-selected', String(selected));
+      button.tabIndex = selected ? 0 : -1;
+    });
+  }
+
+  function selectView(view, focus = false) {
+    activeView = view;
+    syncView();
+    if (focus) viewTabs.find(button => button.dataset.assayWorkspaceView === view)?.focus();
+    redraw();
+  }
 
   function redraw() {
-    requestAnimationFrame(() => {
+    cancelAnimationFrame(redrawFrame);
+    redrawFrame = requestAnimationFrame(() => {
+      if (root.closest('[hidden]')) return;
+      if (activeView === 'chart') {
+        analysisView.redrawChart();
+        return;
+      }
       if (!panels.raw.hidden) resultsManager.redrawResultGrid();
       if (!panels.transformed.hidden) analysisView.redrawTransformGrid();
     });
@@ -40,11 +69,14 @@ export function createAnalyzeWorkspace({ elements, runtime, resultsManager, anal
     if (elements.assayClearResultsBtn) elements.assayClearResultsBtn.disabled = !resultCount;
     if (lastAssayId !== (assay?.id || '') || options.tab) {
       activeTab = 'raw';
-      root.classList.remove('is-chart-focused');
-      find('assay-chart-focus-btn').setAttribute('aria-pressed', 'false');
       lastAssayId = assay?.id || '';
     }
-    if (options.tab) activeTab = options.tab;
+    if (options.tab) {
+      activeTab = options.tab;
+      activeView = 'data';
+    }
+    syncView();
+    contextRail.refresh();
     if (!info.transformActive && activeTab === 'transformed') activeTab = 'raw';
     // Table2 formulas point at Table1 cells, so the Transformed tab always shows its
     // source plate above it; point-mode clicks need both grids on screen.
@@ -108,23 +140,32 @@ export function createAnalyzeWorkspace({ elements, runtime, resultsManager, anal
       selectTab(visible[target].dataset.assayDataTab, true);
     });
   });
+  viewTabs.forEach(button => {
+    button.addEventListener('click', () => selectView(button.dataset.assayWorkspaceView));
+    button.addEventListener('keydown', event => {
+      const index = viewTabs.indexOf(button);
+      const target = event.key === 'Home' ? 0 : event.key === 'End' ? viewTabs.length - 1
+        : event.key === 'ArrowDown' ? (index + 1) % viewTabs.length
+          : event.key === 'ArrowUp' ? (index + viewTabs.length - 1) % viewTabs.length : -1;
+      if (target < 0) return;
+      event.preventDefault();
+      selectView(viewTabs[target].dataset.assayWorkspaceView, true);
+    });
+  });
   find('assay-show-empty-rows').addEventListener('change', (event) => {
     runtime.showEmptyResultRows = event.target.checked;
     resultsManager.refreshRowVisibility();
     analysisView.refreshRowVisibility();
     refresh();
   });
-  find('assay-data-order-btn').addEventListener('click', (event) => {
-    const enabled = root.classList.toggle('is-data-first');
-    event.currentTarget.setAttribute('aria-pressed', String(enabled));
-    setPlateText(event.currentTarget, enabled ? 'workspace.chartFirst' : 'workspace.dataFirst');
-  });
-  find('assay-chart-focus-btn').addEventListener('click', (event) => {
-    const focused = root.classList.toggle('is-chart-focused');
-    event.currentTarget.setAttribute('aria-pressed', String(focused));
-    requestAnimationFrame(() => analysisView.redrawChart());
-  });
   find('assay-workspace-format-btn').addEventListener('click', () => analysisView.openChartFormat());
+  root.ownerDocument.defaultView.addEventListener('resize', redraw);
+  // Observe the available canvas, which also changes when either rail resizes
+  // or the chart header wraps without a window resize.
+  const ResizeObserver = root.ownerDocument.defaultView.ResizeObserver;
+  if (ResizeObserver && elements.assayAnalysisTable) {
+    new ResizeObserver(() => { if (activeView === 'chart') redraw(); }).observe(elements.assayAnalysisTable);
+  }
   refresh();
   return { refresh };
 }

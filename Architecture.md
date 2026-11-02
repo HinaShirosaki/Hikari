@@ -147,7 +147,7 @@ Channel groups in `src/shared/ipc/channels.js`, the preload API that exposes the
 | `INVENTORY`, `ASSAY` | `inventory-api`, `assay-api` — parse chemical / assay result import files; `ASSAY.PLOT_REQUEST`/`PLOT_RESPONSE` let the agent ask the open Plate view to draw a live plot | `register-data-ipc`; plot bridge in `core/services/assay-plot-bridge.js` | `lib/chemical-import`, assay parser | Chemicals, Assay |
 | — | `chemical-clipboard-api` — read ChemDraw/MOL/SMILES or image clipboard content, write text (Electron `clipboard` in preload, no IPC) | — | — | Samples (chemical structures), Sequence Viewer primer orders, Agent, Settings |
 | `SEQUENCE_LIBRARY` | `sequence-library-api` — list/get/upsert/delete entries and folders, annotate, search features, backbones | `register-data-ipc` → `register-sequence-library-ipc` | `sequence-viewer/main-process/sequence-library` (SQLite) | Sequence Viewer, agent sequence tools |
-| `AGENT` | `agent-api` — chat + cancel, HTML preview, generate protocol, suggest experiment, list skills, chat-log sessions, log replay; `agent-progress` events back | `register-agent-ipc` | agent backend (Codex runtime, tool runtime, chat logs) | Agent, Home, Protocols, Notebook |
+| `AGENT` | `agent-api` — chat + cancel, HTML preview, generate protocol, suggest experiment, list skills, chat-log sessions; `agent-progress` events back | `register-agent-ipc` | agent backend (Codex runtime, tool runtime, chat logs) | Agent, Home, Protocols, Notebook |
 | `LLM`, `SYSTEM` | `llm-api`, `system-api` — Codex login/logout/status/catalog/model/effort, Codex Desktop MCP setup prompt, direct LLM prompts; open external URL, error reporting, open logs folder / third-party notices, app-close handshake | `register-system-ipc` | `lib/codex-cli-provider`, direct-LLM registry, `lib/error-reporting` | Settings, Papers, Protocols, Chemicals, unsaved-changes service |
 | `GENOME` | `genome-api` — list/get/add/remove reference genome FASTA files, read a region | `register-genome-ipc` | `genome/` service | exposed on `hikariApi`; no in-app caller yet |
 | `BIOINFORMATICS` | `bioinformatics-api` — BLAST and UniProt queries | `register-bioinformatics-ipc` | `bioinformatics/` (remote NCBI/UniProt) | exposed on `hikariApi`; no in-app caller yet (agent smoke test only) |
@@ -161,7 +161,7 @@ Channel groups in `src/shared/ipc/channels.js`, the preload API that exposes the
 ```mermaid
 flowchart TD
   Paths["appPaths"] --> Data["mainDataHelpers<br/>(data/ + storage/)"]
-  Paths --> Log["agentLogService<br/>chatLogTransformMonitor"]
+  Paths --> Log["chatLogTransformMonitor"]
   Data --> Agents["agent foundation<br/>createMainAgentServices"]
   Log --> Agents
   Agents --> MCP["mcp service<br/>(loopback HTTP host)"]

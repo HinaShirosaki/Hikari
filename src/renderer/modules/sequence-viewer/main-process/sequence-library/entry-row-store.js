@@ -24,8 +24,8 @@ function upsertEntryRow(db, row) {
   db.run(
     `INSERT INTO sequence_entries (
        id, name, normalized_name, status, source_format, topology, sequence_length, feature_count,
-       feature_index_version, gbk_rel_path, html_rel_path, folder_id, created_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       feature_index_version, gbk_rel_path, html_rel_path, folder_id, parent_entry_id, created_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        name = excluded.name,
        normalized_name = excluded.normalized_name,
@@ -38,11 +38,12 @@ function upsertEntryRow(db, row) {
        gbk_rel_path = excluded.gbk_rel_path,
        html_rel_path = excluded.html_rel_path,
        folder_id = excluded.folder_id,
+       parent_entry_id = excluded.parent_entry_id,
        updated_at = excluded.updated_at`,
     [
       row.id, row.name, row.normalizedName, row.status, row.sourceFormat, row.topology,
       row.sequenceLength, row.featureCount, row.featureIndexVersion, row.gbkRelPath, row.htmlRelPath, row.folderId,
-      row.createdAt, row.updatedAt
+      cleanText(row.parentEntryId, 200), row.createdAt, row.updatedAt
     ]
   );
 }

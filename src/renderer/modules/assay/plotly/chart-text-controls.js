@@ -216,8 +216,8 @@ export function createChartTextControls(mount, config) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'assay-chart-text-bar__toggle';
-    btn.setAttribute('aria-label', tooltip);
-    btn.setAttribute('data-hover-caption', tooltip);
+    i18nUi.setAttribute(btn, 'aria-label', i18nUi.message(tooltip));
+    i18nUi.setAttribute(btn, 'data-hover-caption', i18nUi.message(tooltip));
     btn.appendChild(ICONS[iconKey]());
     btn.addEventListener('click', () => {
       value[key] = !value[key];
@@ -245,8 +245,8 @@ export function createChartTextControls(mount, config) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'assay-chart-text-bar__toggle';
-    btn.setAttribute('aria-label', tooltip);
-    btn.setAttribute('data-hover-caption', tooltip);
+    i18nUi.setAttribute(btn, 'aria-label', i18nUi.message(tooltip));
+    i18nUi.setAttribute(btn, 'data-hover-caption', i18nUi.message(tooltip));
     btn.appendChild(ICONS[iconKey]());
     btn.addEventListener('click', () => {
       value.baseline = value.baseline === baselineValue ? 'baseline' : baselineValue;
@@ -275,8 +275,8 @@ export function createChartTextControls(mount, config) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'assay-chart-text-bar__toggle';
-    btn.setAttribute('aria-label', tooltip);
-    btn.setAttribute('data-hover-caption', tooltip);
+    i18nUi.setAttribute(btn, 'aria-label', i18nUi.message(tooltip));
+    i18nUi.setAttribute(btn, 'data-hover-caption', i18nUi.message(tooltip));
     btn.appendChild(ICONS[iconKey]());
     btn.addEventListener('click', () => {
       value.textAlign = alignValue;

@@ -28,6 +28,7 @@ const PLUGIN_PERMISSIONS = Object.freeze([
   'settings',
   'files',
   'downloads',
+  'clipboard:read',
   'python',
   'notifications',
   'layout',

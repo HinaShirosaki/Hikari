@@ -1,5 +1,5 @@
 {
-  "sourceVersion": "1.1.0-beta.9",
+  "sourceVersion": "1.1.0-beta.11",
   "exampleDate": "2026-10-24",
   "timezone": "America/Chicago",
   "viewport": [
@@ -441,7 +441,7 @@
       },
       "targets": [
         {
-          "selector": "[data-protocol-menu-trigger=\"c8cbb201-f8b8-43b7-9827-f4d7f79f3891\"]",
+          "selector": "[data-protocol-menu-trigger=\"48fcc986-f536-444e-9f1f-5405eee5d28d\"]",
           "label": "Open the actions menu",
           "rect": {
             "x": 216,

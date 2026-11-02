@@ -17,8 +17,6 @@ export const chemicalsSpanish = Object.freeze({
   "sort.expiration_asc": "Caducidad (más próxima)",
   "sort.expiration_desc": "Caducidad (más lejana)",
   "list.title": "Sustancias químicas",
-  "list.initial": "Mostrando 0 sustancias químicas.",
-  "list.summary": "Mostrando {visible} de {total} sustancias químicas.",
   "list.emptySearch": "Ninguna sustancia química coincide con la búsqueda o el filtro.",
   "list.code": "Código",
   "detail.title": "Detalles de la sustancia química",

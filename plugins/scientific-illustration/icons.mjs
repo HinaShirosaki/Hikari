@@ -34,6 +34,7 @@ const paths = {
   arrow: ['M12 19V5m-6 6 6-6 6 6'],
   image: ['M3 3h18v18H3zM3 17l6-6 4 4 3-3 5 5', 'M8 7h.01'],
   crop: ['M6 3v15h15M3 6h15v15'],
+  palette: ['M12 3C7 3 3 6.6 3 11.5S7 20 11.5 20c1.4 0 2-.8 2-1.7 0-1.2-1-1.6-1-2.8 0-1 .8-1.5 1.8-1.5H17c2.4 0 4-1.6 4-4C21 6.6 17 3 12 3Z', 'M7.5 11.5h.01M9.5 7.5h.01M14.5 7.5h.01M17 11h.01'],
   align: ['M4 3v18M8 5h12v5H8zM8 14h8v5H8z'],
   objectLeft: ['M4 3v18M8 5h12v5H8zM8 14h8v5H8z'],
   objectRight: ['M20 3v18M4 5h12v5H4zM8 14h8v5H8z'],

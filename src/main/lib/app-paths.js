@@ -19,7 +19,6 @@ function createMainAppPaths(deps = {}) {
   const scheduledTasksFileName = String(deps.scheduledTasksFileName || 'scheduled-tasks.json').trim()
     || 'scheduled-tasks.json';
   const genomeLibraryFileName = String(deps.genomeLibraryFileName || 'genome-library.json').trim() || 'genome-library.json';
-  const agentChatLogFileName = String(deps.agentChatLogFileName || 'agent-chat.log').trim() || 'agent-chat.log';
 
   function getUserDataPath() {
     try {
@@ -116,15 +115,6 @@ function createMainAppPaths(deps = {}) {
     return path.join(getDefaultAppDataRoot(), 'Logs', 'errors.log');
   }
 
-  function getAgentChatLogPath() {
-    const override = String(processObject.env.HIKARI_AGENT_CHAT_LOG_PATH || '').trim();
-    if (override) {
-      return override;
-    }
-
-    return path.join(getDefaultAppDataRoot(), 'Logs', agentChatLogFileName);
-  }
-
   function getAgentPythonSandboxRoot() {
     const override = String(processObject.env.HIKARI_AGENT_PYTHON_SANDBOX_ROOT || '').trim();
     if (override) {
@@ -163,7 +153,6 @@ function createMainAppPaths(deps = {}) {
     setStorageRoot,
     getScheduledTasksPath,
     getGenomeLibraryPath,
-    getAgentChatLogPath,
     getErrorLogPath,
     getAgentPythonSandboxRoot,
     getAgentMemoryFilePath,

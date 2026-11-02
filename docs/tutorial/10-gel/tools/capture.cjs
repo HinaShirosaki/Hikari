@@ -270,10 +270,10 @@ async function main() {
   await click('#gel-tool-lanes-btn');
   await click('#gel-open-lane-table-btn');
   await click('#gel-add-table-btn');
-  await input('[data-gel-table-role=label]','Label');
-  for(let lane=0;lane<6;lane++)await input(`[data-gel-table-role=value][data-gel-table-col="${lane}"]`,['Ladder','Control','Sample A','Sample B','Sample C','Sample D'][lane]);
+  await input('#gel-lane-table-shell .gel-table-input.is-label','Label');
+  for(let lane=1;lane<=6;lane++)await input(`#gel-lane-table-shell [data-table-row="0"][data-table-lane="${lane}"]`,['Ladder','Control','Sample A','Sample B','Sample C','Sample D'][lane-1]);
   await shot('17-lane-table','Add lane labels to the figure','Enter a row label and lane values; add more rows when needed.',['#gel-lane-table-panel','#gel-canvas'],
-    [['[data-gel-table-role=label]','Name the table row'], ['.gel-lane-table-grid-shell','Enter each lane label'], ['[data-gel-table-add-row]','Add another table row']]);
+    [['#gel-lane-table-shell .gel-table-input.is-label','Name the table row'], ['#gel-lane-table-shell .gel-table-strip-lanes','Enter each lane label'], ['[data-gel-table-add-row]','Add another table row']]);
   await click('#gel-save-btn');
   await waitFor('document.getElementById("gel-form").getAttribute("aria-busy")==="false"');
   await check('tutorial.state.gelAnalyses.some(r=>r.name.includes("Target signal")&&r.manualOverrides?.laneTable?.rows?.length)','Save retains the named gel, processing selections, and lane table');
@@ -310,7 +310,7 @@ async function main() {
   await check('!document.getElementById("gel-figure-preview").classList.contains("is-trimming")','Apply trim leaves trim mode and retains the shared stack crop');
   await click('#gel-export-menu-btn');
   await shot('22-export-menu','Export a gel or the current stack','PNG and PPTX export the displayed figure; Bands CSV uses the active gel report.','#gel-export-menu',
-    [['#gel-export-image-btn','Export Image (PNG)'], ['#gel-export-pptx-btn','Export PowerPoint (PPTX)'], ['#gel-export-csv-btn','Export Bands (CSV)']]);
+    [['#gel-export-ladder-labels','Ladder labels (optional)'], ['#gel-export-image-btn','Export Image (PNG)'], ['#gel-export-pptx-btn','Export PowerPoint (PPTX)'], ['#gel-export-csv-btn','Export Bands (CSV)']]);
   await evaluate('document.getElementById("gel-export-menu").hidePopover();');
   await click('#gel-save-btn');
   await waitFor('tutorial.exports.some(item=>item.content?.includes("stacks"))');

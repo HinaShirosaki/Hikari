@@ -1,6 +1,8 @@
 'use strict';
 
 const { throwIfAgentRequestAborted } = require('../../lib/llm/request-context.js');
+const { normalizeAssayContextTable } = require('../../../shared/assay-agent-context.mjs');
+const { stageAssayContextTables } = require('./assay-context-tables.js');
 
 function createAgentControllerCore({
   deps,
@@ -46,6 +48,7 @@ function createAgentControllerCore({
         kind,
         label: cleanText(source.label || 'Hidden context', 120),
         text,
+        ...(source.assayTable ? { assayTable: normalizeAssayContextTable(source.assayTable) } : {}),
         paperId: cleanText(source.paperId, 220),
         paperTitle: cleanText(source.paperTitle, 320),
         pageNumber: Number.isFinite(Number(source.pageNumber))
@@ -98,8 +101,8 @@ function createAgentControllerCore({
       return visible;
     }
     return [
-      hidden,
-      visible ? `User question:\n${visible}` : ''
+      visible ? `User question:\n${visible}` : '',
+      hidden
     ].filter(Boolean).join('\n\n');
   }
 
@@ -303,7 +306,10 @@ function createAgentControllerCore({
         : message,
       3000
     ) || message;
-    const hiddenContextText = buildHiddenContextPrompt(payload?.agent?.hiddenContexts);
+    const hiddenContexts = await stageAssayContextTables(normalizeHiddenContexts(payload?.agent?.hiddenContexts), {
+      agentToolRuntime, snapshot, agent: payload?.agent
+    });
+    const hiddenContextText = buildHiddenContextPrompt(hiddenContexts);
     const effectiveMessage = composeAgentMessageWithHiddenContext(visibleEffectiveMessage, hiddenContextText) || message;
     const skillPromptPayload = typeof agentToolRuntime.buildSkillsPromptPayload === 'function'
       ? agentToolRuntime.buildSkillsPromptPayload({

@@ -5,6 +5,7 @@ import { normalizeNotebookResultTable, normalizeNotebookResultTables } from '../
 import { MAX_PLUGIN_STORAGE_CHARS, measurePluginStorageValue } from '../../lib/plugin-storage.js';
 import { LAYOUT_VERBS } from './layout-verbs.js';
 import { renderPluginPlot } from './plotly-render.js';
+import { readPluginChemicalClipboard } from './chemical-clipboard.js';
 import { asArray } from '../../lib/normalize.js';
 import { readPluginSettings, writePluginSettings } from '../../lib/plugin-settings.js';
 import { buildBufferCandidates } from '../../lib/bench-calculations/buffer-candidates.js';
@@ -20,6 +21,10 @@ const NOTIFICATION_TYPES = Object.freeze(['success', 'error']);
 // permission is unreachable, so adding a handler is not enough to expose data.
 const VERBS = {
   ...LAYOUT_VERBS,
+  'clipboard.readChemical': {
+    permission: 'clipboard:read',
+    handler: readPluginChemicalClipboard
+  },
   'plotly.render': {
     permission: 'agent:canvas',
     handler: (params, { windowObject }) => renderPluginPlot(params, windowObject)
