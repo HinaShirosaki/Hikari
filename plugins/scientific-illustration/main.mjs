@@ -28,7 +28,7 @@ import { createArtworkHitTester } from './hit-testing.mjs';
 import { createCanvasTextEditor } from './text-editor.mjs';
 import { createSelectionToolbar } from './selection-toolbar.mjs';
 import { createOpacityControl } from './opacity-control.mjs';
-import { recolorVector, vectorColors } from './vector-colors.mjs';
+import { highlightVectorColor, recolorVector, vectorColors } from './vector-colors.mjs';
 import { MAX_PALETTE } from './model.mjs';
 
 const { hikari } = window.HikariPlugin;
@@ -211,6 +211,15 @@ function renderCanvas(canvas, documentState = state) {
   renderSmartGuides(stage);
   textEditor?.layout();
   syncSelectionToolbar();
+  syncColorHighlight();
+}
+// The focused Colors swatch shows where its color is used on the canvas.
+function syncColorHighlight() {
+  const stage = $('main-canvas'), swatch = document.activeElement?.closest('#vector-color-swatches input'), object = selected();
+  for (const node of stage.querySelectorAll('.color-dim, .color-dim-fill, .color-dim-stroke')) node.classList.remove('color-dim', 'color-dim-fill', 'color-dim-stroke');
+  for (const node of stage.querySelectorAll('.color-ants')) node.remove();
+  const artwork = swatch && object?.type === 'vector' && stage.querySelector(`g[data-object-id="${CSS.escape(object.id)}"] > svg`);
+  if (artwork) highlightVectorColor(artwork, swatch.value);
 }
 function renderSmartGuides(stage) {
   if (!drag?.guides?.length || drag.canvas !== stage.dataset.canvas) return;
@@ -312,7 +321,7 @@ function render(next, id = illustrationId) {
   renderImageStyle(pendingImagePreference?.id === id ? pendingImagePreference.style : state.imageGenerationStyle);
   renderPalette();
   syncComposer();
-  renderLayers(); renderProperties();
+  renderLayers(); renderProperties(); syncColorHighlight();
   if (!$('assets-panel').hidden) assetsPanel?.render();
   renderCanvasProperties();
   renderZoom();
@@ -534,7 +543,9 @@ function renderPalette() {
 }
 // Queued so quick clicks each build on the palette the previous one saved.
 let paletteSave = Promise.resolve();
-const savePalette = change => { if (state) paletteSave = paletteSave.then(() => edit([{ op: 'palette', palette: change(state.palette) }])).catch(error => status(error.message)); };
+const savePalette = change => {
+  if (state) paletteSave = paletteSave.then(() => { const next = change(state.palette); if (next !== state.palette) return edit([{ op: 'palette', palette: next }]); }).catch(error => status(error.message));
+};
 $('palette-colors').addEventListener('change', event => {
   const index = Number(event.target.dataset.index), { value } = event.target;
   if (event.target.type === 'color') savePalette(palette => palette.map((color, at) => at === index ? value : color));
@@ -543,14 +554,22 @@ $('palette-colors').addEventListener('click', event => {
   const remove = event.target.closest('[data-remove-index]');
   if (remove) savePalette(palette => palette.filter((_color, at) => at !== Number(remove.dataset.removeIndex)));
 });
-$('palette-add').addEventListener('click', () => savePalette(palette => palette.length >= MAX_PALETTE ? palette
-  : [...palette, PALETTE_STARTERS.find(value => !palette.includes(value)) || '#808080']));
+// A typed code (with or without #, 3 or 6 digits) is added as is; an empty field adds the next starter color.
+$('palette-add').addEventListener('submit', event => {
+  event.preventDefault();
+  const code = $('palette-code').value.trim().replace(/^#/, '').toLowerCase(), typed = code && `#${code.length === 3 ? code.replace(/./g, '$&$&') : code}`;
+  $('palette-code').value = '';
+  savePalette(palette => palette.length >= MAX_PALETTE || palette.includes(typed) ? palette
+    : [...palette, typed || PALETTE_STARTERS.find(value => !palette.includes(value)) || '#808080']);
+});
 // Preview every picker move; the picker's change commits one undoable edit.
 $('vector-color-swatches').addEventListener('input', event => {
   const object = selected(); if (object?.type !== 'vector') return;
   const patch = recolorVector(object, event.target.dataset.color, event.target.value);
   renderCanvas('main', { ...state, objects: state.objects.map(item => item.id === object.id ? { ...item, ...patch } : item) });
 });
+$('vector-color-swatches').addEventListener('focusin', syncColorHighlight);
+$('vector-color-swatches').addEventListener('focusout', () => queueMicrotask(syncColorHighlight));
 $('vector-color-swatches').addEventListener('change', event => {
   const object = selected(); if (object?.type !== 'vector') return;
   const patch = recolorVector(object, event.target.dataset.color, event.target.value);

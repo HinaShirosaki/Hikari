@@ -56,11 +56,15 @@ conversation and its unsent draft.
   **Save as an asset…**.
 - **Assets**, beside **Illustrations** in the left rail's switch, keeps reusable
   components shared by all figures. Save a selection,
-  use **Import asset…** for SVG, PNG, JPEG or WebP files, or use
+  use **Import asset…** or **Import folder…** for SVG, PNG, JPEG or WebP files, or use
   **Generate asset…** to have Codex make one (SVG or image generation, per the
   figure's Image generation settings) without touching the canvas.
-- **Colors** in Layers recolor an SVG layer one color at a time.
-- **Figure palette** (palette icon in the toolbar) holds up to 8 main colors.
+- **Drag images in:** drop SVG, PNG, JPEG or WebP files on the canvas to add them
+  as layers.
+- **Colors** in Layers recolor an SVG layer one color at a time; the active swatch
+  highlights where its color is used.
+- **Figure palette** (palette icon in the toolbar) holds up to 8 main colors;
+  add one by its hex code or pick it.
   Codex draws new artwork with them, and color pickers offer them.
 - **Crop selected image** crops a raster layer in place; the saved asset is left
   untouched.

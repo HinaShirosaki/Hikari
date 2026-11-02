@@ -8,7 +8,6 @@
   "full.2bf0bcb7": "剪貼簿中有結構資料，但沒有影像預覽。請在 ChemDraw 中將結構複製為影像後重新貼上。",
   "full.18825395": "已貼上化學結構",
   "full.8c0d9694": "匯入素材",
-  "full.f5415f73": "取代插圖",
   "full.bbd6a65c": "匯入插圖",
   "full.91b7bafc": "新增插圖",
   "full.30059edc": "無法載入插圖預覽。",
@@ -220,7 +219,6 @@
   "full.1f2d987": "無法讀取所選檔案。",
   "full.cd181548": "插圖大小不得超過 5 MiB。",
   "full.45f459a6": "請匯入 SVG、PNG、JPEG 或 WebP 插圖。",
-  "full.4274919a": "請使用 PNG、JPEG 或 WebP 取代點陣插圖。",
   "full.a560a4b4": "另一個插圖已開啟。請重新匯入該插圖。",
   "full.85b416ba": "無法載入用於匯出的內建 Inter 字型。",
   "full.216faea4": "不支援 SVG 實體與文件類型。",
@@ -418,7 +416,16 @@
   "full.f808a904": "顏色 {p0}",
   "full.a1ce8a12": "圖形調色盤",
   "full.27c217e3": "新增顏色",
+  "full.70c5d1ca": "十六進位色碼",
   "full.dae286e5": "調色盤顏色 {p0}",
   "full.9a031c2b": "移除 {p0}",
-  "full.74865f3d": "Codex 會在新圖稿中使用這些主色。取色器中也會提供這些顏色。"
+  "full.74865f3d": "Codex 會在新圖稿中使用這些主色。取色器中也會提供這些顏色。",
+  "full.e0f356ca": "匯入資料夾…",
+  "full.35e62f63": "匯入資料夾中的所有 SVG、PNG、JPEG 和 WebP 檔案",
+  "full.16153674": "匯入 {count} 個素材",
+  "full.ba3674eb": "{count} 個檔案",
+  "full.eb1ceb18": "我已檢查這些影像，其中不含文字。標籤應置於獨立的文字圖層。",
+  "full.e12e1e4c": "正在匯入第 {p0} 個，共 {p1} 個…",
+  "full.1e1c2052": "已匯入 {p0}/{p1} 個素材。{p2}",
+  "full.a5d2a35f": "已匯入 {count} 個素材"
 }};if(typeof module==='object'&&module.exports)module.exports=all;}(typeof window==='object'?window:globalThis));

@@ -55,6 +55,10 @@ Clicks on transparent pixels in images and vector artwork pass through to
 visible components underneath. On empty canvas they begin area selection.
 Text keeps a fixed aspect ratio with every handle; its box and font scale together.
 The font-size control remains independently editable.
+Drag SVG, PNG, JPEG, or WebP files from Finder or Explorer onto the canvas to add
+them as layers. One review dialog covers every dropped file; the first is centred
+where you drop it and the rest cascade from there. **Add layer → Import artwork…** takes
+several files at once the same way. Other file types are skipped.
 Double-click a text label on the canvas or its row in Layers to change its text
 directly on the canvas. Press Enter to save, Shift+Enter for a new line, or Escape
 to cancel. Clicking elsewhere also saves. Each change can be undone in one step.
@@ -154,8 +158,9 @@ on the canvas keeps the current panel layout steady. Double-click a label to
 edit its text inline without changing the canvas zoom. Open Layers for the compact font,
 size, color, bold/italic/underline, alignment, weight and anchor controls.
 An SVG layer lists its colors as swatches; pick a new color for one swatch to
-recolor every part painted with it, as one undoable edit. Only hex colors get a
-swatch.
+recolor every part painted with it, as one undoable edit. While a swatch is
+active, the canvas outlines the parts that use its color with a moving dashed
+line and fades the rest of that layer. Only hex colors get a swatch.
 Opacity has a slider and a linked percentage field. Drag the handle for a live
 preview, or enter an exact percentage from 0 to 100. Releasing the slider saves
 one undoable adjustment; Escape cancels an unfinished preview.
@@ -309,7 +314,9 @@ Complexity still sets the amount of scientific detail, and the image-generation
 percentage still controls renderer use. Choosing a style does not enable generation.
 
 **Figure palette** (the palette icon in the right toolbar) sets up to eight main
-colors for the figure. Add a color, click a swatch to change it, or remove it;
+colors for the figure. Type a hex code such as `#4169d8` (or `4169d8`, or the
+short `#48d`) and press Enter or **Add color**; with the field empty, **Add color**
+adds a starter color. Click a swatch to change it, or remove it;
 each change saves with the figure and can be undone. Codex uses the palette for
 the main fills and accents of new SVG artwork, plots and generated images, and
 leaves existing artwork alone unless you ask it to recolor. The text color and
@@ -356,9 +363,13 @@ rotations, relative positions, paint order, raster bytes, and text formatting.
 Multiple components form one named group with independently editable children.
 Remove an asset with its trash control; already placed copies are retained.
 
-Use **Assets → Import asset…** to save an SVG, PNG, JPEG, or WebP file directly
-to the library. Give it a name in the preview. Raster imports require the same
-text-free review as canvas artwork; SVG keeps its editable vector form.
+Use **Assets → Import asset…** to save SVG, PNG, JPEG, or WebP files directly
+to the library. A single file gets a name in the preview. Raster imports require
+the same text-free review as canvas artwork; SVG keeps its editable vector form.
+**Assets → Import folder…** imports every supported file in a folder and its
+subfolders, named after the files. Files that are not artwork are ignored; files
+that fail validation are listed in the review dialog and skipped, and identical
+artwork already in the library is reused rather than duplicated.
 
 Use **Assets → Generate asset…** to have Codex make one new reusable component
 without changing the canvas. Describe it and click **Generate with Codex**. Codex picks SVG or image

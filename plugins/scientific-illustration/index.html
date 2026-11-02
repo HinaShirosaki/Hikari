@@ -18,7 +18,7 @@
           <button id="assets-view-tab" type="button" aria-pressed="false" aria-controls="assets-panel"><span data-i18n="figura.full.e869c758">Assets</span></button>
         </div><button id="new-illustration" data-library-view="illustrations" class="icon-button" type="button" title="New illustration" aria-label="New illustration" data-i18n-title="figura.full.c4701ca9" data-i18n-aria-label="figura.full.c4701ca9"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button></div>
         <input id="illustration-search" data-library-view="illustrations" type="search" placeholder="Search illustrations" aria-label="Search illustrations" data-i18n-placeholder="figura.full.e644ddc6" data-i18n-aria-label="figura.full.e644ddc6">
-        <div class="asset-actions" data-library-view="assets" hidden><button id="generate-asset" type="button" class="secondary-button" title="Ask Codex to make a reusable asset" data-i18n-title="figura.full.b6c21168"><span data-i18n="figura.full.3fca9dcc">Generate asset…</span></button><button id="import-asset" type="button" class="secondary-button"><span data-i18n="figura.full.2b969a36">Import asset…</span></button></div>
+        <div class="asset-actions" data-library-view="assets" hidden><button id="generate-asset" type="button" class="secondary-button" title="Ask Codex to make a reusable asset" data-i18n-title="figura.full.b6c21168"><span data-i18n="figura.full.3fca9dcc">Generate asset…</span></button><button id="import-asset" type="button" class="secondary-button"><span data-i18n="figura.full.2b969a36">Import asset…</span></button><button id="import-asset-folder" type="button" class="secondary-button" title="Import every SVG, PNG, JPEG and WebP file in a folder" data-i18n-title="figura.full.35e62f63"><span data-i18n="figura.full.e0f356ca">Import folder…</span></button></div>
         <input id="asset-search" data-library-view="assets" hidden type="search" placeholder="Search assets" aria-label="Search reusable assets" data-i18n-placeholder="figura.full.6f4dd5da" data-i18n-aria-label="figura.full.ca117097">
       </div>
       <div id="illustrations" data-library-view="illustrations" class="illustration-list left-rail-template__scroll" aria-label="Saved illustrations" data-i18n-aria-label="figura.full.f766526b"></div>
@@ -147,7 +147,7 @@
           <details class="popover" id="palette-menu"><summary class="icon-button" data-icon="palette" title="Figure palette" aria-label="Figure palette" aria-expanded="false" data-i18n-title="figura.full.a1ce8a12" data-i18n-aria-label="figura.full.a1ce8a12"></summary><div class="popover-panel palette-panel" role="group" aria-labelledby="palette-heading">
             <p id="palette-heading" class="palette-heading"><span data-i18n="figura.full.a1ce8a12">Figure palette</span></p>
             <div id="palette-colors" class="color-swatches"></div>
-            <button type="button" id="palette-add" data-icon="plus"><span data-i18n="figura.full.27c217e3">Add color</span></button>
+            <form id="palette-add" class="palette-add"><input id="palette-code" maxlength="9" pattern="\s*#?([\dA-Fa-f]{3}){1,2}\s*" placeholder="#4169d8" spellcheck="false" autocomplete="off" title="Hex color code" aria-label="Hex color code" data-i18n-title="figura.full.70c5d1ca" data-i18n-aria-label="figura.full.70c5d1ca"><button type="submit" data-icon="plus"><span data-i18n="figura.full.27c217e3">Add color</span></button></form>
             <p class="palette-hint"><span data-i18n="figura.full.74865f3d">Codex uses these main colors for new artwork. Color pickers offer them too.</span></p>
           </div></details>
           <datalist id="palette-suggestions"></datalist>
@@ -173,13 +173,14 @@
     <hr role="separator">
     <button type="button" role="menuitem" data-context-action="save-asset" data-icon="assets" tabindex="-1"><span data-i18n="figura.full.6466a9af">Save as an asset…</span></button>
   </div>
-  <input id="asset-input" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp" hidden>
+  <input id="asset-input" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp" multiple hidden>
+  <input id="asset-folder-input" type="file" webkitdirectory hidden>
   <dialog id="raster-dialog" aria-labelledby="raster-title"><form id="raster-form">
     <h2 id="raster-title"><span data-i18n="figura.full.bbd6a65c">Import artwork</span></h2>
     <label id="import-asset-name-field" hidden><span data-i18n="figura.full.fe07306">Name</span><input id="import-asset-name" maxlength="200"></label>
-    <div id="raster-preview-shell"><img id="raster-preview" alt="Artwork preview" data-i18n-alt="figura.full.ed80f90f"></div>
+    <div id="raster-preview-shell"></div>
     <p id="raster-dimensions" role="status"></p>
-    <label id="text-free-review" class="check"><input id="text-free" type="checkbox" required><span data-i18n="figura.full.4e019848">I inspected this image and it contains no text. Labels belong in separate text layers.</span></label>
+    <label id="text-free-review" class="check"><input id="text-free" type="checkbox" required><span id="raster-text-free-label" data-i18n="figura.full.4e019848">I inspected this image and it contains no text. Labels belong in separate text layers.</span></label>
     <p id="raster-error" role="alert"></p><div class="actions"><button type="button" id="cancel-raster"><span data-i18n="figura.full.35afca3b">Cancel</span></button><button id="confirm-raster" type="submit"><span data-i18n="figura.full.91b7bafc">Add artwork</span></button></div>
   </form></dialog>
   <dialog id="save-asset-dialog" aria-labelledby="save-asset-title"><form id="save-asset-form"><h2 id="save-asset-title"><span data-i18n="figura.full.25246562">Save reusable component</span></h2><label><span data-i18n="figura.full.fe07306">Name</span><input id="asset-name" maxlength="200" required></label><p id="asset-save-error" role="alert"></p><div class="actions"><button id="cancel-save-asset" type="button"><span data-i18n="figura.full.35afca3b">Cancel</span></button><button id="confirm-save-asset" type="submit"><span data-i18n="figura.full.62cf0158">Save asset</span></button></div></form></dialog>

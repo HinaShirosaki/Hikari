@@ -8,7 +8,6 @@
   "full.2bf0bcb7": "剪贴板中有结构数据，但没有图像预览。请在 ChemDraw 中将结构复制为图像后重新粘贴。",
   "full.18825395": "已粘贴化学结构",
   "full.8c0d9694": "导入素材",
-  "full.f5415f73": "替换插图",
   "full.bbd6a65c": "导入插图",
   "full.91b7bafc": "添加插图",
   "full.30059edc": "无法加载插图预览。",
@@ -220,7 +219,6 @@
   "full.1f2d987": "无法读取所选文件。",
   "full.cd181548": "插图大小不得超过 5 MiB。",
   "full.45f459a6": "请导入 SVG、PNG、JPEG 或 WebP 插图。",
-  "full.4274919a": "请使用 PNG、JPEG 或 WebP 替换栅格插图。",
   "full.a560a4b4": "另一个插图已打开。请重新导入该插图。",
   "full.85b416ba": "无法加载用于导出的内置 Inter 字体。",
   "full.216faea4": "不支持 SVG 实体和文档类型。",
@@ -418,7 +416,16 @@
   "full.f808a904": "颜色 {p0}",
   "full.a1ce8a12": "图形调色板",
   "full.27c217e3": "添加颜色",
+  "full.70c5d1ca": "十六进制颜色代码",
   "full.dae286e5": "调色板颜色 {p0}",
   "full.9a031c2b": "移除 {p0}",
-  "full.74865f3d": "Codex 会在新图稿中使用这些主色。取色器中也会提供这些颜色。"
+  "full.74865f3d": "Codex 会在新图稿中使用这些主色。取色器中也会提供这些颜色。",
+  "full.e0f356ca": "导入文件夹…",
+  "full.35e62f63": "导入文件夹中的所有 SVG、PNG、JPEG 和 WebP 文件",
+  "full.16153674": "导入 {count} 个素材",
+  "full.ba3674eb": "{count} 个文件",
+  "full.eb1ceb18": "我已检查这些图像，其中不含文本。标签应放在单独的文本图层中。",
+  "full.e12e1e4c": "正在导入第 {p0} 个，共 {p1} 个…",
+  "full.1e1c2052": "已导入 {p0}/{p1} 个素材。{p2}",
+  "full.a5d2a35f": "已导入 {count} 个素材"
 }};if(typeof module==='object'&&module.exports)module.exports=all;}(typeof window==='object'?window:globalThis));

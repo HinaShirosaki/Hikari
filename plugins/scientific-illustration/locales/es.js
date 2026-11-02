@@ -55,7 +55,16 @@
   "full.f808a904": "Color {p0}",
   "full.a1ce8a12": "Paleta de la figura",
   "full.27c217e3": "Añadir color",
+  "full.70c5d1ca": "Código de color hexadecimal",
   "full.dae286e5": "Color de la paleta {p0}",
   "full.9a031c2b": "Quitar {p0}",
-  "full.74865f3d": "Codex usa estos colores principales en las nuevas ilustraciones. Los selectores de color también los ofrecen."
+  "full.74865f3d": "Codex usa estos colores principales en las nuevas ilustraciones. Los selectores de color también los ofrecen.",
+  "full.e0f356ca": "Importar carpeta…",
+  "full.35e62f63": "Importa todos los archivos SVG, PNG, JPEG y WebP de una carpeta",
+  "full.16153674": "Importar {count} recursos",
+  "full.ba3674eb": "{count} archivos",
+  "full.eb1ceb18": "He revisado estas imágenes y no contienen texto. Las etiquetas van en capas de texto separadas.",
+  "full.e12e1e4c": "Importando {p0} de {p1}…",
+  "full.1e1c2052": "Se importaron {p0} de {p1} recursos. {p2}",
+  "full.a5d2a35f": "{count} recursos importados"
 }};if(typeof module==='object'&&module.exports)module.exports=root.HikariUiSpanish;}(typeof window==='object'?window:globalThis));
