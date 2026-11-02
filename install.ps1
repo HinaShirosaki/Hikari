@@ -17,6 +17,19 @@ function Get-HikariDownload($Url, $Destination) {
   }
 }
 
+function Move-HikariDirectory($From, $To) {
+  for ($attempt = 1; ; $attempt++) {
+    try {
+      [IO.Directory]::Move($From, $To)
+      return
+    } catch {
+      # Defender and the indexer briefly lock freshly extracted or just-run files, denying the rename.
+      if ($attempt -ge 10) { throw }
+      Start-Sleep -Milliseconds (200 * $attempt)
+    }
+  }
+}
+
 function Test-HikariRuntime($Node, $NpmCli, $NpxCli, $Arch = '') {
   try {
     if (-not (Test-Path $Node)) { return $false }
@@ -76,7 +89,7 @@ function Install-Hikari {
         if (-not (Test-Path (Join-Path $extracted 'Hikari\Hikari.exe')) -or -not (Test-Path (Join-Path $extracted 'HikariSetup.exe'))) {
           throw 'Hikari archive is missing the portable app or installer.'
         }
-        [IO.Directory]::Move($extracted, $destination)
+        Move-HikariDirectory $extracted $destination
         Write-Host "Hikari portable: $destination\Hikari\Hikari.exe"
         Write-Host "Hikari installer: $destination\HikariSetup.exe"
         return
@@ -129,10 +142,10 @@ function Install-Hikari {
           throw 'Downloaded Node.js runtime failed validation.'
         }
         $previous = Join-Path $nodeTmp 'previous'
-        if (Test-Path $hikariNode) { [IO.Directory]::Move($hikariNode, $previous) }
-        try { [IO.Directory]::Move($runtime, $hikariNode) }
+        if (Test-Path $hikariNode) { Move-HikariDirectory $hikariNode $previous }
+        try { Move-HikariDirectory $runtime $hikariNode }
         catch {
-          if (Test-Path $previous) { [IO.Directory]::Move($previous, $hikariNode) }
+          if (Test-Path $previous) { Move-HikariDirectory $previous $hikariNode }
           throw
         }
         Remove-Item $nodeTmp -Recurse -Force
