@@ -68,7 +68,7 @@ if ('IntersectionObserver' in window) {
       if (!fs.existsSync(path.resolve(folder, ref.split('#')[0]))) throw new Error(`Missing local resource: ${ref}`);
     }
   }
-  if (images !== 24 || headings.length !== 16) throw new Error(`Unexpected chapter coverage: ${images} figures, ${headings.length} sections`);
+  if (images !== 25 || headings.length !== 16) throw new Error(`Unexpected chapter coverage: ${images} figures, ${headings.length} sections`);
   fs.writeFileSync(path.join(folder, 'index.html'), html);
   console.log(`Built index.html: ${headings.length} sections, ${images} screenshots; all ${refs.length} links and image references resolve.`);
 }

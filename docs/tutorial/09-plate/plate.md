@@ -14,7 +14,7 @@ The screenshots use a fictional 24-well plate with Sample A and Sample B. The nu
 
 ![Choose Setup or Analyze in the left rail; Setup shows the assay details and editable well map.](images/01-plate-workspace.png)
 
-Saved plate records are called **assays** in the interface. Use the disclosure arrows beside sections such as **Existing Assays** and **Data Analysis** to expand or collapse them.
+Saved plate records are called **assays** in the interface. Use the disclosure arrows beside sections such as **Existing Assays**, or **Result data** inside **Data Analysis**, to expand or collapse them.
 
 ## 2. Create a plate
 
@@ -115,19 +115,20 @@ The Setup CSV contains sample and concentration mappings. Use the **Import** con
 
 1. Save the plate setup, then click **Analyze**.
 2. Expand **Existing Assays** and choose the plate you want to analyze.
-3. Find **Plate results · Table1** in the lower workspace. The chart appears above it, with **Data Analysis** controls in the left rail.
+3. Use the two view buttons at the top of the right toolbar. **Chart** shows the analysis chart; **Data** shows the plate tables.
+4. The **Data Analysis** panel opens beside the toolbar. Click **Data Analysis**, the bar-chart icon, to open or close it. **Chart Format**, the slider icon below it, opens the formatting controls in the same place.
 
-![Select the assay, use the analysis controls on the left, and read the chart and tables on the right.](images/08-analyze-workspace.png)
+![Switch between Chart and Data in the right toolbar, and use the Data Analysis panel for analysis settings.](images/08-analyze-workspace.png)
 
 ### Type or paste measurements
 
-1. Click a mapped well's result cell to edit it.
+1. Click **Data** in the right toolbar, then find **Plate results · Table1**. Click a mapped well's result cell to edit it.
 2. Type the measurement and press **Enter** to finish the edit.
 3. To enter a block from a spreadsheet, copy the numeric cells, select the destination starting well in Table1, and paste.
 4. Check the row and column positions against the original data. Values for unmapped wells are skipped.
-5. Use **Save results**, the disk icon beside the chart title, after reviewing the plate.
+5. Click **Save** at the top right of the workspace after reviewing the plate.
 
-![Enter a numeric result in a well cell and use Save results beside the chart title.](images/09-enter-results.png)
+![Enter a numeric result in a well cell and use Save at the top right.](images/09-enter-results.png)
 
 Result edits are saved as you finish each edit or paste. Analysis updates from the current values. The **Clear results** trash icon under **Result data** removes the plate's entered measurements; check the selected assay before using it.
 
@@ -139,7 +140,7 @@ Result edits are saved as you finish each edit or paste. Analysis updates from t
 4. If several possible result matrices are found, choose one in **Select Result Matrix**.
 5. Compare its preview with your plate: check the row labels, column labels, dimensions, and values.
 6. Click **Use This Matrix**.
-7. Inspect the imported values in Table1 and the updated chart.
+7. Inspect the imported values in Table1, then click **Chart** to see the updated chart.
 
 ![Choose a detected result matrix, verify its preview, and click Use This Matrix.](images/10-import-results.png)
 
@@ -170,9 +171,9 @@ Avoid formulas that refer back to themselves. Correct cells marked with formula 
 
 ### Choose the analysis data source
 
-1. Expand **Data source** in the left rail.
+1. Expand **Data source** in the **Data Analysis** panel.
 2. Choose **Plate results · Table1** to analyze the original measurements, or **Transformed plate · Table2** to analyze the calculated values.
-3. Check the chart and **Summary** after switching sources.
+3. Check the chart and the **Summary** table after switching sources.
 
 ![Choose Table1 or Table2 in Data source to control which values feed the analysis.](images/12-analysis-source.png)
 
@@ -180,7 +181,7 @@ Only numeric transformed cells contribute when Table2 is selected. Fill all the 
 
 ## 10. Create custom row or column groups
 
-1. Open the **Plate results** table.
+1. Click **Data** in the right toolbar and open the **Plate results** table.
 2. Drag across the well cells covering the rows or columns you want to group.
 3. Under **Data Analysis > Groups**, click **Rows** to add the selected rows as a group, or **Columns** to group the selected columns.
 4. Repeat with other selections as needed.
@@ -198,7 +199,7 @@ For example, selecting A1 through B6 and clicking **Rows** groups rows A and B. 
 2. Choose **Group by**. For the example plate, **Sample ID × Concentration** keeps each sample and concentration combination together.
 3. Choose **Summary statistics** under **Method**.
 4. Leave **Show SD error bars** selected if you want them in the chart.
-5. Open the **Summary** table tab to inspect the calculated results.
+5. Click **Chart** to inspect the chart, then **Data > Summary** to read the calculated results.
 
 ![Choose how to group wells and which analysis method to use, then inspect the chart and Summary table.](images/14-summary-analysis.png)
 
@@ -209,10 +210,10 @@ The controls update the analysis as you change them. Other grouping choices incl
 1. Choose a grouping that separates the series you want to compare, such as **Sample ID**.
 2. Choose a fitting method. The example uses **Linear fit** to demonstrate the controls.
 3. Set **X Axis**, such as **Concentration**.
-4. Inspect the data points and fitted curves in the chart.
-5. Read **Summary** for the fit output. Review any message about missing values or an unsuccessful fit.
+4. Close the panel with its **×** when you want more room, and inspect the data points and fitted curves in the chart.
+5. Click **Data** and open **Summary** for the fit output. Review any message about missing values or an unsuccessful fit.
 
-![Inspect the plotted measurements and fitted curves, then open Summary or Chart Format.](images/15-curve-fit.png)
+![Inspect the plotted measurements and fitted curves, then open the Data view or Format chart.](images/15-curve-fit.png)
 
 The Method menu also contains sigmoidal, hyperbola, polynomial, Padé, and one-phase exponential fits, plus plate QC, Z-scores, comparisons to a control, and normalization. Choose the method that fits your intended analysis.
 
@@ -220,7 +221,7 @@ When a method shows **High control (100%)** or **Low control (0%)**, enter the c
 
 ## 12. Format the chart
 
-1. Click **Chart Format** beside the chart title.
+1. Click **Format chart**, the slider icon beside the chart title, or **Chart Format** in the right toolbar. The panel opens on the right.
 2. Use its tabs to choose the part of the chart you want to change.
 3. In **Frame**, adjust the background and frame settings.
 4. Click **Save preset as…**, the disk icon beside **Preset**, when you want to reuse the current formatting. Give the preset a name in the prompt.
@@ -240,14 +241,15 @@ The format sections are **Frame**, **Axis**, **Data Series**, **Text**, and **El
 
 Formatting is retained with the assay. Use the preset and reset controls when you want to apply a saved style or return settings to their defaults.
 
-## 13. Export or enlarge a chart
+## 13. Export a chart
 
 1. Check the selected assay, data source, analysis method, and chart formatting.
 2. Click **PNG** above the chart to export a raster image, or **SVG** to export a vector image.
 3. Follow the save or download prompt and open the exported image to inspect it.
-4. For a larger view while working, click **Focus chart**, the expand icon at the top-right of the chart. Click it again to return to the regular workspace.
 
-![Export the chart as PNG or SVG, or use Focus chart for a larger view.](images/18-export-chart.png)
+![Export the chart as PNG or SVG from the chart header.](images/18-export-chart.png)
+
+The chart keeps its size when you open or close a panel or resize the window, so the export matches what you formatted. When the chart is larger than the workspace, scroll to see the rest of it. To set an exact size, open **Chart Format > Frame**, clear **Fit to canvas** under **Plot dimensions**, and enter **Width (px)** and **Height (px)**.
 
 ## 14. Find, edit, or delete an existing plate
 

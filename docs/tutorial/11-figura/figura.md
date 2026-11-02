@@ -9,18 +9,18 @@ The screenshots use a fictional diagram with two schematic cells and a signal ar
 ## 1. Open Figura
 
 1. Open **More modules** in Hikari's top navigation bar and choose **Figura**.
-2. Find saved figures in **Illustrations** on the left.
+2. Find saved figures under **Illustrations** on the left. The switch beside it shows **Assets**, your reusable components.
 3. Click an illustration's row to open its canvas.
-4. Use the top toolbar for the title, canvas size, drawing complexity, figure options, and exports.
-5. Use the right toolbar for selection, layers, reusable assets, grouping, alignment, and zoom.
+4. Use the top toolbar for the title, canvas size, detail level, image-generation settings, and exports.
+5. Use the right toolbar for selection, grouping, alignment, adding layers, the figure palette, cropping, layers, and zoom.
 
 ![Find saved illustrations on the left, edit the canvas in the center, and use the right toolbar for drawing tools.](images/01-figura-workspace.png)
 
-Open **Layers** or **Assets** when you need its panel. Click the active tool again, or the panel's close button, to return that space to the canvas. The chevron beside the figure title hides or shows the Illustrations rail.
+Open **Layers** when you need its panel. Click it again, or the panel's close button, to return that space to the canvas. The chevron beside the figure title hides or shows the left rail.
 
 ## 2. Create and name an illustration
 
-1. Click **New illustration**, the plus icon beside Illustrations.
+1. Click **New illustration**, the plus icon beside the Illustrations and Assets switch.
 2. Enter a descriptive title in the top-left title field, such as `Practice diagram · example`.
 3. Click outside the field to finish the title edit.
 4. Start with an AI description or add layers manually using the steps below.
@@ -33,13 +33,13 @@ Figura saves each illustration independently as you finish edits. There is no se
 
 ### Start from an empty canvas
 
-1. Choose a **Complexity** level in the top toolbar: **Simple**, **Standard**, or **Detailed**.
+1. Choose a **Detail** level in the top toolbar: **Simple**, **Standard**, or **Detailed**.
 2. In the composer beneath the empty canvas, describe the content, relationships, labels, and arrangement you want.
 3. Click **Draw with Codex**, the arrow beside the composer, or press **⌘Enter** on macOS / **Ctrl+Enter** on Windows.
 4. Follow the work in Hikari's agent chat rail.
 5. Inspect the resulting figure and labels before exporting it.
 
-![Choose Complexity, enter a figure description, and use the arrow to draw with Codex.](images/03-drawing-prompt.png)
+![Choose Detail, enter a figure description, and use the arrow to draw with Codex.](images/03-drawing-prompt.png)
 
 A practice description:
 
@@ -47,17 +47,17 @@ A practice description:
 
 Codex drawing requires Hikari's configured Codex access. When the illustration already contains components, open its agent chat rail to request changes; the starting composer beneath the canvas is hidden. Each illustration has its own conversation.
 
-Use specific follow-up requests, such as “Move the receiver cell to the right and keep both cells the same size,” or “Change the arrow label to Signal A.” Changing Complexity guides the next request; it does not redraw the existing figure by itself.
+Use specific follow-up requests, such as “Move the receiver cell to the right and keep both cells the same size,” or “Change the arrow label to Signal A.” Changing Detail guides the next request; it does not redraw the existing figure by itself.
 
 ### Set image-generation preferences
 
-1. Open **Figure options**, the three-dot button beside Complexity.
+1. Click **Image generation settings**, the sliders button beside Detail.
 2. Turn on **Image generation** if you want to specify a percentage preference.
 3. Choose **0%, 25%, 50%, 75%, or 100%**. Use 0% when you want new illustrative artwork to remain SVG.
 4. Choose an **Image style** and add **Style notes** when you want to describe the appearance of newly generated artwork.
 5. Close the menu and make your next drawing or revision request.
 
-![Use Figure options to set image-generation preference, image style, and optional style notes.](images/04-generation-preferences.png)
+![Open Image generation settings to set the image-generation share, image style, and optional style notes.](images/04-generation-preferences.png)
 
 With the switch off, Figura uses **Automatic · SVG first**. The percentage guides the approximate area of eligible illustrative artwork; labels, arrows, frames, and quantitative charts stay separately editable. Preferences affect future requested edits and do not convert existing artwork automatically.
 
@@ -65,13 +65,13 @@ You can also start from **Protocols > Generate illustration**, or select text in
 
 ## 4. Set the canvas size
 
-1. Open the **Canvas** size menu in the top toolbar.
+1. Open the canvas-size menu in the top toolbar.
 2. Choose **Landscape**, **Portrait**, **Square**, **Widescreen**, or **Small**.
-3. Choose **Custom…** for exact dimensions, or click the adjacent three-dot **Custom canvas size** button.
+3. For exact dimensions, choose **Custom…**, or click the ruler button beside the menu (**Custom canvas size**).
 4. Enter **Width** and **Height**, then click outside each field to finish the edit.
 5. Inspect the figure at its new bounds.
 
-![Choose a canvas preset or enter exact width and height in the canvas-size options.](images/05-canvas-size.png)
+![Choose a canvas preset, or use the ruler button to enter an exact width and height.](images/05-canvas-size.png)
 
 Changing canvas size changes the figure's bounds while preserving object positions and sizes. It does not scale the artwork to fit. Use **Fit** in the right toolbar to see the full canvas, and **− / +** to zoom. When zoomed in, scroll to pan; hold **⌘ / Ctrl** while scrolling to zoom at the pointer.
 
@@ -79,43 +79,60 @@ Changing canvas size changes the figure's bounds while preserving object positio
 
 1. Click **Add layer**, the plus icon in the right toolbar.
 2. Choose **Text label**.
-3. Enter the label's content in **Layers and properties**.
+3. Enter the label's content in **Layers**.
 4. Adjust its font, size, color, weight, alignment, and anchor as needed.
 5. Click outside the edited field to keep the change.
 
 ![Add layer offers Text label, Vector component, and Import artwork.](images/06-add-layer-menu.png)
 
-![Edit a label's content, font, size, color, weight, and anchor in its properties.](images/07-edit-text.png)
+![Edit a label's content, font, size, color, weight, and anchor in Layers.](images/07-edit-text.png)
 
-To revise a label already on the canvas, double-click it to open its text controls. Text remains independent of the underlying artwork. Resizing a text layer scales its box and font together; changing the font-size field gives you a separate size control.
+### Edit a label on the canvas
 
-Use **Position & size** for exact placement. For a label you want centered under a component, inspect its alignment and anchor as well as its position.
+1. Double-click the label on the canvas, or its row in Layers.
+2. Type the new text. Press **Shift+Enter** for a new line.
+3. Press **Enter** to save, or **Escape** to cancel. Clicking elsewhere also saves.
 
-## 6. Add or style a vector component
+![Double-click a label and type its new text directly on the canvas.](images/08-inline-text.png)
 
-1. Click **Add layer > Vector component**.
-2. Select the new component on the canvas or in Layers.
-3. Set **Fill**, **Stroke**, and **Stroke width** in its vector properties.
-4. Move or resize the component to fit your figure.
-5. For a prepared SVG component, use **Import artwork…** as described in the next section.
+Each text change can be undone in one step. Text remains independent of the underlying artwork, and its row in Layers shows the label text. Resizing a text layer scales its box and font together; changing the font-size field gives you a separate size control.
 
-![Use Fill and Stroke to style a vector component, or open its SVG artwork editor.](images/08-style-vector.png)
+## 6. Recolor vector artwork and set a palette
 
-Clear a fill or stroke override to restore the original SVG styling. **Edit SVG source** opens the component's artwork source; use **Apply artwork** to keep an edited SVG or **Cancel** to leave it unchanged.
+### Change one color
 
-The supplied [cell-component.svg](examples/cell-component.svg) is a text-free example you can import. Add its label as a separate text layer.
+1. Select a vector component, such as a cell drawing, on the canvas or in Layers. To add a plain shape, use **Add layer > Vector component**.
+2. Open **Layers**. Under **Colors**, the component's colors appear as swatches.
+3. Click the swatch for the color you want to change. While it is active, the canvas outlines the parts that use that color with a moving dashed line and fades the rest of the component.
+4. Pick the new color. Every part painted with the old color changes together, as one undoable edit.
+
+![Choose a color swatch in Colors; the canvas outlines the parts painted with that color.](images/09-recolor-vector.png)
+
+Only colors written as hex values get a swatch. For a prepared SVG component, use **Import artwork…** as described in the next section. The supplied [cell-component.svg](examples/cell-component.svg) is a text-free example you can import. Add its label as a separate text layer.
+
+### Set the figure palette
+
+1. Click **Figure palette**, the palette icon in the right toolbar.
+2. Click **Add color** to add a main color. A figure can hold up to eight.
+3. Click a swatch to change its color, or its **×** to remove it.
+
+![Add up to eight main colors, click a swatch to change it, or remove it with ×.](images/10-figure-palette.png)
+
+The palette is saved with the figure, and each change can be undone. Codex uses these colors for new artwork, plots, and generated images, and leaves existing artwork alone unless you ask it to recolor. The text color and Colors pickers offer the palette colors. With an empty palette, Codex chooses the colors.
 
 ## 7. Import and crop artwork
 
 ### Add artwork to the canvas
 
 1. Click **Add layer > Import artwork…**.
-2. Choose an SVG, PNG, JPEG, or WebP file, up to 5 MiB.
-3. Inspect the preview. For a raster image, confirm that it contains no text by checking the review box.
+2. Choose one or more SVG, PNG, JPEG, or WebP files, each up to 5 MiB.
+3. Inspect the preview. For raster images, confirm that they contain no text by checking the review box.
 4. Click **Add artwork**.
-5. Position the new layer and add any labels separately.
+5. Position the new layers and add any labels separately.
 
-![Inspect the imported image, confirm that it has no embedded text, and add the artwork.](images/09-import-artwork.png)
+![Inspect the imported image, confirm that it has no embedded text, and add the artwork.](images/11-import-artwork.png)
+
+You can also drag SVG, PNG, JPEG, or WebP files from Finder or Explorer onto the canvas. One review dialog covers every dropped file; the first is placed where you drop it and the rest cascade from there. Other file types are skipped.
 
 You can practice with [cell-artwork.png](examples/cell-artwork.png). It contains a schematic cell without labels. SVG imports must also contain artwork without text or embedded images.
 
@@ -127,99 +144,99 @@ You can practice with [cell-artwork.png](examples/cell-artwork.png). It contains
 4. Click **Apply crop** to keep the cropped image.
 5. Use **Reset** to restart the crop preview, or **Cancel / Escape** to leave the image unchanged.
 
-![Adjust the image crop with handles or pixel bounds, then click Apply crop.](images/10-crop-image.png)
+![Adjust the image crop with handles or pixel bounds, then click Apply crop.](images/12-crop-image.png)
 
-Crop applies to raster artwork. To replace an image, select its layer and use **Replace artwork…** in its properties.
+Crop applies to raster artwork. To use a different image, import the new file and delete the old layer.
 
 ## 8. Select one or several components
 
 ### Use rectangle selection
 
 1. Choose **Select and move**, the pointer icon, or press **V** while the canvas has focus.
-2. Click a component to select it.
+2. Click a component to select it. **Shift**-click adds or removes a component.
 3. Drag from empty canvas to draw a rectangle around several components.
-4. Inspect the selection frames before moving or resizing anything.
-5. Hold **Shift** to add to the selection. Press **Escape** to clear it.
+4. Inspect the outlines: each selected component shows its own.
+5. Use the bar above the selection to **Group**, **Ungroup**, or **Align and distribute**. Press **Escape** to clear the selection.
 
-![Drag from empty canvas to select several components and inspect the shared frame.](images/11-rectangle-selection.png)
+![Drag from empty canvas to select several components; the bar above them groups or aligns them.](images/13-rectangle-selection.png)
 
 ### Use a freehand outline
 
 1. Choose **Freehand selection**, the lasso icon, or press **L**.
 2. Drag a path around the components you want. The outline closes when you release the pointer.
-3. Move or resize the resulting selection with its frame and handles.
+3. Drag any selected component to move the whole selection.
 
-![Choose Freehand selection, outline the components, and inspect the selection.](images/12-freehand-selection.png)
+![Choose Freehand selection, outline the components, and inspect the selection.](images/14-freehand-selection.png)
 
 Components touched by the selection region are included. Groups select together; hold **Alt** to target individual group members. Clicking transparent space in artwork can select a visible component beneath it, so check the selected layer before editing.
 
 ## 9. Move, resize, and rotate components
 
-### Move or enter exact dimensions
+### Move and resize
 
 1. Select the component or components.
-2. Drag a selected component to move the selection.
-3. Drag a corner or edge handle to resize it.
-4. For precise values, open **Layers**, select the component, and expand **Position & size**.
-5. Enter **X**, **Y**, **Width**, or **Height**. Use the nearby **Rotation** and **Opacity** fields when needed.
+2. Drag a selected component to move the selection. Hold **Shift** while dragging to keep the move horizontal or vertical.
+3. While you drag, **smart guides** snap the selection to nearby components and the canvas edges and center. Dashed lines mark alignment; markers show equal spacing.
+4. Release to place the selection, or press **Escape** to cancel the move.
+5. To resize a single component, drag a corner or edge handle. Hold **Shift** to keep its proportions.
 
-![Expand Position & size for exact geometry, and use Rotation or Opacity for the selected component.](images/13-position-and-size.png)
+![While dragging, smart guides show alignment and equal spacing with other components.](images/15-smart-guides.png)
 
-Arrow keys nudge a selection by one canvas unit; hold **Shift** to move by ten. Vector and raster handles can stretch artwork along one or both dimensions. Text handles preserve its aspect ratio and scale the font with its box.
+Hold **⌘** on macOS or **Ctrl** on Windows while dragging to move freely, or turn off **Smart guides** in **Align and distribute**. Arrow keys nudge a selection by one canvas unit; hold **Shift** to move by ten. Vector and raster handles can stretch artwork along one or both dimensions. Text handles preserve its aspect ratio and scale the font with its box.
 
 ### Rotate with the canvas handle
 
-1. Select a component or group.
+1. Select a single component.
 2. Drag the round handle connected to its selection frame.
 3. Hold **Shift** to snap to 15-degree increments.
 4. Release to keep the rotation, or press **Escape** during the drag to cancel.
 
-![Use the round handle to rotate the selection, and the frame handles to resize it.](images/14-rotate-selection.png)
+![Use the round handle to rotate the selection, and the frame handles to resize it.](images/16-rotate-selection.png)
 
 You can focus the rotation handle and use arrow keys for one-degree steps, or **Shift + arrow** for 15-degree steps. Hikari's Undo and Redo actions let you revise a completed edit; **⌘/Ctrl+Z** undoes and **⌘/Ctrl+Shift+Z** redoes.
 
 ## 10. Manage layers and visibility
 
-1. Open **Layers and properties** from the right toolbar.
+1. Open **Layers** from the right toolbar.
 2. Click a layer row to select its component.
 3. Hover over or focus the row to reveal its visibility button. Click it to hide or show the component.
-4. With a component selected, use the bottom action icons to **Duplicate layer**, **Bring forward**, **Send backward**, or **Delete layer**.
-5. Inspect overlapping artwork after changing layer order.
+4. Drag the **Opacity** slider, or enter a percentage from 0 to 100.
+5. With a component selected, use the bottom action icons to **Duplicate layer**, **Bring forward**, **Send backward**, or **Delete layer**.
 
-![Select layers, toggle their visibility, and use the duplicate, order, and delete actions.](images/15-layer-actions.png)
+![Select layers, toggle their visibility, adjust opacity, and use the duplicate, order, and delete actions.](images/17-layer-actions.png)
 
-Hidden layers remain in the illustration but are omitted from exports. Layer names help you identify artwork separately from its labels. You can change the selected layer's name at the top of its properties.
+Hidden layers remain in the illustration but are omitted from exports. Releasing the opacity slider saves one undoable change; **Escape** cancels an unfinished slider preview. Artwork layers have a name you can change at the top of their properties; text layers are listed by their text.
 
 ## 11. Group related artwork and labels
 
 1. Select the components you want to keep together, such as a cell and its label.
-2. Click **Group selection** in the right toolbar, or press **⌘G / Ctrl+G**.
-3. Move, resize, or rotate the group using its outer frame.
+2. Click **Group selection** in the right toolbar or in the bar above the selection, or press **⌘G / Ctrl+G**.
+3. Drag any member to move the whole group. Clicking one member selects the whole group.
 4. To separate the components again, select the group and click **Ungroup**, or press **⌘Shift+G / Ctrl+Shift+G**.
 
-![Select related components and use Group or Ungroup in the right toolbar.](images/16-group-selection.png)
+![Select related components and use Group or Ungroup in the right toolbar or the selection bar.](images/18-group-selection.png)
 
-Grouping keeps artwork and text independently editable. A selected group shows its outer frame; you can select an individual member from Layers when you need to edit only that component.
+Grouping keeps artwork and text independently editable. A selected group outlines each of its members. To edit only one member, hold **Alt** while clicking it, or select it in Layers. Resize handles and the rotation handle appear when a single component is selected.
 
 ### Use the context menu
 
 Right-click a component on the canvas or its layer row for **Copy**, **Paste**, **Group**, **Ungroup**, and **Save as an asset…**. Unavailable actions are disabled. On macOS, Control-click also opens the menu.
 
-![Right-click a component or group to access copy, grouping, and reusable-asset actions.](images/17-context-menu.png)
+![Right-click a component or group to access copy, grouping, and reusable-asset actions.](images/19-context-menu.png)
 
 Right-clicking an already selected component keeps the current multiple selection. Press **Escape** to dismiss the menu.
 
 ## 12. Align components and distribute spacing
 
 1. Select at least two items.
-2. Open **Align and distribute** in the right toolbar.
+2. Open **Align and distribute** in the right toolbar or the selection bar.
 3. Choose left, right, top, bottom, horizontal-center, or vertical-center alignment.
 4. With three or more items, choose **Distribute horizontally** or **Distribute vertically** for equal gaps.
 5. Inspect the result and use Undo if you want to try another arrangement.
 
-![Use alignment actions for two or more items, or distribution actions for three or more.](images/18-align-distribute.png)
+![Use alignment actions for two or more items, distribution actions for three or more, and the Smart guides switch.](images/20-align-distribute.png)
 
-Alignment uses the selection's visible bounds. Distribution keeps the outside items in place while spacing the items between them. Complete groups count as single items; individual group members can also be selected and arranged separately.
+Alignment uses the selection's visible bounds. Distribution keeps the outside items in place while spacing the items between them. Complete groups count as single items; individual group members can also be selected and arranged separately. The **Smart guides** switch at the bottom of this menu turns drag snapping on or off.
 
 ## 13. Copy and paste editable components
 
@@ -229,9 +246,13 @@ Alignment uses the selection's visible bounds. Distribution keeps the outside it
 4. Right-click the destination canvas and choose **Paste**, or use **⌘V / Ctrl+V**.
 5. Move the selected copies to their intended positions.
 
-![Use Copy and Paste to create editable copies on the current canvas or another illustration.](images/19-copy-paste.png)
+![Use Copy and Paste to create editable copies on the current canvas or another illustration.](images/21-copy-paste.png)
 
 Copies retain artwork, separate labels, styles, rotation, and group membership. They appear slightly offset so you can see the new selection. Editing a copy does not alter the original. Text-field copy and paste continue to work as ordinary text editing.
+
+### Paste a chemical structure
+
+Copy a structure in **ChemDraw**, then paste it onto the Figura canvas with **⌘V / Ctrl+V**. Bonds, atom labels, and charges arrive as one vector layer that stays sharp when enlarged and stays vector in SVG and PowerPoint exports. To change the chemistry, edit it in ChemDraw and paste it again. If ChemDraw offers only a bitmap, Figura pastes an image and says so in the status line; copy as SVG or PDF from ChemDraw for vector quality.
 
 ## 14. Save and reuse components as assets
 
@@ -240,40 +261,31 @@ Copies retain artwork, separate labels, styles, rotation, and group membership. 
 1. Select the artwork and labels you want to reuse.
 2. Right-click and choose **Save as an asset…**.
 3. Enter a descriptive **Name**.
-4. Click **Save asset**.
+4. Click **Save asset**. The left rail switches to **Assets**.
 
-![Give the selected component a reusable name and click Save asset.](images/20-save-asset.png)
+![Give the selected component a reusable name and click Save asset.](images/22-save-asset.png)
 
 ### Insert an asset
 
-1. Open **Reusable assets** in the right toolbar.
+1. Click **Assets** in the switch at the top of the left rail.
 2. Search for the component by name.
 3. Click its preview or name to insert an editable copy into the active illustration.
 4. Move or resize the inserted selection as needed.
 
-![Search Assets and click a component to insert it; Import asset adds artwork to the reusable library.](images/21-reusable-assets.png)
+![Switch the rail to Assets, search, and click a component to insert it; the buttons above add assets from files.](images/23-reusable-assets.png)
 
-**Import asset…** adds an artwork file to the reusable library. To remove a saved asset, use its trash icon in Assets. Existing copies already placed in illustrations remain independent.
+To add assets from files, click **Import asset…** and choose one or more SVG, PNG, JPEG, or WebP files, or click **Import folder…** to add every supported file in a folder and its subfolders, named after the files. Files that fail validation are listed in the review dialog and skipped, and artwork already in the library is reused rather than duplicated. **Generate asset…** asks Codex to make a new reusable component without changing the canvas.
 
-## 15. Find and duplicate saved illustrations
+To remove a saved asset, use its trash icon in Assets. Copies already placed in illustrations remain independent.
 
-1. Use **Search illustrations** in the left rail to filter titles.
-2. Click a matching row to open its saved canvas.
-3. Clear the search to see all illustrations again.
-4. If the rail is folded, use the title's chevron to show it.
+## 15. Find saved illustrations
 
-![Search the Illustrations rail and click a saved figure to reopen it.](images/22-saved-illustrations.png)
+1. Click **Illustrations** in the switch at the top of the left rail.
+2. Use **Search illustrations** to filter titles.
+3. Click a matching row to open its saved canvas.
+4. Clear the search to see all illustrations again. If the rail is folded, use the title's chevron to show it.
 
-### Make a separate version
-
-1. Open the figure you want to copy.
-2. Open **Figure options** beside Complexity.
-3. Click **Duplicate illustration**.
-4. Give the copy a new title, then make your revisions there.
-
-![Use Duplicate illustration in Figure options to create a separate saved figure.](images/23-duplicate-illustration.png)
-
-The copy starts with the figure's content and settings and has its own conversation. The original remains available in the library.
+![Show Illustrations, search titles, and click a saved figure to reopen it.](images/24-saved-illustrations.png)
 
 ## 16. Export the finished figure
 
@@ -282,7 +294,7 @@ The copy starts with the figure's content and settings and has its own conversat
 3. Choose **SVG**, **PNG**, or **PowerPoint**.
 4. Follow the save prompt and open the exported file to inspect it.
 
-![Choose SVG, PNG, or PowerPoint from the Export menu.](images/24-export-figure.png)
+![Choose SVG, PNG, or PowerPoint from the Export menu.](images/25-export-figure.png)
 
 | Format | Use it for |
 | --- | --- |

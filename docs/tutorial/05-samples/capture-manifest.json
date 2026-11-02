@@ -1,5 +1,5 @@
 {
-  "sourceVersion": "1.1.0-beta.9",
+  "sourceVersion": "1.1.0-beta.11",
   "exampleDate": "2026-10-24",
   "timezone": "America/Chicago",
   "viewport": [
@@ -430,9 +430,9 @@
       "name": "09-search",
       "title": "Find a sample",
       "crop": {
-        "x": 1291,
+        "x": 1289,
         "y": 0,
-        "width": 307,
+        "width": 309,
         "height": 253
       },
       "targets": [

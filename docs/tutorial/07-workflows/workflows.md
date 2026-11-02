@@ -21,14 +21,13 @@ Each template on the left shows how many processes (runs) it has, how many are i
 
 ## 2. Start a process
 
-![Choose the template and project, optionally name the process, and click Create process.](images/02-new-process.png)
+![Choose the project, optionally name the process, and click Create process.](images/02-new-process.png)
 
 1. Select the template on the left.
-2. Click **+** (**New process**) at the upper right.
-3. Check the **Workflow template**.
-4. Choose a **Project**, or leave **No project**.
-5. Optional: enter a **Process name**. If you leave it blank, the process is named after the template, such as **Protein prep · tutorial 4**.
-6. Click **Create process**.
+2. Click **+** (**New process**) at the upper right. The process uses the selected template, so the dialog does not ask for one.
+3. Choose a **Project**, or leave **No project**.
+4. Optional: enter a **Process name**. If you leave it blank, the process is named after the template, such as **Protein prep · tutorial 4**.
+5. Click **Create process**.
 
 The process appears under its project and opens at its first step.
 

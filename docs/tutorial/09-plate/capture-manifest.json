@@ -1,5 +1,5 @@
 {
-  "sourceVersion": "1.1.0-beta.9",
+  "sourceVersion": "1.1.0-beta.11",
   "exampleDate": "2026-10-25",
   "timezone": "America/Chicago",
   "viewport": [
@@ -108,7 +108,7 @@
           "rect": {
             "x": 22,
             "y": 511,
-            "width": 49,
+            "width": 38,
             "height": 33
           }
         },
@@ -286,40 +286,50 @@
       "name": "08-analyze-workspace",
       "title": "Open Analyze for the selected plate",
       "crop": {
-        "x": 0,
-        "y": 0,
-        "width": 1600,
-        "height": 1000
+        "x": 282,
+        "y": 47,
+        "width": 1318,
+        "height": 953
       },
       "targets": [
         {
-          "selector": "#assay-analysis-panel",
-          "label": "Data and analysis settings",
-          "rect": {
-            "x": 16,
-            "y": 345,
-            "width": 246,
-            "height": 555
-          }
-        },
-        {
-          "selector": ".assay-workspace-chart",
+          "selector": "#assay-workspace-chart",
           "label": "Analysis chart",
           "rect": {
             "x": 324,
-            "y": 178,
-            "width": 1241,
-            "height": 62
+            "y": 160,
+            "width": 813,
+            "height": 816
           }
         },
         {
-          "selector": ".assay-workspace-data",
-          "label": "Result and summary tables",
+          "selector": "#assay-context-rail",
+          "label": "Analysis settings",
           "rect": {
-            "x": 324,
-            "y": 260,
-            "width": 1241,
-            "height": 272
+            "x": 1173,
+            "y": 79,
+            "width": 383,
+            "height": 921
+          }
+        },
+        {
+          "selector": ".assay-workspace-view-switch",
+          "label": "Chart or Data view",
+          "rect": {
+            "x": 1561,
+            "y": 85,
+            "width": 34,
+            "height": 83
+          }
+        },
+        {
+          "selector": "#assay-analysis-toggle-btn",
+          "label": "Data Analysis",
+          "rect": {
+            "x": 1561,
+            "y": 178,
+            "width": 34,
+            "height": 34
           }
         }
       ]
@@ -329,9 +339,9 @@
       "title": "Enter numeric results in the plate grid",
       "crop": {
         "x": 306,
-        "y": 96,
-        "width": 1277,
-        "height": 430
+        "y": 78,
+        "width": 849,
+        "height": 348
       },
       "targets": [
         {
@@ -339,17 +349,17 @@
           "label": "Enter the result value",
           "rect": {
             "x": 455,
-            "y": 379,
+            "y": 279,
             "width": 77,
             "height": 32
           }
         },
         {
           "selector": "#assay-save-results-btn",
-          "label": "Save the current results",
+          "label": "Save the results",
           "rect": {
-            "x": 1486,
-            "y": 114,
+            "x": 1058,
+            "y": 96,
             "width": 79,
             "height": 37
           }
@@ -403,9 +413,9 @@
       "title": "Create a transformed plate with formulas",
       "crop": {
         "x": 306,
-        "y": 317,
-        "width": 1277,
-        "height": 531
+        "y": 142,
+        "width": 849,
+        "height": 532
       },
       "targets": [
         {
@@ -413,7 +423,7 @@
           "label": "Transformed plate · Table2",
           "rect": {
             "x": 419,
-            "y": 335,
+            "y": 160,
             "width": 81,
             "height": 41
           }
@@ -423,7 +433,7 @@
           "label": "Enter a per-well formula",
           "rect": {
             "x": 455,
-            "y": 701,
+            "y": 527,
             "width": 77,
             "height": 32
           }
@@ -434,9 +444,9 @@
       "name": "12-analysis-source",
       "title": "Choose which plate supplies analysis values",
       "crop": {
-        "x": 0,
-        "y": 532,
-        "width": 280,
+        "x": 1169,
+        "y": 291,
+        "width": 380,
         "height": 123
       },
       "targets": [
@@ -444,9 +454,9 @@
           "selector": "#assay-analysis-data-source",
           "label": "Choose Table1 or Table2",
           "rect": {
-            "x": 16,
-            "y": 589,
-            "width": 246,
+            "x": 1187,
+            "y": 348,
+            "width": 344,
             "height": 34
           }
         }
@@ -456,19 +466,19 @@
       "name": "13-custom-groups",
       "title": "Group selected rows or columns",
       "crop": {
-        "x": 0,
-        "y": 455,
-        "width": 1583,
-        "height": 501
+        "x": 306,
+        "y": 196,
+        "width": 1243,
+        "height": 230
       },
       "targets": [
         {
           "selector": "#assay-analysis-add-row-group-btn",
           "label": "Add selected rows as a group",
           "rect": {
-            "x": 16,
-            "y": 518,
-            "width": 92,
+            "x": 1187,
+            "y": 259,
+            "width": 141,
             "height": 32
           }
         },
@@ -476,9 +486,9 @@
           "selector": "#assay-analysis-add-column-group-btn",
           "label": "Or group selected columns",
           "rect": {
-            "x": 113,
-            "y": 518,
-            "width": 113,
+            "x": 1333,
+            "y": 259,
+            "width": 162,
             "height": 32
           }
         },
@@ -486,8 +496,8 @@
           "selector": "#assay-analysis-clear-groups-btn",
           "label": "Clear custom groups",
           "rect": {
-            "x": 232,
-            "y": 518,
+            "x": 1501,
+            "y": 259,
             "width": 30,
             "height": 32
           }
@@ -498,19 +508,19 @@
       "name": "14-summary-analysis",
       "title": "Choose grouping and a summary method",
       "crop": {
-        "x": 0,
+        "x": 307,
         "y": 203,
-        "width": 1582,
-        "height": 688
+        "width": 1242,
+        "height": 790
       },
       "targets": [
         {
           "selector": "#assay-analysis-group-by",
           "label": "Choose how to group wells",
           "rect": {
-            "x": 16,
-            "y": 700,
-            "width": 246,
+            "x": 1187,
+            "y": 458,
+            "width": 344,
             "height": 34
           }
         },
@@ -518,9 +528,9 @@
           "selector": "#assay-analysis-kind",
           "label": "Choose the analysis method",
           "rect": {
-            "x": 16,
-            "y": 768,
-            "width": 246,
+            "x": 1187,
+            "y": 526,
+            "width": 344,
             "height": 34
           }
         },
@@ -530,8 +540,8 @@
           "rect": {
             "x": 325,
             "y": 221,
-            "width": 1239,
-            "height": 430
+            "width": 811,
+            "height": 754
           }
         }
       ]
@@ -540,37 +550,37 @@
       "name": "15-curve-fit",
       "title": "Inspect a fitted curve and its summary",
       "crop": {
-        "x": 0,
-        "y": 0,
-        "width": 1600,
-        "height": 1000
+        "x": 282,
+        "y": 47,
+        "width": 1318,
+        "height": 953
       },
       "targets": [
         {
-          "selector": ".assay-workspace-chart",
+          "selector": "#assay-workspace-chart",
           "label": "Inspect data and fitted curves",
           "rect": {
             "x": 324,
             "y": 160,
-            "width": 1241,
-            "height": 492
+            "width": 1197,
+            "height": 816
           }
         },
         {
-          "selector": "#assay-data-tab-summary",
-          "label": "Open the analysis summary",
+          "selector": "#assay-workspace-view-data",
+          "label": "Data view for the Summary",
           "rect": {
-            "x": 520,
-            "y": 672,
-            "width": 59,
-            "height": 41
+            "x": 1561,
+            "y": 123,
+            "width": 34,
+            "height": 34
           }
         },
         {
           "selector": "#assay-workspace-format-btn",
           "label": "Format the chart",
           "rect": {
-            "x": 1361,
+            "x": 1351,
             "y": 181,
             "width": 30,
             "height": 30
@@ -582,19 +592,19 @@
       "name": "16-format-frame",
       "title": "Format the chart frame and canvas",
       "crop": {
-        "x": 0,
-        "y": 337,
-        "width": 280,
-        "height": 647
+        "x": 1169,
+        "y": 112,
+        "width": 380,
+        "height": 603
       },
       "targets": [
         {
           "selector": ".assay-chart-style-tabs",
           "label": "Choose a format section",
           "rect": {
-            "x": 16,
-            "y": 468,
-            "width": 246,
+            "x": 1187,
+            "y": 198,
+            "width": 344,
             "height": 35
           }
         },
@@ -602,8 +612,8 @@
           "selector": "[data-cc=backgroundColor]",
           "label": "Set the chart background",
           "rect": {
-            "x": 16,
-            "y": 662,
+            "x": 1187,
+            "y": 393,
             "width": 88,
             "height": 34
           }
@@ -612,9 +622,9 @@
           "selector": "[data-cc=presetSaveBtn]",
           "label": "Save formatting as a preset",
           "rect": {
-            "x": 137,
-            "y": 424,
-            "width": 30,
+            "x": 1389,
+            "y": 154,
+            "width": 34,
             "height": 34
           }
         }
@@ -624,19 +634,19 @@
       "name": "17-format-axis",
       "title": "Set axis scale and range",
       "crop": {
-        "x": 0,
-        "y": 337,
-        "width": 280,
-        "height": 663
+        "x": 1169,
+        "y": 112,
+        "width": 380,
+        "height": 888
       },
       "targets": [
         {
           "selector": "[data-cc=xScale]",
           "label": "Choose the X-axis scale",
           "rect": {
-            "x": 16,
-            "y": 561,
-            "width": 119,
+            "x": 1187,
+            "y": 292,
+            "width": 168,
             "height": 34
           }
         },
@@ -644,9 +654,9 @@
           "selector": "[data-cc=yScale]",
           "label": "Choose the Y-axis scale",
           "rect": {
-            "x": 143,
-            "y": 561,
-            "width": 119,
+            "x": 1363,
+            "y": 292,
+            "width": 168,
             "height": 34
           }
         },
@@ -654,8 +664,8 @@
           "selector": "[data-cc=xRangeAuto]",
           "label": "Keep automatic range or set limits",
           "rect": {
-            "x": 20,
-            "y": 606,
+            "x": 1191,
+            "y": 337,
             "width": 13,
             "height": 13
           }
@@ -664,11 +674,11 @@
     },
     {
       "name": "18-export-chart",
-      "title": "Export or focus the chart",
+      "title": "Export the chart",
       "crop": {
         "x": 307,
         "y": 143,
-        "width": 1275,
+        "width": 1231,
         "height": 96
       },
       "targets": [
@@ -676,7 +686,7 @@
           "selector": "#assay-chart-export-png-btn",
           "label": "Export PNG",
           "rect": {
-            "x": 1420,
+            "x": 1410,
             "y": 181,
             "width": 46,
             "height": 31
@@ -686,20 +696,10 @@
           "selector": "#assay-chart-export-svg-btn",
           "label": "Export SVG",
           "rect": {
-            "x": 1469,
+            "x": 1459,
             "y": 181,
             "width": 45,
             "height": 31
-          }
-        },
-        {
-          "selector": "#assay-chart-focus-btn",
-          "label": "Focus the chart",
-          "rect": {
-            "x": 1518,
-            "y": 181,
-            "width": 30,
-            "height": 30
           }
         }
       ]
@@ -762,14 +762,18 @@
   "checks": [
     "Dilution fill divides the starting concentration by the factor",
     "Layout CSV import and Save create a plate with all 24 well mappings",
+    "Analyze opens with the Data Analysis panel in the right rail",
+    "The Data view replaces the chart with the plate tables",
     "Editing a Table1 cell saves the numeric result on the active plate",
     "Result import fills 24 wells and attaches the source CSV",
     "A Table2 formula is stored separately from the raw plate results",
     "The transformed A1 formula computes 6 from the original A1 value of 3",
     "A selected range can become a custom row group",
+    "Close hides the Data Analysis panel",
     "The analysis renders real Plotly traces for the example plate",
+    "Format chart opens Chart Format in the right rail",
+    "Opening the right rail leaves the chart size unchanged",
     "Changing the chart scale saves formatting on the active assay",
-    "Focus chart expands the analysis chart",
     "Delete removes the chosen example assay from the list"
   ]
 }

@@ -238,7 +238,7 @@ async function main() {
   await waitFor('!document.getElementById("sequence-viewer-cloning-design-workspace").hidden');
   await click('[data-cloning-design-strategy]');
   await click('#sequence-viewer-cloning-design-run-btn');
-  await shot('16-cloning-design', 'Choose a cloning route and design primers', 'Read the plan and any review messages before confirming a design.', null,
+  await shot('19-cloning-design', 'Choose a cloning route and design primers', 'Read the plan and any review messages before confirming a design.', null,
     [['#sequence-viewer-cloning-design-strategy-list', 'Choose a route'], ['#sequence-viewer-cloning-design-run-btn', 'Design Primers'], ['#sequence-viewer-cloning-design-confirm-btn', 'Confirm the reviewed design']]);
   await click('#sequence-viewer-cloning-design-back-btn');
   await click('#sequence-viewer-vector-builder-btn');
@@ -249,17 +249,62 @@ async function main() {
   await shot('13-map-actions', 'Open actions for a map selection', 'Right-click a feature or selected range to insert, replace, or delete content.', '#sequence-viewer-vector-builder-context-menu',
     [['[data-vector-action=replace-feature]', 'Replace from stored features'], ['[data-vector-action=delete-bases]', 'Delete selected bases'], ['[data-vector-action=protein-replace]', 'Build a replacement protein']]);
   await key('body', 'Escape');
+  await click('#sequence-viewer-vector-builder-back-btn');
+  await openVector();
+  const rail = name => `[...document.querySelectorAll('#sequence-viewer-feature-rail-host [data-feature-index]')].find(e=>e.getAttribute('aria-label').startsWith(${JSON.stringify(name + ' (')}))`;
+  const onSequence = name => `document.querySelector('#sequence-viewer-sequence-host [data-feature-index="'+${rail(name)}.dataset.featureIndex+'"]')`;
+  const children = 'JSON.stringify([...tutorial.entries.values()].filter(v=>v.entry.parentEntryId==="demo-vector").map(v=>v.entry.name))';
+  await evaluate(`const e=${rail('Teaching CDS')},r=e.getBoundingClientRect();e.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:r.left+4,clientY:r.top+4}));`);
+  await click('[data-sequence-feature-action="save-fragment"]');
+  await waitFor('document.querySelector(".sequence-viewer-fragment-overlay")?.open');
+  await shot('14-save-fragment', 'Save a feature as a DNA fragment', 'Right-click a feature or a selected range, check the name and length, then save.', '.sequence-viewer-fragment-dialog',
+    [['[data-fragment-parent]', 'Template and range'], ['[data-fragment-name]', 'Name the fragment'], ['[data-fragment-preview]', 'Check the length'], ['[data-fragment-save]', 'Save fragment']]);
+  await click('[data-fragment-save]');
+  await waitFor(`${children}.includes("Teaching CDS")`);
+  manifest.checks.push('Save DNA Fragment on a feature saves its span as a child entry under the template');
+  await openVector();
+  await evaluate(`${rail('Teaching F')}.click();`);
+  await click('#sequence-viewer-feature-detail [data-sequence-primer-pcr]');
+  await waitFor('document.querySelector(".sequence-viewer-pcr-picker")');
+  await evaluate(`${onSequence('Teaching R')}.scrollIntoView({block:'center',behavior:'instant'});`);
+  await check(`${onSequence('Teaching R')}.dataset.pcrPrimerState === 'feasible'`, 'PCR highlights the opposite-strand primer as a compatible partner');
+  const partner = await markRect('pcr-partner', onSequence('Teaching R'));
+  await shot('15-pcr-partner', 'Pick the PCR partner primer', 'After PCR…, click a highlighted partner primer in the sequence.', [partner, '.sequence-viewer-pcr-picker'],
+    [['.sequence-viewer-pcr-picker', 'Read the PCR prompt'], [partner, 'Click a highlighted partner']]);
+  await evaluate(`document.querySelector(${JSON.stringify(partner)}).click();`);
+  await waitFor('document.querySelector(".sequence-viewer-fragment-overlay")?.open && /bp/.test(document.querySelector("[data-fragment-preview]").textContent)');
+  await click('[data-fragment-save]');
+  await waitFor(`JSON.parse(${children}).some(n=>n.endsWith("_PCR"))`);
+  manifest.checks.push('A PCR product between Teaching F and Teaching R saves as a child entry');
+  await openVector();
+  await evaluate(`const e=${rail('NdeI')},r=e.getBoundingClientRect();e.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:r.left+4,clientY:r.top+4}));`);
+  await click('#sequence-viewer-feature-context-menu [data-sequence-digest-action="double"]');
+  await waitFor('document.querySelector(".sequence-viewer-digest-picker")');
+  await evaluate(`${rail('BamHI')}.click();`);
+  await waitFor('document.querySelector(".sequence-viewer-digest-overlay")?.open');
+  await check('document.querySelectorAll("[data-digest-keep]").length === 2', 'Double digestion of the circular vector at NdeI and BamHI offers two fragments');
+  await shot('16-digest', 'Review a double digestion', 'Check both sites and the fragments, choose which to keep, then save.', '.sequence-viewer-digest-dialog',
+    [['[data-digest-sites]', 'Check the cut sites'], ['[data-digest-products]', 'Choose and name fragments'], ['[data-digest-save]', 'Confirm digestion and save']]);
+  await click('[data-digest-save]');
+  await waitFor('!document.querySelector(".sequence-viewer-digest-overlay")?.open');
+  await check(`JSON.parse(${children}).length === 4`, 'Confirm digestion saves both fragments under the template');
+  await evaluate('tutorial.home();');
+  await click('#sequence-viewer-library-filter-saved');
+  await waitFor('document.querySelector("#sequence-viewer-library-list [data-sequence-entry-id=demo-vector]")');
+  await openVector();
+  await click('#sequence-viewer-vector-builder-btn');
+  await waitFor('document.querySelector("#sequence-viewer-vector-builder-map svg")');
   await click('#sequence-viewer-vector-builder-protein-builder-btn');
   await click('#sequence-viewer-protein-builder-add-protein-btn');
   await input('#sequence-viewer-protein-builder-add-protein-name', 'Practice protein');
   await input('#sequence-viewer-protein-builder-add-protein-sequence', 'MAGELKQAGELKQAGELKQAGELKQ');
-  await shot('14-add-protein', 'Add a protein block', 'Enter amino acids or a DNA coding sequence, then add it to the chain.', '.sequence-viewer-protein-builder-add-protein-dialog',
+  await shot('17-add-protein', 'Add a protein block', 'Enter amino acids or a DNA coding sequence, then add it to the chain.', '.sequence-viewer-protein-builder-add-protein-dialog',
     [['#sequence-viewer-protein-builder-add-protein-name', 'Name the block'], ['#sequence-viewer-protein-builder-add-protein-type', 'Choose sequence type'], ['#sequence-viewer-protein-builder-add-protein-confirm-btn', 'Add to Chain']]);
   await evaluate('document.getElementById("sequence-viewer-protein-builder-add-protein-form").requestSubmit();');
   await evaluate('document.querySelector("#sequence-viewer-protein-builder-common-blocks details").open=true;');
   await click('[data-protein-builder-add-library-id=his6]');
   await click('#sequence-viewer-protein-builder-build-dna-btn');
-  await shot('15-protein-builder', 'Arrange a protein construct', 'Order blocks from N to C, review the protein sequence, and choose codon settings for DNA.', null,
+  await shot('18-protein-builder', 'Arrange a protein construct', 'Order blocks from N to C, review the protein sequence, and choose codon settings for DNA.', null,
     [['#sequence-viewer-protein-builder-workflow', 'Arrange the assembly chain'], ['#sequence-viewer-protein-builder-protein-sequence-highlight', 'Review amino acids'], ['#sequence-viewer-protein-builder-codon-usage', 'Choose codon usage']]);
   await check('document.getElementById("sequence-viewer-protein-builder-meta").textContent.includes("aa")', 'A manual protein and a common tag form an assembled chain');
   await click('#sequence-viewer-protein-builder-back-btn');
@@ -269,12 +314,22 @@ async function main() {
     await click('[data-sequence-hover-tooltip="feature"] [data-sequence-primer-library-save]');
   }
   await check('tutorial.state.primerLibrary.length === 2', 'Saving two annotated primers from their hover cards populates Primer Library');
+  await evaluate('tutorial.select(604,664); tutorial.cursor(620);');
+  await waitFor('!document.getElementById("sequence-viewer-feature-context-menu").hidden');
+  await click('[data-sequence-feature-action=design-primer]');
+  await waitFor('!document.getElementById("sequence-viewer-primer-design-overlay").hidden && !document.getElementById("sequence-viewer-primer-design-save").disabled');
+  await shot('20-primer-design', 'Design primers for a selected range', 'Review the designed primers, then save them to Primer Library.', '.sequence-viewer-primer-design-dialog',
+    [['#sequence-viewer-primer-design-result', 'Review the designed primers'], ['#sequence-viewer-primer-design-save', 'Save to Primer Library']]);
+  await click('#sequence-viewer-primer-design-save');
+  await waitFor('tutorial.state.primerLibrary.length > 2');
+  manifest.checks.push('Save to Primer Library keeps the designed primers');
+  await click('#sequence-viewer-primer-design-close');
   await click('#sequence-viewer-detail-primer-library-open');
   await click('#sequence-viewer-primer-library-select-all');
-  await shot('17-primer-library', 'Select primers in Primer Library', 'Search, rename, and select primers before exporting their order block.', '.sequence-viewer-primer-library-dialog',
+  await shot('21-primer-library', 'Select primers in Primer Library', 'Search, rename, and select primers before exporting their order block.', '.sequence-viewer-primer-library-dialog',
     [['#sequence-viewer-primer-library-search', 'Search primers'], ['#sequence-viewer-primer-library-body', 'Check names and sequences'], ['#sequence-viewer-primer-library-export', 'Export Selected to IDT']]);
   await click('#sequence-viewer-primer-library-export');
-  await shot('18-primer-order', 'Copy an order block', 'Choose scale and purification, then copy the block for your ordering workflow.', '.sequence-viewer-primer-order-dialog',
+  await shot('22-primer-order', 'Copy an order block', 'Choose scale and purification, then copy the block for your ordering workflow.', '.sequence-viewer-primer-order-dialog',
     [['.sequence-viewer-primer-order-controls', 'Choose order options'], ['#sequence-viewer-primer-order-preview', 'Review the order block'], ['#sequence-viewer-primer-order-copy-idt', 'Copy IDT Block']]);
   await click('#sequence-viewer-primer-order-copy-idt');
   await check('tutorialCopied.includes("Teaching F") && tutorialCopied.includes("Teaching R")', 'Copy IDT Block copies the selected primer names and sequences');
@@ -283,11 +338,18 @@ async function main() {
   await evaluate('tutorial.home();');
   await click('#sequence-viewer-library-filter-saved');
   await waitFor('document.querySelector("#sequence-viewer-library-list [data-sequence-entry-id=demo-vector]")');
+  await click('[data-sequence-sample-position="demo-vector"]');
+  await waitFor('!document.getElementById("sequence-viewer-quick-sample-overlay").hidden');
+  await shot('23-sample-position', 'Record where the DNA is stored', 'Choose the storage location, container, and position, then add the sample.', '#sequence-viewer-quick-sample-overlay .biology-notebook-quick-sample-dialog',
+    [['.biology-notebook-quick-sample-location.is-selected', 'Storage location'], ['#sequence-viewer-quick-sample-container', 'Container'], ['.biology-notebook-quick-sample-well.is-selected', 'Position'], ['#sequence-viewer-quick-sample-name', 'Sample name'], ['#sequence-viewer-quick-sample-submit-btn', 'Add the sample']], { side: false });
+  await evaluate('document.getElementById("sequence-viewer-quick-sample-form").requestSubmit();');
+  await waitFor('document.getElementById("sequence-viewer-quick-sample-overlay").hidden');
+  await check('tutorial.state.samples.some(s=>s.name==="Teaching vector · example" && s.type==="dna" && s.inventoryLink?.containerId==="dna-box")', 'Record sample position adds a DNA sample at the chosen box position');
   await contextMenu('#sequence-viewer-library-list [data-sequence-entry-id=demo-vector]');
-  await shot('19-library-actions', 'Organize the sequence library', 'Right-click an entry to rename it, create a folder, or choose Move to Folder.', '#sequence-viewer-library-context-menu',
+  await shot('24-library-actions', 'Organize the sequence library', 'Right-click an entry to rename it, create a folder, or choose Move to Folder.', '#sequence-viewer-library-context-menu',
     [['#sequence-viewer-library-context-menu [data-sequence-library-action=new-folder]', 'New Folder'], ['#sequence-viewer-library-context-menu [data-sequence-library-action=rename]', 'Rename'], ['#sequence-viewer-library-context-menu [data-sequence-library-action=move-entry]', 'Move to Folder']]);
   await click('#sequence-viewer-library-context-menu [data-sequence-library-action=rename]');
-  await shot('20-rename-sequence', 'Rename a sequence', 'Type the new name in the library row and press Enter to keep it.', '.folder-tree-template__rename-input',
+  await shot('25-rename-sequence', 'Rename a sequence', 'Type the new name in the library row and press Enter to keep it.', '.folder-tree-template__rename-input',
     [['#sequence-viewer-library-list input', 'Edit the name, then Enter']]);
   await input('#sequence-viewer-library-list input', 'Teaching vector · renamed');
   await key('#sequence-viewer-library-list input', 'Enter');

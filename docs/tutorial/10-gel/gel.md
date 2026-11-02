@@ -18,7 +18,7 @@ The screenshots use simulated images for learning the interface. You can follow 
 
 ![Select gels in the left navigator, inspect the image in the center, and choose tools on the right.](images/02-gel-workspace.png)
 
-The vertical toolbar on the right opens **Image**, **Crop**, **Lanes**, **Ladder**, **Bands**, **Results**, and **Processed**. Click an open category again, or its panel's close button, to make more room for the image.
+The vertical toolbar on the right opens **Image**, **Crop**, **Lanes**, **Ladder**, **Bands**, **Results**, and **Processed**. Click an open category again, or its panel's close button, to hide its panel. The gel keeps its size and position either way.
 
 A project can hold up to 16 gel layers. New imports appear in the navigator so you can return to their images and settings.
 
@@ -268,12 +268,15 @@ The same edges trim the stack's blots and their individual lane tables. You can 
 1. Select the individual gel or open the stack you want to export.
 2. Inspect the displayed figure, including its labels, crop, and alignment.
 3. Click **Export** in the right toolbar.
-4. Choose **Image (PNG)** for an image, or **PowerPoint (PPTX)** for a slide with separate blot images and editable labels and table cells.
-5. Follow the save prompt, then open the exported file to inspect it.
+4. Optional: turn on **Ladder labels** to print the marked ladder sizes beside each exported blot.
+5. Choose **Image (PNG)** for an image, or **PowerPoint (PPTX)** for a slide with separate blot images and editable labels and table cells.
+6. Follow the save prompt, then open the exported file to inspect it.
 
-![Use Export to choose Image, PowerPoint, or measured Bands data.](images/22-export-menu.png)
+![Turn on Ladder labels if needed, then choose Image, PowerPoint, or measured Bands data.](images/22-export-menu.png)
 
 For **Bands (CSV)**, first select the individual gel whose analysis results you want, then choose that export. It exports that gel's band report. To copy the compact target-intensity table, use **Results > Band intensity > Copy table**.
+
+**Ladder labels** is off by default and works for single gels and stacks. It labels only ladder bands you marked with **Set MW** that lie inside the crop, in the ladder's units; in PowerPoint the labels and ticks stay editable. It does not change measurements.
 
 For an individual gel, finish the lane dividers before exporting its figure. In a stack's view, PNG and PowerPoint export the combined stack shown in the viewer.
 
@@ -291,7 +294,7 @@ For an individual gel, finish the lane dividers before exporting its figure. In 
 
 The project includes the gel images, processing settings, manual selections, lane tables, and stack placement. Opening a project merges its contents into the current workspace. You can practice with [practice.gel-figure.json](examples/practice.gel-figure.json), which contains the two simulated gels shown here.
 
-### Rename or remove a gel
+### Rename a gel or stack
 
 1. Double-click a gel, stack, or Layout entry in the navigator. You can also focus the entry and press **F2**.
 2. Type the new name.

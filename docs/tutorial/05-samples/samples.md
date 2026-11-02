@@ -94,6 +94,7 @@ Each type adds its own fields to the form.
 | **Protein** | MW (kDa), Tag, Buffer, Expression Host |
 | **Chemical** | CAS #, MW (g/mol), Purity, Vendor / Catalog #, and a chemical structure |
 | **Primer** | Sequence (5'→3'), Direction, Tm (°C), Target |
+| **DNA**, **RNA** | No extra fields |
 | **Other** | No extra fields |
 
 If you change a sample's type, the old type's fields are not kept when you save.

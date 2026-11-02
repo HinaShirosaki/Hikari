@@ -13,7 +13,7 @@
 <a href="#10-create-custom-row-or-column-groups">10. Create custom row or column groups</a>
 <a href="#11-choose-an-analysis-and-inspect-the-summary">11. Choose an analysis and inspect the summary</a>
 <a href="#12-format-the-chart">12. Format the chart</a>
-<a href="#13-export-or-enlarge-a-chart">13. Export or enlarge a chart</a>
+<a href="#13-export-a-chart">13. Export a chart</a>
 <a href="#14-find-edit-or-delete-an-existing-plate">14. Find, edit, or delete an existing plate</a></nav></aside>
 <main id="chapter"><div class="eyebrow">HIKARI / ILLUSTRATED TUTORIAL</div><article><h1>Plate</h1>
 <p>How to define an assay plate, enter results, calculate transformed values, and prepare a chart.</p>
@@ -26,7 +26,7 @@
 <li>Choose <strong>Analyze</strong> to enter measurements, transform values, group wells, and plot the results.</li>
 </ol>
 <figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 1"><img loading="lazy" src="images/01-plate-workspace.png" alt="Choose Setup or Analyze in the left rail; Setup shows the assay details and editable well map."></button><figcaption><span>Figure 1.</span> Choose Setup or Analyze in the left rail; Setup shows the assay details and editable well map. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
-<p>Saved plate records are called <strong>assays</strong> in the interface. Use the disclosure arrows beside sections such as <strong>Existing Assays</strong> and <strong>Data Analysis</strong> to expand or collapse them.</p>
+<p>Saved plate records are called <strong>assays</strong> in the interface. Use the disclosure arrows beside sections such as <strong>Existing Assays</strong>, or <strong>Result data</strong> inside <strong>Data Analysis</strong>, to expand or collapse them.</p>
 <h2 id="2-create-a-plate">2. Create a plate<a class="heading-link" href="#2-create-a-plate" aria-label="Link to 2. Create a plate">#</a></h2>
 <ol>
 <li>In <strong>Setup</strong>, click <strong>Create new assay</strong>, the plus icon at the top of the left rail.</li>
@@ -120,18 +120,19 @@ A2,A,2,Sample A,50 uM
 <ol>
 <li>Save the plate setup, then click <strong>Analyze</strong>.</li>
 <li>Expand <strong>Existing Assays</strong> and choose the plate you want to analyze.</li>
-<li>Find <strong>Plate results · Table1</strong> in the lower workspace. The chart appears above it, with <strong>Data Analysis</strong> controls in the left rail.</li>
+<li>Use the two view buttons at the top of the right toolbar. <strong>Chart</strong> shows the analysis chart; <strong>Data</strong> shows the plate tables.</li>
+<li>The <strong>Data Analysis</strong> panel opens beside the toolbar. Click <strong>Data Analysis</strong>, the bar-chart icon, to open or close it. <strong>Chart Format</strong>, the slider icon below it, opens the formatting controls in the same place.</li>
 </ol>
-<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 8"><img loading="lazy" src="images/08-analyze-workspace.png" alt="Select the assay, use the analysis controls on the left, and read the chart and tables on the right."></button><figcaption><span>Figure 8.</span> Select the assay, use the analysis controls on the left, and read the chart and tables on the right. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 8"><img loading="lazy" src="images/08-analyze-workspace.png" alt="Switch between Chart and Data in the right toolbar, and use the Data Analysis panel for analysis settings."></button><figcaption><span>Figure 8.</span> Switch between Chart and Data in the right toolbar, and use the Data Analysis panel for analysis settings. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
 <h3 id="type-or-paste-measurements">Type or paste measurements<a class="heading-link" href="#type-or-paste-measurements" aria-label="Link to Type or paste measurements">#</a></h3>
 <ol>
-<li>Click a mapped well&#39;s result cell to edit it.</li>
+<li>Click <strong>Data</strong> in the right toolbar, then find <strong>Plate results · Table1</strong>. Click a mapped well&#39;s result cell to edit it.</li>
 <li>Type the measurement and press <strong>Enter</strong> to finish the edit.</li>
 <li>To enter a block from a spreadsheet, copy the numeric cells, select the destination starting well in Table1, and paste.</li>
 <li>Check the row and column positions against the original data. Values for unmapped wells are skipped.</li>
-<li>Use <strong>Save results</strong>, the disk icon beside the chart title, after reviewing the plate.</li>
+<li>Click <strong>Save</strong> at the top right of the workspace after reviewing the plate.</li>
 </ol>
-<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 9"><img loading="lazy" src="images/09-enter-results.png" alt="Enter a numeric result in a well cell and use Save results beside the chart title."></button><figcaption><span>Figure 9.</span> Enter a numeric result in a well cell and use Save results beside the chart title. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 9"><img loading="lazy" src="images/09-enter-results.png" alt="Enter a numeric result in a well cell and use Save at the top right."></button><figcaption><span>Figure 9.</span> Enter a numeric result in a well cell and use Save at the top right. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
 <p>Result edits are saved as you finish each edit or paste. Analysis updates from the current values. The <strong>Clear results</strong> trash icon under <strong>Result data</strong> removes the plate&#39;s entered measurements; check the selected assay before using it.</p>
 <h2 id="8-import-a-result-file">8. Import a result file<a class="heading-link" href="#8-import-a-result-file" aria-label="Link to 8. Import a result file">#</a></h2>
 <ol>
@@ -141,7 +142,7 @@ A2,A,2,Sample A,50 uM
 <li>If several possible result matrices are found, choose one in <strong>Select Result Matrix</strong>.</li>
 <li>Compare its preview with your plate: check the row labels, column labels, dimensions, and values.</li>
 <li>Click <strong>Use This Matrix</strong>.</li>
-<li>Inspect the imported values in Table1 and the updated chart.</li>
+<li>Inspect the imported values in Table1, then click <strong>Chart</strong> to see the updated chart.</li>
 </ol>
 <figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 10"><img loading="lazy" src="images/10-import-results.png" alt="Choose a detected result matrix, verify its preview, and click Use This Matrix."></button><figcaption><span>Figure 10.</span> Choose a detected result matrix, verify its preview, and click Use This Matrix. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
 <p>If the file has only one detected matrix, the import can proceed directly. Importing fills the matched wells and keeps the source file as an attachment to the assay.</p>
@@ -176,15 +177,15 @@ A2,A,2,Sample A,50 uM
 <p>Avoid formulas that refer back to themselves. Correct cells marked with formula errors before analyzing their transformed values.</p>
 <h3 id="choose-the-analysis-data-source">Choose the analysis data source<a class="heading-link" href="#choose-the-analysis-data-source" aria-label="Link to Choose the analysis data source">#</a></h3>
 <ol>
-<li>Expand <strong>Data source</strong> in the left rail.</li>
+<li>Expand <strong>Data source</strong> in the <strong>Data Analysis</strong> panel.</li>
 <li>Choose <strong>Plate results · Table1</strong> to analyze the original measurements, or <strong>Transformed plate · Table2</strong> to analyze the calculated values.</li>
-<li>Check the chart and <strong>Summary</strong> after switching sources.</li>
+<li>Check the chart and the <strong>Summary</strong> table after switching sources.</li>
 </ol>
 <figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 12"><img loading="lazy" src="images/12-analysis-source.png" alt="Choose Table1 or Table2 in Data source to control which values feed the analysis."></button><figcaption><span>Figure 12.</span> Choose Table1 or Table2 in Data source to control which values feed the analysis. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
 <p>Only numeric transformed cells contribute when Table2 is selected. Fill all the transformed wells you intend to analyze; blank Table2 cells do not automatically borrow Table1 values. Formula edits save as you finish editing. To remove the transformed plate, use its <strong>Remove transform</strong> trash icon.</p>
 <h2 id="10-create-custom-row-or-column-groups">10. Create custom row or column groups<a class="heading-link" href="#10-create-custom-row-or-column-groups" aria-label="Link to 10. Create custom row or column groups">#</a></h2>
 <ol>
-<li>Open the <strong>Plate results</strong> table.</li>
+<li>Click <strong>Data</strong> in the right toolbar and open the <strong>Plate results</strong> table.</li>
 <li>Drag across the well cells covering the rows or columns you want to group.</li>
 <li>Under <strong>Data Analysis &gt; Groups</strong>, click <strong>Rows</strong> to add the selected rows as a group, or <strong>Columns</strong> to group the selected columns.</li>
 <li>Repeat with other selections as needed.</li>
@@ -199,7 +200,7 @@ A2,A,2,Sample A,50 uM
 <li>Choose <strong>Group by</strong>. For the example plate, <strong>Sample ID × Concentration</strong> keeps each sample and concentration combination together.</li>
 <li>Choose <strong>Summary statistics</strong> under <strong>Method</strong>.</li>
 <li>Leave <strong>Show SD error bars</strong> selected if you want them in the chart.</li>
-<li>Open the <strong>Summary</strong> table tab to inspect the calculated results.</li>
+<li>Click <strong>Chart</strong> to inspect the chart, then <strong>Data &gt; Summary</strong> to read the calculated results.</li>
 </ol>
 <figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 14"><img loading="lazy" src="images/14-summary-analysis.png" alt="Choose how to group wells and which analysis method to use, then inspect the chart and Summary table."></button><figcaption><span>Figure 14.</span> Choose how to group wells and which analysis method to use, then inspect the chart and Summary table. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
 <p>The controls update the analysis as you change them. Other grouping choices include sample ID, concentration, plate row, and plate column.</p>
@@ -208,15 +209,15 @@ A2,A,2,Sample A,50 uM
 <li>Choose a grouping that separates the series you want to compare, such as <strong>Sample ID</strong>.</li>
 <li>Choose a fitting method. The example uses <strong>Linear fit</strong> to demonstrate the controls.</li>
 <li>Set <strong>X Axis</strong>, such as <strong>Concentration</strong>.</li>
-<li>Inspect the data points and fitted curves in the chart.</li>
-<li>Read <strong>Summary</strong> for the fit output. Review any message about missing values or an unsuccessful fit.</li>
+<li>Close the panel with its <strong>×</strong> when you want more room, and inspect the data points and fitted curves in the chart.</li>
+<li>Click <strong>Data</strong> and open <strong>Summary</strong> for the fit output. Review any message about missing values or an unsuccessful fit.</li>
 </ol>
-<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 15"><img loading="lazy" src="images/15-curve-fit.png" alt="Inspect the plotted measurements and fitted curves, then open Summary or Chart Format."></button><figcaption><span>Figure 15.</span> Inspect the plotted measurements and fitted curves, then open Summary or Chart Format. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 15"><img loading="lazy" src="images/15-curve-fit.png" alt="Inspect the plotted measurements and fitted curves, then open the Data view or Format chart."></button><figcaption><span>Figure 15.</span> Inspect the plotted measurements and fitted curves, then open the Data view or Format chart. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
 <p>The Method menu also contains sigmoidal, hyperbola, polynomial, Padé, and one-phase exponential fits, plus plate QC, Z-scores, comparisons to a control, and normalization. Choose the method that fits your intended analysis.</p>
 <p>When a method shows <strong>High control (100%)</strong> or <strong>Low control (0%)</strong>, enter the corresponding group label or sample ID from your plate. For a sigmoidal fit, <strong>Asymmetric (5PL)</strong> enables the five-parameter option; polynomial fits show <strong>Polynomial Order</strong>. Recheck the summary whenever you change a method or control assignment.</p>
 <h2 id="12-format-the-chart">12. Format the chart<a class="heading-link" href="#12-format-the-chart" aria-label="Link to 12. Format the chart">#</a></h2>
 <ol>
-<li>Click <strong>Chart Format</strong> beside the chart title.</li>
+<li>Click <strong>Format chart</strong>, the slider icon beside the chart title, or <strong>Chart Format</strong> in the right toolbar. The panel opens on the right.</li>
 <li>Use its tabs to choose the part of the chart you want to change.</li>
 <li>In <strong>Frame</strong>, adjust the background and frame settings.</li>
 <li>Click <strong>Save preset as…</strong>, the disk icon beside <strong>Preset</strong>, when you want to reuse the current formatting. Give the preset a name in the prompt.</li>
@@ -232,14 +233,14 @@ A2,A,2,Sample A,50 uM
 </ol>
 <figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 17"><img loading="lazy" src="images/17-format-axis.png" alt="Choose axis scales and use automatic limits or enter a range."></button><figcaption><span>Figure 17.</span> Choose axis scales and use automatic limits or enter a range. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
 <p>Formatting is retained with the assay. Use the preset and reset controls when you want to apply a saved style or return settings to their defaults.</p>
-<h2 id="13-export-or-enlarge-a-chart">13. Export or enlarge a chart<a class="heading-link" href="#13-export-or-enlarge-a-chart" aria-label="Link to 13. Export or enlarge a chart">#</a></h2>
+<h2 id="13-export-a-chart">13. Export a chart<a class="heading-link" href="#13-export-a-chart" aria-label="Link to 13. Export a chart">#</a></h2>
 <ol>
 <li>Check the selected assay, data source, analysis method, and chart formatting.</li>
 <li>Click <strong>PNG</strong> above the chart to export a raster image, or <strong>SVG</strong> to export a vector image.</li>
 <li>Follow the save or download prompt and open the exported image to inspect it.</li>
-<li>For a larger view while working, click <strong>Focus chart</strong>, the expand icon at the top-right of the chart. Click it again to return to the regular workspace.</li>
 </ol>
-<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 18"><img loading="lazy" src="images/18-export-chart.png" alt="Export the chart as PNG or SVG, or use Focus chart for a larger view."></button><figcaption><span>Figure 18.</span> Export the chart as PNG or SVG, or use Focus chart for a larger view. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 18"><img loading="lazy" src="images/18-export-chart.png" alt="Export the chart as PNG or SVG from the chart header."></button><figcaption><span>Figure 18.</span> Export the chart as PNG or SVG from the chart header. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>The chart keeps its size when you open or close a panel or resize the window, so the export matches what you formatted. When the chart is larger than the workspace, scroll to see the rest of it. To set an exact size, open <strong>Chart Format &gt; Frame</strong>, clear <strong>Fit to canvas</strong> under <strong>Plot dimensions</strong>, and enter <strong>Width (px)</strong> and <strong>Height (px)</strong>.</p>
 <h2 id="14-find-edit-or-delete-an-existing-plate">14. Find, edit, or delete an existing plate<a class="heading-link" href="#14-find-edit-or-delete-an-existing-plate" aria-label="Link to 14. Find, edit, or delete an existing plate">#</a></h2>
 <h3 id="reopen-and-edit">Reopen and edit<a class="heading-link" href="#reopen-and-edit" aria-label="Link to Reopen and edit">#</a></h3>
 <ol>

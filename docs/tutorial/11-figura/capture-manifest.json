@@ -1,5 +1,5 @@
 {
-  "sourceVersion": "1.1.0-beta.9",
+  "sourceVersion": "1.1.0-beta.11",
   "exampleDate": "2026-10-25",
   "timezone": "America/Chicago",
   "viewport": [
@@ -33,9 +33,9 @@
           "label": "Edit the figure canvas",
           "rect": {
             "x": 292,
-            "y": 42,
+            "y": 44,
             "width": 1248,
-            "height": 940
+            "height": 938
           }
         },
         {
@@ -64,7 +64,7 @@
           "selector": "#new-illustration",
           "label": "Create a new illustration",
           "rect": {
-            "x": 233,
+            "x": 225,
             "y": 14,
             "width": 30,
             "height": 30
@@ -74,7 +74,7 @@
           "selector": "#figure-title",
           "label": "Enter the figure title",
           "rect": {
-            "x": 328,
+            "x": 332,
             "y": 6,
             "width": 288,
             "height": 33
@@ -94,12 +94,12 @@
       "targets": [
         {
           "selector": "#complexity",
-          "label": "Choose a complexity level",
+          "label": "Choose a detail level",
           "rect": {
-            "x": 1330,
-            "y": 10,
+            "x": 1340,
+            "y": 9,
             "width": 79,
-            "height": 23
+            "height": 28
           }
         },
         {
@@ -129,17 +129,27 @@
       "title": "Set preferences for future AI edits",
       "crop": {
         "x": 1252,
-        "y": 26,
+        "y": 0,
         "width": 306,
-        "height": 369
+        "height": 317
       },
       "targets": [
+        {
+          "selector": "#figure-menu > summary",
+          "label": "Open Image generation settings",
+          "rect": {
+            "x": 1421,
+            "y": 9,
+            "width": 28,
+            "height": 28
+          }
+        },
         {
           "selector": "#image-generation-enabled",
           "label": "Enable a percentage preference",
           "rect": {
             "x": 1496,
-            "y": 58,
+            "y": 61,
             "width": 30,
             "height": 18
           }
@@ -149,7 +159,7 @@
           "label": "Choose the image-generation share",
           "rect": {
             "x": 1284,
-            "y": 86,
+            "y": 90,
             "width": 196,
             "height": 24
           }
@@ -159,7 +169,7 @@
           "label": "Choose an image style",
           "rect": {
             "x": 1284,
-            "y": 181,
+            "y": 144,
             "width": 242,
             "height": 28
           }
@@ -170,28 +180,38 @@
       "name": "05-canvas-size",
       "title": "Choose a preset or an exact canvas size",
       "crop": {
-        "x": 604,
+        "x": 1027,
         "y": 0,
-        "width": 316,
-        "height": 171
+        "width": 280,
+        "height": 176
       },
       "targets": [
         {
           "selector": "#canvas-size",
           "label": "Choose a canvas preset",
           "rect": {
-            "x": 669,
+            "x": 1074,
             "y": 9,
-            "width": 165,
-            "height": 25
+            "width": 182,
+            "height": 28
+          }
+        },
+        {
+          "selector": "#canvas-settings",
+          "label": "Custom canvas size",
+          "rect": {
+            "x": 1258,
+            "y": 9,
+            "width": 28,
+            "height": 28
           }
         },
         {
           "selector": "#canvas-properties [name=width]",
           "label": "Enter the canvas width",
           "rect": {
-            "x": 639,
-            "y": 100,
+            "x": 1072,
+            "y": 104,
             "width": 98,
             "height": 32
           }
@@ -200,8 +220,8 @@
           "selector": "#canvas-properties [name=height]",
           "label": "Enter the canvas height",
           "rect": {
-            "x": 745,
-            "y": 100,
+            "x": 1178,
+            "y": 104,
             "width": 98,
             "height": 32
           }
@@ -255,9 +275,9 @@
       "title": "Edit a label independently",
       "crop": {
         "x": 1274,
-        "y": 24,
+        "y": 26,
         "width": 284,
-        "height": 976
+        "height": 974
       },
       "targets": [
         {
@@ -265,7 +285,7 @@
           "label": "Edit the label text",
           "rect": {
             "x": 1305,
-            "y": 189,
+            "y": 151,
             "width": 235,
             "height": 49
           }
@@ -275,7 +295,7 @@
           "label": "Set font, size, and color",
           "rect": {
             "x": 1305,
-            "y": 250,
+            "y": 212,
             "width": 235,
             "height": 30
           }
@@ -285,7 +305,7 @@
           "label": "Set weight and anchor",
           "rect": {
             "x": 1305,
-            "y": 326,
+            "y": 288,
             "width": 235,
             "height": 55
           }
@@ -293,49 +313,93 @@
       ]
     },
     {
-      "name": "08-style-vector",
-      "title": "Style a vector component",
+      "name": "08-inline-text",
+      "title": "Edit a label directly on the canvas",
       "crop": {
-        "x": 1274,
-        "y": 24,
-        "width": 284,
-        "height": 976
+        "x": 274,
+        "y": 26,
+        "width": 1284,
+        "height": 974
       },
       "targets": [
         {
-          "selector": "#vector-properties [name=fill]",
-          "label": "Set the vector fill",
+          "selector": "#canvas-text-editor",
+          "label": "Type the new label text",
           "rect": {
-            "x": 1305,
-            "y": 247,
-            "width": 114,
-            "height": 30
-          }
-        },
-        {
-          "selector": "#vector-properties [name=stroke]",
-          "label": "Set its outline color",
-          "rect": {
-            "x": 1426,
-            "y": 247,
-            "width": 114,
-            "height": 30
-          }
-        },
-        {
-          "selector": "#edit-artwork",
-          "label": "Open the SVG artwork editor",
-          "rect": {
-            "x": 1305,
-            "y": 322,
-            "width": 235,
-            "height": 30
+            "x": 330,
+            "y": 133,
+            "width": 399,
+            "height": 55
           }
         }
       ]
     },
     {
-      "name": "09-import-artwork",
+      "name": "09-recolor-vector",
+      "title": "Recolor vector artwork one color at a time",
+      "crop": {
+        "x": 402,
+        "y": 26,
+        "width": 1156,
+        "height": 974
+      },
+      "targets": [
+        {
+          "selector": "#vector-color-swatches input[data-color=\"#438482\"]",
+          "label": "Choose the color to change",
+          "rect": {
+            "x": 1334,
+            "y": 424,
+            "width": 24,
+            "height": 24
+          }
+        },
+        {
+          "selector": "#main-canvas [data-object-id=\"sender\"] .color-ants",
+          "label": "Parts painted with it",
+          "rect": {
+            "x": 426,
+            "y": 373,
+            "width": 213,
+            "height": 160
+          }
+        }
+      ]
+    },
+    {
+      "name": "10-figure-palette",
+      "title": "Set the figure palette",
+      "crop": {
+        "x": 1360,
+        "y": 46,
+        "width": 240,
+        "height": 199
+      },
+      "targets": [
+        {
+          "selector": "#palette-colors",
+          "label": "Click a swatch to change it",
+          "rect": {
+            "x": 1389,
+            "y": 100,
+            "width": 192,
+            "height": 40
+          }
+        },
+        {
+          "selector": "#palette-add",
+          "label": "Add a color",
+          "rect": {
+            "x": 1389,
+            "y": 146,
+            "width": 192,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "11-import-artwork",
       "title": "Inspect imported artwork before adding it",
       "crop": {
         "x": 402,
@@ -345,7 +409,7 @@
       },
       "targets": [
         {
-          "selector": "#raster-preview",
+          "selector": "#raster-preview-shell img",
           "label": "Inspect the artwork",
           "rect": {
             "x": 560,
@@ -377,23 +441,23 @@
       ]
     },
     {
-      "name": "10-crop-image",
+      "name": "12-crop-image",
       "title": "Crop a selected raster image",
       "crop": {
         "x": 274,
-        "y": 24,
+        "y": 26,
         "width": 1284,
-        "height": 976
+        "height": 974
       },
       "targets": [
         {
           "selector": ".cropper-crop-box",
           "label": "Adjust the crop area",
           "rect": {
-            "x": 394,
-            "y": 96,
-            "width": 869,
-            "height": 652
+            "x": 395,
+            "y": 97,
+            "width": 868,
+            "height": 651
           }
         },
         {
@@ -411,7 +475,7 @@
           "label": "Apply crop",
           "rect": {
             "x": 1438,
-            "y": 59,
+            "y": 61,
             "width": 85,
             "height": 31
           }
@@ -419,29 +483,39 @@
       ]
     },
     {
-      "name": "11-rectangle-selection",
+      "name": "13-rectangle-selection",
       "title": "Select components with a rectangle",
       "crop": {
         "x": 274,
-        "y": 24,
+        "y": 26,
         "width": 1284,
-        "height": 976
+        "height": 974
       },
       "targets": [
         {
-          "selector": "#main-canvas .selection",
+          "selector": "#main-canvas .selection, #main-canvas .selection-member",
           "label": "Review the selected components",
           "rect": {
-            "x": 447,
-            "y": 283,
-            "width": 295,
-            "height": 348
+            "x": 451,
+            "y": 324,
+            "width": 286,
+            "height": 303
+          }
+        },
+        {
+          "selector": "#selection-toolbar",
+          "label": "Group or align from the bar",
+          "rect": {
+            "x": 539,
+            "y": 276,
+            "width": 111,
+            "height": 40
           }
         }
       ]
     },
     {
-      "name": "12-freehand-selection",
+      "name": "14-freehand-selection",
       "title": "Select with a freehand outline",
       "crop": {
         "x": 274,
@@ -461,67 +535,57 @@
           }
         },
         {
-          "selector": "#main-canvas .selection",
+          "selector": "#main-canvas .selection, #main-canvas .selection-member",
           "label": "Review the selected region",
           "rect": {
-            "x": 1084,
-            "y": 283,
-            "width": 295,
-            "height": 348
+            "x": 1089,
+            "y": 324,
+            "width": 286,
+            "height": 303
           }
         }
       ]
     },
     {
-      "name": "13-position-and-size",
-      "title": "Set exact position, size, and opacity",
+      "name": "15-smart-guides",
+      "title": "Drag with smart guides",
       "crop": {
-        "x": 1274,
-        "y": 24,
-        "width": 284,
-        "height": 976
+        "x": 274,
+        "y": 26,
+        "width": 1284,
+        "height": 974
       },
       "targets": [
         {
-          "selector": ".geometry-options",
-          "label": "Enter position and dimensions",
+          "selector": "#main-canvas .smart-guide-alignment",
+          "label": "Alignment guide",
           "rect": {
-            "x": 1305,
-            "y": 604,
-            "width": 235,
-            "height": 154
+            "x": 785,
+            "y": 436,
+            "width": 583,
+            "height": 0
           }
         },
         {
-          "selector": "#properties [name=rotation]",
-          "label": "Set a rotation angle",
+          "selector": "#main-canvas .selection",
+          "label": "The component being moved",
           "rect": {
-            "x": 1305,
-            "y": 564,
-            "width": 114,
-            "height": 30
-          }
-        },
-        {
-          "selector": "#properties [name=opacity]",
-          "label": "Adjust opacity",
-          "rect": {
-            "x": 1426,
-            "y": 564,
-            "width": 114,
-            "height": 30
+            "x": 1069,
+            "y": 284,
+            "width": 295,
+            "height": 269
           }
         }
       ]
     },
     {
-      "name": "14-rotate-selection",
+      "name": "16-rotate-selection",
       "title": "Rotate a component with its handle",
       "crop": {
         "x": 274,
-        "y": 24,
+        "y": 26,
         "width": 1284,
-        "height": 976
+        "height": 974
       },
       "targets": [
         {
@@ -547,13 +611,13 @@
       ]
     },
     {
-      "name": "15-layer-actions",
+      "name": "17-layer-actions",
       "title": "Manage layer order and visibility",
       "crop": {
         "x": 1274,
-        "y": 24,
+        "y": 26,
         "width": 284,
-        "height": 976
+        "height": 974
       },
       "targets": [
         {
@@ -561,7 +625,7 @@
           "label": "Select a layer",
           "rect": {
             "x": 1305,
-            "y": 78,
+            "y": 80,
             "width": 235,
             "height": 260
           }
@@ -571,9 +635,19 @@
           "label": "Hide or show the layer",
           "rect": {
             "x": 1498,
-            "y": 85,
+            "y": 87,
             "width": 26,
             "height": 28
+          }
+        },
+        {
+          "selector": ".opacity-control",
+          "label": "Adjust opacity",
+          "rect": {
+            "x": 1305,
+            "y": 587,
+            "width": 235,
+            "height": 30
           }
         },
         {
@@ -581,7 +655,7 @@
           "label": "Duplicate, reorder, or delete",
           "rect": {
             "x": 1305,
-            "y": 703,
+            "y": 626,
             "width": 235,
             "height": 39
           }
@@ -589,7 +663,7 @@
       ]
     },
     {
-      "name": "16-group-selection",
+      "name": "18-group-selection",
       "title": "Group artwork and its label",
       "crop": {
         "x": 274,
@@ -603,7 +677,7 @@
           "label": "Group the selected components",
           "rect": {
             "x": 1559,
-            "y": 184,
+            "y": 221,
             "width": 34,
             "height": 34
           }
@@ -613,29 +687,39 @@
           "label": "Ungroup when needed",
           "rect": {
             "x": 1559,
-            "y": 221,
+            "y": 259,
             "width": 34,
             "height": 34
           }
         },
         {
-          "selector": "#main-canvas .selection",
-          "label": "Inspect the shared selection frame",
+          "selector": "#selection-toolbar [data-selection-action=group]",
+          "label": "Or use the selection bar",
           "rect": {
-            "x": 457,
-            "y": 283,
-            "width": 295,
-            "height": 348
+            "x": 544,
+            "y": 281,
+            "width": 30,
+            "height": 30
+          }
+        },
+        {
+          "selector": "#main-canvas .selection, #main-canvas .selection-member",
+          "label": "Inspect the selected components",
+          "rect": {
+            "x": 451,
+            "y": 324,
+            "width": 286,
+            "height": 303
           }
         }
       ]
     },
     {
-      "name": "17-context-menu",
+      "name": "19-context-menu",
       "title": "Open component actions with a right-click",
       "crop": {
         "x": 577,
-        "y": 418,
+        "y": 419,
         "width": 256,
         "height": 248
       },
@@ -645,7 +729,7 @@
           "label": "Copy selected components",
           "rect": {
             "x": 602,
-            "y": 443,
+            "y": 444,
             "width": 206,
             "height": 36
           }
@@ -655,7 +739,7 @@
           "label": "Ungroup the selected group",
           "rect": {
             "x": 602,
-            "y": 560,
+            "y": 561,
             "width": 206,
             "height": 36
           }
@@ -665,7 +749,7 @@
           "label": "Save as a reusable asset",
           "rect": {
             "x": 602,
-            "y": 605,
+            "y": 606,
             "width": 206,
             "height": 36
           }
@@ -673,22 +757,22 @@
       ]
     },
     {
-      "name": "18-align-distribute",
+      "name": "20-align-distribute",
       "title": "Align components or distribute their spacing",
       "crop": {
-        "x": 1379,
+        "x": 1356,
         "y": 46,
-        "width": 221,
-        "height": 354
+        "width": 244,
+        "height": 435
       },
       "targets": [
         {
           "selector": "[data-layout-action=vertical-center]",
           "label": "Align vertical centers",
           "rect": {
-            "x": 1403,
+            "x": 1380,
             "y": 217,
-            "width": 183,
+            "width": 206,
             "height": 37
           }
         },
@@ -696,9 +780,9 @@
           "selector": "[data-layout-action=distribute-horizontal]",
           "label": "Distribute horizontally",
           "rect": {
-            "x": 1403,
+            "x": 1380,
             "y": 302,
-            "width": 183,
+            "width": 206,
             "height": 37
           }
         },
@@ -706,20 +790,30 @@
           "selector": "[data-layout-action=distribute-vertical]",
           "label": "Distribute vertically",
           "rect": {
-            "x": 1403,
+            "x": 1380,
             "y": 338,
-            "width": 183,
+            "width": 206,
             "height": 37
+          }
+        },
+        {
+          "selector": "#smart-guides",
+          "label": "Smart guides on or off",
+          "rect": {
+            "x": 1392,
+            "y": 397,
+            "width": 13,
+            "height": 13
           }
         }
       ]
     },
     {
-      "name": "19-copy-paste",
+      "name": "21-copy-paste",
       "title": "Copy and paste editable components",
       "crop": {
         "x": 1354,
-        "y": 749,
+        "y": 750,
         "width": 246,
         "height": 248
       },
@@ -729,7 +823,7 @@
           "label": "Copy the selection",
           "rect": {
             "x": 1379,
-            "y": 774,
+            "y": 775,
             "width": 206,
             "height": 36
           }
@@ -739,7 +833,7 @@
           "label": "Paste editable copies",
           "rect": {
             "x": 1379,
-            "y": 810,
+            "y": 811,
             "width": 206,
             "height": 36
           }
@@ -747,7 +841,7 @@
       ]
     },
     {
-      "name": "20-save-asset",
+      "name": "22-save-asset",
       "title": "Save a reusable component",
       "crop": {
         "x": 602,
@@ -779,107 +873,108 @@
       ]
     },
     {
-      "name": "21-reusable-assets",
+      "name": "23-reusable-assets",
       "title": "Find and insert reusable assets",
       "crop": {
-        "x": 1274,
-        "y": 24,
-        "width": 284,
-        "height": 976
+        "x": 0,
+        "y": 0,
+        "width": 273,
+        "height": 270
       },
       "targets": [
+        {
+          "selector": "#assets-view-tab",
+          "label": "Switch the rail to Assets",
+          "rect": {
+            "x": 136,
+            "y": 16,
+            "width": 117,
+            "height": 26
+          }
+        },
+        {
+          "selector": [
+            "#import-asset",
+            "#import-asset-folder"
+          ],
+          "label": "Import files or a folder",
+          "rect": {
+            "x": 16,
+            "y": 56,
+            "width": 239,
+            "height": 65
+          }
+        },
         {
           "selector": "#asset-search",
           "label": "Search saved assets",
           "rect": {
-            "x": 1305,
-            "y": 126,
-            "width": 235,
-            "height": 32
+            "x": 16,
+            "y": 133,
+            "width": 239,
+            "height": 33
           }
         },
         {
           "selector": ".asset-insert",
           "label": "Insert an editable copy",
           "rect": {
-            "x": 1305,
-            "y": 217,
-            "width": 206,
+            "x": 16,
+            "y": 190,
+            "width": 207,
             "height": 62
-          }
-        },
-        {
-          "selector": "#import-asset",
-          "label": "Import an artwork asset",
-          "rect": {
-            "x": 1305,
-            "y": 84,
-            "width": 235,
-            "height": 30
           }
         }
       ]
     },
     {
-      "name": "22-saved-illustrations",
+      "name": "24-saved-illustrations",
       "title": "Find and reopen a saved illustration",
       "crop": {
         "x": 0,
         "y": 0,
-        "width": 298,
-        "height": 1000
+        "width": 273,
+        "height": 203
       },
       "targets": [
+        {
+          "selector": "#illustrations-view-tab",
+          "label": "Show Illustrations",
+          "rect": {
+            "x": 18,
+            "y": 16,
+            "width": 98,
+            "height": 26
+          }
+        },
         {
           "selector": "#illustration-search",
           "label": "Search illustration titles",
           "rect": {
             "x": 16,
             "y": 56,
-            "width": 247,
+            "width": 239,
             "height": 33
           }
         },
         {
-          "selector": "#illustrations",
+          "selector": "#illustrations > *",
           "label": "Open a saved figure",
           "rect": {
             "x": 16,
-            "y": 100,
-            "width": 247,
-            "height": 856
+            "y": 109,
+            "width": 236,
+            "height": 76
           }
         }
       ]
     },
     {
-      "name": "23-duplicate-illustration",
-      "title": "Duplicate a figure before revising it",
-      "crop": {
-        "x": 1252,
-        "y": 26,
-        "width": 306,
-        "height": 369
-      },
-      "targets": [
-        {
-          "selector": "#duplicate-illustration",
-          "label": "Duplicate this illustration",
-          "rect": {
-            "x": 1276,
-            "y": 334,
-            "width": 258,
-            "height": 37
-          }
-        }
-      ]
-    },
-    {
-      "name": "24-export-figure",
+      "name": "25-export-figure",
       "title": "Export the figure in the format you need",
       "crop": {
         "x": 1287,
-        "y": 25,
+        "y": 28,
         "width": 271,
         "height": 159
       },
@@ -889,7 +984,7 @@
           "label": "Export editable SVG",
           "rect": {
             "x": 1311,
-            "y": 49,
+            "y": 52,
             "width": 223,
             "height": 37
           }
@@ -899,7 +994,7 @@
           "label": "Export a PNG image",
           "rect": {
             "x": 1311,
-            "y": 86,
+            "y": 88,
             "width": 223,
             "height": 37
           }
@@ -909,7 +1004,7 @@
           "label": "Export adjustable PowerPoint objects",
           "rect": {
             "x": 1311,
-            "y": 123,
+            "y": 125,
             "width": 223,
             "height": 37
           }
@@ -918,18 +1013,23 @@
     }
   ],
   "checks": [
-    "Figure options saves a zero-percent image-generation preference without calling AI",
+    "Image generation settings save a zero-percent preference without calling AI",
     "Adding and editing a text label saves its content and font size",
+    "Double-clicking a label edits its text on the canvas and Enter saves it",
+    "Add layer > Vector component adds an editable vector layer",
+    "A new swatch color recolors every part painted with the old color",
+    "Add color saves palette colors with the figure",
     "Applying a raster crop saves new image pixels on the selected layer",
-    "Rectangle selection includes the sender artwork and its independent label",
-    "Position fields update the selected component in canvas coordinates",
+    "Rectangle selection includes the sender artwork and its label and shows the floating selection bar",
+    "Escape cancels a drag and leaves the component in place",
     "The rotation handle supports one-degree keyboard steps",
     "The layer visibility button hides a component without deleting it",
+    "The opacity field saves the selected layer opacity",
     "Grouping preserves separate artwork and text within one editable group",
     "Vertical-center alignment gives the three selected labels the same visible center",
     "Pasting a copied group creates independent editable artwork and text layers",
+    "Saving an asset switches the left rail to Assets",
     "An asset inserts independent copies of its saved artwork and text",
-    "Duplicate illustration adds a separate saved figure to the library",
     "SVG export produces a figure from the visible editable layers"
   ]
 }

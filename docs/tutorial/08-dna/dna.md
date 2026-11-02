@@ -67,7 +67,7 @@ For records already in the library, annotation and base changes are saved back t
 4. To select a custom range, drag across the bases from the beginning to the end of the range.
 5. Right-click the highlighted range to open its actions.
 
-![After selecting bases, right-click to add a feature or design a primer.](images/05-selection-menu.png)
+![After selecting bases, right-click to save a fragment, add a feature, or design a primer.](images/05-selection-menu.png)
 
 To return to the map-preview library, click **DNA** in the top navigation bar.
 
@@ -140,7 +140,7 @@ Use the frame and stop-codon controls to narrow the displayed tracks when the vi
 3. Close the menu and inspect the site labels at their sequence positions.
 4. Use the **Primers** checkbox beside the toolbar menus to show or hide primer-binding tracks.
 
-Hover over a displayed primer to inspect its name and sequence. The primer's hover card provides copy and Primer Library controls.
+Hover over a displayed primer to inspect its name and sequence. The primer's hover card provides copy, Primer Library, and **PCR…** controls. A restriction site's hover card and right-click menu offer **Single digestion…** and **Double digestion…** (Section 11).
 
 ## 9. Align a read to a reference
 
@@ -171,15 +171,53 @@ To compare another read, use **Open Sequence** again. Keep the intended referenc
 ![Use the Vector Builder map and Bases panel together, or open Protein Builder from its toolbar.](images/12-vector-builder.png)
 
 6. Right-click a feature or a selected range to open its actions.
-7. Choose the operation you need, such as inserting bases before or after the selected feature, deleting the selected bases, or replacing the feature.
+7. Choose the operation you need, such as saving the feature as a DNA fragment, inserting bases before or after it, deleting the selected bases, or replacing the feature.
 
-![Right-click a map selection to replace a feature, delete bases, or build a protein replacement.](images/13-map-actions.png)
+![Right-click a map selection to save a fragment, replace a feature, delete bases, or build a protein replacement.](images/13-map-actions.png)
 
 For **Replace Feature…**, search the stored feature library, choose the feature and its source, inspect the preview, and click **Confirm**.
 
 Use the back arrow labeled **Back to DNA** to return to the sequence viewer.
 
-## 11. Build a protein construct
+## 11. Save fragments, PCR products, and digests
+
+Each of these saves a new linear GenBank record beneath its template in the library. Click the template's disclosure arrow to show or hide its saved pieces. If the template is not saved yet, it is saved first.
+
+### Save a fragment
+
+1. Select a range of bases, or right-click an annotated feature. This also works on the map and bases in **Vector Builder**.
+2. Choose **Save DNA Fragment…**.
+3. Check the template and range, and edit the suggested **Fragment name** if needed.
+4. Check the length shown under the name, then click **Save fragment**.
+
+![Check the template, name the fragment, check its length, and click Save fragment.](images/14-save-fragment.png)
+
+A feature is saved over its full span, including joined parts and spans that cross the origin of a circular sequence. Its strand and annotations are kept.
+
+### Save a PCR product
+
+1. Click a primer-binding feature, or hover over it to open its card.
+2. Click **PCR…**.
+3. In the sequence, click one of the highlighted partner primers. Primers that cannot pair with the first one are greyed out.
+4. Check the product length in the dialog, edit the name if needed, and click **Save fragment**.
+
+![After PCR…, click a highlighted partner primer in the sequence.](images/15-pcr-partner.png)
+
+The product includes both primer sequences, including any 5′ additions. If no compatible partner is annotated on the template, add one first. Use **Choose a different partner in the sequence** in the dialog to pick again, or **Cancel** in the prompt to stop.
+
+### Digest with restriction enzymes
+
+1. Click **Cutters** and turn on the sites you want to see (Section 8).
+2. Right-click a restriction site, or hover over it, and choose **Single digestion…** or **Double digestion…**.
+3. For a double digestion, click a second, different restriction site.
+4. Check both sites and their enzymes, then review the fragments. Clear any fragment you do not want and rename the rest if needed.
+5. Click **Confirm digestion and save**.
+
+![Check the cut sites, choose and name the fragments, then confirm the digestion.](images/16-digest.png)
+
+Each fragment lists the overhang at both ends, in the 5′ → 3′ direction. Lengths refer to the plus strand. Nothing is written until you confirm.
+
+## 12. Build a protein construct
 
 ### Add blocks
 
@@ -189,7 +227,7 @@ Use the back arrow labeled **Back to DNA** to return to the sequence viewer.
 4. Under **Enter sequence**, provide a **Protein name** and choose **Amino-acid sequence** or **DNA coding sequence**.
 5. Paste the sequence and click **Add to Chain**.
 
-![Name a protein block, choose its sequence type, enter the sequence, and add it to the chain.](images/14-add-protein.png)
+![Name a protein block, choose its sequence type, enter the sequence, and add it to the chain.](images/17-add-protein.png)
 
 You can use **Search UniProt** instead: enter a query, run the search, select a result, choose the sequence or region, and add it to the chain.
 
@@ -197,7 +235,7 @@ You can use **Search UniProt** instead: enter a query, run the search, select a 
 7. Use each block's move controls to arrange the chain from N terminus to C terminus. Use its edit or remove control when needed.
 8. Review the assembled amino-acid sequence. Click the sequence to edit it directly if required.
 
-![Arrange the assembly chain, review the protein sequence, and choose codon usage for its DNA.](images/15-protein-builder.png)
+![Arrange the assembly chain, review the protein sequence, and choose codon usage for its DNA.](images/18-protein-builder.png)
 
 ### Review DNA and continue
 
@@ -208,7 +246,7 @@ You can use **Search UniProt** instead: enter a query, run the search, select a 
 5. If you opened Protein Builder from a map insertion or replacement action, use **Insert Into Vector** to apply the construct at that target instead.
 6. Continue through the cloning review before confirming the design.
 
-## 12. Review a cloning design
+## 13. Review a cloning design
 
 1. Make the intended sequence edit, or build an insertion through Protein Builder.
 2. Click **Cloning Design** when it is available. It is also accessible from the Vector Builder toolbar.
@@ -216,7 +254,7 @@ You can use **Search UniProt** instead: enter a query, run the search, select a 
 4. Click **Design Primers**.
 5. Read the plan, primer information, and any warnings or review messages. Select another route and run **Design Primers** again if needed.
 
-![Choose a cloning route, design primers, and review the result before using Confirm Design.](images/16-cloning-design.png)
+![Choose a cloning route, design primers, and review the result before using Confirm Design.](images/19-cloning-design.png)
 
 6. Use **Save All to Primer Library** to keep the displayed primers when that action is available.
 7. Click **Confirm Design** when you want to save the working product and generated primer record. Find the resulting records under **Unsaved**, inspect them, and use **Save** for records you want in Saved.
@@ -225,7 +263,7 @@ A plan can retain a review status after confirmation. Read its messages; confirm
 
 Use **Back to Sequence** to return without confirming the design.
 
-## 13. Save and export primers
+## 14. Save and export primers
 
 ### Save a primer
 
@@ -233,7 +271,14 @@ Use **Back to Sequence** to return without confirming the design.
 2. Hover over a primer-binding feature to open its card.
 3. Use the save-to-library control in that card to keep the full oligo in **Primer Library**.
 
-To design a primer for a selected range, right-click the range and choose **Design Primer**, then inspect the displayed primer information.
+### Design primers for a range
+
+1. Select the range of bases you want to amplify.
+2. Right-click the selection and choose **Design Primer**.
+3. Review the designed primers, their length, Tm, and GC content, and read any warning below the table.
+4. Click **Save to Primer Library** to keep the pair, or **Order Primers** to go straight to an order block.
+
+![Review the designed primers, then save them to Primer Library.](images/20-primer-design.png)
 
 ### Select primers
 
@@ -243,7 +288,7 @@ To design a primer for a selected range, right-click the range and choose **Desi
 4. Tick the primers you want to export, or use the header checkbox to select the visible entries.
 5. Click **Export Selected to IDT**.
 
-![Search Primer Library, check primer names and sequences, and export the selected entries.](images/17-primer-library.png)
+![Search Primer Library, check primer names and sequences, and export the selected entries.](images/21-primer-library.png)
 
 ### Copy the order block
 
@@ -252,13 +297,27 @@ To design a primer for a selected range, right-click the range and choose **Desi
 3. Click **Copy IDT Block** or **Copy CSV**.
 4. Paste the copied text into the ordering workflow you use and review it there before submitting an order.
 
-![Choose scale and purification, inspect the order block, and copy the selected primer details.](images/18-primer-order.png)
+![Choose scale and purification, inspect the order block, and copy the selected primer details.](images/22-primer-order.png)
 
 Copying the block does not place an order. To remove library entries, select them in Primer Library and click **Remove Selected**.
 
-## 14. Organize the sequence library
+## 15. Organize the sequence library
 
-![Right-click a sequence entry to create a folder, rename the record, or move it into a folder.](images/19-library-actions.png)
+### Record where a sequence is stored
+
+1. In the library, click the location-pin button on the sequence's row. In **Primer Library**, each primer row has the same button.
+2. Choose the storage **Location**, then the **Container**.
+3. Click the position in the box where the tube is kept.
+4. Check the **Sample Name** and **Type**, and add a code, lot, or concentration if useful.
+5. Click the pin button at the bottom right to add the sample.
+
+![Choose the location, container, and position, check the sample name, and add the sample.](images/23-sample-position.png)
+
+The sample is added to **Samples** at that position, the same way as samples added from Notebook. A location needs a container; add one in Samples first.
+
+### Use the library menu
+
+![Right-click a sequence entry to create a folder, rename the record, or move it into a folder.](images/24-library-actions.png)
 
 ### Rename an entry
 
@@ -266,7 +325,7 @@ Copying the block does not place an order. To remove library entries, select the
 2. Choose **Rename Sequence**.
 3. Type the new name in the row and press **Enter**. Press **Escape** to cancel the rename.
 
-![Type a new name in the library row and press Enter to keep it.](images/20-rename-sequence.png)
+![Type a new name in the library row and press Enter to keep it.](images/25-rename-sequence.png)
 
 ### Use folders
 

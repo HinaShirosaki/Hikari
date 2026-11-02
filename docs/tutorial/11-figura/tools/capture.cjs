@@ -112,7 +112,7 @@ async function main() {
     if (errors.length) throw new Error(`Renderer reported an error before ${name}: ${errors.join('; ')}`);
     await evaluate('document.querySelectorAll("[data-hikari-transient-toast]").forEach(t => { t.hidden = true; }); await document.fonts.ready; await illustrationWorkspace.flush(); await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));');
     await pause(120);
-    if (name === '06-add-layer-menu' || name === '18-align-distribute') {
+    if (name === '06-add-layer-menu' || name === '20-align-distribute') {
       const paint=await evaluate(`const el=document.querySelector(${JSON.stringify(targets[0][0])}),r=el.getBoundingClientRect(),panel=el.parentElement,menu=panel.parentElement,hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {ok:el.contains(hit),open:menu.open,popover:panel.matches(':popover-open'),rect:r.toJSON(),css:[getComputedStyle(panel).display,getComputedStyle(panel).visibility,getComputedStyle(panel).position],hit:hit?.outerHTML.slice(0,200)};`);
       if(!paint.ok)throw Error('The hosted menu must be visible above the canvas: '+name+' '+JSON.stringify(paint));
     }
@@ -187,6 +187,7 @@ async function main() {
   const scrollTo = selector => evaluate(`document.querySelector(${JSON.stringify(selector)}).scrollIntoView({block:'center',behavior:'instant'});`);
   const upload = (selector, content, name) => evaluate(`const d=new DataTransfer();d.items.add(new File([${JSON.stringify(content)}],${JSON.stringify(name)},{type:'text/csv'}));const el=document.querySelector(${JSON.stringify(selector)});el.files=d.files;el.dispatchEvent(new Event('change',{bubbles:true}));`);
   const tool = id => `[data-workspace-tool-id="${id}"]`;
+  const picked = '#main-canvas .selection, #main-canvas .selection-member';
   const settle = () => evaluate('await illustrationWorkspace.flush();await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));');
   const choose = async ids => { await evaluate(`await tutorial.choose(${JSON.stringify(ids)});`); await settle(); };
   const closeLayers = async () => { if(await evaluate('return !document.getElementById("layer-inspector").hidden;'))await click('#close-layers'); };
@@ -211,20 +212,20 @@ async function main() {
     [['#new-illustration','Create a new illustration'], ['#figure-title','Enter the figure title']]);
   await input('#prompt','Draw a simple schematic of one sender cell, a signal arrow, and one receiver cell. Keep every label separately editable.');
   await input('#complexity','simple');await settle();
-  await shot('03-drawing-prompt','Describe the figure you want to draw','Choose Complexity, describe the figure, then use Draw with Codex when ready.',['.toolbar','#prompt-form','#main-canvas'],
-    [['#complexity','Choose a complexity level'], ['#prompt','Describe content and labels'], ['#generate','Draw with Codex']]);
+  await shot('03-drawing-prompt','Describe the figure you want to draw','Choose Detail, describe the figure, then use Draw with Codex when ready.',['.toolbar','#prompt-form','#main-canvas'],
+    [['#complexity','Choose a detail level'], ['#prompt','Describe content and labels'], ['#generate','Draw with Codex']]);
   await click('#figure-menu > summary');
   await click('#image-generation-enabled');
   await input('#image-generation-percent','0');
   await input('#image-generation-style-prompt','Teal and lavender palette; keep labels separate.');
   await settle();
-  await shot('04-generation-preferences','Set preferences for future AI edits','Figure options controls image-generation preference, image style, and style notes.','#figure-menu .popover-panel',
-    [['#image-generation-enabled','Enable a percentage preference'], ['#image-generation-percent','Choose the image-generation share'], ['#image-generation-style','Choose an image style']]);
-  await check('illustrationWorkspace.getDocument().imageGenerationPercent===0','Figure options saves a zero-percent image-generation preference without calling AI');
+  await shot('04-generation-preferences','Set preferences for future AI edits','Image generation settings hold the image-generation share, image style, and style notes.',['#figure-menu > summary','#figure-menu .popover-panel'],
+    [['#figure-menu > summary','Open Image generation settings'], ['#image-generation-enabled','Enable a percentage preference'], ['#image-generation-percent','Choose the image-generation share'], ['#image-generation-style','Choose an image style']]);
+  await check('illustrationWorkspace.getDocument().imageGenerationPercent===0','Image generation settings save a zero-percent preference without calling AI');
   await evaluate('document.getElementById("figure-menu").open=false;');
   await input('#canvas-size','custom');
   await shot('05-canvas-size','Choose a preset or an exact canvas size','Canvas size sets the figure bounds; it does not scale the objects.',['.canvas-controls','.canvas-options .popover-panel'],
-    [['#canvas-size','Choose a canvas preset'], ['#canvas-properties [name=width]','Enter the canvas width'], ['#canvas-properties [name=height]','Enter the canvas height']]);
+    [['#canvas-size','Choose a canvas preset'], ['#canvas-settings','Custom canvas size'], ['#canvas-properties [name=width]','Enter the canvas width'], ['#canvas-properties [name=height]','Enter the canvas height']]);
   await input('#canvas-properties [name=width]','1200');await settle();
   await evaluate('document.querySelector(".canvas-options").open=false;');
   await click(tool('add-menu'));
@@ -237,18 +238,39 @@ async function main() {
   await shot('07-edit-text','Edit a label independently','Use text controls for its content, font, size, color, and alignment.','#layer-inspector',
     [['#label-content','Edit the label text'], ['.font-row','Set font, size, and color'], ['#text-properties .field-grid','Set weight and anchor']]);
   await check('illustrationWorkspace.getDocument().objects.some(o=>o.type==="text"&&o.text.includes("Signal transfer")&&o.fontSize===38)','Adding and editing a text label saves its content and font size');
-  await click(tool('add-menu'));await click('#add-vector');await settle();
-  await input('#properties [name=fill]','#d2e5e4');await settle();
-  await input('#properties [name=stroke]','#438482');await settle();
-  await shot('08-style-vector','Style a vector component','Change the vector fill and stroke, or edit its source artwork when needed.','#layer-inspector',
-    [['#vector-properties [name=fill]','Set the vector fill'], ['#vector-properties [name=stroke]','Set its outline color'], ['#edit-artwork','Open the SVG artwork editor']]);
-  await evaluate('await tutorial.clear();await tutorial.seed();await tutorial.apply([{op:"title",title:"Practice diagram · example"}]);');
+  const labelId=await evaluate('return illustrationWorkspace.getDocument().objects.find(o=>o.type==="text").id;');
   await closeLayers();
+  await evaluate(`document.querySelector('#main-canvas [data-object-id="${labelId}"] text').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));`);
+  await waitFor('document.getElementById("canvas-text-editor")');
+  await editingInput('#canvas-text-editor','Signal transfer · edited');
+  await shot('08-inline-text','Edit a label directly on the canvas','Double-click a label, type, and press Enter to save.',['#main-canvas','#canvas-text-editor'],
+    [['#canvas-text-editor','Type the new label text']]);
+  await key('#canvas-text-editor','Return');await settle();
+  await check(`illustrationWorkspace.getDocument().objects.find(o=>o.id===${JSON.stringify(labelId)}).text==='Signal transfer · edited'`,'Double-clicking a label edits its text on the canvas and Enter saves it');
+  await click(tool('add-menu'));await click('#add-vector');await settle();
+  await check('illustrationWorkspace.getDocument().objects.some(o=>o.type==="vector")','Add layer > Vector component adds an editable vector layer');
+  await evaluate('await tutorial.clear();await tutorial.seed();await tutorial.apply([{op:"title",title:"Practice diagram · example"}]);');
+  await choose(['sender']);
+  const swatch='#vector-color-swatches input[data-color="#438482"]';
+  await evaluate(`const el=document.querySelector(${JSON.stringify(swatch)});el.focus();el.dispatchEvent(new FocusEvent('focusin',{bubbles:true}));`);
+  await waitFor('document.querySelector(\'#main-canvas [data-object-id="sender"] .color-ants\')');
+  await shot('09-recolor-vector','Recolor vector artwork one color at a time','Pick a swatch in Colors; the canvas outlines every part that uses it.',['#main-canvas [data-object-id="sender"]','#layer-inspector'],
+    [[swatch,'Choose the color to change'], ['#main-canvas [data-object-id="sender"] .color-ants','Parts painted with it']]);
+  await input(swatch,'#2f6f8f');await settle();
+  await check('(o=>o.svg.includes("#2f6f8f")&&!o.svg.includes("#438482"))(illustrationWorkspace.getDocument().objects.find(o=>o.id==="sender"))','A new swatch color recolors every part painted with the old color');
+  await evaluate('await illustrationWorkspace.history("undo");');await settle();
+  await closeLayers();
+  await click(tool('palette-menu'));
+  for(let i=0;i<3;i++){await click('#palette-add');await settle();}
+  await shot('10-figure-palette','Set the figure palette','Add up to eight main colors; Codex and the color pickers use them.','#palette-menu .popover-panel',
+    [['#palette-colors','Click a swatch to change it'], ['#palette-add','Add a color']]);
+  await check('illustrationWorkspace.getDocument().palette.length===3','Add color saves palette colors with the figure');
+  await evaluate('document.getElementById("palette-menu").open=false;');
   await click(tool('add-menu'));await click('#import');
   await evaluate('const d=new DataTransfer();const bytes=Uint8Array.from(atob(tutorial.raster.split(",")[1]),c=>c.charCodeAt(0));d.items.add(new File([bytes],"cell-artwork.png",{type:"image/png"}));const el=document.getElementById("asset-input");el.files=d.files;el.dispatchEvent(new Event("change",{bubbles:true}));');
-  await waitFor('document.getElementById("raster-dialog").open');
-  await shot('09-import-artwork','Inspect imported artwork before adding it','Review the image and confirm that labels are kept in separate text layers.','#raster-dialog',
-    [['#raster-preview','Inspect the artwork'], ['#text-free','Confirm the image has no text'], ['#confirm-raster','Add artwork to the canvas']]);
+  await waitFor('document.getElementById("raster-dialog").open && !document.getElementById("confirm-raster").disabled');
+  await shot('11-import-artwork','Inspect imported artwork before adding it','Review the image and confirm that labels are kept in separate text layers.','#raster-dialog',
+    [['#raster-preview-shell img','Inspect the artwork'], ['#text-free','Confirm the image has no text'], ['#confirm-raster','Add artwork to the canvas']]);
   await click('#text-free');await click('#confirm-raster');
   await waitFor('illustrationWorkspace.getDocument().objects.some(o=>o.type==="raster")');
   const rasterId=await evaluate('return illustrationWorkspace.getDocument().objects.find(o=>o.type==="raster").id;');
@@ -256,7 +278,7 @@ async function main() {
   await waitFor('document.querySelector("#canvas-crop-overlay [data-crop-field=width]")?.value');
   await input('[data-crop-field=x]','40');await input('[data-crop-field=y]','30');
   await input('[data-crop-field=width]','400');await input('[data-crop-field=height]','300');
-  await shot('10-crop-image','Crop a selected raster image','Drag the crop handles or enter pixel bounds, then apply the crop.','#canvas-crop-overlay',
+  await shot('12-crop-image','Crop a selected raster image','Drag the crop handles or enter pixel bounds, then apply the crop.','#canvas-crop-overlay',
     [['.cropper-crop-box','Adjust the crop area'], ['.canvas-crop-fields','Enter exact pixel bounds'], ['#canvas-crop-apply','Apply crop']]);
   await click('#canvas-crop-apply');
   await waitFor('!document.getElementById("canvas-crop-overlay")');
@@ -264,49 +286,55 @@ async function main() {
   await evaluate(`await illustrationWorkspace.manage('open',${JSON.stringify(originalId)});`);await settle();await closeLayers();
   await click(tool('pointer-tool'));
   await dragCanvas([[115,180],[200,280],[300,420],[445,535]]);
-  await shot('11-rectangle-selection','Select components with a rectangle','Drag empty canvas around components; the outer frame moves the selection.','#main-canvas',
-    [['#main-canvas .selection','Review the selected components']]);
-  await check('document.getElementById("group-selection").disabled===false','Rectangle selection includes the sender artwork and its independent label');
+  await shot('13-rectangle-selection','Select components with a rectangle','Drag empty canvas around components; each selected component shows its outline.','#main-canvas',
+    [[picked,'Review the selected components'], ['#selection-toolbar','Group or align from the bar']]);
+  await check('document.getElementById("group-selection").disabled===false && !document.getElementById("selection-toolbar").hidden','Rectangle selection includes the sender artwork and its label and shows the floating selection bar');
   await key('#main-canvas','Escape');
   await click(tool('freehand-tool'));
   await dragCanvas([[740,185],[1060,185],[1085,430],[1060,545],[745,545],[730,400],[740,185]]);
-  await shot('12-freehand-selection','Select with a freehand outline','Use Freehand selection to outline components, then move or resize them.',['#main-canvas','#plugin-workspace-tools'],
-    [[tool('freehand-tool'),'Choose Freehand selection'], ['#main-canvas .selection','Review the selected region']]);
+  await shot('14-freehand-selection','Select with a freehand outline','Use Freehand selection to outline components, then move or resize them.',['#main-canvas','#plugin-workspace-tools'],
+    [[tool('freehand-tool'),'Choose Freehand selection'], [picked,'Review the selected region']]);
+  await key('#main-canvas','Escape');
   await click(tool('pointer-tool'));
-  await choose(['sender']);
-  await evaluate('document.querySelector(".geometry-options").open=true;');
-  await shot('13-position-and-size','Set exact position, size, and opacity','Open Layers, select a component, and expand Position & size.','#layer-inspector',
-    [['.geometry-options','Enter position and dimensions'], ['#properties [name=rotation]','Set a rotation angle'], ['#properties [name=opacity]','Adjust opacity']]);
-  await input('#properties [name=x]','155');await settle();
-  await check('illustrationWorkspace.getDocument().objects.find(o=>o.id==="sender").x===155','Position fields update the selected component in canvas coordinates');
+  // Hold the drag open so the smart guides are drawn, then cancel it.
+  const from=await point(910,325);win.webContents.sendInputEvent({type:'mouseDown',...from,button:'left',clickCount:1});
+  for(const xy of [[906,327],[898,329],[890,328]]){win.webContents.sendInputEvent({type:'mouseMove',...await point(...xy)});await pause(40);}
+  await waitFor('document.querySelector("#main-canvas .smart-guides line")');
+  await shot('15-smart-guides','Drag with smart guides','Guides mark alignment and equal spacing while you drag; release to place.','#main-canvas',
+    [['#main-canvas .smart-guide-alignment','Alignment guide'], ['#main-canvas .selection','The component being moved']]);
+  await key('#main-canvas','Escape');
+  win.webContents.sendInputEvent({type:'mouseUp',...await point(890,328),button:'left',clickCount:1});await settle();
+  await check('illustrationWorkspace.getDocument().objects.find(o=>o.id==="receiver").x===770','Escape cancels a drag and leaves the component in place');
   await choose(['signal-arrow']);await closeLayers();
-  await shot('14-rotate-selection','Rotate a component with its handle','Drag the round rotation handle; hold Shift to snap to 15-degree steps.','#main-canvas',
+  await shot('16-rotate-selection','Rotate a component with its handle','Drag the round rotation handle; hold Shift to snap to 15-degree steps.','#main-canvas',
     [['#main-canvas .rotation-handle','Use the rotation handle'], ['#main-canvas .selection','Resize or move the selected component']]);
   await key('#main-canvas .rotation-handle','ArrowRight');await settle();
   await waitFor('Math.abs(illustrationWorkspace.getDocument().objects.find(o=>o.id==="signal-arrow").rotation-1)<0.00001');
   manifest.checks.push('The rotation handle supports one-degree keyboard steps');
   await evaluate('await illustrationWorkspace.history("undo");');
   await choose(['caption']);
-  await evaluate('document.querySelector(".geometry-options").open=false;');
   await evaluate('document.querySelector("[data-layer-id=caption] .layer-visibility").focus();');
-  await shot('15-layer-actions','Manage layer order and visibility','Use Layers to select, hide, duplicate, reorder, or delete components.','#layer-inspector',
-    [['#layers','Select a layer'], ['[data-layer-id=caption] .layer-visibility','Hide or show the layer'], ['.object-actions','Duplicate, reorder, or delete']]);
+  await shot('17-layer-actions','Manage layer order and visibility','Use Layers to select, hide, duplicate, reorder, or delete components.','#layer-inspector',
+    [['#layers','Select a layer'], ['[data-layer-id=caption] .layer-visibility','Hide or show the layer'], ['.opacity-control','Adjust opacity'], ['.object-actions','Duplicate, reorder, or delete']]);
   await click('[data-layer-id=caption] .layer-visibility');await settle();
   await check('illustrationWorkspace.getDocument().objects.find(o=>o.id==="caption").visible===false','The layer visibility button hides a component without deleting it');
   await evaluate('await illustrationWorkspace.history("undo");');
+  await input('#opacity-number','60');await settle();
+  await check('illustrationWorkspace.getDocument().objects.find(o=>o.id==="caption").opacity===0.6','The opacity field saves the selected layer opacity');
+  await evaluate('await illustrationWorkspace.history("undo");');
   await choose(['sender','sender-label']);await closeLayers();
-  await shot('16-group-selection','Group artwork and its label','Select related components and group them so they move and resize together.',['#main-canvas','#plugin-workspace-tools'],
-    [[tool('group-selection'),'Group the selected components'], [tool('ungroup-selection'),'Ungroup when needed'], ['#main-canvas .selection','Inspect the shared selection frame']]);
+  await shot('18-group-selection','Group artwork and its label','Select related components and group them so they move and resize together.',['#main-canvas','#plugin-workspace-tools'],
+    [[tool('group-selection'),'Group the selected components'], [tool('ungroup-selection'),'Ungroup when needed'], ['#selection-toolbar [data-selection-action=group]','Or use the selection bar'], [picked,'Inspect the selected components']]);
   await click(tool('group-selection'));await settle();
   await check('illustrationWorkspace.getDocument().groups.some(g=>g.ids.includes("sender")&&g.ids.includes("sender-label"))','Grouping preserves separate artwork and text within one editable group');
   await menuAt(285,325);
-  await shot('17-context-menu','Open component actions with a right-click','The same menu is available on the canvas or a layer row.','#canvas-context-menu',
+  await shot('19-context-menu','Open component actions with a right-click','The same menu is available on the canvas or a layer row.','#canvas-context-menu',
     [['[data-context-action=copy]','Copy selected components'], ['[data-context-action=ungroup]','Ungroup the selected group'], ['[data-context-action=save-asset]','Save as a reusable asset']]);
   await key('#main-canvas','Escape');
   await choose(['sender-label','signal-label','receiver-label']);await closeLayers();
   await click(tool('align-menu'));
-  await shot('18-align-distribute','Align components or distribute their spacing','Select two items to align them, or at least three to distribute equal gaps.','#align-menu .popover-panel',
-    [['[data-layout-action=vertical-center]','Align vertical centers'], ['[data-layout-action=distribute-horizontal]','Distribute horizontally'], ['[data-layout-action=distribute-vertical]','Distribute vertically']]);
+  await shot('20-align-distribute','Align components or distribute their spacing','Select two items to align them, or at least three to distribute equal gaps.','#align-menu .popover-panel',
+    [['[data-layout-action=vertical-center]','Align vertical centers'], ['[data-layout-action=distribute-horizontal]','Distribute horizontally'], ['[data-layout-action=distribute-vertical]','Distribute vertically'], ['#smart-guides','Smart guides on or off']]);
   await click('[data-layout-action=vertical-center]');await settle();
   await check('(()=>{const centers=["sender-label","signal-label","receiver-label"].map(id=>{const r=document.querySelector(`#main-canvas [data-object-id="${id}"] text`).getBoundingClientRect();return r.y+r.height/2;});return Math.max(...centers)-Math.min(...centers)<1;})()','Vertical-center alignment gives the three selected labels the same visible center');
   await evaluate('await illustrationWorkspace.history("undo");document.getElementById("align-menu").open=false;');
@@ -314,7 +342,7 @@ async function main() {
   await choose([groupId]);await closeLayers();await menuAt(285,325);
   await click('[data-context-action=copy]');await settle();
   await menuAt(1100,650);
-  await shot('19-copy-paste','Copy and paste editable components','Copy the selection, then paste on this canvas or another illustration.','#canvas-context-menu',
+  await shot('21-copy-paste','Copy and paste editable components','Copy the selection, then paste on this canvas or another illustration.','#canvas-context-menu',
     [['[data-context-action=copy]','Copy the selection'], ['[data-context-action=paste]','Paste editable copies']]);
   const count=await evaluate('return illustrationWorkspace.getDocument().objects.length;');
   await click('[data-context-action=paste]');await settle();
@@ -322,26 +350,21 @@ async function main() {
   await evaluate('await illustrationWorkspace.history("undo");');
   await choose([groupId]);await closeLayers();await menuAt(285,325);await click('[data-context-action=save-asset]');
   await input('#asset-name','Sender cell component');
-  await shot('20-save-asset','Save a reusable component','Give the selected artwork and label a reusable asset name.','#save-asset-dialog',
+  await shot('22-save-asset','Save a reusable component','Give the selected artwork and label a reusable asset name.','#save-asset-dialog',
     [['#asset-name','Name the reusable component'], ['#confirm-save-asset','Save asset']]);
   await click('#confirm-save-asset');
   await waitFor('document.querySelector("[data-saved-asset]")');await settle();
-  await shot('21-reusable-assets','Find and insert reusable assets','Search Assets and click a component to add an editable copy.','#layer-inspector',
-    [['#asset-search','Search saved assets'], ['.asset-insert','Insert an editable copy'], ['#import-asset','Import an artwork asset']]);
+  await check('document.getElementById("assets-view-tab").getAttribute("aria-pressed")==="true"','Saving an asset switches the left rail to Assets');
+  await shot('23-reusable-assets','Find and insert reusable assets','Search Assets and click a component to add an editable copy.',['#assets-view-tab','#import-asset-folder','#asset-search','.asset-insert'],
+    [['#assets-view-tab','Switch the rail to Assets'], [['#import-asset','#import-asset-folder'],'Import files or a folder'], ['#asset-search','Search saved assets'], ['.asset-insert','Insert an editable copy']], { side: true });
   await click('.asset-insert');await settle();
   await check(`illustrationWorkspace.getDocument().objects.length===${count+2}`,'An asset inserts independent copies of its saved artwork and text');
   await evaluate('await illustrationWorkspace.history("undo");');await closeLayers();
-  await shot('22-saved-illustrations','Find and reopen a saved illustration','Search titles in the Illustrations rail, then click a row to open it.','#illustrations-rail',
-    [['#illustration-search','Search illustration titles'], ['#illustrations','Open a saved figure']]);
-  await click('#figure-menu > summary');
-  await shot('23-duplicate-illustration','Duplicate a figure before revising it','Figure options creates a separate illustration with the current canvas content.','#figure-menu .popover-panel',
-    [['#duplicate-illustration','Duplicate this illustration']]);
-  const oldLibraryCount=await evaluate('return illustrationWorkspace.getLibrary().illustrations.length;');
-  await click('#duplicate-illustration');await settle();
-  await check(`illustrationWorkspace.getLibrary().illustrations.length===${oldLibraryCount+1}`,'Duplicate illustration adds a separate saved figure to the library');
-  await evaluate('document.getElementById("figure-menu").open=false;');
+  await click('#illustrations-view-tab');
+  await shot('24-saved-illustrations','Find and reopen a saved illustration','Search titles in the Illustrations rail, then click a row to open it.',['#illustrations-view-tab','#new-illustration','#illustration-search','#illustrations > *'],
+    [['#illustrations-view-tab','Show Illustrations'], ['#illustration-search','Search illustration titles'], ['#illustrations > *','Open a saved figure']], { side: true });
   await click('#export-menu > summary');
-  await shot('24-export-figure','Export the figure in the format you need','Choose SVG, PNG, or PowerPoint; hidden layers are left out.','#export-menu .popover-panel',
+  await shot('25-export-figure','Export the figure in the format you need','Choose SVG, PNG, or PowerPoint; hidden layers are left out.','#export-menu .popover-panel',
     [['#export-svg','Export editable SVG'], ['#export-png','Export a PNG image'], ['#export-pptx','Export adjustable PowerPoint objects']]);
   await click('#export-svg');
   await waitFor('tutorial.downloads.some(d=>d.fileName.endsWith(".svg"))');
