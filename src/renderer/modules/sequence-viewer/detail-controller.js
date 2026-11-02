@@ -61,6 +61,7 @@ export function createSequenceViewerDetailController(config = {}) {
   const onSetSequenceOrigin = config?.onSetSequenceOrigin || (async () => {});
   const hasCloningDesignSource = config?.hasCloningDesignSource || (() => false);
   const onRequestPrimerOrder = config?.onRequestPrimerOrder || (() => {});
+  const onSavePrimersToLibrary = config?.onSavePrimersToLibrary || (() => {});
 
   const hoverController = createSequenceHoverTooltipController(rootDocument);
   const hideSequenceHoverTooltip = () => hoverController.hide();
@@ -193,7 +194,8 @@ export function createSequenceViewerDetailController(config = {}) {
     getSequenceSelectionSegments,
     getAlignmentHighlightSegments,
     hideSequenceHoverTooltip: () => hoverController.hideNow(),
-    buildSelectionDetailHtml
+    buildSelectionDetailHtml,
+    onFeaturesRendered: config.onFeaturesRendered
   });
 
   function resolveSequenceBoundaryFromEvent(event, record) {
@@ -376,7 +378,8 @@ export function createSequenceViewerDetailController(config = {}) {
     renderActiveRecord,
     setStatus,
     persistFeatureMutation,
-    onRequestPrimerOrder
+    onRequestPrimerOrder,
+    onSavePrimersToLibrary
   });
 
   sequenceEditingController = createSequenceViewerSequenceEditingController({
@@ -457,6 +460,7 @@ export function createSequenceViewerDetailController(config = {}) {
       openFeatureEditor,
       openPrimerDesignOverlay,
       orderDesignedPrimers: () => featureEditingController?.orderDesignedPrimers?.(),
+      saveDesignedPrimers: () => featureEditingController?.saveDesignedPrimers?.(),
       deleteFeatureFromContext,
       applyFeatureEditorChanges,
       getActiveFeatureActionContext: () => activeFeatureActionContext,

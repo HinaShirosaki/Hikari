@@ -69,6 +69,7 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
   const getAlignmentHighlightSegments = config?.getAlignmentHighlightSegments || (() => []);
   const hideSequenceHoverTooltip = config?.hideSequenceHoverTooltip || (() => {});
   const buildSelectionDetailHtml = config?.buildSelectionDetailHtml || (() => '');
+  const onFeaturesRendered = config?.onFeaturesRendered || (() => {});
 
   function renderFeatureRail(record) {
     if (!elements.featureRailHost) {
@@ -140,6 +141,7 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
         <span style="left:100%;">${sequenceLength.toLocaleString()}</span>
       </div>
     `);
+    onFeaturesRendered();
   }
 
   function renderSelectedFeatureDetail(record) {
@@ -219,6 +221,7 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
       alignmentSequenceTrack,
       orfTranslationContext
     }));
+    onFeaturesRendered();
 
     if (preserveScroll) {
       if (!restoreScrollAnchor(elements.sequenceHost, scrollAnchor)) {

@@ -8,6 +8,7 @@ import { createPrimerOrderController } from '../primer-order-dialog.js';
 import { createPrimerLibraryController } from '../primer-library.js';
 import { createSequenceSamplePositionController } from '../sample-position.js';
 import { createDnaFragmentDialog } from '../fragment-dialog.js';
+import { createPcrPrimerPicker } from '../pcr-primer-picker.js';
 import { createDnaDigestionController } from '../digestion-dialog.js';
 import { getCommercialRestrictionFeaturesForRecord } from '../restriction-analysis.js';
 import { createSequenceViewerDetailController } from '../detail-controller.js';
@@ -78,8 +79,31 @@ export function setupSequenceViewerControllers(ctx) {
 
   controllers.fragments = createDnaFragmentDialog({
     rootDocument, getSelectedRecord: actions.getSelectedRecord,
-    getEntryId: () => state.activeEntryId, appState: options?.state,
-    saveFragment: actions.saveDerivedDnaFragment
+    getEntryId: () => state.activeEntryId,
+    saveFragment: actions.saveDerivedDnaFragment,
+    onRequestPcrPartner: primer => controllers.pcrPicker.start(primer)
+  });
+
+  controllers.pcrPicker = createPcrPrimerPicker({
+    rootDocument, elements, getSelectedRecord: actions.getSelectedRecord, getEntryId: () => state.activeEntryId,
+    getFeatureFromEvent: event => {
+      const index = Number(event.target?.closest?.('[data-feature-index]')?.dataset.featureIndex);
+      return Number.isInteger(index) ? controllers.detail?.getVisibleFeaturesForRecord(actions.getSelectedRecord())[index] : null;
+    },
+    onBeginPicking: primer => {
+      controllers.digestion?.cancel();
+      controllers.vectorBuilder?.hideOverlays();
+      controllers.detail?.hideFeatureContextMenu();
+      controllers.detail?.clearSequenceSelection();
+      rootDocument?.querySelectorAll?.('[data-sequence-hover-tooltip]').forEach(node => { node.hidden = true; });
+      state.showPrimers = true;
+      state.alignmentViewEnabled = false;
+      state.selectedFeatureIndex = controllers.detail?.getVisibleFeaturesForRecord(actions.getSelectedRecord()).indexOf(primer) ?? -1;
+      controllers.home?.setLocalWorkspaceVisibility('detail');
+      onNavigateDetail?.();
+      controllers.detail?.renderActiveRecord({ preserveScroll: true });
+    },
+    onPairSelected: (primer, partner) => controllers.fragments.open({ primer, partner })
   });
 
   controllers.digestion = createDnaDigestionController({
@@ -115,7 +139,8 @@ export function setupSequenceViewerControllers(ctx) {
     hasStoragePath: actions.hasStoragePath,
     persistFeatureMutation: actions.persistFeatureMutation,
     onRequestSave: actions.saveCurrentRecordToLibrary,
-    onSaveDnaFragment: (range) => controllers.fragments.open({ range }),
+    onSaveDnaFragment: (range, feature) => controllers.fragments.open({ range, feature }),
+    onFeaturesRendered: () => controllers.pcrPicker?.refreshHighlights(),
     onRequestAnnotate: () => controllers.annotation?.annotateCurrentRecord?.(),
     onApplySequenceEdit: actions.applySequenceEdit,
     onApplyAminoAcidEdit: actions.applyAminoAcidEdit,
@@ -124,6 +149,7 @@ export function setupSequenceViewerControllers(ctx) {
     onRequestCloningDesign: () => controllers.cloningDesign?.open?.(),
     hasCloningDesignSource: actions.hasCurrentCloningDesignSource,
     onRequestPrimerOrder: (primers) => controllers.primerOrder?.open?.(primers),
+    onSavePrimersToLibrary: (primers) => controllers.primerLibrary?.save?.(primers, actions.getSelectedRecord()?.name || ''),
     onSelectAlignmentSession: (sessionId) => controllers.alignment?.selectSavedAlignmentSession?.(sessionId, { enableView: true }),
     onConfirmProteinBuilderConstruct: actions.confirmProteinBuilderConstruct,
     onReturnToProteinBuilder: actions.returnToProteinBuilder,
@@ -213,6 +239,7 @@ export function setupSequenceViewerControllers(ctx) {
       await controllers.detail?.openPrimerDesignOverlay?.(context);
       controllers.vectorBuilder?.render?.();
     },
+    onSaveDnaFragment: (range, feature) => controllers.fragments.open({ range, feature }),
     onRequestProteinInsert: (target) => {
       actions.showProteinBuilderWorkspace();
       controllers.proteinBuilder?.render?.();

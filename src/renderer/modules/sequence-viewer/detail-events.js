@@ -38,6 +38,7 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const openFeatureEditor = config?.openFeatureEditor || (() => {});
   const openPrimerDesignOverlay = config?.openPrimerDesignOverlay || (() => {});
   const orderDesignedPrimers = config?.orderDesignedPrimers || (() => {});
+  const saveDesignedPrimers = config?.saveDesignedPrimers || (() => {});
   const deleteFeatureFromContext = config?.deleteFeatureFromContext || (async () => {});
   const applyFeatureEditorChanges = config?.applyFeatureEditorChanges || (async () => {});
   const getActiveFeatureActionContext = config?.getActiveFeatureActionContext || (() => null);
@@ -89,6 +90,7 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     openFeatureEditor,
     openPrimerDesignOverlay,
     orderDesignedPrimers,
+    saveDesignedPrimers,
     deleteFeatureFromContext,
     applyFeatureEditorChanges,
     getActiveFeatureActionContext,

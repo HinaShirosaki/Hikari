@@ -16,6 +16,8 @@ export const DEFAULT_SAMPLE_INVENTORY_LOCATION_DISPLAY = {
 
 export const DEFAULT_SAMPLE_TYPE_LABELS = {
   plasmid: 'Plasmid',
+  dna: 'DNA',
+  rna: 'RNA',
   cell_line: 'Cell Line',
   strain: 'Strain',
   antibody: 'Antibody',

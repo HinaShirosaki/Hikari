@@ -54,7 +54,9 @@ async function main() {
       loadPrimerFixture(record);
       window.qaReady=true;
     </script></body></html>`);
-  const win = new BrowserWindow({ width: 1280, height: 850, show: false, webPreferences: { sandbox: true, contextIsolation: true } });
+  // Synthetic hover/focus checks must not be replaced by the desktop pointer.
+  const win = new BrowserWindow({ width: 1280, height: 850, show: false,
+    webPreferences: { sandbox: true, contextIsolation: true, offscreen: true, backgroundThrottling: false } });
   const errors = [];
   win.webContents.on('console-message', event => { if (event.level >= 3) errors.push(event.message); });
   const exec = async code => {
@@ -62,12 +64,18 @@ async function main() {
     catch (error) { throw new Error(`${error.message}\nScript: ${code}\n${errors.join('\n')}`); }
   };
   const click = id => exec(`document.getElementById(${JSON.stringify(id)}).click()`);
+  const focus = selector => exec(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});
+    e.focus();e.dispatchEvent(new FocusEvent('focusin',{bubbles:true}));})()`);
   const ready = async () => {
     for (let i = 0; i < 120 && !await exec('Boolean(window.qaReady)'); i++) await new Promise(resolve => setTimeout(resolve, 30));
     assert.equal(await exec('Boolean(window.qaReady)'), true, errors.join('\n'));
   };
   const hover = async index => {
-    await exec(`(()=>{const e=document.querySelector('#sequence-viewer-sequence-host [data-feature-index="${index}"]');const r=e.getBoundingClientRect();e.dispatchEvent(new MouseEvent('mouseover',{bubbles:true,clientX:r.left+5,clientY:r.top+5}))})()`);
+    // This fixture targets a fresh card directly; native pointer paths have
+    // their own regression test, including preservation across nearby features.
+    await exec(`(()=>{document.querySelectorAll('[data-sequence-hover-tooltip]').forEach(e=>e.hidden=true);
+      const e=document.querySelector('#sequence-viewer-sequence-host [data-feature-index="${index}"]');
+      const r=e.getBoundingClientRect();e.dispatchEvent(new MouseEvent('mouseover',{bubbles:true,clientX:r.left+5,clientY:r.top+5}))})()`);
   };
   const rows = () => exec('appState.primerLibrary');
   const screenshot = async name => {
@@ -94,8 +102,6 @@ async function main() {
   };
   try {
     await win.loadFile(fixture); await ready();
-    win.show();
-    win.focus();
     for (const night of [true, false]) {
       await exec(`document.body.classList.toggle('theme-night',${night})`);
       await hover(0);
@@ -109,10 +115,10 @@ async function main() {
     await exec('loadPrimerFixture(primerFixture)');
     assert.equal(await exec(`document.querySelector('[data-sequence-hover-tooltip="feature"]').hidden`), true);
     await click('sequence-viewer-vector-builder-btn');
-    await exec(`document.querySelector('#sequence-viewer-vector-builder-map [data-feature-index="0"]').focus()`);
+    await focus('#sequence-viewer-vector-builder-map [data-feature-index="0"]');
     await assertHoverLayout('[data-sequence-hover-tooltip="map"]');
     assert.equal(await exec(`document.querySelectorAll('[data-sequence-hover-tooltip]:not([hidden])').length`), 1);
-    await exec(`document.querySelector('[data-sequence-hover-tooltip="map"] [data-sequence-primer-copy-kind="name"]').focus()`);
+    await focus('[data-sequence-hover-tooltip="map"] [data-sequence-primer-copy-kind="name"]');
     assert.equal(await exec(`document.querySelector('[data-sequence-hover-tooltip="map"]').hidden`), false);
     await exec(`document.querySelector('[data-sequence-hover-tooltip="map"] [data-sequence-primer-copy-kind="name"]').click()`);
     assert.equal(await exec('window.copiedHover'), 'Construct F');
@@ -197,8 +203,85 @@ async function main() {
     await click('sequence-viewer-primer-library-remove');
     assert.equal((await rows()).length, 0);
     assert.equal(await exec(`document.getElementById('sequence-viewer-primer-library-export').disabled`), true);
+
+    // The feature-design result is an unboxed reading surface, with direct save
+    // using the exact same pair shown in its copy/order actions.
+    await click('sequence-viewer-primer-library-close');
+    win.setSize(1280, 850);
+    await exec(`document.body.classList.add('ui-neutral-compact');window.designFixture={...primerFixture,name:'Primer_design_QA',features:[
+      {id:'bom',name:'bom',type:'misc_feature',strand:1,segments:[{start:43,end:183}]}]};
+      loadPrimerFixture(designFixture)`);
+    const design = async (map = false) => {
+      const host = map ? '#sequence-viewer-vector-builder-map' : '#sequence-viewer-sequence-host';
+      await exec(`(()=>{
+        for(const type of ['mousedown','contextmenu']){
+          const e=document.querySelector('${host} [data-feature-index="0"]'),r=e.getBoundingClientRect();
+          e.dispatchEvent(new MouseEvent(type,{bubbles:true,cancelable:true,button:0,clientX:r.left+5,clientY:r.top+5}));
+        }
+        document.querySelector('${map ? '#sequence-viewer-vector-builder-context-menu [data-vector-action="design-primer"]' : '#sequence-viewer-feature-context-menu [data-sequence-feature-action="design-primer"]'}').click();
+      })()`);
+      await new Promise(resolve => setTimeout(resolve, 80));
+      assert.equal(await exec(`document.getElementById('sequence-viewer-primer-design-overlay').hidden`), false);
+    };
+    const displayedPair = () => exec(`Array.from(document.querySelectorAll('#sequence-viewer-primer-design-result tbody tr')).map(row=>({
+      name:row.querySelector('[data-sequence-primer-copy-kind="name"]').dataset.sequencePrimerCopy,
+      sequence:row.querySelector('[data-sequence-primer-copy-kind="sequence"]').dataset.sequencePrimerCopy
+    }))`);
+    await design();
+    const pair = await displayedPair();
+    assert.equal(pair.length, 2);
+    assert.deepEqual(pair.map(primer => primer.name), ['bom F', 'bom R']);
+    for (const [width, night] of [[1280, false], [800, true], [480, false]]) {
+      win.setSize(width, 850);
+      await exec(`document.body.classList.toggle('theme-night',${night})`);
+      const geometry = await exec(`(()=>{
+        const e=document.getElementById('sequence-viewer-primer-design-result'),style=getComputedStyle(e);
+        const r=document.querySelector('.sequence-viewer-primer-design-dialog').getBoundingClientRect();
+        const sequence=document.querySelector('.sequence-viewer-primer-design-table .sequence-viewer-cloning-design-primer-seq');
+        const action=document.getElementById('sequence-viewer-primer-design-save').getBoundingClientRect();
+        return {background:style.backgroundColor,border:style.borderTopWidth,font:style.fontFamily,
+          sequenceFont:getComputedStyle(sequence).fontFamily,left:r.left,right:r.right,bottom:r.bottom,
+          actionLeft:action.left,actionRight:action.right,actionBottom:action.bottom,width:innerWidth,height:innerHeight};
+      })()`);
+      assert.equal(geometry.background, 'rgba(0, 0, 0, 0)');
+      assert.equal(geometry.border, '0px');
+      assert.doesNotMatch(geometry.font, /mono/i);
+      assert.match(geometry.sequenceFont, /mono/i);
+      assert.ok(geometry.left >= 0 && geometry.right <= geometry.width && geometry.bottom <= geometry.height);
+      assert.ok(geometry.actionLeft >= 0 && geometry.actionRight <= geometry.width && geometry.actionBottom <= geometry.height);
+      await screenshot(`designed-primers-${width}${night ? '-night' : ''}.png`);
+    }
+    await click('sequence-viewer-primer-design-save');
+    assert.deepEqual((await rows()).map(({ name, sequence }) => ({ name, sequence })), pair);
+    assert.ok((await rows()).every(primer => primer.sourceName === 'Primer_design_QA'));
+    const persisted = await exec('persistCount');
+    await click('sequence-viewer-primer-design-save');
+    assert.equal((await rows()).length, 2, 'Saving the pair again does not duplicate it');
+    assert.equal(await exec('persistCount'), persisted);
+    await click('sequence-viewer-primer-design-order');
+    assert.equal((await exec(`document.getElementById('sequence-viewer-primer-order-preview').value`)).split('\n').length, 2);
+    await click('sequence-viewer-primer-order-close');
+    await click('sequence-viewer-primer-design-dismiss');
+
+    win.setSize(1280, 850);
+    await click('sequence-viewer-vector-builder-btn');
+    await design(true);
+    const mapPair = await displayedPair();
+    assert.equal(mapPair.length, 2);
+    await click('sequence-viewer-primer-design-save');
+    const mapSaved = await rows();
+    assert.ok(mapPair.every(primer => mapSaved.some(saved => saved.name === primer.name && saved.sequence === primer.sequence)));
+    await win.reload(); await ready();
+    assert.deepEqual(await rows(), mapSaved, 'Directly saved designed primers survive reload');
+
+    await exec(`loadPrimerFixture({...primerFixture,name:'Ambiguous_design_QA',sequence:'N'.repeat(200),features:[
+      {id:'bom',name:'bom',type:'misc_feature',strand:1,segments:[{start:43,end:183}]}]})`);
+    await design();
+    assert.equal(await exec(`document.getElementById('sequence-viewer-primer-design-save').disabled`), true);
+    assert.equal(await exec(`document.getElementById('sequence-viewer-primer-design-order').disabled`), true);
+    assert.equal((await displayedPair()).length, 0, 'Failed design clears the previous pair');
     assert.deepEqual(errors, []);
-    console.log('Primer Library Electron QA passed: primer hover day/night/long-name/long-oligo/edge layouts, map keyboard/copy actions, full tails/reverse strand, duplicates, selection and IDT clipboard, rename/search, reload, cloning save-all, removal, and responsive library layouts.');
+    console.log('Primer Library Electron QA passed: hover/map copy actions; full oligos, duplicates, IDT, rename/search, persistence, cloning save-all and removal; unboxed feature-design layouts in day/night/narrow windows, direct save from sequence/maps, ordering, reload and failed-design actions.');
   } finally {
     win.destroy();
     await fs.promises.rm(temp, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });

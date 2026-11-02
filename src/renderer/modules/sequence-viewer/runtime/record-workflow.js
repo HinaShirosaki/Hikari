@@ -139,6 +139,7 @@ export function createRecordWorkflowActions(ctx) {
 
   function resetDetailSurfaces() {
     controllers.digestion?.cancel();
+    controllers.pcrPicker?.cancel();
     controllers.detail?.clearSequenceSelection();
     controllers.detail?.hideFeatureContextMenu();
     controllers.detail?.hideFeatureEditor();

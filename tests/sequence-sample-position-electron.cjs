@@ -82,7 +82,8 @@ async function main() {
     await click('#sequence-viewer-library-list [data-sequence-sample-position]');
     assert.equal(await run(pickerOpen), true);
     assert.equal(await run(`${field('name')}.value`), 'pTest <long construct name>');
-    assert.equal(await run(`${field('type')}.value`), 'plasmid');
+    assert.equal(await run(`${field('type')}.value`), 'dna');
+    assert.equal(await run(`Array.from(${field('type')}.options).some(option=>option.value==='rna' && option.textContent==='RNA')`), true);
     await click('#sequence-viewer-quick-sample-location-list [data-quick-sample-location="-20 Degree"]');
     assert.equal(await run(`${field('grid-label')}.textContent`), 'Cloning box · W2');
     assert.deepEqual(await run(`({requests:getRequests,navigations})`), before, 'Recording must preserve the current DNA workspace');
@@ -93,7 +94,7 @@ async function main() {
     await waitFor(`!${pickerOpen}`);
     const dna = await run(`appState.samples.at(-1)`);
     assert.equal(dna.name, 'pTest <long construct name>');
-    assert.equal(dna.type, 'plasmid');
+    assert.equal(dna.type, 'dna');
     assert.equal(dna.concentration, '80 ng/uL');
     assert.deepEqual(dna.inventoryLink, { section: '-20 Degree', containerId: 'box-1', wellIndex: 4 });
     assert.equal(dna.location.position, 'W5');

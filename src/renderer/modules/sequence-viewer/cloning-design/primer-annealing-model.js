@@ -146,6 +146,45 @@ export function annealingStats(alignment) {
   };
 }
 
+// Reserve the available resizing span once. Reference columns and their gap
+// slots belong to the DNA context, rather than the current oligo length.
+export function buildPrimerReferenceFrame(record, alignment, maxPrimerLength) {
+  if (!alignment) return null;
+  const first = alignment.columns.find(column => column.targetIndex !== null)?.targetIndex ?? 0;
+  const last = alignment.columns.findLast(column => column.targetIndex !== null)?.targetIndex ?? first;
+  const primerLength = Math.max(...alignment.columns.map(column => column.primerIndex ?? -1)) + 1;
+  const flank = targetIndex => ({ targetIndex, referenceBase: orientedBase(record, targetIndex, alignment.strand) });
+  return { alignment, sequence: record.sequence, topology: record.topology, strand: alignment.strand,
+    columns: [
+      ...Array.from({ length: 10 }, (_, i) => flank(first - 10 + i)),
+      ...alignment.columns.map(column => ({ targetIndex: column.targetIndex, referenceBase: column.referenceBase,
+        insertionIndex: column.targetIndex === null ? column.primerIndex : null })),
+      ...Array.from({ length: 10 + Math.max(0, maxPrimerLength - primerLength) }, (_, i) => flank(last + i + 1))
+    ] };
+}
+
+export function primerAlignmentInReferenceFrame(sequence, record, frame, searchAlignment = frame?.alignment) {
+  if (!frame) return searchAlignment;
+  const primer = dna(sequence);
+  const original = frame.alignment;
+  const originalLength = Math.max(...original.columns.map(column => column.primerIndex ?? -1)) + 1;
+  // Length edits keep the original site and strand. A shorter repeated seed
+  // may make the specificity search ambiguous, but must not move this drawing
+  // to a different matching location on the plasmid.
+  const lastRetained = original.columns.findLastIndex(column => column.primerIndex !== null && column.primerIndex < primer.length);
+  const columns = original.columns.slice(0, lastRetained + 1).map(column => ({ ...column,
+    base: column.primerIndex === null ? '' : primer[column.primerIndex] }));
+  const lastTarget = original.columns.findLast(column => column.targetIndex !== null)?.targetIndex ?? original.start - 1;
+  for (let i = originalLength; i < primer.length; i++) {
+    const targetIndex = lastTarget + 1 + i - originalLength;
+    const referenceBase = orientedBase(record, targetIndex, frame.strand);
+    columns.push({ primerIndex: i, targetIndex, base: primer[i], referenceBase,
+      paired: concrete(primer[i]) && primer[i] === referenceBase, unpaired: !referenceBase });
+  }
+  return { ...original, columns, ambiguous: searchAlignment?.ambiguous ?? original.ambiguous,
+    siteCount: searchAlignment?.siteCount ?? original.siteCount };
+}
+
 export function primerLengthOptions(primer, product, alignment = alignPrimerToDna(primer?.sequence, product), templateAlignment = null) {
   const sequence = dna(primer?.sequence);
   const tail = dna(primer?.tailSequence);

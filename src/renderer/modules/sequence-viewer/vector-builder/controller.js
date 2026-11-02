@@ -215,6 +215,7 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
     formatRangeLabel,
     positionFloatingMenu,
     onRequestPrimerDesign,
+    onSaveDnaFragment: config.onSaveDnaFragment,
     onRequestProteinInsert
   });
 

@@ -1,5 +1,12 @@
 // Japanese preview. Missing entries use the English catalog.
 export const dnaJapanese = Object.freeze({
+  "full.1eacdedd": "配列上で別のパートナーを選択",
+  "full.c6d6432b": "パートナープライマー：{name}",
+  "full.f8782d9d": "PCR：{name}。配列上で強調表示されたパートナープライマーをクリックしてください。",
+  "full.68ffa4eb": "適合するパートナー：{count} 個。他のプライマーはグレー表示です。",
+  "full.ed441948": "この鋳型には適合するパートナープライマーの注釈がありません。パートナープライマーを追加して PCR を再開してください。",
+  "full.b91468ab": "強調表示されたパートナープライマーを選択してください。",
+  "full.7db1ed41": "このプライマーは {name} と PCR 産物を形成できません。強調表示されたプライマーを選択してください。",
   "full.eb8624b": "単一消化…",
   "full.7405cff0": "二重消化…",
   "full.19a973d": "元の鋳型の末端",

@@ -24,7 +24,7 @@ function createPrimerDesignOverlay({
   persistFeatureMutation,
   hideFeatureContextMenu
 } = {}) {
-  // Last designed pair, kept here so the order action can re-read it.
+  // Keep the displayed pair for ordering and saving directly to the library.
   let designedPrimers = [];
 
   function renderPrimerDesignTable(primers = []) {
@@ -34,7 +34,7 @@ function createPrimerDesignOverlay({
 
     return `
       <div class="sequence-viewer-cloning-design-primer-table-wrap">
-        <table class="sequence-viewer-cloning-design-primer-table">
+        <table class="sequence-viewer-cloning-design-primer-table sequence-viewer-primer-design-table">
           <thead>
             <tr>
               <th>${i18nUi.html("Primer")}</th>
@@ -65,7 +65,7 @@ function createPrimerDesignOverlay({
                     </div>
                   </td>
                   <td>${Math.max(0, Number(primer?.length) || sequence.length).toLocaleString()} nt</td>
-                  <td>${escapeHtml(formatNumber(primer?.tm, 1))} C</td>
+                  <td>${escapeHtml(formatNumber(primer?.tm, 1))} °C</td>
                   <td>${escapeHtml(formatNumber(primer?.gcContent, 1))}%</td>
                 </tr>
               `;
@@ -151,6 +151,8 @@ function createPrimerDesignOverlay({
     });
     const primers = Array.isArray(primerPlan?.primers) ? primerPlan.primers : [];
     designedPrimers = primers;
+    if (elements.primerDesignSaveBtn) elements.primerDesignSaveBtn.disabled = !primers.length;
+    if (elements.primerDesignOrderBtn) elements.primerDesignOrderBtn.disabled = !primers.length;
     const thresholdLabel = cleanText(primerPlan?.selectedThresholdLevel, 80) || 'none';
 
     if (elements.primerDesignTitle) {
@@ -162,9 +164,7 @@ function createPrimerDesignOverlay({
     if (elements.primerDesignResult) {
       i18nUi.setHtml(elements.primerDesignResult, `
         <div class="sequence-viewer-primer-design-summary">
-          <p><strong>${i18nUi.html("Template:")}</strong> ${escapeHtml(target.label)}</p>
-          <p><strong>${i18nUi.html("Selected sequence:")}</strong> ${target.sequence.length.toLocaleString()} bp</p>
-          <p><strong>${i18nUi.html("Threshold profile:")}</strong> ${escapeHtml(thresholdLabel)}</p>
+          <p>${i18nUi.html("Threshold profile:")} ${escapeHtml(thresholdLabel)}</p>
         </div>
         ${renderPrimerDesignTable(primers)}
         ${renderPrimerDesignWarnings(primerPlan?.warnings)}

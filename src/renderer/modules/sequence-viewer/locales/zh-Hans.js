@@ -1,5 +1,12 @@
 // Simplified Chinese preview. Missing entries use the English catalog.
 export const dnaSimplifiedChinese = Object.freeze({
+  "full.1eacdedd": "在序列中重新选择配对引物",
+  "full.c6d6432b": "配对引物：{name}",
+  "full.f8782d9d": "PCR：{name}。请在序列中点击高亮显示的配对引物。",
+  "full.68ffa4eb": "可配对引物：{count} 个。其他引物已显示为灰色。",
+  "full.ed441948": "此模板上未注释可配对的引物。请添加配对引物，然后重新开始 PCR。",
+  "full.b91468ab": "请选择高亮显示的配对引物。",
+  "full.7db1ed41": "此引物无法与 {name} 形成 PCR 产物。请选择高亮显示的引物。",
   "full.eb8624b": "单酶切…",
   "full.7405cff0": "双酶切…",
   "full.19a973d": "模板原始末端",

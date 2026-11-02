@@ -6,6 +6,8 @@ import { COMMON_SEQUENCE_FEATURE_TYPES } from './feature-types.js';
 import { clamp, cleanText, normalizeRecordName } from './shared.js';
 import { createPrimerDesignOverlay } from './detail-feature-editing/primer-design.js';
 import { renderDigestionActions } from './digestion-actions.js';
+import { getFeatureDnaFragmentRange } from './dna-fragments.js';
+import { buildFeatureLocationText } from './feature-model.js';
 import {
   buildManualFeatureId,
   doesFeatureOverlapRange,
@@ -29,6 +31,7 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
   const setStatus = config?.setStatus || (() => {});
   const persistFeatureMutation = config?.persistFeatureMutation || (async () => {});
   const onRequestPrimerOrder = config?.onRequestPrimerOrder || (() => {});
+  const onSavePrimersToLibrary = config?.onSavePrimersToLibrary || (() => {});
 
   let featureEditorState = null;
 
@@ -144,12 +147,14 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
     if (!elements.featureContextMenu) {
       return;
     }
-    const selectionLabel = context?.selectionRange ? formatBaseRangeLabel(context.selectionRange) : '';
+    const selectionLabel = context?.fragmentFeature
+      ? buildFeatureLocationText(context.fragmentFeature, getSelectedRecord()?.sequence?.length || 0)
+      : context?.selectionRange ? formatBaseRangeLabel(context.selectionRange) : '';
     const featureName = cleanText(context?.featureContext?.feature?.name, 120) || 'feature';
     i18nUi.setHtml(elements.featureContextMenu, `
       ${selectionLabel ? `<p class="small-note">${escapeHtml(selectionLabel)}</p>` : ''}
       ${renderDigestionActions(context?.restrictionFeature, { menu: true })}
-      ${context?.selectionRange ? `<button type="button" class="sequence-viewer-context-item" data-sequence-feature-action="save-fragment">${i18nUi.html('Save DNA Fragment…')}</button>` : ''}
+      ${context?.fragmentRange || context?.selectionRange ? `<button type="button" class="sequence-viewer-context-item" data-sequence-feature-action="save-fragment">${i18nUi.html('Save DNA Fragment…')}</button>` : ''}
       <button type="button" class="sequence-viewer-context-item" data-sequence-feature-action="add"${context?.selectionRange ? '' : ' disabled'}>${i18nUi.html("Add Feature")}</button>
       <button type="button" class="sequence-viewer-context-item" data-sequence-feature-action="design-primer">${i18nUi.html("Design Primer")}</button>
       <button type="button" class="sequence-viewer-context-item" data-sequence-feature-action="edit"${context?.featureContext ? '' : ' disabled'}>${i18nUi.html("Edit")} ${escapeHtml(featureName)}</button>
@@ -177,9 +182,14 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
       featureContext = getSelectedEditableFeatureContext(record);
     }
 
+    const fragmentFeature = visibleFeatures[clickedFeatureIndex]
+      || (!selectionRange ? getFeatureByIndexForRecord(record, state.selectedFeatureIndex) : null);
+
     return {
       selectionRange,
       featureContext,
+      fragmentFeature,
+      fragmentRange: fragmentFeature ? getFeatureDnaFragmentRange(fragmentFeature, record) : selectionRange,
       restrictionFeature: visibleFeatures[clickedFeatureIndex]?.type === 'restriction_site' ? visibleFeatures[clickedFeatureIndex] : null
     };
   }
@@ -412,6 +422,7 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
 
   return {
     orderDesignedPrimers: () => onRequestPrimerOrder(getDesignedPrimers()),
+    saveDesignedPrimers: () => onSavePrimersToLibrary(getDesignedPrimers()),
     applyFeatureEditorChanges,
     buildSelectionDetailHtml,
     deleteFeatureFromContext,

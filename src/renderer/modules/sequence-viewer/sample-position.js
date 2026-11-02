@@ -6,7 +6,8 @@ export function samplePositionButtonHtml(attribute, id) {
   return `<button type="button" class="sequence-viewer-sample-position-btn" ${attribute}="${escapeHtml(id)}"
     ${dnaAttributes({ title: 'ui.recordSamplePosition', 'aria-label': 'ui.recordSamplePosition' })} aria-haspopup="dialog">
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M5.5 4h7M7 4v5l-2.6 6.4A3.2 3.2 0 0 0 7.4 20h2.2a3.2 3.2 0 0 0 3-4.4L10 9V4M14 14.5h6M17 11.5v6"/>
+      <path d="M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0Z"/>
+      <circle cx="12" cy="10" r="2.5"/>
     </svg>
   </button>`;
 }
@@ -26,7 +27,7 @@ export function createSequenceSamplePositionController({ rootDocument, appState 
 
   return {
     openSequence(entry) {
-      if (entry) picker.open({ name: entry.name, type: 'plasmid' });
+      if (entry) picker.open({ name: entry.name, type: 'dna' });
     },
     openPrimer(primer) {
       if (primer) picker.open({

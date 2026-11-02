@@ -5,6 +5,28 @@ const mod = (value, length) => ((value % length) + length) % length;
 const sliceTemplate = (record, start, end) => (normalizeTopology(record.topology) === 'circular'
   ? record.sequence + record.sequence : record.sequence).slice(start, end);
 
+// Save the genomic span, including gaps in joined annotations. Preserve the
+// annotation's location order to distinguish an origin-spanning feature from
+// an ordinary joined feature on a circular template.
+export function getFeatureDnaFragmentRange(feature, record) {
+  const length = record?.sequence?.length || 0;
+  const segments = (feature?.segments || []).map(segment => ({ start: Number(segment.start), end: Number(segment.end) }))
+    .filter(segment => Number.isInteger(segment.start) && Number.isInteger(segment.end)
+      && segment.start >= 0 && segment.end <= length && segment.end > segment.start);
+  if (!segments.length) return null;
+  let offset = 0;
+  let previous = -1;
+  const circular = normalizeTopology(record.topology) === 'circular';
+  const unrolled = segments.map(segment => {
+    if (circular && segment.start < previous) offset += length;
+    previous = segment.start;
+    return { start: segment.start + offset, end: segment.end + offset };
+  });
+  const start = Math.min(...unrolled.map(segment => segment.start));
+  const end = Math.max(...unrolled.map(segment => segment.end));
+  return end - start <= length ? { start, end } : null;
+}
+
 // All ranges are zero-based, end-exclusive. Circular ranges may cross the
 // origin, but a fragment never contains more than one copy of the template.
 export function buildDnaFragmentRecord(template, range, name = '') {
@@ -116,7 +138,7 @@ export function resolveFragmentPrimer(template, primer, strand) {
   throw new Error('No matching 3′ primer binding site was found on this template.');
 }
 
-export function buildPcrFragmentRecord(template, forwardPrimer, reversePrimer, name = '') {
+export function resolvePcrPrimerPair(template, forwardPrimer, reversePrimer) {
   template = { ...template, sequence: normalizeSequenceText(template?.sequence || '') };
   const forward = resolveFragmentPrimer(template, forwardPrimer, 1);
   const reverse = resolveFragmentPrimer(template, reversePrimer, -1);
@@ -128,12 +150,19 @@ export function buildPcrFragmentRecord(template, forwardPrimer, reversePrimer, n
   if (reverse.start < forward.start || reverse.end < forward.end || reverse.end - forward.start > length) {
     throw new Error('These primers do not face inward along a valid template fragment.');
   }
-  const product = buildDnaFragmentRecord(template, { start: forward.start, end: reverse.end }, name || `${template.name || 'DNA'}_PCR`);
   const reverseOligo = reverseComplementIupac(reverse.sequence);
   const overlap = forward.end - reverse.start;
   if (overlap > 0 && forward.sequence.slice(-overlap) !== reverseOligo.slice(0, overlap)) {
     throw new Error('The overlapping primer sequences disagree.');
   }
+  return { forward, reverse, overlap, reverseOligo,
+    productLength: forward.sequence.length + reverse.sequence.length + reverse.start - forward.end };
+}
+
+export function buildPcrFragmentRecord(template, forwardPrimer, reversePrimer, name = '') {
+  template = { ...template, sequence: normalizeSequenceText(template?.sequence || '') };
+  const { forward, reverse, overlap, reverseOligo } = resolvePcrPrimerPair(template, forwardPrimer, reversePrimer);
+  const product = buildDnaFragmentRecord(template, { start: forward.start, end: reverse.end }, name || `${template.name || 'DNA'}_PCR`);
   product.sequence = forward.sequence + (overlap > 0
     ? reverseOligo.slice(overlap)
     : sliceTemplate(template, forward.end, reverse.start) + reverseOligo);

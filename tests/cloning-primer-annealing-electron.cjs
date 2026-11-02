@@ -56,6 +56,17 @@ async function main() {
   const exec = code => win.webContents.executeJavaScript(code, true);
   const click = selector => exec(`document.querySelector(${JSON.stringify(selector)}).click()`);
   const metric = key => exec(`document.querySelector('[data-annealing-metric="${key}"]').textContent`);
+  const referenceSnapshot = () => exec(`(()=>{
+    const svg=document.querySelector('.primer-annealing-duplex'),reference=svg.querySelector('[data-annealing-reference]');
+    const scroller=document.querySelector('.primer-annealing-scroll');
+    return {width:svg.getAttribute('width'),viewBox:svg.getAttribute('viewBox'),dna:reference.innerHTML,scrollLeft:scroller.scrollLeft,
+      template:source.originalSequence,product:state.records[0].sequence};
+  })()`);
+  const rememberReference = () => exec(`window.referenceNode=document.querySelector('[data-annealing-reference]');window.referenceScroller=document.querySelector('.primer-annealing-scroll')`);
+  const assertMountedReference = async snapshot => {
+    assert.deepEqual(await referenceSnapshot(), snapshot, 'DNA bases, coordinates, track width, source sequences, and viewport stay fixed');
+    assert.equal(await exec(`document.querySelector('[data-annealing-reference]')===window.referenceNode && document.querySelector('.primer-annealing-scroll')===window.referenceScroller`), true, 'only the primer layer updates during a drag');
+  };
   const handlePoint = async () => {
     await exec(`document.querySelector('[data-annealing-length-handle]').scrollIntoView({block:'center',inline:'center'})`);
     return exec(`(()=>{const r=document.querySelector('[data-annealing-length-handle]').getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()`);
@@ -86,16 +97,20 @@ async function main() {
     await click('[data-annealing-action="previous"]');
     const original = await exec('state.cloningDesign.displayPlan.primers[1].sequence');
     const point = await handlePoint();
+    const fixedReference = await referenceSnapshot();
+    await rememberReference();
     pointer('mouseMove', point); pointer('mouseDown', point);
     pointer('mouseMove', { x: point.x + 30, y: point.y });
     await exec('new Promise(resolve=>requestAnimationFrame(resolve))');
     assert.equal(await exec('state.cloningDesign.displayPlan.primers[1].sequence'), original);
     assert.equal(await metric('length'), `${original.length + 2} nt`);
+    await assertMountedReference(fixedReference);
     await screenshot('length-preview.png');
     win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
     win.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' });
     pointer('mouseUp', { x: point.x + 30, y: point.y });
     assert.equal(await metric('length'), `${original.length} nt`);
+    await assertMountedReference(fixedReference);
     const nextPoint = await handlePoint();
     pointer('mouseMove', nextPoint); pointer('mouseDown', nextPoint);
     pointer('mouseMove', { x: nextPoint.x + 15, y: nextPoint.y });
@@ -105,6 +120,7 @@ async function main() {
     await exec('new Promise(resolve=>requestAnimationFrame(resolve))');
     const applied = await exec('state.cloningDesign.displayPlan.primers[1].sequence');
     assert.equal(applied.length, original.length + 2);
+    assert.deepEqual(await referenceSnapshot(), fixedReference, 'releasing the primer does not rebuild its reference window');
     assert.equal(await exec('document.querySelector("[data-annealing-primer]").value'), '1');
     assert.equal(await exec('document.querySelector("[data-annealing-mode=product]").getAttribute("aria-pressed")'), 'true');
     assert.ok(await exec(`document.querySelector('.sequence-viewer-cloning-design-primer-table').textContent.includes(${JSON.stringify(applied)})`));
@@ -122,6 +138,36 @@ async function main() {
     win.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Right' });
     await exec('new Promise(resolve=>requestAnimationFrame(resolve))');
     assert.equal(await exec('state.cloningDesign.displayPlan.primers[1].sequence'), applied);
+    assert.deepEqual(await referenceSnapshot(), fixedReference, 'keyboard resizing also keeps the reference fixed');
+    // Exercise extension and shortening on forward/reverse primers in both DNA views.
+    for (const primerIndex of [0, 1]) {
+      await exec(`(()=>{const select=document.querySelector('[data-annealing-primer]');select.value='${primerIndex}';select.dispatchEvent(new Event('change',{bubbles:true}))})()`);
+      for (const mode of ['template', 'product']) {
+        await click(`[data-annealing-mode="${mode}"]`);
+        const originalLength = await exec(`state.cloningDesign.displayPlan.primers[${primerIndex}].length`);
+        for (const delta of [30, -30]) {
+          const position = await handlePoint(), snapshot = await referenceSnapshot();
+          await rememberReference();
+          pointer('mouseMove', position); pointer('mouseDown', position);
+          pointer('mouseMove', {x:position.x+delta,y:position.y});
+          await exec('new Promise(resolve=>requestAnimationFrame(resolve))');
+          await assertMountedReference(snapshot);
+          pointer('mouseUp', {x:position.x+delta,y:position.y});
+          await exec('new Promise(resolve=>requestAnimationFrame(resolve))');
+          assert.deepEqual(await referenceSnapshot(), snapshot);
+        }
+        assert.equal(await exec(`state.cloningDesign.displayPlan.primers[${primerIndex}].length`), originalLength);
+      }
+    }
+    // Moving near the edge must not automatically pan the underlying DNA.
+    await exec(`(()=>{const s=document.querySelector('.primer-annealing-scroll'),h=document.querySelector('[data-annealing-length-handle]');const r=h.getBoundingClientRect(),b=s.getBoundingClientRect();s.scrollLeft+=r.x+r.width/2-b.right+16})()`);
+    const edgePoint = await exec(`(()=>{const r=document.querySelector('[data-annealing-length-handle]').getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()`);
+    const edgeReference = await referenceSnapshot();
+    pointer('mouseMove', edgePoint); pointer('mouseDown', edgePoint);
+    pointer('mouseMove', {x:edgePoint.x+5,y:edgePoint.y});
+    await exec('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+    assert.deepEqual(await referenceSnapshot(), edgeReference);
+    pointer('mouseUp', {x:edgePoint.x+5,y:edgePoint.y});
     await click('[data-cloning-design-action="save-primers"]');
     assert.equal(await exec('savedPrimers[1].sequence'), applied);
     if (await exec('state.cloningDesign.displayPlan.feasible')) {

@@ -3,12 +3,13 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
-import { buildDnaFragmentRecord, buildPcrFragmentRecord, resolveFragmentPrimer } from '../src/renderer/modules/sequence-viewer/dna-fragments.js';
+import { buildDnaFragmentRecord, buildPcrFragmentRecord, resolveFragmentPrimer, getFeatureDnaFragmentRange } from '../src/renderer/modules/sequence-viewer/dna-fragments.js';
 import { buildRecordGenbankText } from '../src/renderer/modules/sequence-viewer/storage.js';
 import { parseInputRecords } from '../src/renderer/modules/sequence-viewer/parsing.js';
 import { reverseComplementIupac } from '../src/renderer/modules/sequence-viewer/shared.js';
 import { buildDnaLibraryHierarchy } from '../src/renderer/modules/sequence-viewer/home/library-hierarchy.js';
 import { primerFeatureSequence } from '../src/renderer/modules/sequence-viewer/primer-hover.js';
+import { evaluatePcrPrimerCandidates } from '../src/renderer/modules/sequence-viewer/pcr-primer-picker.js';
 
 const require = createRequire(import.meta.url);
 const library = require('../src/renderer/modules/sequence-viewer/main-process/sequence-library/index.js');
@@ -44,6 +45,10 @@ const wrapped = buildDnaFragmentRecord(circular, { start: 225, end: 20 });
 assert.equal(wrapped.sequence, sequence.slice(225) + sequence.slice(0, 20));
 assert.deepEqual(wrapped.features[0].segments, [{ start: 5, end: 15 }, { start: 15, end: 27 }]);
 assert.deepEqual(reload(wrapped).features[0].segments, wrapped.features[0].segments);
+assert.deepEqual(getFeatureDnaFragmentRange(template.features[1], template), { start: 25, end: 40 });
+assert.deepEqual(getFeatureDnaFragmentRange(circular.features[0], circular), { start: 230, end: 252 });
+assert.deepEqual(getFeatureDnaFragmentRange({ segments: [{ start: 20, end: 30 }, { start: 180, end: 190 }] }, circular), { start: 20, end: 190 }, 'joined annotations retain their genomic span');
+assert.equal(getFeatureDnaFragmentRange({ segments: [] }, circular), null);
 
 const primer = (name, start, end, strand, tail = '') => ({ name, type: 'primer_bind', strand,
   segments: [{ start, end }], primerSequence: tail + (strand === 1 ? sequence.slice(start, end) : reverseComplementIupac(sequence.slice(start, end))) });
@@ -70,6 +75,24 @@ assert.throws(() => buildPcrFragmentRecord(template, primer('F', 180, 198, 1), r
 assert.throws(() => resolveFragmentPrimer({ sequence: 'ACGT'.repeat(30), topology: 'linear' }, { sequence: 'ACGTACGTACGT' }, 1), /multiple sites/);
 assert.throws(() => resolveFragmentPrimer(template, { sequence: 'AAAA' }, -1), /at least 12/);
 assert.throws(() => resolveFragmentPrimer(template, { ...forward, primerSequence: 'A'.repeat(22) }, 1), /3′ end/);
+
+const otherForward = primer('Other forward', 60, 78, 1);
+const invalidReverse = { ...reverse, name: 'Invalid reverse', primerSequence: 'A'.repeat(22) };
+const outwardReverse = primer('Outward reverse', 1, 19, -1);
+const candidateTemplate = { ...template, features: [forward, reverse, otherForward, invalidReverse, outwardReverse] };
+const candidates = evaluatePcrPrimerCandidates(candidateTemplate, forward);
+const status = (list, name) => list.find(candidate => candidate.primer.name === name)?.state;
+assert.equal(status(candidates, 'Forward'), 'selected');
+assert.equal(status(candidates, 'Reverse'), 'feasible');
+assert.equal(candidates.find(candidate => candidate.state === 'feasible').productLength, pcr.sequence.length);
+assert.equal(status(candidates, 'Other forward'), 'unavailable');
+assert.equal(status(candidates, 'Invalid reverse'), 'unavailable');
+assert.equal(status(candidates, 'Outward reverse'), 'unavailable');
+assert.equal(status(evaluatePcrPrimerCandidates({ ...candidateTemplate, topology: 'circular' }, forward), 'Outward reverse'), 'feasible');
+const reverseCandidates = evaluatePcrPrimerCandidates(candidateTemplate, reverse);
+assert.equal(status(reverseCandidates, 'Forward'), 'feasible');
+assert.equal(status(reverseCandidates, 'Other forward'), 'feasible');
+assert.equal(status(reverseCandidates, 'Reverse'), 'selected');
 
 const storagePath = await fs.mkdtemp(path.join(os.tmpdir(), 'hikari-fragments-'));
 const save = (id, record, parentEntryId) => library.upsertSequenceEntry({ storagePath, id, name: record.name,

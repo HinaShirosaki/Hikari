@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { alignPrimerToDna, annealingStats, orientedBase, primerLengthOptions, primerTemplateRecord, replacePlanPrimer, resizedPrimer } from '../src/renderer/modules/sequence-viewer/cloning-design/primer-annealing-model.js';
+import { alignPrimerToDna, annealingStats, buildPrimerReferenceFrame, orientedBase, primerAlignmentInReferenceFrame, primerLengthOptions, primerTemplateRecord, replacePlanPrimer, resizedPrimer } from '../src/renderer/modules/sequence-viewer/cloning-design/primer-annealing-model.js';
 import { cloningPrimerTm } from '../src/renderer/modules/sequence-viewer/calculations/oligo.js';
 import { reverseComplementDna } from '../src/renderer/modules/sequence-viewer/calculations/sequence.js';
 import { buildPrimerRecord } from '../src/renderer/modules/sequence-viewer/cloning-assembly/primer-records.js';
@@ -190,4 +190,46 @@ test('a manually adjusted review draft refreshes its notebook with current prime
   assert.equal(saved.entry.sequenceViewerCloningDesign.needsReview, true);
   assert.equal(saved.entry.resultTable.rows[0].sequence, primer.sequence);
   assert.ok(saved.entry.result.includes('Design status: Needs review'));
+});
+
+test('resizing preserves a fixed DNA reference on both strands through shortening and extension', () => {
+  const product = record(dna(400, 177));
+  for (const strand of [1, -1]) {
+    const sequence = strand === 1 ? product.sequence.slice(80, 110) : reverseComplementDna(product.sequence.slice(80, 110));
+    const primer = { sequence, bindingSequence: sequence };
+    const original = alignPrimerToDna(sequence, product);
+    const options = primerLengthOptions(primer, product, original);
+    const frame = buildPrimerReferenceFrame(product, original, options.max);
+    const reference = structuredClone(frame.columns);
+    for (const length of [options.min, 25, 40, options.max, 30]) {
+      const resized = resizedPrimer(primer, length, options);
+      const alignment = primerAlignmentInReferenceFrame(resized.sequence, product, frame, alignPrimerToDna(resized.sequence, product));
+      assert.deepEqual(frame.columns, reference);
+      assert.equal(product.sequence.length, 400);
+      assert.equal(alignment.strand, strand);
+      assert.equal(alignment.columns[0].targetIndex, original.columns[0].targetIndex);
+      assert.equal(annealingStats(alignment).paired, length);
+    }
+  }
+});
+
+test('the template reference keeps insertion slots and a primer cannot jump to an earlier repeated site when shortened', () => {
+  const template = record(dna(80, 931));
+  const oligo = template.sequence.slice(10, 35) + 'AAA' + template.sequence.slice(35, 55);
+  const original = alignPrimerToDna(oligo, template);
+  const frame = buildPrimerReferenceFrame(template, original, 70);
+  const reference = structuredClone(frame.columns);
+  const shorter = primerAlignmentInReferenceFrame(oligo.slice(0, -5), template, frame);
+  assert.equal(annealingStats(shorter).gaps, 3);
+  assert.deepEqual(frame.columns, reference);
+  const repeat = dna(20, 647), unique = dna(15, 334);
+  const plasmid = record(repeat + dna(50, 73) + repeat + unique + dna(50, 75));
+  const site = alignPrimerToDna(repeat + unique, plasmid);
+  const repeatedFrame = buildPrimerReferenceFrame(plasmid, site, 60);
+  const search = alignPrimerToDna(repeat, plasmid);
+  assert.equal(search.ambiguous, true);
+  assert.equal(search.start, 0);
+  const anchored = primerAlignmentInReferenceFrame(repeat, plasmid, repeatedFrame, search);
+  assert.equal(anchored.columns[0].targetIndex, 70);
+  assert.equal(anchored.ambiguous, true);
 });

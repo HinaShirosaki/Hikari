@@ -1,5 +1,12 @@
 // Spanish preview. Missing entries use the English catalog.
 export const dnaSpanish = Object.freeze({
+  "full.1eacdedd": "Elegir otro cebador en la secuencia",
+  "full.c6d6432b": "Cebador complementario: {name}",
+  "full.f8782d9d": "PCR: {name}. Haz clic en un cebador complementario resaltado en la secuencia.",
+  "full.68ffa4eb": "Cebadores compatibles: {count}. Los demás se muestran en gris.",
+  "full.ed441948": "No hay cebadores complementarios compatibles anotados en esta plantilla. Añade uno y vuelve a iniciar la PCR.",
+  "full.b91468ab": "Elige un cebador complementario resaltado.",
+  "full.7db1ed41": "Este cebador no puede formar un producto de PCR con {name}. Elige un cebador resaltado.",
   "full.eb8624b": "Digestión simple…",
   "full.7405cff0": "Digestión doble…",
   "full.19a973d": "Extremo original de la plantilla",

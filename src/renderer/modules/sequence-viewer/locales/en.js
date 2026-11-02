@@ -1,4 +1,11 @@
 export const dnaEnglish = Object.freeze({
+  "full.1eacdedd": "Choose a different partner in the sequence",
+  "full.c6d6432b": "Partner primer: {name}",
+  "full.f8782d9d": "PCR: {name}. Click a highlighted partner primer in the sequence.",
+  "full.68ffa4eb": "Compatible partners: {count}. Other primers are greyed out.",
+  "full.ed441948": "No compatible partner primers are annotated on this template. Add a partner primer, then start PCR again.",
+  "full.b91468ab": "Choose a highlighted partner primer.",
+  "full.7db1ed41": "This primer cannot form a PCR product with {name}. Choose a highlighted primer.",
   "full.eb8624b": "Single digestion…",
   "full.7405cff0": "Double digestion…",
   "full.19a973d": "Original template end",

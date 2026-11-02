@@ -57,7 +57,10 @@ async function main() {
       window.template={name:'Parent DNA',sequence,topology:'circular',features:[
         {id:'f',name:'Primer F',type:'primer_bind',strand:1,primerSequence:'GGGG'+sequence.slice(20,38),segments:[{start:20,end:38}]},
         {id:'r',name:'Primer R',type:'primer_bind',strand:-1,primerSequence:'CCCC'+reverseComplementIupac(sequence.slice(150,168)),segments:[{start:150,end:168}]},
-        {id:'gene',name:'Test gene',type:'CDS',strand:1,segments:[{start:40,end:130}]}]};
+        {id:'other-f',name:'Other F',type:'primer_bind',strand:1,segments:[{start:60,end:78}]},
+        {id:'invalid-r',name:'Invalid R',type:'primer_bind',strand:-1,primerSequence:'AAAAAAAAAAAAAAAAAA',segments:[{start:200,end:218}]},
+        {id:'gene',name:'Test gene',type:'CDS',strand:1,segments:[{start:40,end:130}]},
+        {id:'origin',name:'Origin feature',type:'misc_feature',strand:-1,segments:[{start:230,end:240},{start:0,end:12}]}]};
       window.host=document.getElementById('sequence-viewer-sequence-host');
       window.menu=document.getElementById('sequence-viewer-feature-context-menu');
       window.bases=()=>[...host.querySelectorAll('.sequence-viewer-strand-row-top .sequence-viewer-seq-base')];
@@ -65,6 +68,7 @@ async function main() {
       window.selectRange=(start,end)=>{baseEvent(start,'mousedown');baseEvent(end,'mousemove');window.dispatchEvent(new MouseEvent('mouseup',{bubbles:true}));baseEvent(start,'contextmenu')};
       window.openEntry=id=>document.querySelector('#sequence-viewer-detail-library-list [data-sequence-entry-id="'+id+'"]').dispatchEvent(new MouseEvent('dblclick',{bubbles:true,detail:2}));
       window.readSequence=()=>bases().map(e=>e.textContent).join('');
+      window.primerNode=name=>{const index=[...document.querySelectorAll('#sequence-viewer-feature-rail-host [data-feature-index]')].find(e=>e.getAttribute('aria-label').startsWith(name+' (')).dataset.featureIndex;return host.querySelector('[data-feature-index="'+index+'"]')};
       await window.hikariApi.sequenceLibraryUpsert({storagePath:${JSON.stringify(scratch)},id:'parent-fixture',name:template.name,status:'saved',
         sequence,sequenceLength:sequence.length,features:template.features,featureCount:template.features.length,topology:template.topology,gbkText:buildRecordGenbankText(template)});
       viewer.render({activeViewId:'sequence-viewer-detail-view'});window.ready=true;
@@ -125,12 +129,31 @@ async function main() {
     await waitFor(`readSequence().length===240`);
     await run(`document.querySelector('#sequence-viewer-feature-rail-host [aria-label^="Primer F"]').click()`);
     await click('#sequence-viewer-feature-detail [data-sequence-primer-pcr]');
+    assert.equal(await run(open), false, 'PCR starts by picking a partner on the sequence');
+    assert.equal(await run(`!!document.querySelector('.sequence-viewer-pcr-picker')`), true);
+    assert.equal(await run(`primerNode('Primer F').dataset.pcrPrimerState`), 'selected');
+    assert.equal(await run(`primerNode('Primer R').dataset.pcrPrimerState`), 'feasible');
+    for (const name of ['Other F', 'Invalid R']) {
+      assert.equal(await run(`primerNode('${name}').dataset.pcrPrimerState`), 'unavailable');
+      assert.equal(await run(`primerNode('${name}').getAttribute('aria-disabled')`), 'true');
+      assert.equal(await run(`Number(getComputedStyle(primerNode('${name}')).opacity)<0.5`), true, 'infeasible primers are greyed out');
+      await run(`primerNode('${name}').click()`);
+      assert.equal(await run(open), false, 'infeasible primers cannot open confirmation');
+    }
+    win.setSize(900, 850);
+    await new Promise(resolve => setTimeout(resolve, 150));
+    assert.equal(await run(`primerNode('Primer R').dataset.pcrPrimerState`), 'feasible', 'resizing retains partner highlights');
+    await screenshot('pcr-partner-picking.png');
+    await run(`primerNode('Primer R').dispatchEvent(new MouseEvent('mousedown',{bubbles:true,cancelable:true,button:0}))`);
     assert.equal(await run(open), true);
+    assert.match(await run(`${field('partner')}.textContent`), /Primer R/);
     assert.match(await run(`${field('preview')}.textContent`), /156 bp/);
-    assert.equal(await run(`${field('partner')}.options.length`), 3, 'annotated, library and pasted partners are available');
-    await run(`${field('partner')}.value='custom';${field('partner')}.dispatchEvent(new Event('change',{bubbles:true}))`);
-    assert.equal(await run(`${field('save')}.disabled`), true);
-    await run(`${field('sequence')}.value=template.features[1].primerSequence;${field('sequence')}.dispatchEvent(new Event('input',{bubbles:true}));${field('name')}.value='PCR child'`);
+    assert.equal(await run(`document.querySelectorAll('[data-pcr-primer-state]').length`), 0);
+    await click('[data-fragment-pick-partner]');
+    assert.equal(await run(open), false);
+    assert.equal(await run(`primerNode('Primer R').dataset.pcrPrimerState`), 'feasible');
+    await run(`primerNode('Primer R').click()`);
+    await run(`${field('name')}.value='PCR child'`);
     assert.equal(await run(`${field('save')}.disabled`), false);
     for (const width of [1280, 800, 480]) {
       win.setSize(width, 850);
@@ -156,17 +179,83 @@ async function main() {
     await waitFor('readSequence().length===240');
     await run(`document.querySelector('#sequence-viewer-feature-rail-host [aria-label^="Primer R"]').click()`);
     await click('#sequence-viewer-feature-detail [data-sequence-primer-pcr]');
+    assert.equal(await run(open), false);
+    assert.equal(await run(`primerNode('Primer F').dataset.pcrPrimerState`), 'feasible');
+    assert.equal(await run(`primerNode('Other F').dataset.pcrPrimerState`), 'feasible');
+    await run(`primerNode('Primer F').click()`);
     assert.equal(await run(open), true);
-    assert.equal(await run(`${field('partner-label')}.textContent`), 'Forward primer');
+    assert.match(await run(`${field('partner')}.textContent`), /Primer F/);
     assert.match(await run(`${field('preview')}.textContent`), /156 bp/);
     win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
     win.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' });
     await waitFor(`!${open}`);
     await run(`(()=>{const e=host.querySelector('[data-feature-index="0"]'),r=e.getBoundingClientRect();e.dispatchEvent(new MouseEvent('mouseover',{bubbles:true,clientX:r.left,clientY:r.top}))})()`);
     await click('[data-sequence-hover-tooltip="feature"] [data-sequence-primer-pcr]');
-    assert.equal(await run(open), true, 'primer hover cards can launch PCR');
-    await click('[data-fragment-cancel]');
+    assert.equal(await run(`!!document.querySelector('.sequence-viewer-pcr-picker')`), true, 'primer hover cards launch partner picking');
+    await click('[data-pcr-pick-cancel]');
+    assert.equal(await run(`document.querySelectorAll('[data-pcr-primer-state]').length`), 0);
+    await run(`document.querySelector('#sequence-viewer-feature-rail-host [aria-label^="Invalid R"]').click()`);
+    await click('#sequence-viewer-feature-detail [data-sequence-primer-pcr]');
+    assert.match(await run(`document.querySelector('.sequence-viewer-pcr-picker').textContent`), /No compatible partner/);
+    assert.equal(await run(`document.querySelectorAll('[data-pcr-primer-state="feasible"]').length`), 0);
+    win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
+    win.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' });
+    await waitFor(`!document.querySelector('.sequence-viewer-pcr-picker')`);
+    assert.equal(await run(`primerNode('Primer F').hasAttribute('aria-disabled')`), false, 'cancellation restores normal primer interaction');
     assert.equal((await entries()).length, 3, 'cancellation does not save another fragment');
+    // Right-clicking a feature saves its full span, even when other bases are selected.
+    await run(`selectRange(50,100);(()=>{const e=document.querySelector('#sequence-viewer-feature-rail-host [aria-label^="Test gene"]'),r=e.getBoundingClientRect();e.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:r.left,clientY:r.top}))})()`);
+    await click('[data-sequence-feature-action="save-fragment"]');
+    assert.match(await run(`${field('preview')}.textContent`), /90 bp/);
+    assert.equal(await run(`${field('name')}.value`), 'Parent DNA_Test gene');
+    await run(`${field('name')}.value='Feature child'`);
+    await click('[data-fragment-save]');
+    await waitFor(`!${open}`);
+    assert.equal(await run('readSequence()'), await run('sequence.slice(40,130)'));
+    assert.equal((await entries()).find(entry => entry.name === 'Feature child').parentEntryId, parent.id);
+    await run(`openEntry('${parent.id}')`);
+    await waitFor('readSequence().length===240');
+    // Origin-spanning reverse features keep the short genomic fragment and their strand.
+    await run(`(()=>{const index=document.querySelector('#sequence-viewer-feature-rail-host [aria-label^="Origin feature"]').dataset.featureIndex,e=host.querySelector('[data-feature-index="'+index+'"]'),r=e.getBoundingClientRect();e.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:r.left,clientY:r.top}))})()`);
+    await click('[data-sequence-feature-action="save-fragment"]');
+    assert.match(await run(`${field('preview')}.textContent`), /22 bp/);
+    await run(`${field('name')}.value='Origin feature child'`);
+    await click('[data-fragment-save]');
+    await waitFor(`!${open}`);
+    assert.equal(await run('readSequence()'), await run('sequence.slice(230)+sequence.slice(0,12)'));
+    const originChild = (await entries()).find(entry => entry.name === 'Origin feature child');
+    assert.equal(originChild.parentEntryId, parent.id);
+    assert.ok(originChild.gbkRelPath.endsWith('.gbk'));
+    const originGbk = await library.getSequenceEntry({ storagePath: scratch, id: originChild.id, includeGbk: true });
+    assert.match(originGbk.gbkText, /complement\(join\(1\.\.10,11\.\.22\)\)/);
+    await run(`openEntry('${parent.id}')`);
+    await waitFor('readSequence().length===240');
+    await click('#sequence-viewer-vector-builder-btn');
+    await run(`(()=>{const index=document.querySelector('#sequence-viewer-feature-rail-host [aria-label^="Test gene"]').dataset.featureIndex,e=document.querySelector('#sequence-viewer-vector-builder-map [data-feature-index="'+index+'"]'),r=e.getBoundingClientRect();e.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:r.left,clientY:r.top}))})()`);
+    await click('#sequence-viewer-vector-builder-context-menu [data-vector-action="save-fragment"]');
+    assert.match(await run(`${field('preview')}.textContent`), /90 bp/);
+    await run(`${field('name')}.value='Map feature child'`);
+    await click('[data-fragment-save]');
+    await waitFor(`!${open}`);
+    assert.equal(await run('readSequence()'), await run('sequence.slice(40,130)'));
+    assert.equal((await entries()).find(entry => entry.name === 'Map feature child').parentEntryId, parent.id);
+    // A PCR start on the vector map returns to sequence-based partner picking.
+    await run(`openEntry('${parent.id}')`);
+    await waitFor('readSequence().length===240');
+    await click('#sequence-viewer-vector-builder-btn');
+    await run(`(()=>{const e=document.querySelector('#sequence-viewer-vector-builder-map [data-feature-index="0"]'),r=e.getBoundingClientRect();e.dispatchEvent(new MouseEvent('mousemove',{bubbles:true,clientX:r.left,clientY:r.top}))})()`);
+    await click('[data-sequence-hover-tooltip="map"] [data-sequence-primer-pcr]');
+    assert.equal(await run(`document.getElementById('sequence-viewer-vector-builder-workspace').hidden`), true);
+    assert.equal(await run(`primerNode('Primer R').dataset.pcrPrimerState`), 'feasible');
+    await run(`primerNode('Primer R').click()`);
+    assert.equal(await run(open), true);
+    await click('[data-fragment-cancel]');
+    await run(`document.querySelector('#sequence-viewer-feature-rail-host [aria-label^="Primer F"]').click()`);
+    await click('#sequence-viewer-feature-detail [data-sequence-primer-pcr]');
+    assert.equal(await run(`!!document.querySelector('.sequence-viewer-pcr-picker')`), true);
+    await run(`openEntry('${parent.id}')`);
+    await waitFor(`!document.querySelector('.sequence-viewer-pcr-picker')`);
+    assert.equal(await run(`document.querySelectorAll('[data-pcr-primer-state]').length`), 0, 'loading a record clears pending partner selection');
     await run(`show('sequence-viewer-view');viewer.render({activeViewId:'sequence-viewer-view'})`);
     await waitFor(`!!document.querySelector('#sequence-viewer-library-list [data-sequence-dna-toggle]')`);
     await screenshot('dna-family.png');
@@ -179,7 +268,7 @@ async function main() {
     await run(`const search=document.getElementById('sequence-viewer-library-search-input');search.value='PCR child';search.dispatchEvent(new Event('input',{bubbles:true}))`);
     assert.equal(await run(`document.querySelector('#sequence-viewer-library-list [data-sequence-entry-id="${pcr.id}"]').getClientRects().length>0`), true);
     assert.deepEqual(errors, []);
-    console.log('Sequence fragment Electron QA passed: selection save, forward/reverse primer and hover PCR, real IPC and GBK storage, fold/unfold, ancestry search, reload, cancellation, failed-save retry, duplicate submits, and responsive layouts.');
+    console.log('Sequence fragment Electron QA passed: selection and feature saves, origin-spanning reverse features, vector-map feature saves, PCR partner picking with feasible highlights and greyed-out alternatives, reflow, reverse starts, no-partner and cancellation, real IPC and GBK storage, fold/unfold, ancestry search, reload, failed-save retry, duplicate submits, and responsive layouts.');
   } finally {
     win.destroy();
     await fs.promises.rm(scratch, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });

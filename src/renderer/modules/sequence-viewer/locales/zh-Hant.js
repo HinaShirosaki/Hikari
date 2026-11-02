@@ -1,5 +1,12 @@
 // Traditional Chinese preview. Missing entries use the English catalog.
 export const dnaTraditionalChinese = Object.freeze({
+  "full.1eacdedd": "在序列中重新選擇配對引子",
+  "full.c6d6432b": "配對引子：{name}",
+  "full.f8782d9d": "PCR：{name}。請在序列中點選醒目顯示的配對引子。",
+  "full.68ffa4eb": "可配對引子：{count} 個。其他引子已顯示為灰色。",
+  "full.ed441948": "此範本上未註釋可配對的引子。請新增配對引子，然後重新開始 PCR。",
+  "full.b91468ab": "請選擇醒目顯示的配對引子。",
+  "full.7db1ed41": "此引子無法與 {name} 形成 PCR 產物。請選擇醒目顯示的引子。",
   "full.eb8624b": "單酶切…",
   "full.7405cff0": "雙酶切…",
   "full.19a973d": "範本原始末端",

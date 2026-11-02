@@ -247,7 +247,7 @@ function bindSequenceHostEvents(context = {}) {
         return;
       }
     }
-    if (!context?.selectionRange && !context?.featureContext && !context?.restrictionFeature) {
+    if (!context?.selectionRange && !context?.featureContext && !context?.restrictionFeature && !context?.fragmentRange) {
       hideFeatureContextMenu();
       return;
     }

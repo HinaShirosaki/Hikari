@@ -3,35 +3,32 @@ import '../localization.js';
 import { escapeHtml } from '../../../lib/html.js';
 import { reverseComplementIupac } from '../shared.js';
 import { parseInputRecords } from '../parsing.js';
-import { alignPrimerToDna, annealingStats, orientedBase, primerLengthOptions, primerTemplateRecord, resizedPrimer } from './primer-annealing-model.js';
+import { alignPrimerToDna, annealingStats, buildPrimerReferenceFrame, primerAlignmentInReferenceFrame, primerLengthOptions, primerTemplateRecord, resizedPrimer } from './primer-annealing-model.js';
 
 const i18nUi = createPresentation('dna');
 const number = value => value === null || value === undefined ? '—' : Number(value).toFixed(1);
 const measuredStats = alignment => ({ ...annealingStats(alignment), ...(alignment?.ambiguous ? { tm: null } : {}) });
 
-function renderDuplex(primer, record, alignment, options, locked) {
+function renderDuplex(primer, record, alignment, options, locked, frame) {
   if (!alignment) return `<p class="small-note">${i18nUi.html('No reliable binding site was found in this DNA. The primer remains available in the table.')}</p>`;
-  const first = alignment.columns.find(column => column.targetIndex !== null)?.targetIndex || 0;
-  const last = alignment.columns.findLast(column => column.targetIndex !== null)?.targetIndex ?? first;
-  const flank = index => ({ targetIndex: index, referenceBase: orientedBase(record, index, alignment.strand), base: '', primerIndex: null });
-  const columns = [
-    ...Array.from({ length: 10 }, (_, i) => flank(first - 10 + i)),
-    ...alignment.columns,
-    ...Array.from({ length: 10 }, (_, i) => flank(last + i + 1))
-  ];
+  const key = column => column.targetIndex === null ? `insertion:${column.primerIndex ?? column.insertionIndex}` : `target:${column.targetIndex}`;
+  const overlay = new Map(alignment.columns.filter(column => column.base).map(column => [key(column), column]));
+  const columns = frame.columns.map(column => ({ base: '', primerIndex: null, ...overlay.get(key(column)), ...column }));
   const advance = 15, left = 76, width = left + columns.length * advance + 46;
   const x = index => left + (index + 0.5) * advance;
   const oligo = columns.map((column, index) => ({ ...column, index })).filter(column => column.base);
   const start = oligo[0]?.index || 0, end = oligo.at(-1)?.index || start;
-  const bases = columns.map((column, index) => {
+  const referenceBases = columns.map((column, index) => {
     const position = column.targetIndex === null ? null : ((column.targetIndex % record.sequence.length) + record.sequence.length) % record.sequence.length;
     const coordinate = position === null ? '' : alignment.strand === 1 ? position + 1 : record.sequence.length - position;
-    const state = column.paired ? 'paired' : column.unpaired ? 'overhang' : column.targetIndex === null || column.primerIndex === null ? 'gap' : 'mismatch';
     return `${coordinate && index % 10 === 0 ? `<text class="primer-annealing-coordinate" x="${x(index)}" y="23">${coordinate}</text>` : ''}
       <text x="${x(index)}" y="57" class="primer-annealing-base">${escapeHtml(column.referenceBase || '·')}</text>
       ${column.referenceBase ? `<line class="primer-annealing-dna-bond" x1="${x(index)}" x2="${x(index)}" y1="63" y2="70"/>` : ''}
-      <text x="${x(index)}" y="86" class="primer-annealing-base">${escapeHtml(reverseComplementIupac(column.referenceBase) || '·')}</text>
-      ${column.paired ? `<line class="primer-annealing-pair-bond" x1="${x(index)}" x2="${x(index)}" y1="93" y2="108"/>` : ''}
+      <text x="${x(index)}" y="86" class="primer-annealing-base">${escapeHtml(reverseComplementIupac(column.referenceBase) || '·')}</text>`;
+  }).join('');
+  const primerBases = columns.map((column, index) => {
+    const state = column.paired ? 'paired' : column.unpaired ? 'overhang' : column.targetIndex === null || column.primerIndex === null ? 'gap' : 'mismatch';
+    return `${column.paired ? `<line class="primer-annealing-pair-bond" x1="${x(index)}" x2="${x(index)}" y1="93" y2="108"/>` : ''}
       ${column.base ? `<text x="${x(index)}" y="${column.paired ? 127 : 147}" class="primer-annealing-oligo-base is-${state}" data-pair-state="${state}">${escapeHtml(column.base)}</text>` : ''}`;
   }).join('');
   // The oligo outline steps out of the duplex at mismatches and insertions.
@@ -46,10 +43,14 @@ function renderDuplex(primer, record, alignment, options, locked) {
   const handleY = oligo.at(-1)?.paired ? 111 : 131;
   return `<div class="primer-annealing-scroll" tabindex="0" aria-label="${escapeHtml(i18nUi.text('Single-row primer and double-stranded DNA alignment'))}">
     <svg class="primer-annealing-duplex" width="${width}" height="190" viewBox="0 0 ${width} 190" role="group" aria-label="${escapeHtml(i18nUi.text('Primer annealing to {name}', { name: record.name || i18nUi.text('DNA') }))}">
-      <text x="18" y="57" class="primer-annealing-end">5′</text><text x="18" y="86" class="primer-annealing-end">3′</text>
-      <text x="${width - 24}" y="57" class="primer-annealing-end">3′</text><text x="${width - 24}" y="86" class="primer-annealing-end">5′</text>
+      <g data-annealing-reference>
+        <text x="18" y="57" class="primer-annealing-end">5′</text><text x="18" y="86" class="primer-annealing-end">3′</text>
+        <text x="${width - 24}" y="57" class="primer-annealing-end">3′</text><text x="${width - 24}" y="86" class="primer-annealing-end">5′</text>
+        ${referenceBases}
+      </g>
+      <g data-annealing-primer>
       <polygon class="primer-annealing-outline" points="${[...top, ...bottom].join(' ')}"/>
-      ${bases}
+      ${primerBases}
       <text x="${left + start * advance - 18}" y="${oligo[0]?.paired ? 127 : 147}" class="primer-annealing-end">5′</text>
       <text x="${handleX + 25}" y="${oligo.at(-1)?.paired ? 127 : 147}" class="primer-annealing-end">3′ →</text>
       ${locked ? '' : `<g class="primer-annealing-handle" data-annealing-length-handle tabindex="0" role="slider" aria-orientation="horizontal"
@@ -60,14 +61,15 @@ function renderDuplex(primer, record, alignment, options, locked) {
         <line class="primer-annealing-handle-line" x1="${handleX}" x2="${handleX}" y1="${handleY + 3}" y2="${handleY + 19}"/>
       </g>`}
       <text x="${left}" y="179" class="primer-annealing-coordinate">${escapeHtml(primer.name)}</text>
+      </g>
     </svg>
   </div>`;
 }
 
 export function createPrimerAnnealingController({ root, getContext, getBridge = () => null, getStoragePath = () => '', onApply = () => {} } = {}) {
   let activePlan = null, index = 0, mode = 'template';
-  let drag = null, dragFrame = null;
-  const drafts = new Map(), templateCache = new Map(), alignmentCache = new Map();
+  let drag = null, applying = false;
+  const drafts = new Map(), templateCache = new Map(), alignmentCache = new Map(), referenceFrames = new Map();
 
   function align(sequence, record) {
     const key = `${record.topology}|${record.sequence}|${sequence}`;
@@ -105,21 +107,40 @@ export function createPrimerAnnealingController({ root, getContext, getBridge = 
   function data() {
     const context = getContext();
     const plan = context.displayPlan;
-    if (plan !== activePlan) { activePlan = plan; drafts.clear(); alignmentCache.clear(); index = 0; }
+    if (plan !== activePlan) {
+      activePlan = plan; drafts.clear(); alignmentCache.clear(); index = 0;
+      if (!applying) referenceFrames.clear();
+    }
     const primers = plan?.primers || [];
     index = Math.max(0, Math.min(index, primers.length - 1));
     const original = primers[index];
     if (!original) return null;
     const product = { ...context.record, name: context.record?.name || i18nUi.text('Final plasmid') };
     const template = templateFor(context, original);
-    const productOriginalAlignment = align(original.sequence, product);
-    const originalTemplateAlignment = align(original.sequence, template);
+    const productSearch = align(original.sequence, product);
+    const templateSearch = align(original.sequence, template);
+    const initialOptions = primerLengthOptions(original, product, productSearch, templateSearch);
+    const frameFor = (kind, record, alignment) => {
+      const key = `${index}:${kind}`;
+      let frame = referenceFrames.get(key);
+      if (!frame || frame.sequence !== record.sequence || frame.topology !== record.topology) {
+        frame = buildPrimerReferenceFrame(record, alignment, initialOptions.max);
+        if (frame) referenceFrames.set(key, frame);
+      }
+      return frame;
+    };
+    const productFrame = frameFor('product', product, productSearch);
+    const templateFrame = frameFor('template', template, templateSearch);
+    const productOriginalAlignment = primerAlignmentInReferenceFrame(original.sequence, product, productFrame, productSearch);
+    const originalTemplateAlignment = primerAlignmentInReferenceFrame(original.sequence, template, templateFrame, templateSearch);
     const options = primerLengthOptions(original, product, productOriginalAlignment, originalTemplateAlignment);
     const length = drafts.get(index) ?? original.sequence.length;
     const primer = length === original.sequence.length ? original : resizedPrimer(original, length, options);
-    const productAlignment = length === original.sequence.length ? productOriginalAlignment : align(primer.sequence, product);
-    const templateAlignment = length === original.sequence.length ? originalTemplateAlignment : align(primer.sequence, template);
-    return { context, primers, original, primer, product, template, productAlignment, templateAlignment, options,
+    const productAlignment = length === original.sequence.length ? productOriginalAlignment
+      : primerAlignmentInReferenceFrame(primer.sequence, product, productFrame, align(primer.sequence, product));
+    const templateAlignment = length === original.sequence.length ? originalTemplateAlignment
+      : primerAlignmentInReferenceFrame(primer.sequence, template, templateFrame, align(primer.sequence, template));
+    return { context, primers, original, primer, product, template, productAlignment, templateAlignment, options, productFrame, templateFrame,
       dirty: primer.sequence !== original.sequence,
       locked: context.locked || original.template_kind === 'oligo_pool' || !templateAlignment || template.loading || options.min === options.max };
   }
@@ -140,8 +161,8 @@ export function createPrimerAnnealingController({ root, getContext, getBridge = 
     <div class="primer-annealing-dna-label"><strong>${i18nUi.html(mode === 'product' ? 'Final plasmid' : 'Template DNA')}</strong>
       <span>${escapeHtml(selected.name || '')}${selected.sequence ? ` · ${selected.sequence.length.toLocaleString()} bp` : ''}${alignment ? ` · ${i18nUi.html(alignment.strand === 1 ? 'Forward strand' : 'Reverse strand')}` : ''}</span>
     </div>
-    ${!selected.sequence ? `<p class="small-note">${i18nUi.html(template.loading ? 'Loading template DNA…' : 'Template DNA is unavailable for this primer. Select Product to inspect the final construct.')}</p>` : renderDuplex(primer, selected, alignment, view.options, view.locked)}
-    ${alignment?.ambiguous ? `<p class="small-note primer-annealing-warning">${i18nUi.html('Multiple equally scoring binding sites were found. This is one possible alignment; its Tm is not reported.')}</p>` : ''}
+    ${!selected.sequence ? `<p class="small-note">${i18nUi.html(template.loading ? 'Loading template DNA…' : 'Template DNA is unavailable for this primer. Select Product to inspect the final construct.')}</p>` : renderDuplex(primer, selected, alignment, view.options, view.locked, mode === 'product' ? view.productFrame : view.templateFrame)}
+    <div data-annealing-binding-note>${alignment?.ambiguous ? `<p class="small-note primer-annealing-warning">${i18nUi.html('Multiple equally scoring binding sites were found. This is one possible alignment; its Tm is not reported.')}</p>` : ''}</div>
     ${alignment ? `<div class="primer-annealing-legend"><span class="is-paired">${i18nUi.html('Paired')}: ${stats.paired} nt</span><span class="is-unpaired">${i18nUi.html('Unpaired ends')}: ${stats.unpaired} nt</span><span class="is-unpaired">${i18nUi.html('Mismatches / gaps')}: ${stats.mismatches} / ${stats.gaps}</span><span>${i18nUi.html('Paired GC')}: ${number(stats.gc)}%</span></div>` : ''}`;
   }
 
@@ -149,7 +170,20 @@ export function createPrimerAnnealingController({ root, getContext, getBridge = 
     const host = root?.querySelector?.('[data-primer-annealing-detail]');
     const scrollLeft = host?.querySelector('.primer-annealing-scroll')?.scrollLeft || 0;
     const focused = root?.ownerDocument?.activeElement?.matches?.('[data-annealing-length-handle]');
-    if (host) i18nUi.setHtml(host, detailMarkup(view));
+    if (host) {
+      const next = host.ownerDocument.createElement('div');
+      i18nUi.setHtml(next, detailMarkup(view));
+      const reference = host.querySelector('[data-annealing-reference]');
+      const nextReference = next.querySelector('[data-annealing-reference]');
+      if (reference && nextReference && reference.innerHTML === nextReference.innerHTML) {
+        // Keep the actual duplex and its scroll container mounted while only
+        // replacing the oligo, its statistics, and any specificity note.
+        for (const selector of ['[data-annealing-primer]', '.primer-annealing-metrics', '.primer-annealing-legend', '[data-annealing-binding-note]']) {
+          const current = host.querySelector(selector), replacement = next.querySelector(selector);
+          if (current && replacement) current.replaceWith(replacement);
+        }
+      } else host.replaceChildren(...next.childNodes);
+    }
     const scroller = host?.querySelector('.primer-annealing-scroll');
     if (scroller) scroller.scrollLeft = scrollLeft;
     if (focused) host?.querySelector('[data-annealing-length-handle]')?.focus({ preventScroll: true });
@@ -175,14 +209,18 @@ export function createPrimerAnnealingController({ root, getContext, getBridge = 
   }
 
   function applyDraft() {
+    if (applying) return;
     const view = data();
     if (!view?.dirty || view.locked) return;
     const selectedIndex = index;
     const scrollLeft = root?.querySelector('.primer-annealing-scroll')?.scrollLeft || 0;
     const focused = root?.ownerDocument?.activeElement?.matches?.('[data-annealing-length-handle]');
-    const nextPlan = onApply(index, view.primer, view.templateAlignment);
-    if (nextPlan) { activePlan = nextPlan; index = selectedIndex; drafts.clear(); }
-    render();
+    applying = true;
+    try {
+      const nextPlan = onApply(index, view.primer, view.templateAlignment);
+      if (nextPlan) { activePlan = nextPlan; index = selectedIndex; drafts.clear(); }
+      render();
+    } finally { applying = false; }
     const scroller = root?.querySelector('.primer-annealing-scroll');
     if (scroller) scroller.scrollLeft = scrollLeft;
     if (focused) root?.querySelector('[data-annealing-length-handle]')?.focus({ preventScroll: true });
@@ -202,25 +240,14 @@ export function createPrimerAnnealingController({ root, getContext, getBridge = 
     const view = data();
     if (!view || view.context.displayPlan !== drag.plan || index !== drag.index || view.locked) { endDrag(true); return; }
     const scroller = root.querySelector('.primer-annealing-scroll');
-    const bounds = scroller?.getBoundingClientRect();
-    const direction = bounds && drag.clientX > bounds.right - 24 ? 1 : bounds && drag.clientX < bounds.left + 24 ? -1 : 0;
-    if (scroller && direction && (direction > 0 ? view.primer.sequence.length < view.options.max : view.primer.sequence.length > view.options.min)) scroller.scrollLeft += direction * 10;
     const scroll = scroller?.scrollLeft || 0;
     setLength(drag.startLength + (drag.clientX - drag.startX + scroll - drag.startScroll) / drag.advance);
-    return direction;
-  }
-
-  function continueDrag() {
-    dragFrame = null;
-    if (resizeFromPointer() && drag) dragFrame = root.ownerDocument.defaultView.requestAnimationFrame(continueDrag);
   }
 
   function endDrag(cancel = false) {
     if (!drag) return;
     const current = drag;
     drag = null;
-    if (dragFrame !== null) root.ownerDocument.defaultView.cancelAnimationFrame(dragFrame);
-    dragFrame = null;
     root.classList.remove('is-resizing-primer');
     if (root.hasPointerCapture?.(current.pointerId)) root.releasePointerCapture(current.pointerId);
     if (cancel) {
@@ -264,7 +291,7 @@ export function createPrimerAnnealingController({ root, getContext, getBridge = 
       if (!drag || event.pointerId !== drag.pointerId) return;
       event.preventDefault();
       drag.clientX = event.clientX;
-      if (dragFrame === null) continueDrag();
+      resizeFromPointer();
     });
     root?.addEventListener('pointerup', event => {
       if (!drag || event.pointerId !== drag.pointerId) return;

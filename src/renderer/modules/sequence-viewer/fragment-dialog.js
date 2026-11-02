@@ -1,12 +1,11 @@
 import { createPresentation } from '../../lib/i18n/presentation.js';
 import './localization.js';
-import { normalizePrimerLibrary } from '../../../shared/primer-library.mjs';
 import { isPrimerBindingFeature } from './feature-types.js';
-import { buildDnaFragmentRecord, buildPcrFragmentRecord } from './dna-fragments.js';
+import { buildDnaFragmentRecord, buildPcrFragmentRecord, getFeatureDnaFragmentRange } from './dna-fragments.js';
 
 const i18nUi = createPresentation('dna');
 
-export function createDnaFragmentDialog({ rootDocument, getSelectedRecord, getEntryId, appState, saveFragment } = {}) {
+export function createDnaFragmentDialog({ rootDocument, getSelectedRecord, getEntryId, saveFragment, onRequestPcrPartner = () => {} } = {}) {
   let dialog = null;
   let context = null;
   let saving = false;
@@ -22,20 +21,13 @@ export function createDnaFragmentDialog({ rootDocument, getSelectedRecord, getEn
     const name = field('name').value.trim();
     if (!name) throw new Error(i18nUi.text('Enter a fragment name.'));
     if (!context.primer) return buildDnaFragmentRecord(context.template, context.range, name);
-    const choice = field('partner').value;
-    const partner = choice === 'custom'
-      ? { name: context.primer.strand === -1 ? i18nUi.text('Forward primer') : i18nUi.text('Reverse primer'), sequence: field('sequence').value }
-      : context.partners[Number(choice)];
     return context.primer.strand === -1
-      ? buildPcrFragmentRecord(context.template, partner, context.primer, name)
-      : buildPcrFragmentRecord(context.template, context.primer, partner, name);
+      ? buildPcrFragmentRecord(context.template, context.partner, context.primer, name)
+      : buildPcrFragmentRecord(context.template, context.primer, context.partner, name);
   }
 
   function preview() {
     if (!context || saving) return;
-    const custom = context.primer && field('partner').value === 'custom';
-    field('custom').hidden = !custom;
-    field('sequence').disabled = !custom;
     try {
       const product = makeProduct();
       i18nUi.setText(field('preview'), i18nUi.message('{length} bp · linear DNA · {features} annotations', {
@@ -65,10 +57,8 @@ export function createDnaFragmentDialog({ rootDocument, getSelectedRecord, getEn
         <label>${i18nUi.html('Fragment name')}<input data-fragment-name required maxlength="140" autocomplete="off"></label>
         <div data-fragment-pcr>
           <p data-fragment-primer></p>
-          <label><span data-fragment-partner-label></span><select data-fragment-partner></select></label>
-          <label data-fragment-custom>${i18nUi.html('Partner primer sequence (5′ → 3′)')}
-            <textarea data-fragment-sequence rows="3" spellcheck="false" maxlength="1000"></textarea>
-          </label>
+          <p data-fragment-partner></p>
+          <button type="button" class="ghost-btn" data-fragment-pick-partner>${i18nUi.html('Choose a different partner in the sequence')}</button>
         </div>
       </fieldset>
       <p class="small-note" data-fragment-preview aria-live="polite"></p>
@@ -83,6 +73,12 @@ export function createDnaFragmentDialog({ rootDocument, getSelectedRecord, getEn
     dialog.addEventListener('change', preview);
     dialog.addEventListener('cancel', event => { if (saving) event.preventDefault(); else context = null; });
     dialog.addEventListener('click', event => {
+      if (event.target.closest('[data-fragment-pick-partner]') && !saving && context?.primer) {
+        const primer = context.primer;
+        close();
+        onRequestPcrPartner(primer);
+        return;
+      }
       if (event.target === dialog || event.target.closest('[data-fragment-close], [data-fragment-cancel]')) close();
     });
     dialog.querySelector('form').addEventListener('submit', event => {
@@ -117,37 +113,22 @@ export function createDnaFragmentDialog({ rootDocument, getSelectedRecord, getEn
     return dialog;
   }
 
-  function open({ range, primer } = {}) {
+  function open({ range, primer, partner, feature } = {}) {
     const template = getSelectedRecord();
+    if (primer && !partner) return onRequestPcrPartner(primer);
     if (!template?.sequence?.length || !ensureDialog() || saving) return false;
-    context = { template, entryId: getEntryId(), range: range && { ...range }, primer, partners: [] };
+    if (feature) range = getFeatureDnaFragmentRange(feature, template);
+    if (!primer && !range) return false;
+    context = { template, entryId: getEntryId(), range: range && { ...range }, primer, partner };
     field('pcr').hidden = !primer;
     i18nUi.setText(field('title'), i18nUi.message(primer ? 'Create PCR fragment' : 'Save DNA fragment'));
     i18nUi.setText(field('parent'), i18nUi.message('Saved as GenBank DNA under {name}.', { name: template.name }));
     if (primer) {
-      const strand = primer.strand === -1 ? 1 : -1;
-      context.partners = [
-        ...(template.features || []).filter(feature => isPrimerBindingFeature(feature.type) && (feature.strand === -1 ? -1 : 1) === strand),
-        ...normalizePrimerLibrary(appState?.primerLibrary)
-      ];
       i18nUi.setText(field('primer'), i18nUi.message('Starting primer: {name}', { name: primer.name || i18nUi.text('Primer') }));
-      i18nUi.setText(field('partner-label'), i18nUi.message(strand === -1 ? 'Reverse primer' : 'Forward primer'));
-      i18nUi.setHtml(field('partner'), context.partners.map((partner, index) => i18nUi.option(String(index), partner.segments
-        ? `${partner.name} (${partner.segments.map(part => `${part.start + 1}–${part.end}`).join(', ')})`
-        : `${partner.name} · ${i18nUi.text('Primer Library')}`)).join('') + i18nUi.option('custom', i18nUi.message('Enter a primer sequence…')));
-      field('partner').value = 'custom';
-      // Prefer a partner that actually yields an inward-facing product.
-      const valid = context.partners.findIndex(partner => {
-        try {
-          if (strand === -1) buildPcrFragmentRecord(template, primer, partner);
-          else buildPcrFragmentRecord(template, partner, primer);
-          return true;
-        } catch { return false; }
-      });
-      if (valid >= 0) field('partner').value = String(valid);
+      i18nUi.setText(field('partner'), i18nUi.message('Partner primer: {name}', { name: partner.name || i18nUi.text('Primer') }));
     }
-    field('sequence').value = '';
-    field('name').value = primer ? `${template.name}_PCR` : buildDnaFragmentRecord(template, range).name;
+    field('name').value = primer ? `${template.name}_PCR`
+      : feature?.name ? `${template.name}_${feature.name}` : buildDnaFragmentRecord(template, range).name;
     preview();
     rootDocument.querySelectorAll('[data-sequence-hover-tooltip]').forEach(node => { node.hidden = true; });
     if (!dialog.open) dialog.showModal();
