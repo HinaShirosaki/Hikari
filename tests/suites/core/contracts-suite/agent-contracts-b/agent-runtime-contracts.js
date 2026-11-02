@@ -146,7 +146,7 @@ module.exports = function registerAgentContractsBAgentRuntimeContracts(context =
         groups[2].examples.some((example) => Object.prototype.hasOwnProperty.call(example, 'traces')),
         false
       );
-      assert.equal(groups[2].examples.some((example) => example.config?.responsive === true), true);
+      assert.equal(groups[2].examples.some((example) => example.config?.responsive === false), true);
 
       const validCallCount = executedCalls.length;
       const deprecatedAssayAlias = await router.callTool('assay_table', {

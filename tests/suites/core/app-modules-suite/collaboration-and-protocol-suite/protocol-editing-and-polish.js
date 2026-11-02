@@ -34,7 +34,7 @@ test('protocol-management keeps interactive-bar presets outside the Steps label 
   assert.deepEqual(
     presetModule.getProtocolPlaceholderPresetEntries({ sampleTypeLabels: { custom_lysate: 'Lysate' } })
       .map((entry) => entry.name),
-    ['Plasmid', 'Cell Line', 'Strain', 'Antibody', 'Protein', 'Chemical', 'Primer', 'Lysate', 'volume', 'buffer', 'concentration', 'temperature', 'time']
+    ['Plasmid', 'DNA', 'RNA', 'Cell Line', 'Strain', 'Antibody', 'Protein', 'Chemical', 'Primer', 'Lysate', 'volume', 'buffer', 'concentration', 'temperature', 'time']
   );
 });
 test('protocol-management leaves its search lens to the shared search-field component', () => {
