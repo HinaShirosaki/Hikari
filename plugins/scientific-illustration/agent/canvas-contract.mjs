@@ -19,7 +19,7 @@ const objectProperties = {
   textFree: { type: 'boolean', description: 'Required true for normal raster artwork. Pasted chemical structures retain false because atom labels are integral to the structure.' },
   chemicalStructure: { type: 'boolean', const: true, description: 'User-pasted vector or raster chemical structure. Vector SVG may include integral atom text. Preserve atom symbols, charges and bonds together; captions still belong in separate text layers.' },
   text: { type: 'string', maxLength: 3000 }, fontFamily: { type: 'string', maxLength: 100, description: 'Inter is bundled and embedded in SVG exports and previews. Other fonts use installed system fonts.' }, fontSize: { type: 'number', minimum: 4, maximum: 300 },
-  fontWeight: { type: 'number', minimum: 100, maximum: 900 }, color: { type: 'string' }, align: { type: 'string', enum: ['start', 'middle', 'end'] },
+  fontWeight: { type: 'number', minimum: 100, maximum: 900 }, color: { type: 'string' }, align: { type: 'string', enum: ['start', 'middle', 'end'], description: 'Horizontal text alignment within this object’s width: left, center or right. Changing alignment preserves the text box position, dimensions and font size. Resizing a text box preserves fontSize; set fontSize explicitly to change typography.' },
   anchor: { type: 'string', enum: ['top', 'middle', 'bottom'] }, italic: { type: 'boolean' }, underline: { type: 'boolean' }
 };
 export const CANVAS_TOOL_CONTRACT = Object.freeze({
@@ -59,7 +59,7 @@ export const CANVAS_TOOL_CONTRACT = Object.freeze({
           object: { type: 'object', additionalProperties: false, required: ['id', 'type'], properties: objectProperties },
           id: { type: 'string', maxLength: 100, description: 'Component ID, or group ID for update/delete/transfer/ungroup/transform/rotate. group requires an unused ID.' },
           degrees: { type: 'number', minimum: -360, maximum: 360, description: 'rotate: clockwise angle to add to the selected components. Keeps their sizes, typography and relative positions rigidly related.' },
-          pivot: { type: 'object', additionalProperties: false, required: ['x', 'y'], properties: { x: { type: 'number' }, y: { type: 'number' } }, description: 'rotate: optional center in canvas units. Defaults to the selected components\' bounds center; the UI uses the visible selection center for text.' },
+          pivot: { type: 'object', additionalProperties: false, required: ['x', 'y'], properties: { x: { type: 'number' }, y: { type: 'number' } }, description: 'rotate: optional center in canvas units. Defaults to the selected components\' bounds center; the UI rotates a single text box around its box center.' },
           name: { type: 'string', maxLength: 200, description: 'Optional group name for group.' },
           patch: { type: 'object', description: 'update: object properties (set vector fill, stroke, or strokeWidth to null to restore original artwork); group update: name and/or x/y/width/height; canvas: width, height, background. transform: x/y and proportional width/height in canvas units. Set either dimension, or both at the same scale. Group resizing scales text fonts proportionally and preserves member rotations. Unsupported size/font limits reject the batch.' },
           canvas: { type: 'string', enum: ['main'] }, copy: { type: 'boolean' }, new_id: { type: 'string', maxLength: 100 },

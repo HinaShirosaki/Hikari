@@ -87,11 +87,9 @@ for (const strand of [1, -1]) {
     change('sequenceEditTagSelect', 'tag:flag');
     const aligned = elements.sequenceEditTextarea.value;
     assert.equal(translateDnaSequence(strand === -1 ? reverseComplementDna(aligned) : aligned).protein, 'DYKDDDDK');
-    assert.match(elements.sequenceEditTagPreview.textContent, /at a codon boundary/);
     change('sequenceEditTagOrientation', 'reverse');
     const reversed = elements.sequenceEditTextarea.value;
     assert.equal(reversed, reverseComplementDna(aligned));
-    assert.match(elements.sequenceEditTagPreview.textContent, /opposite to this ORF/);
     await controller.applySequenceEditDialog();
     assert.deepEqual(edits[0], { mode: 'insert', range: { start: 12, end: 12 }, sequence: reversed });
     assert.equal(record.sequence, original.slice(0, 12) + reversed + original.slice(12));
@@ -112,16 +110,16 @@ test('overlapping coding features require an explicit reference unless a coding 
   assert.match(elements.sequenceEditTagOrientation.innerHTML, /Along ORF/);
 });
 
-test('frame feedback respects codon_start and flags a split codon without moving the edit', async () => {
+test('peptide insertion preserves the chosen boundary for a partial CDS', async () => {
   const feature = { name: 'Partial CDS', type: 'CDS', qualifiers: { codon_start: 2 }, segments: [{ start: 6, end: 30 }] };
   const { elements, controller, edits, change } = fixture([feature], feature, 12);
   change('sequenceEditTagSelect', 'tag:ha');
-  assert.match(elements.sequenceEditTagPreview.textContent, /inside a codon/);
   await controller.applySequenceEditDialog();
   assert.equal(edits[0].range.start, 12);
   controller.openSequenceEditDialog('insert', { range: { start: 13, end: 13 } });
   change('sequenceEditTagSelect', 'tag:ha');
-  assert.match(elements.sequenceEditTagPreview.textContent, /at a codon boundary/);
+  await controller.applySequenceEditDialog();
+  assert.equal(edits[1].range.start, 13);
 });
 
 test('manual DNA edits and dialog reopen clear the library selection; other edit modes hide tags', () => {

@@ -56,6 +56,7 @@ export function createUnsavedChangesService({
   const selectedKeys = new Set();
   let allowUnload = false;
   let saveInProgress = false;
+  let storageFailed = false;
   let pendingAction = 'quit';
 
   function getUnsavedSources() {
@@ -179,6 +180,7 @@ export function createUnsavedChangesService({
     if (overlay) {
       overlay.hidden = true;
     }
+    storageFailed = false;
     setStatus('');
     setBusy(false);
   }
@@ -193,26 +195,26 @@ export function createUnsavedChangesService({
     api?.respondToAppClose?.(action);
   }
 
-  function handleCloseRequested() {
-    pendingAction = 'quit';
-    if (saveInProgress) {
-      syncActions();
-      api?.respondToAppClose?.('pending');
+  async function handleCloseRequested() {
+    if (saveInProgress || overlay?.hidden === false) {
+      // Keep the current choices and action. A native quit during a guarded
+      // reload must not turn its eventual reload into an application quit.
+      api?.respondToAppClose?.(pendingAction === 'reload' ? 'cancel' : 'pending');
       return;
     }
+    pendingAction = 'quit';
+    // Acknowledge before waiting on storage so main's hung-window fallback
+    // cannot race a healthy but slow save or the user's decision.
+    api?.respondToAppClose?.('pending');
     const sources = getUnsavedSources();
     if (!sources.length) {
-      respondToClose('quit');
+      await finishClose({ checkEditors: true });
       return;
     }
     if (!showDialog(sources)) {
       respondToClose('cancel');
       return;
     }
-    // Main gives us 3s to answer before it assumes the window hung. The user
-    // deciding in our dialog takes longer than that, so tell main we're alive
-    // and waiting; the real answer follows when they click.
-    api?.respondToAppClose?.('pending');
   }
 
   // location.reload() alone is silently vetoed by our beforeunload listener
@@ -222,25 +224,37 @@ export function createUnsavedChangesService({
     pendingAction = 'reload';
     const sources = getUnsavedSources();
     if (!sources.length) {
-      await finishClose();
+      await finishClose({ checkEditors: true });
     } else if (!showDialog(sources)) {
       respondToClose('cancel');
       shellNotice(shellUi('unsaved.reloadError'), { type: 'error' });
     }
   }
 
-  async function finishClose() {
-    if (overlay?.hidden !== false) showDialog([]);
+  async function finishClose({ checkEditors = false } = {}) {
+    // Storage writes are automatic. Keep a clean exit quiet; an empty save
+    // chooser flashing here looks like unsaved work when there is none.
     setBusy(true);
     setStatus(shellUi('unsaved.storageSaving'));
     try {
       await flushPendingSaves();
     } catch (error) {
-      if (overlay?.hidden !== false) showDialog([]);
+      if (overlay?.hidden !== false) showDialog(getUnsavedSources());
+      storageFailed = true;
       const message = shellUi('unsaved.storageError', { error: String(error?.message || error || 'Unknown error') });
       setStatus(message, true);
       setBusy(false);
       if (!overlay) shellNotice(message, { type: 'error' });
+      return;
+    }
+    // The window remains usable while a clean exit waits on storage. Protect
+    // an editor changed during that wait instead of approving its unload.
+    const sources = checkEditors ? getUnsavedSources() : [];
+    if (sources.length) {
+      if (!showDialog(sources)) {
+        setBusy(false);
+        respondToClose('cancel');
+      }
       return;
     }
     hideDialog();
@@ -275,6 +289,13 @@ export function createUnsavedChangesService({
 
   async function discardAndQuit() {
     if (saveInProgress) {
+      return;
+    }
+    // After a shown storage error, Discard is the way out: retrying the same
+    // failing write here would leave force quit as the only exit.
+    if (storageFailed) {
+      hideDialog();
+      respondToClose('quit');
       return;
     }
     await finishClose();

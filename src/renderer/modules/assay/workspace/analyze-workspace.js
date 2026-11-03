@@ -159,6 +159,12 @@ export function createAnalyzeWorkspace({ elements, runtime, resultsManager, anal
     refresh();
   });
   find('assay-workspace-format-btn').addEventListener('click', () => analysisView.openChartFormat());
+  root.addEventListener('assay:group-selection-start', () => {
+    activeView = 'data';
+    activeTab = 'raw';
+    refresh();
+    redraw();
+  });
   root.ownerDocument.defaultView.addEventListener('resize', redraw);
   // Observe the available canvas, which also changes when either rail resizes
   // or the chart header wraps without a window resize.

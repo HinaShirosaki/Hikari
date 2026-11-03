@@ -27,7 +27,6 @@ const EDITING_ELEMENT_MAP = {
   sequenceEditTagOptions: 'vectorBuilderSequenceEditTagOptions',
   sequenceEditTagOrfSelect: 'vectorBuilderSequenceEditTagOrfSelect',
   sequenceEditTagOrientation: 'vectorBuilderSequenceEditTagOrientation',
-  sequenceEditTagPreview: 'vectorBuilderSequenceEditTagPreview',
   sequenceEditDeleteMessage: 'vectorBuilderSequenceEditDeleteMessage',
   sequenceEditConfirmBtn: 'vectorBuilderSequenceEditConfirm',
   // Typing must not open the base editor over the Replace Feature dialog.

@@ -2,7 +2,8 @@
 
 `index.js` is the public renderer entry point. It composes the assay view, keeps the exported contract small, and delegates domain behavior to focused modules.
 
-- `artifact-storage.js`: folder-backed assay artifacts, analysis JSON, chart SVG persistence, and result-file attachment metadata.
+- `artifact-storage.js`: folder-backed assay artifacts, analysis JSON, chart SVG persistence, and result-file attachments. Imported CSV/Excel bytes are retained in `result-files/`; `original-plate.csv` and `transformed-plate.csv` save separate full-size plate matrices beside the assay JSON, including empty wells, zeros and formula errors (`#ERROR`). CSVs update on imports, result edits, formula edits and saves; an inactive transform saves an empty transformed matrix. Writes are serialized per assay and retain CSV paths in `plateCsvFiles`.
+- `plate-csv.js`: read-only CSV serialization of Table1 and computed Table2 values, using the same formula evaluator and saved analysis groups as the UI. Formulas remain in `transformSpec` in the assay JSON.
 - `analysis-view.js` plus `analysis-view/`: analysis workflow controller, result summaries, analysis table rendering, the derived-plate grid, and direct Plotly lifecycle ownership.
 - `analysis-chart-model.js`: pure chart-model selection for Assay analysis results.
 - `derived-plate.js` plus `derived-plate/`: pure plate transforms plus the well-reference grammar. The active UI stores one formula per transformed cell; bare references and `Table1` read Plate Results, while `Table2` reads computed transformed cells with cycle detection. Legacy guided-step and global-formula specs remain readable. Analysis reads the transformed numeric plate whenever cell formulas are active.
@@ -14,7 +15,7 @@
 - `inventory-sample-picker.js`: well context menu picker for applying inventory sample IDs.
 - `serial-dilution.js`: serial dilution dialog controller and DOM rendering.
 - `serial-dilution-model.js`: serial dilution grouping, recipe calculations, and summary table model.
-- `results-manager.js` plus `results/`: result spreadsheet orchestration, grid model, paste handling, and import workflow.
+- `results-manager.js` plus `results/`: result spreadsheet orchestration, grid model, paste handling, and import workflow. `group-selection.js` arms row/column drag grouping, shows a floating hint and cursor, and commits the range on release; Escape or Cancel exits the tool.
 - `result-import-detector.js`: CSV/Excel table normalization and plate-sized result matrix detection.
 - `plate-model.js`: plate definitions, well IDs, layout normalization, and axis template helpers.
 - `numbering.js`: assay number allocation and previews.

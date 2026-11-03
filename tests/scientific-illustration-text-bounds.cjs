@@ -28,15 +28,16 @@ async function verifyTextBounds({ tool, evaluate, check, win, pause, temp }) {
     const group=document.querySelector('#${canvas}-canvas [data-object-id=bounds-label]'),hit=group.querySelector('.object-hit'),glyph=group.querySelector('text').getBBox(),outline=document.querySelector('#${canvas}-canvas .selection > rect');
     const box=node=>({x:Number(node.getAttribute('x')||0),y:Number(node.getAttribute('y')||0),width:Number(node.getAttribute('width')),height:Number(node.getAttribute('height'))});
     const corners=node=>{const b=box(node),m=node.getScreenCTM();return [[b.x,b.y],[b.x+b.width,b.y],[b.x+b.width,b.y+b.height],[b.x,b.y+b.height]].map(([x,y])=>{const p=new DOMPoint(x,y).matrixTransform(m);return {x:p.x,y:p.y}})};
-    const m=hit.getScreenCTM();
-    return {zoom:Math.hypot(m.a,m.b),hit:box(hit),glyph:{x:glyph.x,y:glyph.y,width:glyph.width,height:glyph.height},hitCorners:corners(hit),outlineCorners:outline&&corners(outline)};
+    const m=hit.getScreenCTM(),object=illustrationWorkspace.getDocument().objects.find(object=>object.id==='bounds-label');
+    const layoutCorners=[[0,0],[object.width,0],[object.width,object.height],[0,object.height]].map(([x,y])=>{const p=new DOMPoint(x,y).matrixTransform(m);return {x:p.x,y:p.y}});
+    return {zoom:Math.hypot(m.a,m.b),hit:box(hit),glyph:{x:glyph.x,y:glyph.y,width:glyph.width,height:glyph.height},hitCorners:corners(hit),layoutCorners,outlineCorners:outline&&corners(outline)};
   })()`);
   const checkBounds = async (message, canvas = 'main') => {
     const b = await bounds(canvas);
     // Chromium rounds glyph metrics differently at the measuring and display
     // scales. The target must stay within one displayed pixel of the text.
     check(['x', 'y', 'width', 'height'].every(key => Math.abs(b.hit[key] - b.glyph[key]) * b.zoom < 1), `${message}: hit target fits the rendered glyph bounds ${JSON.stringify(b)}`);
-    check(b.outlineCorners && b.outlineCorners.every((p, i) => Math.hypot(p.x - b.hitCorners[i].x, p.y - b.hitCorners[i].y) < 0.001), `${message}: rotated selection outline matches the hit target at zoom`);
+    check(b.outlineCorners && b.outlineCorners.every((p, i) => Math.hypot(p.x - b.layoutCorners[i].x, p.y - b.layoutCorners[i].y) < 0.001), `${message}: selection handles show the authored text box at zoom`);
   };
   win.webContents.debugger.attach('1.3');
   try {
@@ -74,7 +75,7 @@ async function verifyTextBounds({ tool, evaluate, check, win, pause, temp }) {
     await evaluate('document.getElementById("close-layers").click();document.getElementById("zoom-in").click();document.getElementById("zoom-fit").click()');
     const after = await read(), previewAfter = await tool({ action: 'render', canvas: 'main' });
     check(before.revision === after.revision && JSON.stringify(before.objects) === JSON.stringify(after.objects), 'Measuring and zooming text never rewrites saved alignment or placement');
-    check(JSON.stringify(previewBefore.content.filter(item => item.type === 'image')) === JSON.stringify(previewAfter.content.filter(item => item.type === 'image')), 'Tight selection bounds leave both agent previews unchanged');
+    check(JSON.stringify(previewBefore.content.filter(item => item.type === 'image')) === JSON.stringify(previewAfter.content.filter(item => item.type === 'image')), 'Text box selection leaves agent previews unchanged');
     await fs.writeFile(path.join(temp, 'text-tight-bounds.png'), (await win.webContents.capturePage()).toPNG());
     await apply([{ op: 'update', id: label.id, patch: { text: '', width: 300, height: 160 } }]);
     const empty = await bounds(); check(empty.hit.width === 1 && empty.hit.height === 1, 'An empty label has a tiny target instead of an invisible oversized obstacle');

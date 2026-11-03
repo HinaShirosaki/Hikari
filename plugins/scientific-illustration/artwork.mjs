@@ -166,8 +166,9 @@ function localTextBounds(object) {
   return box;
 }
 
-// Editing bounds are separate from the saved layout box, which determines
-// text alignment, anchoring and rotation. No saved label or export moves.
+// Painted bounds keep hit testing, guides and multi-selection close to the
+// glyphs. A single selected label exposes its authored text box for resizing
+// and alignment; that frame is separate from this painted target.
 export function interactionBox(object) {
   if (object.type !== 'text') return object;
   const box = localTextBounds(object), angle = object.rotation * Math.PI / 180;
@@ -223,7 +224,7 @@ export function scene(documentState, canvas, { interactive = false, selectedId =
       svg.append(outlines);
     }
     const single = documentState.objects.find(obj => obj.id === selectedId && obj.canvas === canvas && obj.visible);
-    const selected = members.length > 1 ? null : single && interactionBox(single);
+    const selected = members.length > 1 ? null : single;
     if (selected) {
       const { x, y, width: w, height: h, rotation } = selected;
       const handles = element('g', { transform: `translate(${x} ${y}) rotate(${rotation} ${w / 2} ${h / 2})`, class: 'selection', 'pointer-events': 'none' });

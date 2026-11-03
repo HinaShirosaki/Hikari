@@ -16,7 +16,7 @@ import { buildDisplayPlan } from './cloning-design/plan-building.js';
 import { isVisibleElement, renderPlanSummary, renderPrimerTable, renderProcedure, renderRestrictionEnzymes, renderWarnings } from './cloning-design/plan-rendering.js';
 import { RESTRICTION_LIGATION_STRATEGY, STRATEGIES, STRATEGY_WHOLE_PLASMID, canConfirmCloningDesignPlan, cloningStrategyUsesDonor, cloningStrategyUsesInsertRange, isCloningDesignPlanActionable } from './cloning-design/strategies.js';
 import { createPrimerAnnealingController } from './cloning-design/primer-annealing.js';
-import { replacePlanPrimer } from './cloning-design/primer-annealing-model.js';
+import { replacePlanPrimers } from './cloning-design/primer-annealing-model.js';
 
 export function createSequenceViewerCloningDesignController(config = {}) {
   const elements = config?.elements || {};
@@ -68,10 +68,12 @@ export function createSequenceViewerCloningDesignController(config = {}) {
     getContext: () => ({
       displayPlan: getDesignState().displayPlan,
       source: getCloningDesignSource(), record: getSelectedRecord(), donor: getActiveDonor(),
+      tmFloor: getDesignState().primerTmFloor,
       locked: confirmPending || Boolean(getDesignState().storedAgentDesign)
     }),
     getBridge, getStoragePath,
-    onApply: applyPrimerLength
+    onApply: applyPrimerLengths,
+    onTmFloorChange: value => { getDesignState().primerTmFloor = value; persist?.(); }
   });
 
   function availableStrategies() {
@@ -363,16 +365,18 @@ export function createSequenceViewerCloningDesignController(config = {}) {
     return { notebookResult, notebookError };
   }
 
-  function applyPrimerLength(index, primer, templateAlignment) {
+  function applyPrimerLengths(updates, coupling) {
     const designState = getDesignState();
-    if (confirmPending || designState.storedAgentDesign || !designState.displayPlan?.primers?.[index]) return null;
-    const nextPlan = replacePlanPrimer(designState.displayPlan, index, primer, templateAlignment);
+    if (confirmPending || designState.storedAgentDesign || !updates.length
+      || updates.some(update => !designState.displayPlan?.primers?.[update.index])) return null;
+    const nextPlan = replacePlanPrimers(designState.displayPlan, updates, coupling);
     designState.displayPlan = nextPlan;
     const { notebookError } = saveDesignNotebook(nextPlan, { allowReviewDraft: true });
     void annotatePrimersOnSelectedRecord({ state, primers: nextPlan.primers, target: 'product', persistFeatureMutation });
     setStatus(notebookError
       ? i18nUi.text('Primer updated. The Notebook page could not be saved: {error}', { error: notebookError })
-      : i18nUi.text('Primer updated. Review primer-pair balance and the PCR program before use.'),
+      : updates.length > 1 ? i18nUi.text('Linked primers updated. Review primer-pair balance and the PCR program before use.')
+        : i18nUi.text('Primer updated. Review primer-pair balance and the PCR program before use.'),
     Boolean(notebookError) || !nextPlan.feasible);
     render();
     return nextPlan;

@@ -128,12 +128,13 @@ file. Undo and redo are also saved. Browsing alone stays clean. Quit's Save
 flushes pending workspace changes without a download dialog; **Save project**
 remains a portable backup. Failed writes remain unsaved and can be retried.
 
-A single gel and a Stack edit their lane table the same way: a **Lane table**
-bar (**Add table**, then **Add row** and **Remove row**, which removes the last
+A single gel's **Add table** toolbar tool creates its lane table or reopens an
+existing one. A Stack's **Add table** action creates its overall table. Both use
+a **Lane table** bar with **Add row** and **Remove row** (which removes the last
 row) above a white strip where labels and lane values are typed in the export's
 own type and position, so what you type is what exports. A single gel's strip
 sits above its image over its own lanes; its bar also has **Include ladder
-lane** and × (hide; **Lanes → Table** shows it again), and a long table scrolls
+lane** and × (hide; **Add table** shows it again), and a long table scrolls
 in the strip. **Add table** asks for finished lane dividers when they are
 missing. A Stack has one overall table of its own, typed on the top of its
 figure over the lanes of its first gel with lane dividers. While a

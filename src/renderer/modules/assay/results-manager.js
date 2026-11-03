@@ -42,8 +42,10 @@ export function createAssayResultsManager({
     getAnalysisGroups,
     applyAnalysisGroupHighlights,
     refreshAnalysisGroupDisplay,
-    onAddSelectedRowGroup,
-    onAddSelectedColumnGroup,
+    onStartRowGroup,
+    onStartColumnGroup,
+    cancelGroupSelection,
+    isGroupSelectionActive,
     onClearAnalysisGroups
   } = createAssayAnalysisGroups({
     elements,
@@ -86,6 +88,7 @@ export function createAssayResultsManager({
 
 
   function clearResultGrid() {
+    cancelGroupSelection();
     if (!resultGrid) {
       return;
     }
@@ -149,11 +152,14 @@ export function createAssayResultsManager({
       assayResultTable.append(host);
       const gridOptions = {
         data: buildResultGridData(def),
-        columns: buildResultGridColumns(def),
+        columns: buildResultGridColumns(def, { editable: (_cell, { mapped }) => !isGroupSelectionActive() && mapped }),
         index: '__rowIndex',
         layout: 'fitDataTable',
         reactiveData: false,
         initialFilter: resultRowVisible,
+        // Focus opens an editor on mousedown, then range selection immediately
+        // cancels it on click. Match Table2: edit after selection handles focus.
+        editTriggerEvent: 'click',
         selectableRange: true,
         selectableRangeColumns: true,
         selectableRangeRows: true,
@@ -393,8 +399,9 @@ export function createAssayResultsManager({
     redrawResultGrid,
     syncCurrentResultsFromGrid,
     refreshAnalysisGroupDisplay,
-    onAddSelectedRowGroup,
-    onAddSelectedColumnGroup,
+    onStartRowGroup,
+    onStartColumnGroup,
+    cancelGroupSelection,
     onClearAnalysisGroups,
     onResultTablePaste,
     onClearResults,

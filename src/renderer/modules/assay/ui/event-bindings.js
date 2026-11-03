@@ -62,7 +62,6 @@ export function bindAssayEvents({
   elements.assayAnalysisGroupByInput?.addEventListener('change', analysisView.onAnalysisMethodChange);
   elements.assayAnalysisDataSourceInput?.addEventListener('change', analysisView.onAnalysisDataSourceChange);
   elements.assayAnalysisXAxisInput?.addEventListener('change', analysisView.onAnalysisMethodChange);
-  elements.assayAnalysisAsymmetricInput?.addEventListener('change', analysisView.onAnalysisConfigChange);
   elements.assayAnalysisPolyOrderInput?.addEventListener('change', analysisView.onAnalysisConfigChange);
   elements.assayAnalysisSubtotalsInput?.addEventListener('change', analysisView.onAnalysisConfigChange);
   elements.assayAnalysisHighControlInput?.addEventListener('change', analysisView.onAnalysisConfigChange);
@@ -79,8 +78,8 @@ export function bindAssayEvents({
       analysisView.redrawTransformGrid();
     }
   });
-  elements.assayAnalysisAddRowGroupBtn?.addEventListener('click', resultsManager.onAddSelectedRowGroup);
-  elements.assayAnalysisAddColumnGroupBtn?.addEventListener('click', resultsManager.onAddSelectedColumnGroup);
+  elements.assayAnalysisAddRowGroupBtn?.addEventListener('click', resultsManager.onStartRowGroup);
+  elements.assayAnalysisAddColumnGroupBtn?.addEventListener('click', resultsManager.onStartColumnGroup);
   elements.assayAnalysisClearGroupsBtn?.addEventListener('click', resultsManager.onClearAnalysisGroups);
   elements.assayAttachResultFileBtn?.addEventListener('click', resultsManager.onAttachResultFileClick);
   elements.assayResultFileInput?.addEventListener('change', resultsManager.onResultFileChange);

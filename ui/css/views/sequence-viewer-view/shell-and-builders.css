@@ -351,11 +351,6 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   background: var(--hikari-left-rail-list-hover);
 }
 
-.sequence-viewer-library-item-active {
-  background: var(--hikari-left-rail-list-selected);
-  box-shadow: none;
-}
-
 .sequence-viewer-library-item-name {
   display: block;
   min-width: 0;

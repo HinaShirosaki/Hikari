@@ -307,7 +307,7 @@ async function main() {
     await exec('controller.undo()');
     await exec("action('save')");await waitFor("el('gel-figure-status').textContent==='Figure project saved.'");
     assert.deepEqual(await exec('headerCheck()'),ownTables,'Undo restores each gel and its table together');
-    await exec("edit('Treatment B');click('gel-open-lane-table-btn');const cell=document.querySelector('#gel-lane-table-shell [data-table-lane]');cell.value='B changed';cell.dispatchEvent(new Event('input',{bubbles:true}));stackView();action('save')");
+    await exec("edit('Treatment B');click('gel-add-table-btn');const cell=document.querySelector('#gel-lane-table-shell [data-table-lane]');cell.value='B changed';cell.dispatchEvent(new Event('input',{bubbles:true}));stackView();action('save')");
     await waitFor("el('gel-figure-status').textContent==='Figure project saved.'");
     const editedTables=await exec('headerCheck()');
     assert.deepEqual(editedTables[0].values,ownTables[0].values,'Editing the second gel leaves the first table intact');
@@ -638,8 +638,8 @@ async function main() {
     await waitFor("!el('gel-crop-mode-btn').disabled");
     assert.equal(await exec("el('gel-canvas').width"), 900, 'The individual editor loads the dropped image');
     assert.equal(await exec('count()'), 1, 'The dropped gel appears in navigation before opening Layout');
-    assert.deepEqual(await exec("({panel:el('gel-lane-table-panel').checkVisibility(),add:!el('gel-add-table-btn').disabled})"),{panel:true,add:true},'A gel shows the lane table strip with Add table ready, before any dividers');
-    await exec("set('gel-contrast-strength','70');click('gel-process-image-btn');set('gel-expected-lane-count','6');click('gel-auto-detect-lanes-btn');click('gel-tool-dividers-btn');click('gel-open-lane-table-btn');click('gel-add-table-btn');const label=document.querySelector('#gel-lane-table-shell .is-label');label.value='Condition';label.dispatchEvent(new Event('input',{bubbles:true}));document.querySelectorAll('#gel-lane-table-shell [data-table-lane]').forEach((input,i)=>{input.value='S'+(i+1);input.dispatchEvent(new Event('input',{bubbles:true}))});action('add')");
+    assert.deepEqual(await exec("({panel:el('gel-lane-table-panel').checkVisibility(),add:!el('gel-add-table-btn').disabled})"),{panel:false,add:true},'Add table is ready in the toolbar without an empty strip above the gel');
+    await exec("set('gel-contrast-strength','70');click('gel-process-image-btn');set('gel-expected-lane-count','6');click('gel-auto-detect-lanes-btn');click('gel-tool-dividers-btn');click('gel-add-table-btn');const label=document.querySelector('#gel-lane-table-shell .is-label');label.value='Condition';label.dispatchEvent(new Event('input',{bubbles:true}));document.querySelectorAll('#gel-lane-table-shell [data-table-lane]').forEach((input,i)=>{input.value='S'+(i+1);input.dispatchEvent(new Event('input',{bubbles:true}))});action('add')");
     assert.equal(await exec('count()'), 1, 'Current gel does not duplicate an automatically imported layer');
     assert.match(await exec("document.querySelector('[data-figure-row]').textContent"), /^Gel 1/);
     assert.equal(await exec("el('gel-blot-figure').hidden"), true, 'Adding the current gel keeps it in the editor');

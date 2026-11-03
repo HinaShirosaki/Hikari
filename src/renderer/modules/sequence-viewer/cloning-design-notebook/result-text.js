@@ -11,14 +11,14 @@ function buildPrimerResultTable(primers = []) {
   }
   return {
     columns: [
-      { field: 'step', title: 'PCR Step', titleFormatter: () => i18nUi.render(i18nUi.message("PCR Step")), headerTooltip: () => i18nUi.render(i18nUi.message("PCR Step")) },
-      { field: 'name', title: 'Primer', titleFormatter: () => i18nUi.render(i18nUi.message("Primer")), headerTooltip: () => i18nUi.render(i18nUi.message("Primer")) },
-      { field: 'role', title: 'Role', titleFormatter: () => i18nUi.render(i18nUi.message("Role")), headerTooltip: () => i18nUi.render(i18nUi.message("Role")) },
-      { field: 'sequence', title: 'Sequence', titleFormatter: () => i18nUi.render(i18nUi.message("Sequence")), headerTooltip: () => i18nUi.render(i18nUi.message("Sequence")) },
-      { field: 'length', title: 'Length', titleFormatter: () => i18nUi.render(i18nUi.message("Length")), headerTooltip: () => i18nUi.render(i18nUi.message("Length")) },
-      { field: 'tm', title: 'Binding Tm', titleFormatter: () => i18nUi.render(i18nUi.message("Binding Tm")), headerTooltip: () => i18nUi.render(i18nUi.message("Binding Tm")) },
+      { field: 'step', title: i18nUi.text('PCR Step') },
+      { field: 'name', title: i18nUi.text('Primer') },
+      { field: 'role', title: i18nUi.text('Role') },
+      { field: 'sequence', title: i18nUi.text('Sequence') },
+      { field: 'length', title: i18nUi.text('Length') },
+      { field: 'tm', title: i18nUi.text('Binding Tm') },
       { field: 'gc', title: 'GC%' },
-      { field: 'notes', title: 'Notes', titleFormatter: () => i18nUi.render(i18nUi.message("Notes")), headerTooltip: () => i18nUi.render(i18nUi.message("Notes")) }
+      { field: 'notes', title: i18nUi.text('Notes') }
     ],
     rows: asArray(primers).map((primer, index) => ({
       id: cleanText(primer?.name, 120) || `primer_${index + 1}`,

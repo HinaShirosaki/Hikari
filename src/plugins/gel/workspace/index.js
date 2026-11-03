@@ -428,7 +428,6 @@ export function initGelAnalysis({
   elements.gelToolBandBottomBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('band-bottom'));
   elements.gelLaneBandModeBtn?.addEventListener('click', manualWorkflow.onLaneBandModeToggle);
   elements.gelAddTableBtn?.addEventListener('click', laneTable.onAddTableClick);
-  elements.gelOpenLaneTableBtn?.addEventListener('click', laneTable.onTogglePanel);
   elements.gelCloseLaneTableBtn?.addEventListener('click', laneTable.onClosePanel);
   elements.gelExportImageBtn?.addEventListener('click', (event) => laneTable.onGenerateFigureClick(event.currentTarget));
   elements.gelExportPptxBtn?.addEventListener('click', (event) => laneTable.onGeneratePowerPointClick(event.currentTarget));

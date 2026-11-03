@@ -1,0 +1,129 @@
+.sequence-viewer-assembly-banner {
+  position: fixed;
+  z-index: 2600;
+  right: var(--space-18);
+  bottom: var(--space-18);
+  width: min(620px, calc(100vw - 36px));
+  max-height: min(560px, calc(100svh - 36px));
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+  margin: 0;
+  padding: var(--space-12);
+  border: 1px solid var(--theme-accent);
+  border-radius: 10px;
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text-strong);
+  box-shadow: var(--theme-shadow-small);
+}
+
+.sequence-viewer-assembly-head,
+.sequence-viewer-assembly-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  flex-shrink: 0;
+}
+
+.sequence-viewer-assembly-head { justify-content: space-between; }
+.sequence-viewer-assembly-head h4 { margin: 0; }
+
+.sequence-viewer-assembly-banner button {
+  padding: var(--space-6) var(--space-8);
+  flex-shrink: 0;
+}
+
+.sequence-viewer-assembly-controls select { flex: 1 1 auto; }
+
+.sequence-viewer-assembly-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.sequence-viewer-assembly-banner fieldset {
+  display: grid;
+  gap: var(--space-12);
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-4) var(--space-4) 0 0;
+  border: 0;
+}
+
+.sequence-viewer-assembly-banner label {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-6);
+}
+
+.sequence-viewer-assembly-banner :is(input, select) {
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  padding: var(--space-6) var(--space-8);
+  box-sizing: border-box;
+}
+
+.sequence-viewer-assembly-settings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: var(--space-12);
+}
+
+.sequence-viewer-assembly-inputs {
+  display: grid;
+  gap: var(--space-12);
+}
+
+.sequence-viewer-assembly-input {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(130px, 170px) auto;
+  align-items: center;
+  gap: var(--space-8);
+}
+
+.sequence-viewer-assembly-source {
+  display: grid;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sequence-viewer-assembly-row-actions {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.sequence-viewer-assembly-row-actions button { min-width: 32px; }
+
+.sequence-viewer-assembly-banner :is(p, ul) {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.sequence-viewer-assembly-banner .sequence-viewer-assembly-selected {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sequence-viewer-assembly-junctions { padding-left: var(--space-18); }
+
+:is(#sequence-viewer-view, #sequence-viewer-detail-view) .sequence-viewer-dna-row[data-assembly-selected="true"] {
+  --hikari-left-rail-list-selected: var(--theme-accent-wash);
+  --hikari-left-rail-list-hover: var(--theme-accent-wash);
+  background: var(--theme-accent-wash);
+  color: var(--theme-accent);
+}
+
+@media (max-width: 600px) {
+  .sequence-viewer-assembly-input { grid-template-columns: minmax(0, 1fr) auto; }
+  .sequence-viewer-assembly-source { grid-column: 1 / -1; }
+}
+
+@media (max-width: 900px) {
+  body:has(.sequence-viewer-assembly-banner:not([hidden])) :is(#sequence-viewer-view, #sequence-viewer-detail-view) .left-rail-template__scroll {
+    padding-bottom: 240px;
+  }
+}

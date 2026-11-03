@@ -2,6 +2,10 @@ import { setSharedLeftRailWidth } from '../shared-left-rail.js';
 import { getPluginLeftRailLayout, setPluginLeftRailFolded } from '../plugin-left-rail.js';
 
 export const LAYOUT_VERBS = {
+  'app.setLeftRail': {
+    permission: 'layout',
+    handler: (params, { leftRailHeader, frameWindow }) => leftRailHeader.set(params, frameWindow)
+  },
   'app.setContextActions': {
     permission: 'layout',
     handler: (params, { contextActions, frameWindow }) => contextActions.set(params, frameWindow)

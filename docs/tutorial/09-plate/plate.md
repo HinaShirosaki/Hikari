@@ -217,7 +217,7 @@ The controls update the analysis as you change them. Other grouping choices incl
 
 The Method menu also contains sigmoidal, hyperbola, polynomial, Padé, and one-phase exponential fits, plus plate QC, Z-scores, comparisons to a control, and normalization. Choose the method that fits your intended analysis.
 
-When a method shows **High control (100%)** or **Low control (0%)**, enter the corresponding group label or sample ID from your plate. For a sigmoidal fit, **Asymmetric (5PL)** enables the five-parameter option; polynomial fits show **Polynomial Order**. Recheck the summary whenever you change a method or control assignment.
+When a method shows **High control (100%)** or **Low control (0%)**, enter the corresponding group label or sample ID from your plate. Sigmoidal fits come as **4PL** (symmetric) and **5PL** (asymmetric); polynomial fits show **Polynomial Order**. Recheck the summary whenever you change a method or control assignment.
 
 ## 12. Format the chart
 

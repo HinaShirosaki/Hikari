@@ -12,14 +12,15 @@ export const GROUP_BY_VALUES = Object.freeze([
 ]);
 export const X_AXIS_VALUES = Object.freeze(['auto', 'concentration', 'sample', 'column']);
 export const ANALYSIS_VALUES = Object.freeze([
-  'summary', 'linear', 'sigmoidal', 'hyperbola', 'polynomial', 'pade11', 'exponential',
+  'summary', 'linear', 'sigmoidal', 'sigmoidal5', 'hyperbola', 'polynomial', 'pade11', 'exponential',
   'normalize', 'percent_control', 'plate_qc', 'zscore', 'ttest'
 ]);
 
 export const ANALYSIS_LABELS = Object.freeze({
   summary: 'Summary statistics',
   linear: 'Linear fit',
-  sigmoidal: 'Sigmoidal fit',
+  sigmoidal: 'Sigmoidal fit (4PL)',
+  sigmoidal5: 'Asymmetric sigmoidal fit (5PL)',
   hyperbola: 'Hyperbola',
   polynomial: 'Polynomial',
   pade11: 'Pade (1,1)',
@@ -49,7 +50,6 @@ export function normalizeAnalysisSpec(input) {
     xAxis: pick(source.xAxis, X_AXIS_VALUES, 'auto'),
     analysis: pick(source.analysis, ANALYSIS_VALUES, 'summary'),
     polyOrder: Number.isInteger(order) && order >= 2 && order <= 4 ? order : 2,
-    asymmetric: Boolean(source.asymmetric),
     subtotals: Boolean(source.subtotals),
     errorBars: source.errorBars !== false,
     // Control wells are named, not flagged on the plate: these match a group label or
@@ -74,8 +74,8 @@ const LEGACY_METHODS = Object.freeze({
   standard_curve_semilog_line: { analysis: 'linear', xAxis: 'concentration' },
   standard_curve_4pl_log_concentration: { analysis: 'sigmoidal', xAxis: 'concentration' },
   standard_curve_4pl_concentration: { analysis: 'sigmoidal', xAxis: 'concentration' },
-  standard_curve_5pl_log_concentration: { analysis: 'sigmoidal', xAxis: 'concentration', asymmetric: true },
-  standard_curve_5pl_concentration: { analysis: 'sigmoidal', xAxis: 'concentration', asymmetric: true },
+  standard_curve_5pl_log_concentration: { analysis: 'sigmoidal5', xAxis: 'concentration' },
+  standard_curve_5pl_concentration: { analysis: 'sigmoidal5', xAxis: 'concentration' },
   standard_curve_hyperbola: { analysis: 'hyperbola', xAxis: 'concentration' },
   standard_curve_quadratic: { analysis: 'polynomial', xAxis: 'concentration', polyOrder: 2 },
   standard_curve_cubic: { analysis: 'polynomial', xAxis: 'concentration', polyOrder: 3 },
@@ -92,9 +92,6 @@ export function specFromLegacyMethod(method) {
 export function describeAnalysisSpec(spec) {
   const normalized = normalizeAnalysisSpec(spec);
   const parts = [ANALYSIS_LABELS[normalized.analysis]];
-  if (normalized.analysis === 'sigmoidal') {
-    parts[0] = normalized.asymmetric ? 'Asymmetric sigmoidal fit (5PL)' : 'Sigmoidal fit (4PL)';
-  }
   if (normalized.analysis === 'polynomial') {
     parts[0] = `Polynomial fit (order ${normalized.polyOrder})`;
   }

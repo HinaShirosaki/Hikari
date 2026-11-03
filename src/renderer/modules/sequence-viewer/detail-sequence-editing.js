@@ -5,7 +5,6 @@ import { escapeHtml } from '../../lib/html.js';
 import { clamp, cleanText, normalizeSequenceText } from './shared.js';
 import {
   buildPeptideInsertDna,
-  getCodingOffsetAtBoundary,
   getInsertionCodingFeatures,
   PEPTIDE_INSERT_GROUPS
 } from './sequence-edit-peptides.js';
@@ -104,7 +103,6 @@ export function createSequenceViewerSequenceEditingController(config = {}) {
     }
     if (elements.sequenceEditTagOrientation) elements.sequenceEditTagOrientation.value = 'along';
     if (elements.sequenceEditTagOptions) elements.sequenceEditTagOptions.hidden = true;
-    if (elements.sequenceEditTagPreview) i18nUi.setText(elements.sequenceEditTagPreview, '');
   }
 
   function updatePeptideSequence() {
@@ -125,18 +123,6 @@ export function createSequenceViewerSequenceEditingController(config = {}) {
       elements.sequenceEditTagOrientation.value = orientation;
     }
     if (elements.sequenceEditTextarea) elements.sequenceEditTextarea.value = generated.sequence;
-    if (elements.sequenceEditTagPreview) {
-      let frameNote = 'Choose an ORF reference to check the reading frame.';
-      if (feature) {
-        const offset = getCodingOffsetAtBoundary(getSelectedRecord(), feature, editState.range.start);
-        const codonStart = Number(feature?.qualifiers?.codon_start || 1) - 1;
-        frameNote = Number.isFinite(offset) && offset >= codonStart && (offset - codonStart) % 3 === 0
-          ? 'Insertion is at a codon boundary.'
-          : 'Insertion is inside a codon. Choose a codon boundary to express the peptide in frame.';
-        if (orientation === 'reverse') frameNote += ' Peptide DNA faces opposite to this ORF.';
-      }
-      i18nUi.setText(elements.sequenceEditTagPreview, i18nUi.message("{p0} · {p1} bp · {p2} strand. {p3}", { p0: generated.part.sequence, p1: generated.sequence.length, p2: generated.strand === -1 ? '−' : '+', p3: frameNote }));
-    }
   }
 
   elements.sequenceEditTagSelect?.addEventListener('change', updatePeptideSequence);

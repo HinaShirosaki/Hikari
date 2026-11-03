@@ -95,7 +95,10 @@ try {
   } };
   const actions = { getSelectedRecord: () => template, getBridge: () => bridge, getStoragePath: () => storagePath,
     setAlignmentSessions: () => {}, setStatus: () => {} };
-  const controllers = { home: { refreshLibraryEntries: async () => {}, openLibraryEntryInDetail: async () => {} } };
+  const opened = [];
+  const selected = [];
+  const controllers = { home: { refreshLibraryEntries: async options => { selected.push(options.selectedId); },
+    openLibraryEntryInDetail: async id => { opened.push(id); } } };
   const persistence = createLibraryPersistenceActions({ state, actions, controllers });
   const entryIds = ['digest-child-1', 'digest-child-2'];
   await assert.rejects(persistence.saveDerivedDnaFragments(template, two, { entryIds }), /Fixture disk failure/);
@@ -109,6 +112,12 @@ try {
   assert.ok(saved.every(entry => entry.parentEntryId === parentId && entry.gbkRelPath.endsWith('.gbk')));
   const stored = await library.getSequenceEntry({ storagePath, id: saved[1].id, includeGbk: true });
   assert.equal(parseInputRecords(stored.gbkText).records[0].sequence, two[1].sequence);
+  assert.deepEqual(opened, [entryIds[0]], 'ordinary derived saves still open the first child');
+  await persistence.saveDerivedDnaFragments(template, [two[1]], { entryIds: [entryIds[1]], openAfterSave: false });
+  assert.deepEqual(opened, [entryIds[0]], 'individual digest saves keep the template open');
+  assert.equal(selected.at(-1), parentId);
+  assert.ok(state.expandedDnaEntryIds.includes(parentId), 'the template expands to reveal saved children');
+  assert.equal((await library.listSequenceEntries({ storagePath })).entries.length, 3, 'stable IDs avoid duplicate children');
 } finally {
   await fs.rm(storagePath, { recursive: true, force: true });
 }

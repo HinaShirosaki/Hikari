@@ -255,7 +255,7 @@ export function buildOverlapExtensionLigationPlan(payload = {}) {
     // notes that say so are not warnings here -- but what the stated insert
     // template could not confirm still is, and `base.warnings` now carries only
     // those.
-    return { ...base, ...summarizePrimerPlan(base.primers, overlapPcr.junctions) };
+    return { ...base, junctions: overlapPcr.junctions, ...summarizePrimerPlan(base.primers, overlapPcr.junctions) };
   });
 
   if (!design.feasible) {
@@ -276,6 +276,8 @@ export function buildOverlapExtensionLigationPlan(payload = {}) {
     recommendedAssemblyStrategy: 'restriction-ligation',
     primerOligoPlan: {
       primers: design.primers,
+      junctions: design.junctions,
+      overlapSummary: design.overlapSummary,
       selectedThresholdLevel: design.selectedThresholdLevel,
       warnings
     },

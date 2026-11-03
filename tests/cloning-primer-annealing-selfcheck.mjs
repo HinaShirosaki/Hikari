@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { alignPrimerToDna, annealingStats, buildPrimerReferenceFrame, orientedBase, primerAlignmentInReferenceFrame, primerLengthOptions, primerTemplateRecord, replacePlanPrimer, resizedPrimer } from '../src/renderer/modules/sequence-viewer/cloning-design/primer-annealing-model.js';
+import { alignPrimerToDna, annealingStats, buildPrimerReferenceFrame, clampPrimerEnd, normalizePrimerTmFloor, orientedBase, primerAlignmentInReferenceFrame, primerResizeWindow, primerTemplateRecord, primerWithTemplateBinding, replacePlanPrimer, resizePrimerInterval, templateBindingTooLow } from '../src/renderer/modules/sequence-viewer/cloning-design/primer-annealing-model.js';
 import { cloningPrimerTm } from '../src/renderer/modules/sequence-viewer/calculations/oligo.js';
 import { reverseComplementDna } from '../src/renderer/modules/sequence-viewer/calculations/sequence.js';
 import { buildPrimerRecord } from '../src/renderer/modules/sequence-viewer/cloning-assembly/primer-records.js';
@@ -16,6 +16,10 @@ function dna(length, seed = 513) {
 const record = (sequence, topology = 'linear') => ({ sequence, topology });
 const binding = 'GAGCTGACTACGATCGTACGATGCTAGC';
 const tail = 'CAGTCGAT';
+function resized3(primer, length, product) {
+  const options = primerResizeWindow(primer, product);
+  return resizePrimerInterval(primer, clampPrimerEnd({ start: 0, end: primer.sequence.length }, '3', length, options), options);
+}
 
 test('the same oligo has different matched-region Tms on template and assembled product', () => {
   const sequence = tail + binding;
@@ -92,33 +96,33 @@ test('3′ resizing follows the product on either strand and retains the origina
   for (const strand of [1, -1]) {
     const oligo = strand === 1 ? product.sequence.slice(80, 110) : reverseComplementDna(product.sequence.slice(80, 110));
     const primer = buildPrimerRecord({ name: 'PCR F', sequence: oligo, tailSequence: oligo.slice(0, 8), bindingSequence: oligo.slice(8) });
-    const options = primerLengthOptions(primer, product);
-    const longer = resizedPrimer(primer, 35, options);
+    const longer = resized3(primer, 35, product);
     const expected = strand === 1 ? product.sequence.slice(80, 115) : reverseComplementDna(product.sequence.slice(75, 110));
     assert.equal(longer.sequence, expected);
     assert.equal(longer.tailSequence, primer.tailSequence);
     assert.equal(longer.bindingSequence, expected.slice(8));
-    assert.equal(resizedPrimer(primer, 0, options).length, 16);
+    assert.equal(resized3(primer, 0, product).length, 8);
   }
 });
 
 test('linear ends, ambiguous products and original oligos above 120 nt cannot gain invented extension bases', () => {
   const product = record(dna(160, 662));
   const primer = { sequence: product.sequence.slice(-30), bindingSequence: product.sequence.slice(-30) };
-  assert.equal(primerLengthOptions(primer, product).max, 30);
+  assert.equal(resized3(primer, 100, product).length, 30);
   const duplicate = record(primer.sequence + dna(30) + primer.sequence);
-  assert.equal(primerLengthOptions(primer, duplicate).max, 30);
+  assert.equal(resized3(primer, 100, duplicate).length, 30);
   const longPrimer = { sequence: product.sequence.slice(0, 130) };
-  assert.equal(primerLengthOptions(longPrimer, product).max, 130);
+  assert.equal(resized3(longPrimer, 150, product).length, 130);
 });
 
-test('shortening keeps a mutagenic base plus a downstream binding anchor', () => {
+test('users can shorten through a mutation and see the resulting weak template binding', () => {
   const template = dna(60, 217);
   const mutation = template[30] === 'A' ? 'C' : 'A';
   const product = record(template.slice(0, 30) + mutation + template.slice(31));
   const primer = { sequence: product.sequence.slice(10, 50) };
-  const options = primerLengthOptions(primer, product, alignPrimerToDna(primer.sequence, product), alignPrimerToDna(primer.sequence, record(template)));
-  assert.ok(options.min >= 29, 'the edit at primer index 20 retains eight downstream bases');
+  const short = resized3(primer, 12, product);
+  assert.equal(short.sequence, primer.sequence.slice(0, 12));
+  assert.equal(templateBindingTooLow(alignPrimerToDna(short.sequence, record(template))), true);
 });
 
 test('template identity uses the assigned stock and never substitutes the parent for an unavailable donor', () => {
@@ -150,7 +154,7 @@ test('applying a length changes table and nested PCR records, recalculates quali
   const product = record(dna(300, 81));
   const original = { ...buildPrimerRecord({ name: 'Named F', role: 'forward', sequence: product.sequence.slice(60, 90), bindingSequence: product.sequence.slice(60, 90), templateId: 'insert' }), templateEntryId: 'donor' };
   const plan = { feasible: true, primers: [original], warnings: [], plans: [{ plan: { primerOligoPlan: { primers: [{ ...original, name: 'engine_F' }] } } }] };
-  const next = resizedPrimer(original, 33, primerLengthOptions(original, product));
+  const next = resized3(original, 33, product);
   const applied = replacePlanPrimer(plan, 0, next, alignPrimerToDna(next.sequence, product));
   assert.equal(applied.primers[0].sequence, product.sequence.slice(60, 93));
   assert.equal(applied.primers[0].templateEntryId, 'donor');
@@ -169,7 +173,7 @@ test('weak binding temperatures need review and restoring a valid length clears 
   const product = record(binding + dna(80, 94));
   const original = buildPrimerRecord({ name: 'PCR F', role: 'forward', sequence: binding, bindingSequence: binding });
   const plan = { feasible: true, primers: [original], warnings: [] };
-  const short = resizedPrimer(original, 12, primerLengthOptions(original, product));
+  const short = resized3(original, 12, product);
   const review = replacePlanPrimer(plan, 0, short, alignPrimerToDna(short.sequence, product));
   assert.equal(review.feasible, false);
   assert.ok(review.warnings.some(warning => warning.includes('needs review')));
@@ -198,17 +202,17 @@ test('resizing preserves a fixed DNA reference on both strands through shortenin
     const sequence = strand === 1 ? product.sequence.slice(80, 110) : reverseComplementDna(product.sequence.slice(80, 110));
     const primer = { sequence, bindingSequence: sequence };
     const original = alignPrimerToDna(sequence, product);
-    const options = primerLengthOptions(primer, product, original);
-    const frame = buildPrimerReferenceFrame(product, original, options.max);
+    const options = primerResizeWindow(primer, product, original);
+    const frame = buildPrimerReferenceFrame(product, original, options.maxLength, options);
     const reference = structuredClone(frame.columns);
-    for (const length of [options.min, 25, 40, options.max, 30]) {
-      const resized = resizedPrimer(primer, length, options);
+    for (const length of [options.minLength, 25, 40, options.maxLength, 30]) {
+      const resized = resized3(primer, length, product);
       const alignment = primerAlignmentInReferenceFrame(resized.sequence, product, frame, alignPrimerToDna(resized.sequence, product));
       assert.deepEqual(frame.columns, reference);
       assert.equal(product.sequence.length, 400);
       assert.equal(alignment.strand, strand);
       assert.equal(alignment.columns[0].targetIndex, original.columns[0].targetIndex);
-      assert.equal(annealingStats(alignment).paired, length);
+      assert.equal(annealingStats(alignment).paired, resized.sequence.length);
     }
   }
 });
@@ -232,4 +236,114 @@ test('the template reference keeps insertion slots and a primer cannot jump to a
   const anchored = primerAlignmentInReferenceFrame(repeat, plasmid, repeatedFrame, search);
   assert.equal(anchored.columns[0].targetIndex, 70);
   assert.equal(anchored.ambiguous, true);
+});
+
+test('both endpoints resize from the product on forward and reverse strands while retaining a fixed reference', () => {
+  const product = record(dna(400, 718));
+  for (const strand of [1, -1]) {
+    const sequence = strand === 1 ? product.sequence.slice(100, 130) : reverseComplementDna(product.sequence.slice(100, 130));
+    const primer = { sequence, bindingSequence: sequence };
+    const initial = alignPrimerToDna(sequence, product);
+    const window = primerResizeWindow(primer, product, initial);
+    const frame = buildPrimerReferenceFrame(product, initial, window.maxLength, window);
+    const reference = structuredClone(frame.columns);
+    for (const range of [{ start: -5, end: 33 }, { start: 5, end: 27 }, { start: -10, end: -2 }, { start: 33, end: 44 }]) {
+      const resized = resizePrimerInterval(primer, range, window);
+      const expected = strand === 1 ? product.sequence.slice(100 + range.start, 100 + range.end)
+        : reverseComplementDna(product.sequence.slice(130 - range.end, 130 - range.start));
+      assert.equal(resized.sequence, expected);
+      const projected = primerAlignmentInReferenceFrame(resized.sequence, product, frame, alignPrimerToDna(resized.sequence, product), range.start);
+      assert.equal(projected.columns.map(column => column.base).join(''), expected);
+      assert.equal(annealingStats(projected).paired, expected.length);
+      assert.deepEqual(frame.columns, reference);
+    }
+  }
+});
+
+test('5′ and 3′ extensions use product bases that differ from the template', () => {
+  const template = record(dna(300, 627));
+  const mutate = text => [...text].map(base => base === 'A' ? 'C' : 'A').join('');
+  const product = record(template.sequence.slice(0, 90) + mutate(template.sequence.slice(90, 100))
+    + template.sequence.slice(100, 130) + mutate(template.sequence.slice(130, 140)) + template.sequence.slice(140));
+  const primer = { sequence: product.sequence.slice(100, 130) };
+  const window = primerResizeWindow(primer, product);
+  const resized = resizePrimerInterval(primer, { start: -10, end: 40 }, window);
+  assert.equal(resized.sequence, product.sequence.slice(90, 140));
+  assert.notEqual(resized.sequence, template.sequence.slice(90, 140));
+  const frame = buildPrimerReferenceFrame(template, alignPrimerToDna(primer.sequence, template), window.maxLength, window);
+  const projected = primerAlignmentInReferenceFrame(resized.sequence, template, frame, alignPrimerToDna(resized.sequence, template), -10);
+  assert.equal(annealingStats(projected).mismatches, 20);
+});
+
+test('5′ resizing crosses circular origins on either strand and stops at linear boundaries or unresolved bases', () => {
+  const sequence = dna(300, 883);
+  for (const strand of [1, -1]) {
+    const segment = strand === 1 ? sequence.slice(0, 30) : reverseComplementDna(sequence.slice(-30));
+    const primer = { sequence: segment };
+    const circularProduct = record(sequence, 'circular');
+    const window = primerResizeWindow(primer, circularProduct);
+    const resized = resizePrimerInterval(primer, { start: -5, end: 30 }, window);
+    const expected = strand === 1 ? sequence.slice(-5) + sequence.slice(0, 30)
+      : reverseComplementDna(sequence.slice(-30) + sequence.slice(0, 5));
+    assert.equal(resized.sequence, expected);
+    assert.equal(primerResizeWindow(primer, record(sequence)).minStart, 0);
+  }
+  const withN = record(sequence.slice(0, 95) + 'N' + sequence.slice(96));
+  assert.equal(primerResizeWindow({ sequence: sequence.slice(100, 130) }, withN).minStart, -4);
+});
+
+test('either end can reach an eight-base weak primer, recover its length, and respect the maximum size', () => {
+  const product = record(dna(300, 911));
+  const primer = { sequence: product.sequence.slice(100, 130) };
+  const window = primerResizeWindow(primer, product);
+  const five = clampPrimerEnd({ start: 0, end: 30 }, '5', 1000, window);
+  assert.deepEqual(five, { start: 22, end: 30 });
+  assert.equal(templateBindingTooLow(alignPrimerToDna(resizePrimerInterval(primer, five, window).sequence, product)), true);
+  const three = clampPrimerEnd({ start: 0, end: 30 }, '3', -1000, window);
+  assert.deepEqual(three, { start: 0, end: 8 });
+  assert.equal(clampPrimerEnd(five, '5', -1000, window).end - clampPrimerEnd(five, '5', -1000, window).start, 120);
+  assert.equal(clampPrimerEnd(three, '3', 1000, window).end, 120);
+});
+
+test('red binding status depends on template temperature even when product binding is strong', () => {
+  const sequence = dna(40, 228);
+  const product = alignPrimerToDna(sequence, record(sequence));
+  const template = alignPrimerToDna(sequence, record(sequence.slice(-12)));
+  assert.ok(annealingStats(product).tm >= 54);
+  assert.equal(templateBindingTooLow(product), false);
+  assert.ok(annealingStats(template).tm < 54);
+  assert.equal(templateBindingTooLow(template), true);
+});
+
+test('users can set the template Tm floor, including zero, without changing the binding temperature', () => {
+  const alignment = alignPrimerToDna(binding, record(binding));
+  const tm = annealingStats(alignment).tm;
+  assert.equal(templateBindingTooLow(alignment, tm - 0.1), false);
+  assert.equal(templateBindingTooLow(alignment, tm), false);
+  assert.equal(templateBindingTooLow(alignment, tm + 0.1), true);
+  assert.equal(annealingStats(alignment).tm, tm);
+  assert.equal(normalizePrimerTmFloor(), 54);
+  assert.equal(normalizePrimerTmFloor(''), 54);
+  assert.equal(normalizePrimerTmFloor(0), 0);
+  assert.equal(normalizePrimerTmFloor(-10), 0);
+  assert.equal(normalizePrimerTmFloor(200), 100);
+  assert.equal(normalizePrimerTmFloor(61.5), 61.5);
+});
+
+test('trimming a 5′ tail refreshes binding metadata and retains internal insertion slots', () => {
+  const seed = dna(70, 674);
+  const sequence = seed.slice(10, 35) + 'AAA' + seed.slice(35, 55);
+  const template = record(seed);
+  const primer = { sequence: tail + sequence, tailSequence: tail, bindingSequence: sequence };
+  const product = record(primer.sequence);
+  const window = primerResizeWindow(primer, product);
+  const range = { start: tail.length + 2, end: primer.sequence.length - 3 };
+  const frame = buildPrimerReferenceFrame(template, alignPrimerToDna(primer.sequence, template), window.maxLength, window);
+  const resized = resizePrimerInterval(primer, range, window);
+  const projected = primerAlignmentInReferenceFrame(resized.sequence, template, frame, alignPrimerToDna(resized.sequence, template), range.start);
+  const bound = primerWithTemplateBinding(resized, projected);
+  assert.equal(bound.bindingSequence, seed.slice(35, 52));
+  assert.equal(bound.tailSequence + bound.bindingSequence, resized.sequence);
+  assert.equal(annealingStats(projected).gaps, 3);
+  assert.equal(projected.columns.find(column => column.targetIndex === null).sourcePrimerIndex, tail.length + 25);
 });

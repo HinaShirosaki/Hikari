@@ -28,11 +28,12 @@ function resolveModel(spec) {
       fit: (points) => fitLineCurve(points, 'Linear')
     };
   }
-  if (spec.analysis === 'sigmoidal') {
+  if (spec.analysis === 'sigmoidal' || spec.analysis === 'sigmoidal5') {
+    const asymmetric = spec.analysis === 'sigmoidal5';
     return {
-      label: spec.asymmetric ? 'Asymmetric Sigmoidal 5PL' : 'Sigmoidal 4PL',
-      minPoints: spec.asymmetric ? 5 : 4,
-      fit: (points) => fitSigmoidCurve(points, { asymmetric: spec.asymmetric }),
+      label: asymmetric ? 'Asymmetric Sigmoidal 5PL' : 'Sigmoidal 4PL',
+      minPoints: asymmetric ? 5 : 4,
+      fit: (points) => fitSigmoidCurve(points, { asymmetric }),
       extraHeaders: ['Potency', 'x50'],
       extraCells: (fit) => {
         const params = fit.params || {};

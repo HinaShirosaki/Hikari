@@ -34,6 +34,19 @@
   flex: 0 0 auto;
 }
 
+.primer-annealing-tm-floor {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  color: var(--theme-text-muted);
+  font-size: var(--text-sm);
+}
+
+.primer-annealing-tm-floor input {
+  width: 4.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .primer-annealing-modes .sequence-viewer-mode-btn {
   padding: var(--space-6) var(--space-12);
 }
@@ -174,6 +187,22 @@
   stroke: var(--theme-accent);
   stroke-width: 2;
   stroke-dasharray: 3 2;
+}
+
+.is-low-template-binding .primer-annealing-outline {
+  fill: var(--theme-danger-wash);
+  stroke: var(--theme-danger);
+}
+
+.is-low-template-binding .primer-annealing-oligo-base,
+.is-low-template-binding .primer-annealing-end,
+.is-low-template-binding .primer-annealing-handle-grip {
+  fill: var(--theme-danger);
+}
+
+.is-low-template-binding .primer-annealing-pair-bond,
+.is-low-template-binding .primer-annealing-handle:focus-visible .primer-annealing-handle-hit {
+  stroke: var(--theme-danger);
 }
 
 .is-resizing-primer,

@@ -4,10 +4,9 @@ const i18nUi = createPresentation("plate");
 // Assay-owned formatting controls. All dimensions are displayed in pt except plot size.
 const TABS = [
   { id: 'frame', label: 'Frame' }, { id: 'axis', label: 'Axis' },
-  { id: 'series', label: 'Data Series' }, { id: 'text', label: 'Text' }, { id: 'elements', label: 'Elements' }
+  { id: 'series', label: 'Data Series' }, { id: 'text', label: 'Text' }
 ];
 const TAB_KEYS = {
-  elements: ['plotElements'],
   frame: ['frameStyle', 'frameStroke', 'frameStrokeWidth', 'backgroundColor', 'showVerticalGrid',
     'showHorizontalGrid', 'gridColor', 'gridStrokeWidth', 'sizeAuto', 'frameWidth', 'frameHeight'],
   axis: ['xScale', 'yScale', 'xRange', 'yRange', 'xTick', 'yTick', 'axisStyles',
@@ -120,7 +119,6 @@ const PANEL_HTML = `<div class="assay-chart-style">
     </div>
     ${section('Font', '<div data-cc="textBar"></div>')}
   `)}
-  ${panel('elements', '<div data-cc="plotElements"></div>')}
   <p data-cc="validation" class="assay-chart-style-validation" role="status" aria-live="polite" hidden></p>
 </div>`;
 export { TABS, TAB_KEYS, PANEL_HTML };

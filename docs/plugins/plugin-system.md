@@ -752,8 +752,10 @@ painted as a mask because inserting manifest-provided SVG into the host
 document would be unsafe; source-owned internal plugins may carry a trusted
 icon in their bundled definition. A plugin that draws its own left rail
 can synchronize its width through `app.info`, `app.context`, and
-`app.setLeftRailWidth`, but the rail and resize interaction still live inside
-the iframe.
+`app.setLeftRailWidth`, and register its rail with the header toggle through
+`app.setLeftRail({ available: true })`. The rail and resize interaction still
+live inside the iframe; `app.context.layout.leftRail.folded` carries header
+toggle changes back to the plugin.
 
 When an extension needs host-owned navigation order and chrome, direct module
 integration, agent MCP tools, or its own skill, it graduates from a plugin

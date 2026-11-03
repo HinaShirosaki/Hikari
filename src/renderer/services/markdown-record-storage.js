@@ -36,7 +36,10 @@ export async function syncMarkdownRecordState(api, state, filePath = '') {
 }
 
 async function queueMarkdownRecordState(api, state, filePath) {
-  const snapshot = structuredClone(state);
+  // Match persistState's JSON representation. Older generated primer tables
+  // can still contain UI formatter callbacks in memory; those are not record
+  // data and must not prevent the rest of the workspace from reaching storage.
+  const snapshot = JSON.parse(JSON.stringify(state));
   let roots = queues.get(state);
   if (!roots) { roots = new Map(); queues.set(state, roots); }
   const root = String(snapshot.settings?.storagePath || filePath);

@@ -192,11 +192,12 @@ export function createResultImportController({
     renderResultImportPreview(candidate);
   }
 
-  function openResultImportDialog({ fileName, dataBase64, candidates, importTarget }) {
+  function openResultImportDialog({ assayId, fileName, dataBase64, candidates, importTarget }) {
     if (!assayResultImportOverlay) {
       return;
     }
     resultImportState = {
+      assayId,
       fileName,
       dataBase64,
       candidates,
@@ -258,13 +259,18 @@ export function createResultImportController({
     setResultImportStatus(plateUi('import.saving', { file: resultImportState.fileName }));
 
     try {
-      const importedFileName = resultImportState.fileName;
-      const importTarget = resultImportState.importTarget || getAssayResultImportTarget(runtime.currentLayout, getCurrentDefinition());
+      const importing = resultImportState;
+      const assayId = importing.assayId;
+      const importedFileName = importing.fileName;
+      const importTarget = importing.importTarget || getAssayResultImportTarget(runtime.currentLayout, getCurrentDefinition());
       const attachment = await persistResultAttachment({
+        assayId,
         fileName: importedFileName,
-        dataBase64: resultImportState.dataBase64,
+        dataBase64: importing.dataBase64,
         candidate
       });
+      if (importing !== resultImportState) return;
+      if (assayId !== (runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '')) throw plateError('import.assayChanged');
       const counts = applyResultMatrix({
         matrix: candidate.matrix,
         startRowIndex: importTarget.startRowIndex,
@@ -277,14 +283,17 @@ export function createResultImportController({
       }
       if (typeof onResultImportApplied === 'function') {
         await onResultImportApplied({
+          assayId,
           candidate,
           attachment,
           fileName: importedFileName,
           counts
         });
       }
-      closeResultImportDialog();
-      setResultStatus(plateUi('import.done', { pasted: counts.pastedCount, file: importedFileName, skipped: counts.skippedCount }));
+      if (importing === resultImportState) {
+        closeResultImportDialog();
+        setResultStatus(plateUi('import.done', { pasted: counts.pastedCount, file: importedFileName, skipped: counts.skippedCount }));
+      }
     } catch (error) {
       const message = plateFailure(error, 'import.failed');
       setResultImportStatus(message, true);
@@ -316,6 +325,7 @@ export function createResultImportController({
         fileName: file.name,
         dataBase64
       });
+      if (selectedAssayId !== (runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '')) throw plateError('import.assayChanged');
       const importTarget = getAssayResultImportTarget(runtime.currentLayout, getCurrentDefinition());
       const candidates = detectAssayResultMatrixCandidates(parsed?.tables || [], importTarget);
       if (!candidates.length) {
@@ -326,6 +336,7 @@ export function createResultImportController({
       }
       if (candidates.length === 1) {
         resultImportState = {
+          assayId: selectedAssayId,
           fileName: file.name,
           dataBase64,
           candidates,
@@ -336,6 +347,7 @@ export function createResultImportController({
         return;
       }
       openResultImportDialog({
+        assayId: selectedAssayId,
         fileName: file.name,
         dataBase64,
         candidates,

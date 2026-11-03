@@ -231,6 +231,35 @@ async function run() {
   check(await evaluate('qaResponses.join(",") === "pending,cancel"'), 'Normal close retains the main-process handshake');
   await evaluate('document.querySelector("[data-plugin-remove][data-plugin-id=github-demo]").click()');
   check(await evaluate('qaState.settings.plugins.length === 1') && (await fs.stat(installedPath)).isDirectory(), 'Removing a GitHub plugin retains its checkout like a folder installation');
+
+  await evaluate('qaDirty = false; qaResponses.length = 0');
+  failStorage = true;
+  await evaluate('qaGuard.handleCloseRequested()');
+  check(await evaluate('qaResponses.join() === "pending" && !document.getElementById("unsaved-changes-overlay").hidden && document.getElementById("unsaved-changes-status").textContent.includes("Disk full")'), 'A clean quit with a storage failure stays open with the actual error');
+  await evaluate('qaGuard.handleCloseRequested()');
+  check(await evaluate('document.getElementById("unsaved-changes-status").textContent.includes("Disk full")'), 'Repeated quit preserves the storage failure');
+  await click('unsaved-changes-cancel-btn');
+  failStorage = false;
+  storageGate = new Promise(resolve => { releaseStorage = resolve; });
+  const beforeCloseCalls = storageCalls;
+  await evaluate(`
+    qaResponses.length = 0; window.qaDialogShows = 0;
+    new MutationObserver(records => {
+      records.forEach((record, index) => {
+        const hiddenAfter = index + 1 < records.length ? records[index + 1].oldValue !== null : record.target.hidden;
+        if (!hiddenAfter) qaDialogShows++;
+      });
+    }).observe(document.getElementById('unsaved-changes-overlay'), {attributes:true,attributeOldValue:true,attributeFilter:['hidden']});
+    void qaGuard.handleCloseRequested();
+  `);
+  await waitFor('qaResponses.join() === "pending"');
+  for (let i = 0; i < 100 && storageCalls === beforeCloseCalls; i++) await pause(10);
+  check(storageCalls > beforeCloseCalls && await evaluate('document.getElementById("unsaved-changes-overlay").hidden && !qaDialogShows'), 'Clean quit waits for real storage without showing an empty save dialog');
+  await evaluate('qaGuard.handleCloseRequested()');
+  check(await evaluate('qaResponses.join() === "pending,pending" && !qaDialogShows'), 'Repeated quit does not bypass the outstanding save');
+  releaseStorage(); storageGate = null;
+  await waitFor('qaResponses.at(-1) === "quit"');
+  check(await evaluate('document.getElementById("unsaved-changes-overlay").hidden && !qaDialogShows'), 'Successful clean quit never flashes a save dialog');
   console.log(`Settings plugins Electron: ${checks} checks passed.`);
 }
 

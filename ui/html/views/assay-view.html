@@ -234,6 +234,10 @@
             </section>
             <p id="assay-workspace-row-status" class="small-note" aria-live="polite"></p>
           </section>
+          <div id="assay-group-selection-hint" class="assay-workspace-group-hint" role="status" hidden>
+            <span id="assay-group-selection-hint-text"></span>
+            <button type="button" id="assay-group-selection-cancel-btn" class="ghost-btn" data-i18n="plate.action.cancel">Cancel</button>
+          </div>
         </div>
       </div>
 
@@ -308,7 +312,7 @@
                     <input id="assay-analysis-row-groups" type="hidden" />
                     <input id="assay-analysis-column-groups" type="hidden" />
                     <div class="form-actions assay-analysis-group-actions assay-analysis-action-row" role="group" aria-label="Grouping actions" data-i18n-aria-label="plate.groups.actions">
-                      <button type="button" id="assay-analysis-add-row-group-btn" class="ghost-btn assay-analysis-group-icon-btn assay-analysis-action-btn" aria-label="Add selected rows as group" title="Add selected rows as a group" data-i18n-aria-label="plate.groups.addRowsLabel" data-i18n-title="plate.groups.addRowsTitle">
+                      <button type="button" id="assay-analysis-add-row-group-btn" class="ghost-btn assay-analysis-group-icon-btn assay-analysis-action-btn" aria-pressed="false" aria-label="Group rows by dragging" title="Drag across rows to create a group" data-i18n-aria-label="plate.groups.addRowsLabel" data-i18n-title="plate.groups.addRowsTitle">
                         <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                           <path d="M3 4h12v16H3Z"></path>
                           <path d="M3 9h12"></path>
@@ -317,7 +321,7 @@
                           <path d="M16 12h6"></path>
                         </svg><span data-i18n="plate.groups.rows">Rows</span>
                       </button>
-                      <button type="button" id="assay-analysis-add-column-group-btn" class="ghost-btn assay-analysis-group-icon-btn assay-analysis-action-btn" aria-label="Add selected columns as group" title="Add selected columns as a group" data-i18n-aria-label="plate.groups.addColumnsLabel" data-i18n-title="plate.groups.addColumnsTitle">
+                      <button type="button" id="assay-analysis-add-column-group-btn" class="ghost-btn assay-analysis-group-icon-btn assay-analysis-action-btn" aria-pressed="false" aria-label="Group columns by dragging" title="Drag across columns to create a group" data-i18n-aria-label="plate.groups.addColumnsLabel" data-i18n-title="plate.groups.addColumnsTitle">
                         <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                           <path d="M4 3h16v12H4Z"></path>
                           <path d="M9 3v12"></path>
@@ -372,8 +376,11 @@
                       </select>
                     </label>
                     <label>
-                      <span data-i18n="plate.settings.method">Method</span>
-                      <select id="assay-analysis-kind">
+                      <span class="assay-analysis-label-row">
+                        <span data-i18n="plate.settings.method">Method</span>
+                        <span class="assay-info-tip" aria-hidden="true">i<span id="assay-analysis-method-hint" class="assay-info-tip__text" data-i18n="plate.methodHint.summary">Mean, SD and n for each group. No model is fitted.</span></span>
+                      </span>
+                      <select id="assay-analysis-kind" aria-describedby="assay-analysis-method-hint">
                         <optgroup label="Statistics" data-i18n-label="plate.method.statistics">
                           <option value="summary" selected data-i18n="plate.method.summary">Summary statistics</option>
                           <option value="plate_qc" data-i18n="plate.method.plateQc">Plate QC (Z&#39;-factor, SSMD, CV%)</option>
@@ -382,7 +389,8 @@
                         </optgroup>
                         <optgroup label="Curve fitting" data-i18n-label="plate.method.curveFitting">
                           <option value="linear" data-i18n="plate.method.linear">Linear fit</option>
-                          <option value="sigmoidal" data-i18n="plate.method.sigmoidal">Sigmoidal fit (4PL / 5PL)</option>
+                          <option value="sigmoidal" data-i18n="plate.method.sigmoidal">Sigmoidal fit (4PL)</option>
+                          <option value="sigmoidal5" data-i18n="plate.method.sigmoidal5">Sigmoidal fit (5PL, asymmetric)</option>
                           <option value="hyperbola" data-i18n="plate.method.hyperbola">Hyperbola</option>
                           <option value="polynomial" data-i18n="plate.method.polynomial">Polynomial</option>
                           <option value="pade11" data-i18n="plate.method.pade">Pade (1,1)</option>
@@ -415,10 +423,6 @@
                       </select>
                     </label>
                     <div class="assay-analysis-modifiers">
-                      <label class="assay-analysis-checkbox" hidden>
-                        <input id="assay-analysis-asymmetric" type="checkbox" />
-                        <span data-i18n="plate.settings.asymmetric">Asymmetric (5PL)</span>
-                      </label>
                       <label id="assay-analysis-poly-order-field" hidden>
                         <span data-i18n="plate.settings.polyOrder">Polynomial Order</span>
                         <input id="assay-analysis-poly-order" type="number" min="2" max="4" step="1" value="2" />

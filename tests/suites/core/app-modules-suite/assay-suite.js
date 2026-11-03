@@ -706,7 +706,6 @@ test('assay analysis keeps the rail free of status copy while retaining saved an
   const view = createAssayAnalysisView({
     runtime,
     elements: {
-      assayAnalysisAsymmetricInput: input(),
       assayAnalysisColumnGroupsInput: input(),
       assayAnalysisErrorBarsInput: input(),
       assayAnalysisErrorBarsField: new MockElement(),
@@ -745,7 +744,7 @@ test('assay analysis keeps the rail free of status copy while retaining saved an
   view.destroy();
 });
 
-test('assay group selection stays silent but missing selections still explain the blocked action', () => {
+test('assay group tools arm a new drag without committing the previous selection', () => {
   const document = createMockDocument();
   const { createAssayResultsManager } = loadEsmStyleModule(path.join(
     __dirname,
@@ -757,6 +756,13 @@ test('assay group selection stays silent but missing selections still explain th
   ), { document });
   const resultTable = new MockElement('assay-result-table');
   resultTable.append = () => {};
+  const rowGroups = new MockElement();
+  const columnGroups = new MockElement();
+  const rowButton = new MockElement();
+  const columnButton = new MockElement();
+  const hint = new MockElement();
+  const hintText = new MockElement();
+  let changed = 0;
 
   class RangeTabulator {
     static instance = null;
@@ -789,8 +795,12 @@ test('assay group selection stays silent but missing selections still explain th
   const manager = createAssayResultsManager({
     runtime: { currentLayout: [], currentResults: {}, resultPasteAnchor: { rowIndex: 0, columnIndex: 0 } },
     elements: {
-      assayAnalysisRowGroupsInput: new MockElement(),
-      assayAnalysisColumnGroupsInput: new MockElement(),
+      assayAnalysisRowGroupsInput: rowGroups,
+      assayAnalysisColumnGroupsInput: columnGroups,
+      assayAnalysisAddRowGroupBtn: rowButton,
+      assayAnalysisAddColumnGroupBtn: columnButton,
+      assayGroupSelectionHint: hint,
+      assayGroupSelectionHintText: hintText,
       assayResultTable: resultTable
     },
     TabulatorLib: RangeTabulator,
@@ -800,7 +810,7 @@ test('assay group selection stays silent but missing selections still explain th
     filterAndNormalizeResults: (results) => ({ ...results }),
     setResultStatus: () => {},
     clearAnalysisOutput: () => {},
-    onAnalysisConfigChange: () => {},
+    onAnalysisConfigChange: () => { changed++; },
     parseResultImportFile: null,
     persistResultAttachment: null,
     onResultImportApplied: null,
@@ -814,11 +824,20 @@ test('assay group selection stays silent but missing selections still explain th
   }];
   assert.equal(document.querySelector('[data-hikari-transient-toast]'), null, 'selecting a range says nothing');
 
-  RangeTabulator.instance.ranges = [];
-  manager.onAddSelectedRowGroup();
-  const toast = document.querySelector('[data-hikari-transient-toast]');
-  assert.equal(toast.textContent, 'Select at least one row before adding a group.');
-  assert.equal(toast.hidden, false, 'a blocked action surfaces in the shared transient notice');
+  manager.onStartRowGroup();
+  assert.equal(rowGroups.value, '', 'arming the tool does not group the previous selection');
+  assert.equal(rowButton.getAttribute('aria-pressed'), 'true');
+  assert.equal(hint.hidden, false);
+  assert.match(hintText.textContent, /Drag across plate rows/);
+  manager.onStartColumnGroup();
+  assert.equal(rowButton.getAttribute('aria-pressed'), 'false');
+  assert.equal(columnButton.getAttribute('aria-pressed'), 'true');
+  assert.match(hintText.textContent, /Drag across plate columns/);
+  manager.cancelGroupSelection();
+  assert.equal(hint.hidden, true);
+  assert.equal(columnButton.getAttribute('aria-pressed'), 'false');
+  assert.equal(changed, 0, 'arming, switching and canceling do not change the analysis');
+  assert.equal(document.querySelector('[data-hikari-transient-toast]'), null, 'the tool gives its hint beside the plate');
 });
 
 test('assay treats loading a saved plate as a clean setup and results baseline', () => {

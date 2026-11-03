@@ -1,5 +1,6 @@
 import { plateError, plateNotice, plateUi } from './localization.js';
 import { PLATES_ROOT_FOLDER_NAME, recordFolderName } from '../../../shared/storage-layout.mjs';
+import { buildAssayPlateCsvFiles } from './plate-csv.js';
 
 function encodeDataUrlPayload(dataUrl) {
   const source = String(dataUrl || '').trim();
@@ -30,6 +31,7 @@ export function createAssayArtifactStorage({
   getActiveResultsAssay,
   persist
 }) {
+  const writes = new Map();
   function getStorageRoot() {
     return String(state.settings?.storagePath || '').trim();
   }
@@ -65,15 +67,41 @@ export function createAssayArtifactStorage({
     return result?.ok ? result : null;
   }
 
-  // Writes the assay's on-disk record: assay-definition.json (plate setup),
-  // analysis-result.json (raw values + latest analysis) and analysis-chart.svg
-  // (the chart data URL is stripped from the JSON so it is not stored twice).
-  async function persistAssayArtifacts(assayId) {
+  // Freeze each requested save, then write it in order. A slow previous save
+  // must never overwrite CSVs produced from newer edits or formulas.
+  function persistAssayArtifacts(assayId) {
     const assay = getAssayById(assayId);
     const storageRoot = getStorageRoot();
     const targetFolder = buildAssayArtifactFolder(assay);
     if (!assay || !storageRoot || !targetFolder || !window.hikariApi?.writeJsonFile) {
-      return;
+      return Promise.resolve({ ok: false, skipped: true });
+    }
+    const snapshot = structuredClone(assay);
+    const current = (writes.get(assayId) || Promise.resolve())
+      .then(() => writeAssayArtifacts(assayId, snapshot, storageRoot, targetFolder))
+      .catch(error => {
+        console.warn('Failed to persist assay artifacts:', error);
+        const detail = String(error?.message || error || '');
+        plateNotice(detail ? plateUi('storage.writeFailed', { error: detail }) : plateUi('storage.writeFailedUnknown'), { type: 'error' });
+        return { ok: false, error };
+      });
+    writes.set(assayId, current);
+    void current.then(() => { if (writes.get(assayId) === current) writes.delete(assayId); });
+    return current;
+  }
+
+  async function writeAssayArtifacts(assayId, assay, storageRoot, targetFolder) {
+    if (!window.hikariApi?.storeImportedFile) throw plateError('storage.unavailable');
+    const csvFiles = buildAssayPlateCsvFiles(assay);
+    const plateCsvFiles = {};
+    for (const [key, file] of Object.entries(csvFiles)) {
+      const stored = await window.hikariApi.storeImportedFile({
+        storagePath: storageRoot, targetFolder, fileName: file.fileName,
+        dataBytes: new TextEncoder().encode(file.content), overwrite: true
+      });
+      if (!stored?.ok) throw stored?.error ? new Error(stored.error) : plateError('storage.saveFailed');
+      plateCsvFiles[key] = { name: file.name, fileName: stored.fileName || file.fileName,
+        filePath: stored.filePath || '', relativePath: stored.relativePath || '' };
     }
 
     const definitionPayload = {
@@ -100,6 +128,10 @@ export function createAssayArtifactStorage({
       serialDilutionSummary: assay.serialDilutionSummary,
       wellLayout: assay.wellLayout,
       resultAttachments: Array.isArray(assay.resultAttachments) ? assay.resultAttachments : [],
+      plateCsvFiles,
+      analysisGroups: assay.analysisGroups || null,
+      analysisDataSource: assay.analysisDataSource || null,
+      concentrationUnit: assay.concentrationUnit || '',
       chartStyle: assay.chartStyle || null,
       transformSpec: assay.transformSpec || null,
       updatedAt: assay.updatedAt
@@ -112,42 +144,40 @@ export function createAssayArtifactStorage({
       latestAnalysis.chartDataUrl = '';
     }
 
-    let definitionResult = null;
-    let analysisResult = null;
-    let chartResult = null;
-    try {
-      [definitionResult, analysisResult, chartResult] = await Promise.all([
-        window.hikariApi.writeJsonFile({
-          storagePath: storageRoot,
-          targetFolder,
-          fileName: 'assay-definition.json',
-          data: definitionPayload
-        }),
-        window.hikariApi.writeJsonFile({
-          storagePath: storageRoot,
-          targetFolder,
-          fileName: 'analysis-result.json',
-          data: {
-            assayId: assay.id,
-            resultValues: assay.resultValues || {},
-            resultAttachments: Array.isArray(assay.resultAttachments) ? assay.resultAttachments : [],
-            latestAnalysis,
-            updatedAt: assay.updatedAt
-          }
-        }),
-        chartDataUrl
-          ? persistAssayImageArtifact({
-              targetFolder,
-              fileName: 'analysis-chart.svg',
-              dataUrl: chartDataUrl
-            })
-          : Promise.resolve(null)
-      ]);
-    } catch (error) {
-      console.warn('Failed to persist assay artifacts:', error);
-      const detail = String(error?.message || error || '');
-      plateNotice(detail ? plateUi('storage.writeFailed', { error: detail }) : plateUi('storage.writeFailedUnknown'), { type: 'error' });
-      return;
+    const [definitionResult, analysisResult, chartResult] = await Promise.all([
+      window.hikariApi.writeJsonFile({
+        storagePath: storageRoot,
+        targetFolder,
+        fileName: 'assay-definition.json',
+        data: definitionPayload
+      }),
+      window.hikariApi.writeJsonFile({
+        storagePath: storageRoot,
+        targetFolder,
+        fileName: 'analysis-result.json',
+        data: {
+          assayId: assay.id,
+          resultValues: assay.resultValues || {},
+          resultAttachments: Array.isArray(assay.resultAttachments) ? assay.resultAttachments : [],
+          plateCsvFiles,
+          transformSpec: assay.transformSpec || null,
+          analysisGroups: assay.analysisGroups || null,
+          analysisDataSource: assay.analysisDataSource || null,
+          latestAnalysis,
+          updatedAt: assay.updatedAt
+        }
+      }),
+      chartDataUrl
+        ? persistAssayImageArtifact({
+            targetFolder,
+            fileName: 'analysis-chart.svg',
+            dataUrl: chartDataUrl
+          })
+        : Promise.resolve(null)
+    ]);
+    if (!definitionResult?.ok || !analysisResult?.ok) {
+      const detail = definitionResult?.error || analysisResult?.error;
+      throw detail ? new Error(detail) : plateError('storage.saveFailed');
     }
 
     const liveAssay = getAssayById(assayId);
@@ -164,6 +194,10 @@ export function createAssayArtifactStorage({
     };
 
     setIfChanged('storageFolder', targetFolder);
+    if (JSON.stringify(liveAssay.plateCsvFiles || {}) !== JSON.stringify(plateCsvFiles)) {
+      liveAssay.plateCsvFiles = plateCsvFiles;
+      changed = true;
+    }
     if (definitionResult?.ok) {
       setIfChanged('definitionJsonPath', definitionResult.filePath);
       setIfChanged('definitionJsonRelativePath', definitionResult.relativePath);
@@ -172,10 +206,8 @@ export function createAssayArtifactStorage({
       setIfChanged('analysisResultPath', analysisResult.filePath);
       setIfChanged('analysisResultRelativePath', analysisResult.relativePath);
     }
-    if (chartResult?.filePath) {
-      if (!liveAssay.latestAnalysis || typeof liveAssay.latestAnalysis !== 'object') {
-        liveAssay.latestAnalysis = {};
-      }
+    if (chartResult?.filePath && liveAssay.latestAnalysis
+      && liveAssay.latestAnalysis.analyzedAt === latestAnalysis?.analyzedAt) {
       if (String(liveAssay.latestAnalysis.chartPath || '') !== String(chartResult.filePath || '')) {
         liveAssay.latestAnalysis.chartPath = chartResult.filePath || '';
         liveAssay.latestAnalysis.chartRelativePath = chartResult.relativePath || '';
@@ -186,10 +218,11 @@ export function createAssayArtifactStorage({
     if (changed) {
       persist();
     }
+    return { ok: true, plateCsvFiles };
   }
 
-  async function persistAssayResultAttachment({ fileName, dataBase64, candidate } = {}) {
-    const assay = getActiveResultsAssay();
+  async function persistAssayResultAttachment({ assayId, fileName, dataBase64, candidate } = {}) {
+    const assay = assayId ? getAssayById(assayId) : getActiveResultsAssay();
     const storageRoot = getStorageRoot();
     const targetFolder = buildAssayArtifactFolder(assay);
     if (!assay) {
@@ -207,7 +240,9 @@ export function createAssayArtifactStorage({
 
     const stored = await window.hikariApi.storeImportedFile({
       storagePath: storageRoot,
-      targetFolder,
+      // Uploaded source files have their own namespace, so a result file named
+      // original-plate.csv can never be overwritten by a generated snapshot.
+      targetFolder: `${targetFolder}/result-files`,
       fileName,
       dataBase64
     });
@@ -221,7 +256,7 @@ export function createAssayArtifactStorage({
       fileName: stored.fileName || String(fileName || '').trim(),
       filePath: stored.filePath || '',
       relativePath: stored.relativePath || '',
-      storageFolder: targetFolder,
+      storageFolder: `${targetFolder}/result-files`,
       importedAt: new Date().toISOString(),
       tableName: candidate?.tableName || '',
       format: candidate?.format || '',

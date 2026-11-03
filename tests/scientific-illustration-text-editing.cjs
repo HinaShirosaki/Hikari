@@ -71,7 +71,7 @@ async function verifyTextEditing({ tool, evaluate, check, win, pause, temp }) {
     })()`);
     await click(edgePoint); await click(edgePoint); await pause(80);
     check(await active() && (await read()).revision === openingRevision && JSON.stringify(await label()) === JSON.stringify(before),
-      'Double-clicking near a newly revealed resize handle opens editing without jitter resizing the font');
+      'Double-clicking near the label edge opens editing without resizing its text box or font');
     await type('Nucleus\nEnvelope');
     check(await evaluate('document.getElementById("canvas-text-editor").getBoundingClientRect().width>0 && document.querySelector("#main-canvas [data-object-id=edit-label] text").style.visibility==="hidden"'), 'The rotated text editor replaces the visible label without duplicate glyphs');
     await fs.writeFile(path.join(temp, 'inline-text-editing.png'), (await win.webContents.capturePage()).toPNG());

@@ -1,4 +1,7 @@
 export const commonEnglish = Object.freeze({
+  "full.40df63ba": "Save Sample",
+  "full.ed6fad43": "Saving sample",
+  "full.b704f1c7": "Could not save the sample.",
   "full.dea0fcd6": "Adding sample",
   "full.462bc166": "Add Sample",
   "full.3167540a": "{p0} container",

@@ -250,11 +250,6 @@
   min-width: 0;
 }
 
-.sequence-viewer-sequence-edit-tag-preview {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
 @media (max-width: 520px) {
   .sequence-viewer-sequence-edit-tag-fields {
     grid-template-columns: minmax(0, 1fr);
@@ -454,8 +449,7 @@ body.theme-night .sequence-viewer-library-item {
   background: transparent;
 }
 
-body.theme-night .sequence-viewer-library-item:hover,
-body.theme-night .sequence-viewer-library-item-active {
+body.theme-night .sequence-viewer-library-item:hover {
   background: var(--theme-surface-hover);
 }
 

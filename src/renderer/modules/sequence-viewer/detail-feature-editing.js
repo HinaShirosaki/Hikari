@@ -155,6 +155,7 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
       ${selectionLabel ? `<p class="small-note">${escapeHtml(selectionLabel)}</p>` : ''}
       ${renderDigestionActions(context?.restrictionFeature, { menu: true })}
       ${context?.fragmentRange || context?.selectionRange ? `<button type="button" class="sequence-viewer-context-item" data-sequence-feature-action="save-fragment">${i18nUi.html('Save DNA Fragment…')}</button>` : ''}
+      <button type="button" class="sequence-viewer-context-item" data-sequence-assembly-current>${i18nUi.html('Assemble DNA…')}</button>
       <button type="button" class="sequence-viewer-context-item" data-sequence-feature-action="add"${context?.selectionRange ? '' : ' disabled'}>${i18nUi.html("Add Feature")}</button>
       <button type="button" class="sequence-viewer-context-item" data-sequence-feature-action="design-primer">${i18nUi.html("Design Primer")}</button>
       <button type="button" class="sequence-viewer-context-item" data-sequence-feature-action="edit"${context?.featureContext ? '' : ' disabled'}>${i18nUi.html("Edit")} ${escapeHtml(featureName)}</button>

@@ -26,6 +26,7 @@ app, and use this same API; [§1.2](#12-tool-plugins) lists what differs.
 | Verb or event | Permission | What it does | See |
 | --- | --- | --- | --- |
 | `app.info` | — | Handshake: plugin id, granted permissions, appearance, storage, and layout context | [§2](#2-read-verbs) |
+| `app.listFonts` | `agent:canvas` | Installed system font family names for canvas font pickers | [§2](#2-read-verbs) |
 | `app.context` event | — | Appearance, storage, or layout changed | [§2](#2-read-verbs) |
 | `protocols.list`, `protocols.get` | `protocols:read` | Protocol summaries; one protocol in full | [§2](#2-read-verbs) |
 | `projects.list` | `projects:read` | Project ids and names | [§2](#2-read-verbs) |
@@ -42,7 +43,7 @@ app, and use this same API; [§1.2](#12-tool-plugins) lists what differs.
 | `downloads.save` | `downloads` | Export bytes through a native save dialog | [§3](#3-write-verbs) |
 | `python.run` | `python` | Run Python in a throwaway sandbox | [§3](#3-write-verbs) |
 | `notebook.appendResult` | `notebook:write` | Append text or a table to an existing notebook entry | [§3](#3-write-verbs) |
-| `app.setLeftRailWidth`, `app.setLeftRailFolded` | `layout` | The shared left-rail width; this plugin's fold state | [§4](#4-layout-and-host-ui-verbs) |
+| `app.setLeftRail`, `app.setLeftRailWidth`, `app.setLeftRailFolded` | `layout` | Header rail toggle, shared width, and this plugin's fold state | [§4](#4-layout-and-host-ui-verbs) |
 | `app.setWorkspaceTools`, `app.workspaceTool` event | `layout` | Buttons in Hikari's right toolbar | [§4](#4-layout-and-host-ui-verbs) |
 | `app.setContextActions`, `app.contextAction` event, `app.readContextAction`, `app.respondContextAction` | `layout` | Actions in the Protocol `…` menu and the PDF selection toolbar, with a one-shot handoff of the selected source | [§4](#4-layout-and-host-ui-verbs) |
 | `agent.chat`, `agent.setContext`, `app.setAgentChatExpanded` | `agent:chat` | Submit to, scope, and open or fold the plugin's chat rail | [§5](#5-agent-verbs) |
@@ -158,6 +159,16 @@ is the minimal `chemicals.list` tool.
 
 ## 2. Read verbs
 
+### `app.listFonts` — `agent:canvas`
+
+`await hikari.call('app.listFonts')` returns `{ families: ['Arial', 'Menlo', ...] }`
+for plugins with `agent:canvas`. The host enumerates installed fonts and returns
+sorted, unique family names (up to 100 characters per name). It shares successful
+discovery across canvas plugins and retries failed or empty reads. Font bytes,
+file paths, and `FontData` objects are never exposed. Plugins retain their own
+bundled fonts and free-form entry if an older host rejects this verb. This does
+not grant the plugin iframe the browser's `local-fonts` permission.
+
 ### `app.info` — *no permission required*
 
 Handshake and self-inspection. Use it to confirm the plugin is running inside
@@ -172,7 +183,7 @@ await hikari.call('app.info');
 //   appearance: { mode: 'day', fontSize: 16 },
 //   storage: { configured: true },
 //   layout: {
-//     leftRail: { width: 280, min: 240, max: 400, mobileBreakpoint: 980, foldable: true, folded: false },
+//     leftRail: { width: 280, min: 240, max: 400, mobileBreakpoint: 980, foldable: true, folded: false, headerToggleAvailable: true },
 //     agentChatRail: { expanded: false, available: true },
 //     workspaceTools: { available: true, icons: ['pointer', 'lasso', /* … */ 'crop', 'fit'] }
 //   }
@@ -187,6 +198,8 @@ two-pane workspace. It reports the host's current persisted rail width and
 clamping limits. `foldable` indicates that the host supports folding; `folded`
 is the saved preference for the calling plugin's rail. Folding is independent
 per plugin, while expanded widths stay shared. This context exposes no host DOM.
+`headerToggleAvailable` indicates support for registering a plugin's rail with
+the header button through `app.setLeftRail` (§4).
 `layout.agentChatRail.expanded` reports whether the host's chat rail is open
 for the active workspace. Opening, folding or navigating between workspaces
 publishes an `app.context` event with `changed:"layout"`. Plugins can use this
@@ -689,6 +702,33 @@ or entry point — and switch to the host surface once a call succeeds.
 
 A tool plugin cannot declare `layout`; Tools owns these surfaces (§1.2).
 
+### `app.setLeftRail` — `layout`
+
+Registers the calling frame's navigation rail with Hikari's header toggle.
+Only the active plugin's registered rail controls the button; plugins without
+a rail leave it hidden. The plugin still renders and hides its own rail.
+
+```js
+const info = await hikari.call('app.info');
+if (info.layout.leftRail.headerToggleAvailable) {
+  const { mounted, leftRail } = await hikari.call('app.setLeftRail', { available: true });
+  // Apply leftRail.folded, then hide your local toggle when mounted is true.
+}
+hikari.on('app.context', info => {
+  // Apply info.layout.leftRail.folded and width to your own rail.
+});
+// When switching to a plugin screen without a rail:
+await hikari.call('app.setLeftRail', { available: false });
+```
+
+`available` must be a boolean and is the only accepted parameter. Header clicks
+save the same per-plugin preference as `app.setLeftRailFolded` and publish
+`app.context` with `changed: 'layout'`. API changes to the fold state also update
+the header. Registration is scoped to the verified frame and cleared when its
+origin grant is replaced; register again when the plugin document reloads.
+This method requires `layout`. Older hosts omit `headerToggleAvailable` and
+reject the verb, so retain a local toggle as a fallback.
+
 ### `app.setLeftRailWidth` — `layout`
 
 Commits the final width of a plugin-owned left rail to Hikari's shared layout
@@ -699,7 +739,7 @@ accepted value, applies it to built-in modules, and broadcasts an
 
 ```js
 const { leftRail } = await hikari.call('app.setLeftRailWidth', { width: 336 });
-// { width: 336, min: 240, max: 400, mobileBreakpoint: 980, foldable: true, folded: false }
+// { width: 336, min: 240, max: 400, mobileBreakpoint: 980, foldable: true, folded: false, headerToggleAvailable: true }
 ```
 
 `width` must be a finite JSON number. It grants no access to settings or host

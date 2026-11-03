@@ -40,6 +40,7 @@ import {
 } from '../app/topbar-search.js';
 import { createTopbarOpenItemHandlers } from '../app/topbar-open-handlers.js';
 import { showTransientNotice } from '../lib/notify.js';
+import { installPlotlyNotifications } from '../app/plotly-notifications.js';
 import { createAppLocalization } from '../app/localization.js';
 
 const APP_READY_EVENT = 'hikari:app-ready';
@@ -115,6 +116,7 @@ export function startHikariCore({
   documentObject = document,
   windowObject = window
 } = {}) {
+  installPlotlyNotifications({ documentObject, windowObject });
   const state = loadState();
   const localization = createAppLocalization({ state, documentObject, windowObject });
   // Plugin views and registry entries must exist before the navigation shell

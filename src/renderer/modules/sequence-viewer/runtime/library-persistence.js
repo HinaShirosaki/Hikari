@@ -118,6 +118,21 @@ export function createLibraryPersistenceActions(ctx) {
     return (await saveDerivedDnaFragments(template, [fragment]))[0];
   }
 
+  async function saveAssembledDna(record, { id, storagePath } = {}) {
+    if (!id || !storagePath || storagePath !== actions.getStoragePath()) throw new Error(i18nUi.text('The storage folder changed. Start assembly again.'));
+    const response = await actions.getBridge()?.sequenceLibraryUpsert?.({
+      storagePath, id, parentEntryId: '', status: LIBRARY_STATUS_SAVED,
+      name: normalizeRecordName(record.name, 'Assembled DNA'), sourceFormat: 'genbank', topology: record.topology,
+      sequenceLength: record.sequence.length, featureCount: record.features.length,
+      sequence: record.sequence, features: record.features, gbkText: buildRecordGenbankText(record), alignmentSessions: []
+    });
+    if (!response?.ok || !response.entry) throw new Error(response?.error || i18nUi.text('The assembled DNA could not be saved.'));
+    await controllers.home?.refreshLibraryEntries({ selectedId: response.entry.id, filter: LIBRARY_STATUS_SAVED, silent: true });
+    await controllers.home?.openLibraryEntryInDetail(response.entry.id);
+    actions.setStatus(i18nUi.text('Saved {name}.', { name: response.entry.name }));
+    return response.entry;
+  }
+
   async function saveDerivedDnaFragments(template, fragments, persistOptions = {}) {
     if (actions.getSelectedRecord() !== template) throw new Error('The template changed. Please try again.');
     if (!fragments?.length) throw new Error('Choose at least one DNA fragment to save.');
@@ -143,8 +158,10 @@ export function createLibraryPersistenceActions(ctx) {
       await controllers.home?.refreshLibraryEntries({ selectedId: parent.id, filter: LIBRARY_STATUS_SAVED, silent: true });
       throw error;
     }
-    await controllers.home?.refreshLibraryEntries({ selectedId: entries[0].id, filter: LIBRARY_STATUS_SAVED, silent: true });
-    await controllers.home?.openLibraryEntryInDetail(entries[0].id);
+    const openAfterSave = persistOptions.openAfterSave !== false;
+    if (!openAfterSave) state.expandedDnaEntryIds = [...new Set([...(state.expandedDnaEntryIds || []), parent.id])];
+    await controllers.home?.refreshLibraryEntries({ selectedId: openAfterSave ? entries[0].id : parent.id, filter: LIBRARY_STATUS_SAVED, silent: true });
+    if (openAfterSave) await controllers.home?.openLibraryEntryInDetail(entries[0].id);
     actions.setStatus(entries.length === 1
       ? i18nUi.text('Saved {name} under {parent} as GenBank DNA.', { name: entries[0].name, parent: parent.name })
       : i18nUi.text('Saved {count} DNA fragments under {parent} as GenBank DNA.', { count: entries.length, parent: parent.name }));
@@ -344,6 +361,7 @@ export function createLibraryPersistenceActions(ctx) {
     persistRecordToLibrary,
     renameLibraryEntry,
     saveCurrentRecordToLibrary,
+    saveAssembledDna,
     saveDerivedDnaFragment,
     saveDerivedDnaFragments,
     upsertLibraryFolder

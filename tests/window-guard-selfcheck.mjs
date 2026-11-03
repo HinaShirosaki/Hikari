@@ -18,6 +18,7 @@ function harness(platform = process.platform) {
   const opened = [];
   const listeners = new Map();
   let permissionHandler = null;
+  let permissionCheck = null;
   let windowOptions = null;
 
   const webContents = {
@@ -25,6 +26,7 @@ function harness(platform = process.platform) {
     on(event, fn) { listeners.set(event, fn); },
     getURL: () => 'file:///app/index.html',
     session: {
+      setPermissionCheckHandler(fn) { permissionCheck = fn; },
       setPermissionRequestHandler(fn) { permissionHandler = fn; }
     }
   };
@@ -49,9 +51,10 @@ function harness(platform = process.platform) {
       listeners.get('will-navigate')({ preventDefault() { prevented = true; } }, url);
       return prevented;
     },
-    permission: (name = 'media') => {
+    permissionCheck: (name, details, contents = webContents) => permissionCheck(contents, name, 'file:///', details),
+    permission: (name = 'media', details, contents = webContents) => {
       let allowed = null;
-      permissionHandler({}, name, (value) => { allowed = value; });
+      permissionHandler(contents, name, (value) => { allowed = value; }, details);
       return allowed;
     }
   };
@@ -99,6 +102,26 @@ function harness(platform = process.platform) {
 assert.equal(harness().permission(), false, 'permission requests must be refused');
 assert.equal(harness().permission('clipboard-read'), false, 'clipboard read must stay refused');
 assert.equal(harness().permission('clipboard-sanitized-write'), true, 'navigator.clipboard.writeText must be allowed');
+
+// FontData (including its blob() method) stays confined to the exact host page.
+{
+  const h = harness();
+  const host = { isMainFrame: true, requestingUrl: 'file:///app/index.html' };
+  assert.equal(h.permission('local-fonts', host), true);
+  assert.equal(h.permissionCheck('local-fonts', host), true);
+  assert.equal(h.permissionCheck('local-fonts', { ...host, requestingUrl: host.requestingUrl + '#figura' }), true);
+  for (const details of [undefined, {}, { ...host, isMainFrame: false },
+    { ...host, requestingUrl: 'http://127.0.0.1:1234/' },
+    { ...host, requestingUrl: 'file:///other.html' },
+    { ...host, requestingUrl: 'file:///app/index.html?other-page' }]) {
+    assert.equal(h.permission('local-fonts', details), false);
+    assert.equal(h.permissionCheck('local-fonts', details), false);
+  }
+  assert.equal(h.permission('local-fonts', host, {}), false, 'another window must not inherit font access');
+  assert.equal(h.permissionCheck('local-fonts', host, null), false);
+  assert.equal(h.permissionCheck('media', host), false);
+  assert.equal(h.permissionCheck('clipboard-read', host), false);
+}
 
 // Only macOS puts native window controls inside the app's header row.
 const macWindow = harness('darwin').windowOptions;

@@ -155,13 +155,14 @@ function assayBody(assay, options) {
     + image(`${assay.name || 'Assay'} analysis plot`, resolveLocalPath(analysis.chartRelativePath || analysis.chartPath, options.storageRoot), analysis.chartDataUrl, options)
     + section('Assay files', files([
       ...array(assay.resultAttachments),
+      ...Object.values(object(assay.plateCsvFiles)),
       ...[['definitionJson', 'Plate setup'], ['analysisResult', 'Analysis results']]
         .filter(([key]) => assay[`${key}RelativePath`] || assay[`${key}Path`])
         .map(([key, name]) => ({ name, path: assay[`${key}Path`], relativePath: assay[`${key}RelativePath`] }))
     ], [], options), 4)
     + additionalDetails(assay, ['name', 'assayNumber', 'plateLabel', 'plateType', 'projectName', 'updatedAt',
       'sampleAxis', 'concentrationAxis', 'concentrationUnit', 'wellLayout', 'resultValues', 'latestAnalysis',
-      'serialDilution', 'serialDilutionSummary', 'resultAttachments'], 4);
+      'serialDilution', 'serialDilutionSummary', 'resultAttachments', 'plateCsvFiles'], 4);
 }
 
 function gelBody(gel, options) {

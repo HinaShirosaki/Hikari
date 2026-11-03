@@ -1,5 +1,8 @@
 // Simplified Chinese preview. Missing entries use the English catalog.
 export const commonSimplifiedChinese = Object.freeze({
+  "full.40df63ba": "保存样品",
+  "full.ed6fad43": "正在保存样品",
+  "full.b704f1c7": "无法保存样品。",
   "full.dea0fcd6": "正在添加样品",
   "full.462bc166": "添加样本",
   "full.3167540a": "{p0} 个容器",

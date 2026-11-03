@@ -6,6 +6,7 @@ import { MAX_PLUGIN_STORAGE_CHARS, measurePluginStorageValue } from '../../lib/p
 import { LAYOUT_VERBS } from './layout-verbs.js';
 import { renderPluginPlot } from './plotly-render.js';
 import { readPluginChemicalClipboard } from './chemical-clipboard.js';
+import { listCanvasFonts } from './fonts.js';
 import { asArray } from '../../lib/normalize.js';
 import { readPluginSettings, writePluginSettings } from '../../lib/plugin-settings.js';
 import { buildBufferCandidates } from '../../lib/bench-calculations/buffer-candidates.js';
@@ -21,6 +22,10 @@ const NOTIFICATION_TYPES = Object.freeze(['success', 'error']);
 // permission is unreachable, so adding a handler is not enough to expose data.
 const VERBS = {
   ...LAYOUT_VERBS,
+  'app.listFonts': {
+    permission: 'agent:canvas',
+    handler: (_params, { windowObject }) => listCanvasFonts(windowObject)
+  },
   'clipboard.readChemical': {
     permission: 'clipboard:read',
     handler: readPluginChemicalClipboard

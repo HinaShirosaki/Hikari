@@ -56,7 +56,9 @@ function startMainApp() {
       appIconPath: mainServices.appIconPath,
       preloadPath: path.join(__dirname, '..', 'preload.js'),
       onCloseRequested: (event, window) => {
-        if (allowWindowClose || window.webContents?.isDestroyed?.()) {
+        // A crashed or killed renderer holds nothing it could still save, and
+        // cannot answer the close handshake.
+        if (allowWindowClose || window.webContents?.isDestroyed?.() || window.webContents?.isCrashed?.()) {
           allowWindowClose = true;
           return;
         }
@@ -65,7 +67,12 @@ function startMainApp() {
           return;
         }
         closeRequestPending = true;
-        window.webContents.send(SYSTEM.APP_CLOSE_REQUESTED);
+        try {
+          window.webContents.send(SYSTEM.APP_CLOSE_REQUESTED);
+        } catch (error) {
+          // A frame disposed mid-navigation must not skip the fallback below.
+          console.error('Failed to ask the window about unsaved changes:', error);
+        }
         closeResponseTimer = setTimeout(async () => {
           if (!closeRequestPending || !mainWindow) {
             return;

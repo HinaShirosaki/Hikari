@@ -41,7 +41,7 @@ module.exports = function registerShellAndPackagingContracts(context = {}) {
     test('main window isolates the renderer and loads the split preload outside the OS sandbox', () => {
       const { createMainWindow } = require(path.join(__dirname, 'src', 'main', 'windows', 'create-main-window.js'));
       let options = null;
-      const webContents = { setWindowOpenHandler() {}, on() {}, getURL: () => '', session: { setPermissionRequestHandler() {} } };
+      const webContents = { setWindowOpenHandler() {}, on() {}, getURL: () => '', session: { setPermissionCheckHandler() {}, setPermissionRequestHandler() {} } };
       createMainWindow({
         BrowserWindow: function BrowserWindowStub(windowOptions) {
           options = windowOptions;

@@ -9,7 +9,7 @@ import {
 } from './analysis/index.js';
 import { isValidWellForDefinition } from './plate-model.js';
 import { parseNumericResult } from './shared.js';
-import { plateMessage } from './localization.js';
+import { plateMessage, setPlateText } from './localization.js';
 import {
   createDefaultChartStyle,
   normalizeChartStyle
@@ -52,7 +52,6 @@ export function createAssayAnalysisView({
   onAnalysisDataSourceChanged
 }) {
   const {
-    assayAnalysisAsymmetricInput,
     assayAnalysisColumnGroupsInput,
     assayAnalysisErrorBarsInput,
     assayAnalysisErrorBarsField,
@@ -61,6 +60,7 @@ export function createAssayAnalysisView({
     assayAnalysisDataSourceInput,
     assayAnalysisHighControlInput,
     assayAnalysisKindInput,
+    assayAnalysisMethodHint,
     assayAnalysisLowControlInput,
     assayAnalysisPolyOrderField,
     assayAnalysisPolyOrderInput,
@@ -157,10 +157,6 @@ export function createAssayAnalysisView({
   const chartControls = assayChartStyleMount
     ? mountChartControls(assayChartStyleMount, {
       store: chartStyleStore,
-      agentElements: {
-        getStyle: () => chartSurface?.getAgentElementStyle(),
-        apply: (patch) => chartSurface?.updateAgentElements(patch.plotElements)
-      },
       safeText
     })
     : null;
@@ -236,7 +232,6 @@ export function createAssayAnalysisView({
       xAxis: assayAnalysisXAxisInput?.value,
       analysis: assayAnalysisKindInput?.value,
       polyOrder: Number(assayAnalysisPolyOrderInput?.value),
-      asymmetric: Boolean(assayAnalysisAsymmetricInput?.checked),
       subtotals: Boolean(assayAnalysisSubtotalsInput?.checked),
       errorBars: assayAnalysisErrorBarsInput ? assayAnalysisErrorBarsInput.checked : true,
       highControl: assayAnalysisHighControlInput?.value,
@@ -249,6 +244,7 @@ export function createAssayAnalysisView({
   function syncAnalysisControls() {
     const analysis = String(assayAnalysisKindInput?.value || 'summary');
     const isSummary = analysis === 'summary';
+    setPlateText(assayAnalysisMethodHint, `methodHint.${analysis}`);
     const toggle = (element, visible) => {
       if (element) {
         element.hidden = !visible;
@@ -264,9 +260,6 @@ export function createAssayAnalysisView({
     // Every analysis pools replicates before plotting, so every one of them can show
     // the spread -- a fitted curve carries it on its observed markers.
     toggle(assayAnalysisErrorBarsField, true);
-    if (assayAnalysisAsymmetricInput?.closest) {
-      toggle(assayAnalysisAsymmetricInput.closest('label'), analysis === 'sigmoidal');
-    }
   }
 
   function clearOutput() {

@@ -58,12 +58,12 @@ assert.equal(
   'ec50 and ic50 were always the same fit'
 );
 assert.equal(specFromLegacyMethod('standard_curve_cubic').polyOrder, 3, 'cubic -> polynomial order 3');
-assert.equal(specFromLegacyMethod('standard_curve_5pl_concentration').asymmetric, true, '5PL -> asymmetric');
+assert.equal(specFromLegacyMethod('standard_curve_5pl_concentration').analysis, 'sigmoidal5', '5PL -> sigmoidal5');
 assert.equal(specFromLegacyMethod('nested_summary').subtotals, true, 'nested summary -> subtotal rows');
 assert.equal(specFromLegacyMethod('row_summary').groupBy, 'row', 'row summary -> groupBy row');
 assert.equal(normalizeAnalysisSpec({ analysis: 'bogus' }).analysis, 'summary', 'unknown analysis falls back');
 assert.equal(normalizeAnalysisSpec({ polyOrder: 9 }).polyOrder, 2, 'polyOrder clamps out of range');
-assert.ok(describeAnalysisSpec({ analysis: 'sigmoidal', asymmetric: true }).includes('5PL'), 'spec describes itself');
+assert.ok(describeAnalysisSpec({ analysis: 'sigmoidal5' }).includes('5PL'), 'spec describes itself');
 
 // --- summary: two grouping keys become two leading columns, plus SD error bars ---
 const twoFactor = [
@@ -144,6 +144,13 @@ assert.ok(
 assert.equal(sigmoid.chartModel.chartType, 'line', 'fits chart as lines');
 assert.equal(sigmoid.chartModel.series.length, 2, 'one fitted line per series');
 assert.ok(sigmoid.chartModel.series[0].markers.length >= 5, 'observed means are kept as markers');
+const sigmoid5 = analyzeAssayData({
+  spec: { analysis: 'sigmoidal5', groupBy: 'sample_concentration', xAxis: 'concentration' },
+  observations: doseCurve
+});
+const modelIndex = sigmoid5.headers.indexOf('Model');
+assert.equal(sigmoid.rows[0][modelIndex], 'Sigmoidal 4PL', 'sigmoidal is the symmetric 4PL');
+assert.equal(sigmoid5.rows[0][modelIndex], 'Asymmetric Sigmoidal 5PL', 'sigmoidal5 is its own method, the 5PL');
 
 // --- custom groups now reach a fit, not just the summary table ---
 const customGroups = analyzeAssayData({

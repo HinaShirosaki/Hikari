@@ -14,25 +14,27 @@ const { importStorageRoot } = require('../src/main/storage/storage-import.js');
 const deferred = () => Promise.withResolvers();
 const turn = () => new Promise(resolve => setImmediate(resolve));
 
-function fixture(api, state, save = () => {}) {
+function fixture(api, state, save = () => {}, externalSources = () => []) {
   const document = createMockDocument(['overlay', 'title', 'list', 'description', 'status', 'close-btn', 'cancel-btn', 'discard-btn', 'save-btn']
     .map(id => `unsaved-changes-${id}`));
   const element = name => document.getElementById(`unsaved-changes-${name}`);
   element('list').replaceChildren = (...children) => { element('list').children = children; };
   element('overlay').hidden = true;
   let dirty = false, reloads = 0, editorSaves = 0;
-  const events = {};
+  const events = {}, responses = [];
   const service = createUnsavedChangesService({
     moduleRegistry: { get: key => key === 'protocol' ? {
       hasUnsavedChanges: () => dirty,
       saveUnsavedChanges: async () => { editorSaves++; save(); dirty = false; return true; }
     } : null },
+    api: { respondToAppClose: action => responses.push(action) },
     flushPendingSaves: () => flushMarkdownRecordState(api, state),
     hasPendingSaves: hasPendingMarkdownSaves,
+    externalSources,
     documentObject: document,
     windowObject: { addEventListener: (name, listener) => { events[name] = listener; }, location: { reload: () => { reloads++; } } }
   });
-  return { service, element, events, dirty: () => { dirty = true; }, get reloads() { return reloads; }, get editorSaves() { return editorSaves; } };
+  return { service, element, events, responses, dirty: () => { dirty = true; }, get reloads() { return reloads; }, get editorSaves() { return editorSaves; } };
 }
 
 test('Save & Reload waits for the real Markdown queue and the reloaded record retains the edit', async () => {
@@ -78,7 +80,7 @@ test('clean reload waits for earlier autosaves and flushes the latest state', as
   const f = fixture(api, state);
   const reloading = f.service.requestReload();
   assert.equal(f.reloads, 0);
-  assert.equal(f.element('overlay').hidden, false);
+  assert.equal(f.element('overlay').hidden, true, 'a clean reload waits without flashing an empty save dialog');
   gate.resolve();
   await earlier; await reloading;
   assert.equal(f.reloads, 1);
@@ -154,4 +156,114 @@ test('a menu reload right after an editor save waits until storage has the edit'
   prevented = false;
   f.events.beforeunload({ preventDefault: () => { prevented = true; } });
   assert.equal(prevented, false, 'once storage answers, the reload goes through');
+});
+
+test('clean quit acknowledges main, drains queued writes, and never shows a save dialog', async () => {
+  const state = { settings: { storagePath: '/synthetic' }, protocols: [{ id: 'p', name: 'Earlier' }] };
+  const gate = deferred(), started = deferred(), writes = [];
+  const api = { autoSaveDataFile: async data => { started.resolve(); await gate.promise; writes.push(data); return { ok: true }; } };
+  const earlier = syncMarkdownRecordState(api, state);
+  await started.promise;
+  state.protocols[0].name = 'Latest';
+  const f = fixture(api, state);
+  const closing = f.service.handleCloseRequested();
+  assert.deepEqual(f.responses, ['pending']);
+  assert.equal(f.element('overlay').hidden, true);
+  let prevented = false;
+  f.events.beforeunload({ preventDefault: () => { prevented = true; } });
+  assert.equal(prevented, true);
+  await f.service.handleCloseRequested();
+  assert.deepEqual(f.responses, ['pending', 'pending']);
+  gate.resolve(); await earlier; await closing;
+  assert.deepEqual(writes.map(data => data.protocols[0].name), ['Earlier', 'Latest']);
+  assert.deepEqual(f.responses, ['pending', 'pending', 'quit']);
+  assert.equal(f.element('overlay').hidden, true);
+});
+
+test('clean local-only quit stays quiet and allows unloading', async () => {
+  const f = fixture({}, { settings: {} });
+  await f.service.handleCloseRequested();
+  assert.deepEqual(f.responses, ['pending', 'quit']);
+  assert.equal(f.element('overlay').hidden, true);
+  f.events.beforeunload({ preventDefault: () => assert.fail('approved quit was blocked') });
+});
+
+test('failed clean quit shows its storage error and stays open until retry succeeds', async () => {
+  let failed = true;
+  const f = fixture({ autoSaveDataFile: async () => failed ? { ok: false, error: 'Disk full' } : { ok: true } }, { settings: { storagePath: '/synthetic' } });
+  await f.service.handleCloseRequested();
+  assert.deepEqual(f.responses, ['pending']);
+  assert.equal(f.element('overlay').hidden, false);
+  assert.match(f.element('status').textContent, /Disk full/);
+  await f.service.handleCloseRequested();
+  assert.match(f.element('status').textContent, /Disk full/, 'another quit cannot clear the error');
+  failed = false;
+  await f.service.saveAndQuit();
+  assert.deepEqual(f.responses, ['pending', 'pending', 'quit']);
+});
+
+test('Discard & Quit after a shown storage error quits without retrying the failing write', async () => {
+  let writes = 0;
+  const f = fixture({ autoSaveDataFile: async () => { writes++; return { ok: false, error: 'could not be cloned' }; } }, { settings: { storagePath: '/synthetic' } });
+  await f.service.handleCloseRequested();
+  assert.match(f.element('status').textContent, /could not be cloned/);
+  f.element('discard-btn').click();
+  for (let i = 0; i < 5; i++) await turn();
+  assert.equal(writes, 1);
+  assert.deepEqual(f.responses, ['pending', 'quit']);
+  assert.equal(f.element('overlay').hidden, true);
+  f.events.beforeunload({ preventDefault: () => assert.fail('approved quit was blocked') });
+  // Cancel clears the error: the next quit tries storage again before Discard skips it.
+  await f.service.handleCloseRequested();
+  f.element('cancel-btn').click();
+  await f.service.handleCloseRequested();
+  assert.equal(writes, 3);
+});
+
+test('repeated quit preserves unchecked editors and waits for the user decision', async () => {
+  let pluginDirty = true, pluginSaves = 0;
+  const f = fixture({}, { settings: {} }, () => {}, () => [{ key: 'plugin:test', label: 'Plugin draft', moduleApi: {
+    hasUnsavedChanges: () => pluginDirty,
+    saveUnsavedChanges: async () => { pluginSaves++; pluginDirty = false; return true; }
+  } }]);
+  f.dirty();
+  await f.service.handleCloseRequested();
+  const rows = f.element('list').children;
+  const checkbox = rows[1]._inserted[0]._inserted[0];
+  checkbox.checked = false; checkbox.change();
+  await f.service.handleCloseRequested();
+  assert.equal(f.element('list').children, rows);
+  assert.equal(checkbox.checked, false);
+  assert.deepEqual(f.responses, ['pending', 'pending']);
+  await f.service.saveAndQuit();
+  assert.equal(f.editorSaves, 1);
+  assert.equal(pluginSaves, 0);
+  assert.equal(pluginDirty, true);
+  assert.equal(f.responses.at(-1), 'quit');
+});
+
+test('quit during a reload dialog preserves the reload action', async () => {
+  const f = fixture({}, { settings: {} });
+  f.dirty(); await f.service.requestReload();
+  await f.service.handleCloseRequested();
+  assert.deepEqual(f.responses, ['cancel']);
+  assert.match(f.element('title').textContent, /reloading/);
+  await f.service.saveAndQuit();
+  assert.equal(f.reloads, 1);
+  assert.deepEqual(f.responses, ['cancel']);
+});
+
+test('an edit made while clean quit waits for storage gets a save choice', async () => {
+  const gate = deferred(), started = deferred();
+  const f = fixture({ autoSaveDataFile: async () => { started.resolve(); await gate.promise; return { ok: true }; } }, { settings: { storagePath: '/synthetic' } });
+  const closing = f.service.handleCloseRequested();
+  await started.promise;
+  f.dirty(); gate.resolve(); await closing;
+  assert.deepEqual(f.responses, ['pending']);
+  assert.equal(f.element('overlay').hidden, false);
+  assert.equal(f.element('list').children[0].textContent, 'Protocol');
+  assert.equal(f.element('save-btn').disabled, false);
+  await f.service.saveAndQuit();
+  assert.equal(f.editorSaves, 1);
+  assert.equal(f.responses.at(-1), 'quit');
 });

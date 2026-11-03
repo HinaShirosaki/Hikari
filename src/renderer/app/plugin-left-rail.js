@@ -13,6 +13,7 @@ export function getPluginLeftRailLayout(pluginId, { windowObject = globalThis.wi
   }
   return {
     ...getSharedLeftRailLayout({ document: windowObject?.document, windowObject }),
+    headerToggleAvailable: Boolean(windowObject?.document?.getElementById?.('topbar-left-rail-toggle')),
     foldable: true,
     folded: folded === true
   };

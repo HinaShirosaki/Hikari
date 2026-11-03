@@ -348,7 +348,7 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       assert.deepEqual(showView.calls, []);
     });
 
-    test('unsaved changes service immediately approves close when editors are clean', () => {
+    test('unsaved changes service approves close after flushing clean editors', async () => {
       const servicesModule = loadServicesModule();
       const responses = [];
       const service = servicesModule.createUnsavedChangesService({
@@ -363,9 +363,9 @@ module.exports = function registerModuleServicesSuite(context = {}) {
         windowObject: null
       });
 
-      service.handleCloseRequested();
+      await service.handleCloseRequested();
 
-      assert.deepEqual(responses, ['quit']);
+      assert.deepEqual(responses, ['pending', 'quit']);
       assert.equal(service.getUnsavedSources().length, 0);
     });
 
