@@ -97,7 +97,7 @@ module.exports = function registerPluginSettingsSuite(context = {}) {
   test('plugin settings: bridge confines reads, writes, and change events to granted frame identity', async () => {
     const { createPluginBridge, PLUGIN_BRIDGE_VERBS } = await import(pathToFileURL(path.join(root, 'src/renderer/app/plugin-bridge.js')).href);
     const listeners = new Map();
-    const windowObject = { addEventListener() {}, CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init.detail; } },
+    const windowObject = { addEventListener() {}, dispatchEvent() {}, CustomEvent: class { constructor(type, init = {}) { this.type = type; this.detail = init.detail; } },
       document: { addEventListener: (name, callback) => listeners.set(name, callback), dispatchEvent: event => listeners.get(event.type)?.(event) } };
     const state = { settings: { pluginSettings: { neighbour: { author: 'private' } } } };
     let fail = false;

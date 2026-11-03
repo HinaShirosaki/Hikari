@@ -14,7 +14,9 @@ const { verifyCanvasInteraction } = require('./scientific-illustration-interacti
 const { verifyTextResize } = require('./scientific-illustration-text-resize.cjs');
 const { verifyTextBounds } = require('./scientific-illustration-text-bounds.cjs');
 const { verifyTextEditing } = require('./scientific-illustration-text-editing.cjs');
-const { verifyRailFolding } = require('./scientific-illustration-rail.cjs');
+const { verifySystemFonts } = require('./scientific-illustration-fonts.cjs');
+const { verifyLayerOrder } = require('./scientific-illustration-layer-order.cjs');
+const { verifyRailFolding, verifyHeaderRail } = require('./scientific-illustration-rail.cjs');
 const { verifyCanvasLayout } = require('./scientific-illustration-layout.cjs');
 const { verifyGrouping } = require('./scientific-illustration-grouping.cjs');
 const { verifySelectionToolbar } = require('./scientific-illustration-selection-toolbar.cjs');
@@ -32,6 +34,7 @@ const { verifyRotation } = require('./scientific-illustration-rotation.cjs');
 const { verifyClipboard } = require('./scientific-illustration-clipboard.cjs');
 const { verifyChemicalPaste } = require('./scientific-illustration-chemical-paste.cjs');
 const { verifyContextMenu } = require('./scientific-illustration-context-menu.cjs');
+const { verifyGenerateHere } = require('./scientific-illustration-generate-here.cjs');
 const { verifySystemHistory } = require('./scientific-illustration-history.cjs');
 const { verifyAlignment } = require('./scientific-illustration-alignment.cjs');
 const { verifySmartGuides } = require('./scientific-illustration-smart-guides.cjs');
@@ -44,8 +47,10 @@ const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
 const repo = path.resolve(__dirname, '..');
 const runtime = path.resolve(process.env.HIKARI_PLUGIN_QA_ROOT || repo);
 const sharedToolsQA = process.env.HIKARI_SHARED_TOOLS_QA_ONLY === '1';
+const headerRailQA = process.env.HIKARI_HEADER_RAIL_QA_ONLY === '1';
 const sourceActionsQA = process.env.HIKARI_SOURCE_ACTIONS_QA_ONLY === '1';
 const automaticAssetsQA = process.env.HIKARI_AUTOMATIC_ASSETS_QA_ONLY === '1';
+const fontsQA = process.env.HIKARI_FONTS_QA_ONLY === '1';
 const { registerPluginIpc } = require(path.join(runtime, 'src/main/ipc/register-plugin-ipc.js'));
 const { createMainMcpService } = require(path.join(runtime, 'src/main/core/services/create-mcp-service.js'));
 const { createAgentMcpStdioServer } = require(path.join(runtime, 'src/main/agent/mcp-contract/stdio-server.js'));
@@ -89,6 +94,7 @@ async function run() {
     // This fixture supplies a connected, local stub agent.
     document.body.dataset.agentAvailability='connected';
     import { createPluginBridge } from ${JSON.stringify(url('src/renderer/app/plugin-bridge.js'))};
+    import { initSharedLeftRailResizers } from ${JSON.stringify(url('src/renderer/app/shared-left-rail.js'))};
     import { createUndoService } from ${JSON.stringify(url('src/renderer/services/undoService.js'))};
     import { createPluginHistoryDelegate } from ${JSON.stringify(pathToFileURL(path.join(repo, 'src/renderer/app/plugin-history.js')).href)};
     import { installPlugins } from ${JSON.stringify(url('src/renderer/app/plugin-loader.js'))};
@@ -131,15 +137,21 @@ async function run() {
     document.body.dataset.activeView=qaRegistry[0].viewId;
     document.getElementById(qaRegistry[0].viewId).classList.add('is-active');
     railRuntime.syncState(qaRegistry[0].viewId);
+    if (${headerRailQA}) window.qaSharedLeftRail=initSharedLeftRailResizers({document,windowObject:window});
   `);
   const historyControls='<div class="topbar-history-controls" role="group" aria-label="Undo and redo" style="position:fixed;left:16px;bottom:16px;z-index:1000"><button id="global-undo-btn" aria-label="Undo" disabled>↶</button><button id="global-redo-btn" aria-label="Redo" disabled>↷</button></div>';
-  if (sharedToolsQA) {
+  if (sharedToolsQA || headerRailQA) {
     // Packages contain the generated shell rather than the UI source fragments.
     const shellPath = path.join(runtime, 'ui/html/shell/end.html');
     const shell = fsSync.readFileSync(fsSync.existsSync(shellPath) ? shellPath : path.join(runtime, 'index.html'), 'utf8');
     const railStart = shell.indexOf('<aside id="universal-agent-chat-rail"');
     const railMarkup = shell.slice(railStart, shell.indexOf('</aside>', railStart) + 8);
-    await fs.writeFile(path.join(temp, 'index.html'), `<!DOCTYPE html><link rel="stylesheet" href="${url('styles.css')}"><style>body{margin:0;height:100vh}.workspace-main{height:100%;padding:0}.view,.plugin-view__main,iframe{width:100%;height:100%;border:0}iframe{display:block}</style>${historyControls}<div class="workspace-shell"><div class="workspace-main"></div>${railMarkup}</div><script type="module" src="host.mjs"></script>`);
+    const startPath = path.join(runtime, 'ui/html/shell/start.html');
+    const shellStart = fsSync.readFileSync(fsSync.existsSync(startPath) ? startPath : path.join(runtime, 'index.html'), 'utf8');
+    const header = headerRailQA ? shellStart.match(/<header class="topbar">[\s\S]*?<\/header>/)[0] : '';
+    const workspaceMarkup = `<div class="workspace-shell"><div class="workspace-main"></div>${railMarkup}</div>`;
+    const contents = headerRailQA ? `<main class="app-shell">${header}${workspaceMarkup}</main>` : workspaceMarkup;
+    await fs.writeFile(path.join(temp, 'index.html'), `<!DOCTYPE html><link rel="stylesheet" href="${url('styles.css')}"><style>body{margin:0;height:100vh}.workspace-main{height:100%;padding:0}.view,.plugin-view__main,iframe{width:100%;height:100%;border:0}iframe{display:block}</style>${historyControls}${contents}<script type="module" src="host.mjs"></script>`);
   } else {
   await fs.writeFile(path.join(temp, 'index.html'), `<!DOCTYPE html><style>body{margin:0}.workspace-main{height:100vh}.view,.plugin-view__main,iframe{width:100%;height:100%;border:0}iframe{display:block}</style>${historyControls}<div hidden><select id="agent-rail-project-select"></select><div id="agent-rail-chat-history"></div><textarea id="agent-rail-message-input"></textarea><button id="agent-rail-send-btn">Send</button><div id="agent-rail-quick-prompts"><button data-agent-suggest-prompt="Summarize workspace">Old prompt</button></div><div id="agent-rail-session-list"></div><p id="agent-rail-status"></p></div><div class="workspace-main"></div><script type="module" src="host.mjs"></script>`);
   }
@@ -147,6 +159,10 @@ async function run() {
     // Hidden fixtures still need animation frames for layout/context observers.
     backgroundThrottling: false, contextIsolation: true, nodeIntegration: false, sandbox: false, preload: path.join(runtime, 'src/main/preload.js') } });
   const errors = [];
+  if (fontsQA) {
+    const { configureMainWindowPermissions } = require(path.join(runtime, 'src/main/windows/create-main-window.js'));
+    configureMainWindowPermissions(win, pathToFileURL(path.join(temp, 'index.html')).href);
+  }
   win.webContents.on('console-message', event => { if (event.level === 'error' && !event.message.includes('Content-Security-Policy')) {
     errors.push(event.message); if (sourceActionsQA) console.error('Source QA renderer:', event.message);
   } });
@@ -179,6 +195,29 @@ async function run() {
     const result = await client.callTool({ name: 'plugin_canvas', arguments: { plugin_id: 'scientific-illustration', request, ...(assets ? { assets } : {}) } });
     return { ...result.structuredContent, content: result.content };
   };
+  if (headerRailQA) {
+    await verifyHeaderRail({ tool, evaluate, check, win, pause, temp, reloadPlugin: async () => {
+      await evaluate('location.reload()'); await pause(350);
+      frame = win.webContents.mainFrame.frames.find(item => item.url.startsWith('http://127.0.0.1'));
+      await evaluate('illustrationWorkspace.ready.then(()=>true)');
+    } });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura header left rail: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
+  if (fontsQA) {
+    await verifySystemFonts({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura system fonts: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
+  if (process.env.HIKARI_LAYER_ORDER_QA_ONLY === '1') {
+    await verifyLayerOrder({ tool, evaluate, check, win, pause, temp, reloadPlugin: async () => {
+      await evaluate('location.reload()'); await pause(350);
+      frame = win.webContents.mainFrame.frames.find(item => item.url.startsWith('http://127.0.0.1'));
+      await evaluate('illustrationWorkspace.ready.then(()=>true)');
+    } });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura layer order: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
   if (process.env.HIKARI_SHIFT_DRAG_QA_ONLY === '1') {
     await verifyShiftDrag({ tool, evaluate, check, win, pause, temp });
     check(errors.length === 0, errors.join('\n'));
@@ -274,6 +313,11 @@ async function run() {
     await verifyContextMenu({ tool, evaluate, check, win, pause, temp });
     check(errors.length === 0, errors.join('\n'));
     console.log(`Figura context menu: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
+  if (process.env.HIKARI_GENERATE_HERE_QA_ONLY === '1') {
+    await verifyGenerateHere({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura generate here: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
   }
   if (process.env.HIKARI_CHEMICAL_PASTE_QA_ONLY === '1') {
     await verifyChemicalPaste({ tool, evaluate, check, win, pause, temp });

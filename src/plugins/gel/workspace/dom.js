@@ -45,7 +45,6 @@ export function getGelElements(root = document) {
     gelImageRow: root.getElementById('gel-image-row'),
     gelLaneTableShell: root.getElementById('gel-lane-table-shell'),
     gelLaneTablePanel: root.getElementById('gel-lane-table-panel'),
-    gelOpenLaneTableBtn: root.getElementById('gel-open-lane-table-btn'),
     gelCloseLaneTableBtn: root.getElementById('gel-close-lane-table-btn'),
     gelLaneTableSpacer: root.getElementById('gel-lane-table-label-spacer'),
     gelCanvas: root.getElementById('gel-canvas'),

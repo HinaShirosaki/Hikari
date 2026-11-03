@@ -231,11 +231,12 @@ export function initAssay({
     return result;
   }
 
-  async function onAssayResultImportApplied({ attachment } = {}) {
+  async function onAssayResultImportApplied({ attachment, assayId } = {}) {
     const assay = getActiveResultsAssay();
     if (!assay) {
       throw plateError('results.notFound');
     }
+    if (assayId && assay.id !== assayId) throw plateError('import.assayChanged');
     const def = getPlateDefinition(assay.plateType || elements.assayPlateTypeInput?.value || '96');
     assay.resultValues = layoutManager.filterMappedResults(normalizeResults(runtime.currentResults, def));
     if (attachment && typeof attachment === 'object') {
@@ -251,7 +252,8 @@ export function initAssay({
     if (typeof onAssaysChanged === 'function') {
       onAssaysChanged();
     }
-    await artifactStorage.persistAssayArtifacts(assay.id);
+    const savedArtifacts = await artifactStorage.persistAssayArtifacts(assay.id);
+    if (savedArtifacts?.ok === false && !savedArtifacts.skipped) throw savedArtifacts.error;
     markResultsDraftSaved();
     notifyActiveAssayChanged();
   }
@@ -279,7 +281,16 @@ export function initAssay({
     ),
     setResultStatus,
     clearAnalysisOutput: () => analysisView?.clearOutput(),
-    onAnalysisConfigChange: () => analysisView?.onAnalysisConfigChange(),
+    onAnalysisConfigChange: () => {
+      const assay = getActiveResultsAssay();
+      if (assay) {
+        assay.analysisGroups = { row: elements.assayAnalysisRowGroupsInput?.value || '', column: elements.assayAnalysisColumnGroupsInput?.value || '' };
+        assay.updatedAt = new Date().toISOString();
+        persist();
+      }
+      analysisView?.onAnalysisConfigChange();
+      if (assay) void artifactStorage.persistAssayArtifacts(assay.id);
+    },
     parseResultImportFile: parseAssayResultImport,
     persistResultAttachment: artifactStorage.persistAssayResultAttachment,
     onResultImportApplied: onAssayResultImportApplied,
@@ -295,6 +306,7 @@ export function initAssay({
         assay.updatedAt = new Date().toISOString();
         persist();
         markResultsDraftSaved();
+        void artifactStorage.persistAssayArtifacts(assay.id);
       }
       analysisView?.onSourceResultsChanged();
       notifyActiveAssayChanged();
@@ -339,8 +351,10 @@ export function initAssay({
       const activeAssay = getAssayById(runtime.activeResultsAssayId);
       if (activeAssay) {
         activeAssay.transformSpec = spec;
+        activeAssay.latestAnalysis = null;
         activeAssay.updatedAt = new Date().toISOString();
         persist();
+        void artifactStorage.persistAssayArtifacts(activeAssay.id);
       }
     }
   });
@@ -375,6 +389,7 @@ export function initAssay({
   });
 
   function loadAssayForResults(assayId) {
+    resultsManager.cancelGroupSelection?.();
     const assay = getAssayById(assayId);
     if (!assay) {
       runtime.activeResultsAssayId = '';
@@ -392,6 +407,8 @@ export function initAssay({
     const axisValues = layoutManager.restoreAssayLayoutState(assay, def);
     layoutManager.renderPlatePreview(axisValues);
     layoutManager.renderPlateDefinition();
+    if (elements.assayAnalysisRowGroupsInput) elements.assayAnalysisRowGroupsInput.value = assay.analysisGroups?.row || '';
+    if (elements.assayAnalysisColumnGroupsInput) elements.assayAnalysisColumnGroupsInput.value = assay.analysisGroups?.column || '';
     resultsManager.renderResultTable();
     analysisView.loadChartStyle(assay.chartStyle);
     analysisView.loadTransformSpec(assay.transformSpec);
@@ -401,6 +418,7 @@ export function initAssay({
     // Tabulator may still be building or replacing the previous assay's rows.
     analysisView.renderAnalysis({ syncResults: false });
     markLoadedAssayDraftsSaved();
+    void artifactStorage.persistAssayArtifacts(assay.id);
     renderList();
     notifyActiveAssayChanged();
   }

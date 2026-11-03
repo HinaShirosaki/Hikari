@@ -200,8 +200,8 @@ Use the lane selector to work on another lane. Close the window when finished; u
 
 ## 11. Add a lane table to the figure
 
-1. Open **Lanes**, then click **Table**.
-2. Click **Add table**. This becomes available after you finish the lane dividers.
+1. Finish the lane dividers in **Lanes**.
+2. Click **Add table** in the toolbar to create the table or reopen it.
 3. Enter a row label in the left-hand field. For sample names, use `Label`.
 4. Enter each lane's value in the aligned fields above the image.
 5. Click **Add row** for another row of descriptions or conditions.

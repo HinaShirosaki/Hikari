@@ -69,4 +69,73 @@ async function verifyRailFolding({ tool, evaluate, check, win, pause, temp, relo
   await fs.writeFile(path.join(temp, 'rail-folding.json'), JSON.stringify({ expanded, collapsed, unchangedRevision: before.revision === after.revision, unchangedPreviews: true }, null, 2));
 }
 
-module.exports = { verifyRailFolding };
+async function verifyHeaderRail({ tool, evaluate, check, win, pause, temp, reloadPlugin }) {
+  const host = code => win.webContents.executeJavaScript(code);
+  const header = () => host(`(() => { const button=document.getElementById('topbar-left-rail-toggle');
+    return {hidden:button.hidden,expanded:button.getAttribute('aria-expanded'),controls:button.getAttribute('aria-controls')}; })()`);
+  const rail = () => evaluate(`(() => { const rail=document.getElementById('illustrations-rail');
+    return {hidden:rail.hidden,inert:rail.inert,width:rail.getBoundingClientRect().width,
+      canvasWidth:document.getElementById('main-canvas').getBoundingClientRect().width,
+      localToggleHidden:document.getElementById('toggle-illustrations').hidden}; })()`);
+  const fold = async value => {
+    await evaluate(`HikariPlugin.hikari.call('app.setLeftRailFolded',{folded:${value}})`); await pause(80);
+  };
+  await evaluate('illustrationWorkspace.manage("create",undefined,"Header rail figure")');
+  await pause(120);
+  const capabilities = await evaluate('HikariPlugin.hikari.call("app.info")');
+  check(capabilities.layout.leftRail.headerToggleAvailable, 'The public API advertises the header toggle');
+  check(!(await header()).hidden && (await rail()).localToggleHidden, 'Figura registers its rail and removes the duplicate local toggle');
+  check(await host(`document.getElementById(document.getElementById('topbar-left-rail-toggle').getAttribute('aria-controls')).tagName==='IFRAME'`), 'Header accessibility targets the plugin frame');
+  const before = await tool({ action: 'read' }), expanded = await rail();
+  const previews = await tool({ action: 'render', canvas: 'main' });
+  win.webContents.debugger.attach('1.3');
+  try {
+    const point = await host(`(() => { const r=document.getElementById('topbar-left-rail-toggle').getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`);
+    for (const type of ['mousePressed', 'mouseReleased']) await win.webContents.debugger.sendCommand('Input.dispatchMouseEvent', {
+      type, ...point, button: 'left', buttons: type === 'mousePressed' ? 1 : 0, clickCount: 1
+    });
+    await pause(100);
+    const hidden = await rail();
+    check(hidden.hidden && hidden.inert && (await header()).expanded === 'false', 'A header click folds the Figura library through app.context');
+    check(Math.abs(hidden.canvasWidth - expanded.canvasWidth - expanded.width) < 1, 'The Figura canvas receives the released width');
+    check(await host('document.activeElement.id==="topbar-left-rail-toggle"'), 'Focus stays on the visible header control');
+    for (const type of ['keyDown', 'keyUp']) await win.webContents.debugger.sendCommand('Input.dispatchKeyEvent', {
+      type, key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13,
+      ...(type === 'keyDown' ? { text: '\r', unmodifiedText: '\r' } : {})
+    });
+    await pause(100);
+    check(!(await rail()).hidden && (await header()).expanded === 'true', 'Enter reopens the Figura library');
+  } finally { win.webContents.debugger.detach(); }
+  await evaluate('document.getElementById("illustration-search").focus()');
+  await fold(true);
+  check((await rail()).hidden && (await header()).expanded === 'false', 'Plugin API changes update the same header state');
+  check(await evaluate('document.activeElement.id==="figure-title"'), 'An external fold leaves focus on a visible plugin control');
+  await evaluate('HikariPlugin.hikari.call("app.setLeftRailWidth",{width:336})'); await pause(80);
+  await fold(false);
+  check((await rail()).width === 336, 'The shared expanded width survives header folding');
+  const after = await tool({ action: 'read' }), afterPreviews = await tool({ action: 'render', canvas: 'main' });
+  check(before.revision === after.revision && JSON.stringify(before.objects) === JSON.stringify(after.objects), 'Header folding preserves figure data and revision');
+  check(JSON.stringify(previews.content.filter(item => item.type === 'image')) === JSON.stringify(afterPreviews.content.filter(item => item.type === 'image')), 'Canvas previews are unchanged');
+  await host(`window.qaPluginView=document.querySelector('.plugin-view.is-active');
+    qaPluginView.classList.remove('is-active'); window.qaNativeView=document.createElement('section');
+    qaNativeView.className='view is-active';document.querySelector('.workspace-main').append(qaNativeView);qaSharedLeftRail.syncToggle();`);
+  check((await header()).hidden, 'A workspace without a rail hides the plugin header control');
+  await host('qaNativeView.remove();qaPluginView.classList.add("is-active");qaSharedLeftRail.syncToggle();');
+  check(!(await header()).hidden && (await header()).expanded === 'true', 'Returning to Figura restores its header state');
+  await evaluate('HikariPlugin.hikari.call("app.setLeftRail",{available:false})');
+  check((await header()).hidden, 'Plugins can unregister a rail for a screen without navigation');
+  await evaluate('HikariPlugin.hikari.call("app.setLeftRail",{available:true})');
+  await fold(true); await reloadPlugin(); await pause(80);
+  check((await rail()).hidden && (await rail()).localToggleHidden && (await header()).expanded === 'false', 'Reload registers the header and restores the saved per-plugin fold preference');
+  win.setSize(480, 800); await pause(80);
+  await host('document.getElementById("topbar-left-rail-toggle").click()'); await pause(80);
+  check(!(await rail()).hidden && (await header()).expanded === 'true', 'The header can reopen the rail in a narrow window');
+  await host('document.getElementById("topbar-left-rail-toggle").click()'); await pause(80);
+  check((await rail()).hidden && (await rail()).localToggleHidden, 'Narrow windows keep a single reopen control');
+  win.setSize(1300, 1000); await pause(80); await fold(false);
+  await fs.writeFile(path.join(temp, 'header-rail-expanded.png'), (await win.webContents.capturePage()).toPNG());
+  await fold(true);
+  await fs.writeFile(path.join(temp, 'header-rail-hidden.png'), (await win.webContents.capturePage()).toPNG());
+}
+
+module.exports = { verifyRailFolding, verifyHeaderRail };

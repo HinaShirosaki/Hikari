@@ -29,6 +29,7 @@ export function createSequenceCursorMenuController(config = {}) {
     i18nUi.setHtml(menu, `
       <button type="button" class="sequence-viewer-context-item" data-sequence-cursor-action="insert">${i18nUi.html("Insert Sequence…")}</button>
       ${circular ? `<button type="button" class="sequence-viewer-context-item" data-sequence-cursor-action="set-origin"${atStart ? ' disabled' : ''}>${i18nUi.html("Set Sequence Start Here")}</button>` : ''}
+      <button type="button" class="sequence-viewer-context-item" data-sequence-assembly-current>${i18nUi.html('Assemble DNA…')}</button>
     `);
     menu.hidden = false;
     positionFloatingUi(menu, Number(event?.clientX) + 4, Number(event?.clientY) + 4);

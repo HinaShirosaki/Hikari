@@ -114,6 +114,23 @@ export async function checkLocalizedPlate({ core, i18n, check }) {
     && byId('assay-workspace-chart').hidden && !byId('assay-workspace-data').hidden, 'The translated Data switch shows only tables');
   byId('assay-workspace-view-chart').click();
   byId('assay-analysis-add-row-group-btn').click();
+  await settle(60);
+  check(!byId('assay-workspace-data').hidden && !byId('assay-group-selection-hint').hidden
+    && byId('assay-group-selection-hint-text').textContent.startsWith('Arrastre por las filas'), 'Grouping opens Data with a translated drag hint');
+  check(!byId('assay-analysis-row-groups').value, 'Arming the group tool does not commit an existing selection');
+  i18n.setLocale('en');
+  check(byId('assay-group-selection-hint-text').textContent.startsWith('Drag across plate rows'), 'The active grouping hint switches language live');
+  i18n.setLocale('es');
+  const grid = window.Tabulator.findTable(byId('assay-result-table').querySelector('.tabulator'))[0];
+  const from = grid.getRow(0).getCell('c1').getElement(), to = grid.getRow(1).getCell('c1').getElement();
+  const coordinates = element => { const r=element.getBoundingClientRect();return {clientX:r.x+r.width/2,clientY:r.y+r.height/2}; };
+  const send = (element, type, buttons) => {
+    const EventCtor = type.startsWith('pointer') ? PointerEvent : MouseEvent;
+    element.dispatchEvent(new EventCtor(type, {bubbles:true,cancelable:true,button:0,buttons,pointerId:1,isPrimary:true,...coordinates(element)}));
+  };
+  send(from,'pointerdown',1);send(from,'mousedown',1);
+  send(to,'pointermove',1);send(to,'mousemove',1);
+  send(to,'pointerup',0);send(to,'mouseup',0);await settle(60);
   check(byId('assay-analysis-row-groups').value.startsWith('Row Group 1'), 'Group names stay canonical data in Spanish');
   byId('assay-analysis-clear-groups-btn').click();
   byId('assay-clear-results-btn').click(); await settle();

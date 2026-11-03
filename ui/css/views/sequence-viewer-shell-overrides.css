@@ -67,9 +67,10 @@
   border-color: var(--theme-border);
 }
 
-#sequence-viewer-view .sequence-viewer-library-item-active {
-  border-color: var(--theme-accent-line);
-  background: var(--theme-highlight);
+/* The family row supplies the single hover/selection background. */
+:is(#sequence-viewer-view, #sequence-viewer-detail-view) .sequence-viewer-dna-row > .sequence-viewer-library-item {
+  background: transparent;
+  box-shadow: none;
 }
 
 #sequence-viewer-view .sequence-viewer-library-item-name {

@@ -1,5 +1,5 @@
 .sequence-viewer-digest-dialog.app-dialog-surface {
-  --app-dialog-width: 640px;
+  --app-dialog-width: 600px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -30,31 +30,47 @@
   padding-right: var(--space-4);
 }
 
-.sequence-viewer-digest-dialog :is(input:not([type="checkbox"]), select) {
+.sequence-viewer-digest-dialog :is(input, select) {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
 }
 
-.sequence-viewer-digest-dialog .sequence-viewer-digest-keep {
-  display: flex;
-  align-items: center;
-  gap: var(--space-8);
-  font-weight: 650;
+.sequence-viewer-digest-sites {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
 }
 
-.sequence-viewer-digest-keep input[type="checkbox"] {
-  flex: 0 0 auto;
-  width: 16px;
-  min-width: 16px;
-  height: 16px;
-  margin: 0;
+.sequence-viewer-digest-sites label {
+  font-size: var(--text-sm);
+  color: var(--theme-text-muted);
+}
+
+.sequence-viewer-digest-sites select {
+  min-height: 32px;
+  padding: var(--space-6) var(--space-8);
+  color: var(--theme-text-strong);
+}
+
+.sequence-viewer-digest-products {
+  margin-top: var(--space-8);
+  gap: var(--space-18);
 }
 
 .sequence-viewer-digest-product {
-  padding: var(--space-12);
-  border: 1px solid var(--theme-border);
-  border-radius: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+.sequence-viewer-digest-product button {
+  min-width: 68px;
+}
+
+.sequence-viewer-digest-product [data-digest-state="saved"] {
+  color: var(--theme-success);
+  background: transparent;
+  opacity: 1;
+  cursor: default;
+  transition: none;
 }
 
 .sequence-viewer-digest-dialog p {

@@ -127,6 +127,7 @@ async function main() {
     await win.loadFile(fixture);
     win.focus();
     await waitFor('Boolean(window.qaReady)');
+    assert.equal(await exec("document.getElementById('gel-add-table-btn').disabled"),true,'Add table waits for a gel image');
     await exec('loadGel()');
     await waitFor("!document.getElementById('gel-crop-mode-btn').disabled");
     await exec("click('gel-tool-results-btn')");
@@ -149,6 +150,11 @@ async function main() {
     assert.ok(layout.card.left>=layout.panel.right&&layout.panel.left>=layout.stage.right&&layout.card.width<=66,'A narrow icon toolbar sits to the right of the active tool panel');
     assert.deepEqual(await exec("[...document.querySelectorAll('.gel-viewer-toolbar button')].filter(b=>b.checkVisibility()).map(b=>{const c=b.querySelector('.gel-card-label,[data-gel-action-label]');return c&&c.checkVisibility()&&c.scrollWidth<=c.clientWidth?'':b.id}).filter(Boolean)"),[],'Every toolbar icon shows its caption unclipped');
     assert.deepEqual(await exec("[...document.querySelectorAll('[data-gel-tool-panel]')].filter(p=>p.checkVisibility()).map(p=>p.dataset.gelToolPanel)"),['image'],'Only Image tools show initially');
+    assert.equal(await exec("Boolean(document.querySelector('.gel-viewer-toolbar #gel-add-table-btn'))"),true,'Add table has its own toolbar icon');
+    assert.equal(await exec("document.getElementById('gel-lane-table-panel').checkVisibility()"),false,'A gel without a table has no empty table strip');
+    await exec("click('gel-add-table-btn')");
+    assert.match(await exec("document.getElementById('gel-status').textContent"),/finish the lane dividers/i,'Adding a table explains missing dividers');
+    assert.equal(await exec("document.getElementById('gel-lane-table-panel').checkVisibility()"),false,'Missing dividers do not create an empty table');
     assert.equal(await exec("document.getElementById('gel-denoise-strength').checkVisibility() || document.getElementById('gel-contrast-strength').checkVisibility()"),false,'Image tools no longer show enhancement sliders');
     await exec("window.originalPreview=document.getElementById('gel-canvas').toDataURL();click('gel-process-image-btn')");
     assert.equal(await exec("document.getElementById('gel-tool-panel-title').textContent"),'Processed');
@@ -178,7 +184,7 @@ async function main() {
     assert.deepEqual(await exec("[...document.querySelectorAll('[data-gel-tool-panel]')].filter(p=>p.checkVisibility()).map(p=>p.dataset.gelToolPanel)"),['lanes'],'Category selection shows just its tools');
     assert.equal(await exec("document.getElementById('gel-tool-lanes-btn').getAttribute('aria-pressed')"),'true');
     await exec("const b=document.getElementById('gel-tool-lanes-btn');b.focus();b.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true,cancelable:true}))");
-    assert.equal(await exec("document.activeElement.id"),'gel-tool-ladder-btn','Arrow keys move through the icon toolbar');
+    assert.equal(await exec("document.activeElement.id"),'gel-add-table-btn','Arrow keys reach Add table as an independent toolbar tool');
     assert.equal(layout.hint,'','Loading an image needs no message');
     await exec("document.getElementById('gel-expected-lane-count').value='6';click('gel-auto-detect-lanes-btn')");
     assert.equal(await exec("getComputedStyle(document.getElementById('gel-canvas')).cursor"),'col-resize','Placing dividers shows a divider cursor');
@@ -337,8 +343,11 @@ async function main() {
     await settle();
     fs.writeFileSync(path.join(output,'results-profile.png'),(await win.webContents.capturePage()).toPNG());
     assert.ok(await exec("(()=>{const tools=document.querySelector('.gel-tools-panel');return tools.scrollTop===0&&tools.scrollHeight<=tools.clientHeight+1})()"),'Only the tool fields scroll; Save stays pinned');
-    await exec("click('gel-open-lane-table-btn');click('gel-add-table-btn')");
+    await exec("click('gel-add-table-btn')");
     await settle();
+    assert.equal(await exec("document.getElementById('gel-add-table-btn').getAttribute('aria-pressed')"),'true','The table tool shows when its table is open');
+    await exec("click('gel-add-table-btn')");
+    assert.equal(await exec("document.querySelectorAll('#gel-lane-table-shell .is-label').length"),1,'Clicking Add table again preserves the existing table');
     async function checkDock() {
       const dock=await exec(`(()=>{const panel=document.getElementById('gel-lane-table-panel'),canvas=rect('gel-canvas'),grid=document.querySelector('.gel-table-strip-lanes').getBoundingClientRect(),layer=document.querySelector('.gel-floating-layer').getBoundingClientRect();return {panel:panel.getBoundingClientRect().toJSON(),canvas,grid:grid.toJSON(),layer:layer.toJSON(),floating:Boolean(panel.closest('[data-gel-window],.gel-floating-layer')),hidden:panel.hidden}})()`);
       assert.equal(dock.hidden,false,'The lane table dock is visible');
@@ -370,8 +379,10 @@ async function main() {
     await exec("click('gel-close-lane-table-btn')");
     await settle();
     assert.equal(await exec("document.getElementById('gel-lane-table-panel').hidden"),true);
+    assert.equal(await exec("document.activeElement.id"),'gel-add-table-btn','Closing the table returns focus to its toolbar tool');
+    assert.equal(await exec("document.getElementById('gel-add-table-btn').getAttribute('aria-pressed')"),'false','Closing the table clears the tool highlight');
     assert.ok((await exec("rect('gel-canvas')")).height>dockedBaseline.height,'Hiding the table returns its space to the image');
-    await exec("click('gel-open-lane-table-btn')");
+    await exec("click('gel-add-table-btn')");
     await settle();
     await checkDock();
     assert.equal(await exec("document.querySelector('#gel-lane-table-shell .is-label').value"),'Label','Hiding and reopening preserves table edits');
@@ -431,7 +442,7 @@ async function main() {
     await settle();
     await new Promise(resolve=>setTimeout(resolve,350));
     fs.writeFileSync(path.join(output,'band-intensity.png'),(await win.webContents.capturePage()).toPNG());
-    await exec("click('gel-open-lane-table-btn')");
+    await exec("click('gel-add-table-btn')");
     // Keep a window open through the resize checks so its bounds are covered.
     await exec("click('gel-open-peak-editor-btn')");
     for (const [width,height] of [[1400,900],[1024,768],[800,700],[600,800]]) {

@@ -1,5 +1,8 @@
 // Traditional Chinese preview. Missing entries use the English catalog.
 export const commonTraditionalChinese = Object.freeze({
+  "full.40df63ba": "儲存樣品",
+  "full.ed6fad43": "正在儲存樣品",
+  "full.b704f1c7": "無法儲存樣品。",
   "full.dea0fcd6": "正在新增樣品",
   "full.462bc166": "新增樣本",
   "full.3167540a": "{p0} 個容器",

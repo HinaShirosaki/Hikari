@@ -267,8 +267,6 @@ async function main() {
     [['#gel-peak-editor-divider-mode-btn','Add a vertical divider'], ['#gel-peak-editor-table','Read the calculated peak areas'], ['#gel-peak-editor-clear-lane-btn','Clear this lane if needed']]);
   manifest.checks.push('A baseline creates a peak integration and Divider splits it into separate rows');
   await click('#gel-peak-editor-close-btn');
-  await click('#gel-tool-lanes-btn');
-  await click('#gel-open-lane-table-btn');
   await click('#gel-add-table-btn');
   await input('#gel-lane-table-shell .gel-table-input.is-label','Label');
   for(let lane=1;lane<=6;lane++)await input(`#gel-lane-table-shell [data-table-row="0"][data-table-lane="${lane}"]`,['Ladder','Control','Sample A','Sample B','Sample C','Sample D'][lane-1]);

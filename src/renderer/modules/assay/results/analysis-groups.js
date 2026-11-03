@@ -1,7 +1,7 @@
 import { rowLabelToIndex } from '../plate-model.js';
 import { parseDimensionGroupSpec } from '../analysis/shared.js';
 import { resultFieldToColumnIndex } from './result-fields.js';
-import { plateNotice, plateUi } from '../localization.js';
+import { createGroupSelection } from './group-selection.js';
 
 // Row/column analysis groups over the result grid: the current range selection,
 // the group specs the inputs hold, and the colour highlighting that shows them.
@@ -15,6 +15,7 @@ function createAssayAnalysisGroups({
     assayAnalysisColumnGroupsInput,
     assayAnalysisRowGroupsInput
   } = elements;
+  const selectionTool = createGroupSelection({ elements, getResultGrid, getSelection: getCurrentResultRangeSelection, onCommit: addSelectedRangeGroup });
 
   const analysisGroupColorCount = 4;
   const analysisGroupColorClasses = Array.from({ length: analysisGroupColorCount }, (_item, index) => index + 1)
@@ -174,15 +175,9 @@ function createAssayAnalysisGroups({
     input.value = current ? `${current}\n${entry}` : entry;
   }
 
-  function addSelectedRangeGroup(dimension) {
-    const selection = getCurrentResultRangeSelection();
+  function addSelectedRangeGroup(dimension, selection) {
     const members = dimension === 'row' ? selection.rowLabels : selection.columnLabels;
-    // The selection itself is visible in the result grid, so only a blocked action
-    // has anything to say -- and it says it in the shared transient notice.
-    if (!members.length) {
-      plateNotice(plateUi(dimension === 'row' ? 'groups.selectRow' : 'groups.selectColumn'), { type: 'error' });
-      return;
-    }
+    if (!members.length) return false;
 
     const input = dimension === 'row' ? assayAnalysisRowGroupsInput : assayAnalysisColumnGroupsInput;
     const groupName = nextGroupName(dimension);
@@ -191,17 +186,19 @@ function createAssayAnalysisGroups({
     if (typeof onAnalysisConfigChange === 'function') {
       onAnalysisConfigChange();
     }
+    return true;
   }
 
-  function onAddSelectedRowGroup() {
-    addSelectedRangeGroup('row');
+  function onStartRowGroup() {
+    selectionTool.start('row');
   }
 
-  function onAddSelectedColumnGroup() {
-    addSelectedRangeGroup('column');
+  function onStartColumnGroup() {
+    selectionTool.start('column');
   }
 
   function onClearAnalysisGroups() {
+    selectionTool.cancel();
     if (assayAnalysisRowGroupsInput) {
       assayAnalysisRowGroupsInput.value = '';
     }
@@ -219,8 +216,10 @@ function createAssayAnalysisGroups({
     getAnalysisGroups,
     applyAnalysisGroupHighlights,
     refreshAnalysisGroupDisplay,
-    onAddSelectedRowGroup,
-    onAddSelectedColumnGroup,
+    onStartRowGroup,
+    onStartColumnGroup,
+    cancelGroupSelection: selectionTool.cancel,
+    isGroupSelectionActive: selectionTool.isActive,
     onClearAnalysisGroups
   };
 }

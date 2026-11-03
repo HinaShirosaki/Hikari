@@ -1,5 +1,8 @@
 // Japanese preview. Missing entries use the English catalog.
 export const commonJapanese = Object.freeze({
+  "full.40df63ba": "サンプルを保存",
+  "full.ed6fad43": "サンプルを保存中",
+  "full.b704f1c7": "サンプルを保存できませんでした。",
   "full.dea0fcd6": "サンプルを追加中",
   "full.462bc166": "サンプルを追加",
   "full.3167540a": "コンテナ {p0} 個",

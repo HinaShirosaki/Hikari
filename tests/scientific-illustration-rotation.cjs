@@ -97,7 +97,7 @@ async function verifyRotation({ tool, evaluate, check, win, pause, temp }) {
 
     await select('rotate-text'); before = await read(); g = await geometry(); await gesture(50); after = await waitForChange(before.revision);
     const textBefore = object(before, 'rotate-text'), textAfter = object(after, 'rotate-text'), textCenter = (await geometry()).pivot;
-    check(Math.hypot(g.pivot.x - textCenter.x, g.pivot.y - textCenter.y) < 0.05, 'Oversized right/bottom anchored text rotates about its visible center');
+    check(Math.hypot(g.pivot.x - textCenter.x, g.pivot.y - textCenter.y) < 0.05 && textBefore.x === textAfter.x && textBefore.y === textAfter.y, 'Text rotates about its text box center without moving the box');
     check(angularError(textAfter.rotation, textBefore.rotation + 50) < 0.01 && ['width', 'height', 'fontFamily', 'fontSize', 'fontWeight', 'text', 'align', 'anchor'].every(key => textBefore[key] === textAfter[key]), 'Text rotation preserves independent text, typography and layout dimensions');
     await evaluate('document.querySelector(".rotation-handle").focus();document.activeElement.dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowRight",bubbles:true,shiftKey:true}))');
     after = await waitForChange(after.revision);

@@ -1,4 +1,7 @@
 export const commonSpanish = Object.freeze({
+  "full.40df63ba": "Guardar muestra",
+  "full.ed6fad43": "Guardando muestra",
+  "full.b704f1c7": "No se pudo guardar la muestra.",
   "full.dea0fcd6": "Añadiendo muestra",
   "full.462bc166": "Add Sample",
   "full.3167540a": "{p0} container",

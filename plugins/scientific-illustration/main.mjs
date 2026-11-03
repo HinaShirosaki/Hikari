@@ -28,14 +28,18 @@ import { createArtworkHitTester } from './hit-testing.mjs';
 import { createCanvasTextEditor } from './text-editor.mjs';
 import { createSelectionToolbar } from './selection-toolbar.mjs';
 import { createOpacityControl } from './opacity-control.mjs';
+import { initFontPicker } from './fonts.mjs';
+import { createLayerOrder } from './layer-order.mjs';
+import { createCanvasGeneration } from './canvas-generation.mjs';
 import { highlightVectorColor, recolorVector, vectorColors } from './vector-colors.mjs';
 import { MAX_PALETTE } from './model.mjs';
 
 const { hikari } = window.HikariPlugin;
+initFontPicker({ hikari });
 const $ = id => document.getElementById(id);
 const properties = $('properties');
 const artworkHitTester = createArtworkHitTester();
-let assetsPanel, workspaceTools, artworkImport, canvasCrop, canvasContextMenu, textEditor;
+let assetsPanel, workspaceTools, artworkImport, canvasCrop, canvasContextMenu, textEditor, layerOrder, canvasGeneration;
 const componentRail = createComponentRail({ document, focusTab: name => workspaceTools?.focus(`${name}-tab`), onChange: name => {
   if (name && workspaceTools?.isHosted()) void hikari.call('app.setAgentChatExpanded', { expanded: false }).catch(() => {});
   workspaceTools?.sync();
@@ -62,6 +66,7 @@ const workspace = createWorkspace({ hikari, onChange: render, onLibraryChange: r
   onStatus: status });
 const leftRail = initPluginLeftRailResizer({ commitWidth: width => hikari.call('app.setLeftRailWidth', { width }),
   commitFolded: folded => hikari.call('app.setLeftRailFolded', { folded }), onCommitError: error => status(error.message) });
+let leftRailHeaderRegistration = null;
 const selected = () => selectedIds.length === 1 ? state?.objects.find(obj => obj.id === selectedId) : undefined;
 const selectedObjects = () => state?.objects.filter(object => selectedIds.includes(object.id)) || [];
 const selectedGroup = () => state?.groups.find(group => group.ids.length === selectedIds.length && group.ids.every(id => selectedIds.includes(id)));
@@ -136,7 +141,7 @@ document.querySelectorAll('[data-layout-action]').forEach(button => button.addEv
   workspaceTools?.focus('align-menu');
 }));
 const newId = () => `object-${crypto.randomUUID()}`;
-const numeric = new Set(['fontSize', 'fontWeight']);
+const numeric = new Set(['fontSize']);
 // Native disclosures keep less-used actions out of the canvas workspace.
 document.addEventListener('click', event => {
   document.querySelectorAll('.popover[open]').forEach(menu => {
@@ -296,6 +301,7 @@ async function edit(operations, revision = state?.revision) {
   return result;
 }
 function render(next, id = illustrationId) {
+  layerOrder?.cancel();
   textEditor?.sync(next, id);
   canvasContextMenu?.close(true);
   if (drag && (next.revision !== drag.revision || id !== illustrationId
@@ -303,6 +309,7 @@ function render(next, id = illustrationId) {
   canvasCrop?.onDocumentChange(next, id);
   if (areaDrag && (id !== illustrationId || activeCanvas !== areaDrag.canvas || next.revision !== areaDrag.revision)) cancelAreaSelection();
   if (id !== illustrationId) {
+    canvasGeneration?.close();
     illustrationId = id; setSelection([]); drag = null;
     componentRail.close();
     assetsPanel?.closeSave();
@@ -384,6 +391,7 @@ $('illustration-search').addEventListener('input', () => { $('illustrations').sc
 $('new-illustration').addEventListener('click', () => void manageIllustration('create'));
 let lastLayerClick = null;
 function renderLayers() {
+  const scrollTop = $('layers').scrollTop;
   const focusedRow = document.activeElement?.closest('[data-layer-id]');
   const focusedId = focusedRow?.dataset.layerId, focusedAction = document.activeElement?.dataset.layerAction;
   $('layers').replaceChildren();
@@ -444,6 +452,11 @@ function renderLayers() {
   if (!state.objects.length) {
     const empty = document.createElement('p'); empty.className = 'layers-empty'; i18nUi.setText(empty, i18nUi.message("Your components and labels will appear here.")); $('layers').append(empty);
   }
+  $('layers').querySelectorAll('.layer-select').forEach(button => {
+    button.setAttribute('aria-describedby', 'layer-order-hint');
+    button.setAttribute('aria-keyshortcuts', 'Alt+ArrowUp Alt+ArrowDown');
+  });
+  $('layers').scrollTop = scrollTop;
   if (focusedId && focusedAction) $('layers').querySelector(`[data-layer-id="${focusedId}"] [data-layer-action="${focusedAction}"]`)?.focus({ preventScroll: true });
 }
 function renderProperties() {
@@ -464,11 +477,6 @@ function renderProperties() {
   properties.elements.name.disabled = object.type === 'group' && !group;
   properties.querySelector('.property-heading').hidden = object.type === 'text';
   properties.querySelector('.object-basics').hidden = object.type === 'group';
-  const weights = properties.elements.fontWeight;
-  weights.querySelector('[data-custom-weight]')?.remove();
-  if (object.type === 'text' && ![...weights.options].some(option => Number(option.value) === object.fontWeight)) {
-    const option = document.createElement('option'); option.value = object.fontWeight; i18nUi.setText(option, object.fontWeight); option.dataset.customWeight = ''; weights.append(option);
-  }
   for (const input of properties.elements) {
     if (!input.name || input.name === 'opacity') continue;
     if (input.type === 'checkbox') input.checked = Boolean(object[input.name]);
@@ -485,8 +493,6 @@ function renderProperties() {
   }));
   properties.querySelectorAll('[data-text-style]').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.textStyle === 'bold' ? object.fontWeight >= 700 : Boolean(object[button.dataset.textStyle]))));
   properties.querySelectorAll('[data-align]').forEach(button => button.setAttribute('aria-pressed', String(object.align === button.dataset.align)));
-  const siblings = state.objects.filter(item => item.canvas === object.canvas);
-  $('raise').disabled = selectedIds.includes(siblings.at(-1)?.id); $('lower').disabled = selectedIds.includes(siblings[0]?.id);
 }
 function select(id, { reveal = true, additive = false } = {}) {
   if (reveal) componentRail.open('layers');
@@ -599,11 +605,6 @@ $('figure-title').addEventListener('change', () => void edit([{ op: 'title', tit
 $('add-text').addEventListener('click', async () => {
   const id = newId(); if ((await edit([{ op: 'upsert', object: { id, type: 'text', name: 'Label', canvas: activeCanvas, text: 'Label', x: 30, y: 30, width: 200, height: 50 } }]))?.ok) { select(id); $('label-content').focus(); $('label-content').select(); }
 });
-$('add-vector').addEventListener('click', async () => {
-  const id = newId();
-  if ((await edit([{ op: 'upsert', object: { id, type: 'vector', name: 'Component', canvas: activeCanvas, x: 40, y: 40, width: 160, height: 100,
-    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 100"><rect x="3" y="3" width="154" height="94" rx="18" fill="#dce9e0" stroke="#587a64" stroke-width="3"/></svg>' } }]))?.ok) select(id);
-});
 function selectionUnits() {
   const groups = state.groups.filter(group => group.ids.every(id => selectedIds.includes(id)));
   return [...groups.map(group => group.id), ...selectedIds.filter(id => !groups.some(group => group.ids.includes(id)))];
@@ -634,17 +635,14 @@ async function transferSelection(canvas, copy, offset = false) {
     } else if (!copy) select(originalSelection);
   }
 }
-function reorder(offset) {
-  if (!selectedIds.length) return;
-  const ids = state.objects.filter(obj => obj.canvas === activeCanvas).map(obj => obj.id);
-  const indices = ids.map((id, index) => selectedIds.includes(id) ? index : -1).filter(index => index >= 0);
-  const edge = offset > 0 ? Math.max(...indices) : Math.min(...indices), neighbor = ids[edge + offset];
-  if (!neighbor) return;
-  const moving = ids.filter(id => selectedIds.includes(id)), rest = ids.filter(id => !selectedIds.includes(id));
-  rest.splice(rest.indexOf(neighbor) + (offset > 0 ? 1 : 0), 0, ...moving);
-  void edit([{ op: 'order', canvas: activeCanvas, ids: rest }]);
-}
-$('raise').addEventListener('click', () => reorder(1)); $('lower').addEventListener('click', () => reorder(-1));
+layerOrder = createLayerOrder({ element: $('layers'),
+  getContext: () => ({ document: state, illustrationId, selectedIds: [...selectedIds] }), status,
+  save: async ({ document, illustrationId: targetId, moving, order }) => {
+    const result = await workspace.request({ action: 'apply', illustration_id: targetId, expected_revision: document.revision,
+      request_id: crypto.randomUUID(), operations: [{ op: 'order', canvas: activeCanvas, ids: order }] });
+    if (!result.ok) status(result.error);
+    else if (illustrationId === targetId) select(moving, { reveal: false });
+  } });
 
 // Drag previews are transient. The final edit uses the revision captured on
 // pointer-down, so an intervening agent edit cannot be silently overwritten.
@@ -735,7 +733,7 @@ setSelectionTool('pointer');
     const objects = selectedObjects(), object = objects.length === 1 ? objects[0] : selectionTarget();
     if (!object) return;
     const boxes = objects.map(interactionBox);
-    drag = { canvas: key, pointerId: event.pointerId, id, object: { ...object }, objects: objects.map(object => ({ ...object })), bounds: objects.length === 1 ? boxes[0] : selectionBounds(boxes), ids: [...selectedIds], start,
+    drag = { canvas: key, pointerId: event.pointerId, id, object: { ...object }, objects: objects.map(object => ({ ...object })), bounds: objects.length === 1 ? object : selectionBounds(boxes), ids: [...selectedIds], start,
       screen: { x: event.clientX, y: event.clientY }, textClick: Boolean(hit.dataset.objectId && state.objects.find(object => object.id === id)?.type === 'text'),
       revision: state.revision, resizing: hit.dataset.resizeDirection, rotating: Boolean(hit.dataset.rotateId), gap: Boolean(hit.dataset.moveId), shiftClick, preview: null };
     if (!drag.resizing && !drag.rotating) {
@@ -773,10 +771,10 @@ setSelectionTool('pointer');
     let patch;
     if (drag.resizing) {
       patch = drag.objects.length > 1 ? resizeSelection(drag.objects, drag.resizing, dx, dy, drag.bounds) : resizeObject(drag.object, drag.resizing, dx, dy, drag.bounds, event.shiftKey);
-      if (drag.objects.some(object => object.type === 'text')) {
+      if (drag.objects.length > 1 && drag.objects.some(object => object.type === 'text')) {
         // Browser glyph metrics can round at fractional font sizes. Measure
         // the resized label again so its actual opposite handle stays fixed.
-        const previews = drag.objects.length > 1 ? transformSelection(drag.objects, patch) : [{ ...drag.object, ...patch }];
+        const previews = transformSelection(drag.objects, patch);
         const boxes = previews.map(interactionBox), box = boxes.length === 1 ? boxes[0] : selectionBounds(boxes);
         const before = resizeAnchor(drag.bounds, drag.resizing), after = resizeAnchor(box, drag.resizing);
         patch.x += before.x - after.x; patch.y += before.y - after.y;
@@ -893,7 +891,7 @@ function queueKeyboardTransform(operations) {
 }
 function rotateWithKeyboard(degrees) {
   queueKeyboardTransform(() => {
-    const boxes = selectedObjects().map(interactionBox), box = boxes.length === 1 ? boxes[0] : selectionBounds(boxes);
+    const objects = selectedObjects(), box = objects.length === 1 ? objects[0] : selectionBounds(objects.map(interactionBox));
     return box ? [{ op: 'rotate', ids: [...selectedIds], degrees,
       pivot: { x: box.x + box.width / 2, y: box.y + box.height / 2 } }] : [];
   });
@@ -954,7 +952,11 @@ const canvasClipboard = installCanvasClipboard({ document, validateSvg, status,
     status(i18nUi.text("Components pasted"));
   }
 });
+canvasGeneration = createCanvasGeneration({ document, workspace, status,
+  getContext: () => ({ document: state, illustrationId }), canGenerate: () => canDraw,
+  beforeSend: () => flushImagePreferences(), sendToChat });
 canvasContextMenu = installCanvasContextMenu({ document, status,
+  getContext: context => context.surface === $('main-canvas') ? canvasGeneration.capture(context) : null,
   hitTest: event => artworkHitTester.hit($('main-canvas'), state.objects, event),
   canOpen: () => Boolean(state) && !drag && !areaDrag && !document.querySelector('dialog[open], #canvas-crop-overlay'),
   selectTarget: (id, { individual, forceIndividual }) => {
@@ -964,12 +966,13 @@ canvasContextMenu = installCanvasContextMenu({ document, status,
     const ids = group?.ids || [id];
     if (forceIndividual || !ids.every(id => selectedIds.includes(id))) select(ids, { reveal: false });
   },
-  getActions: () => ({
+  getActions: target => ({
     copy: { enabled: Boolean(selectedIds.length), run: () => canvasClipboard.copy() },
     paste: { enabled: true, run: () => canvasClipboard.paste() },
     group: { enabled: canGroup(), run: groupSelection },
     ungroup: { enabled: state.groups.some(group => group.ids.every(id => selectedIds.includes(id))), run: ungroupSelection },
-    'save-asset': { enabled: Boolean(selectedIds.length), run: () => assetsPanel.save() }
+    'save-asset': { enabled: Boolean(selectedIds.length), run: () => assetsPanel.save() },
+    'generate-here': { visible: Boolean(target), enabled: Boolean(target) && canDraw && !canvasGeneration.isSubmitting(), run: () => canvasGeneration.open(target) }
   })
 });
 document.addEventListener('keydown', event => {
@@ -1177,6 +1180,10 @@ function theme(info) {
   document.documentElement.style.setProperty('--app-font-size', `${info?.appearance?.fontSize || 16}px`);
   leftRail.applyContext(info?.layout?.leftRail || {});
   if (Array.isArray(info?.permissions) && !info.permissions.includes('layout')) leftRail.destroy();
+  else if (info?.layout?.leftRail?.headerToggleAvailable && !leftRailHeaderRegistration) {
+    leftRailHeaderRegistration = hikari.call('app.setLeftRail', { available: true })
+      .then(result => leftRail.setHeaderToggle(result?.mounted === true)).catch(() => {});
+  }
 }
 i18n.subscribe(() => workspaceTools?.sync());
 workspaceTools = createWorkspaceTools({ hikari, document, onHosted: () => { if (state) renderCanvas('main'); } });

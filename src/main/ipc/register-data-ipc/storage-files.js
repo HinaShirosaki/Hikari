@@ -145,17 +145,24 @@ function createStorageFileHelpers({
 
     const resolvedStoragePath = await resolveConfiguredStorageRoot(storagePath);
     const resolvedTargetFolder = ensurePathWithinRoot(resolvedStoragePath, targetFolderInput);
-    await fs.mkdir(resolvedTargetFolder, { recursive: true });
-
     // De-duplicating is right for a user *import* (two files named scan.png are
     // two different files). It is wrong for a caller that owns its folder and
     // addresses files by path — re-saving would leak a copy every time — so
     // those opt into overwrite. fileName is already separator-free by then.
-    const targetFilePath = payload?.overwrite === true
-      ? path.join(resolvedTargetFolder, fileName)
-      : await getUniqueFilePath(resolvedTargetFolder, fileName);
     const binary = dataBytes?.byteLength ? dataBytes : Buffer.from(dataBase64, 'base64');
-    await fs.writeFile(targetFilePath, binary);
+    const targetFilePath = await withStorageRootWrite(resolvedStoragePath, async () => {
+      await fs.mkdir(resolvedTargetFolder, { recursive: true });
+      if (payload?.overwrite === true) {
+        const filePath = path.join(resolvedTargetFolder, fileName);
+        await writeFileAtomic(fs, filePath, binary);
+        return filePath;
+      }
+      // Reserve names within the root's write queue, so simultaneous imports
+      // cannot select the same supposedly-unused name and lose a source file.
+      const filePath = await getUniqueFilePath(resolvedTargetFolder, fileName);
+      await fs.writeFile(filePath, binary, { flag: 'wx' });
+      return filePath;
+    });
 
     return {
       filePath: targetFilePath,

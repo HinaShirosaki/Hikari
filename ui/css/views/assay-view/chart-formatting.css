@@ -56,18 +56,6 @@
 }
 
 /* One compact row at the existing rail width. */
-.assay-plot-element-fields {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-10);
-  border: 0;
-  padding: 0;
-  margin: 0;
-  min-width: 0;
-}
-.assay-plot-element-fields label { display: flex; flex-direction: column; gap: 4px; }
-.assay-plot-element-fields label:has(input[type="checkbox"]) { flex-direction: row; align-items: center; }
-.assay-plot-element-fields input[type="checkbox"] { width: auto; }
 .assay-chart-style-tabs {
   display: grid;
   grid-template-columns: 1fr .8fr 1.65fr .8fr;
@@ -519,6 +507,3 @@
   color: var(--theme-text-muted);
   font-size: var(--text-xs);
 }
-
-.assay-chart-style-tabs.has-agent-elements { grid-template-columns: 1fr .8fr 1.65fr .8fr 1.3fr; }
-.assay-chart-style-tabs button[hidden] { display: none; }

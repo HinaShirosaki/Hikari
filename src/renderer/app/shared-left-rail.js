@@ -1,4 +1,5 @@
 import { setShellAttribute } from '../lib/i18n/shell.js';
+import { getActivePluginLeftRailHeader, PLUGIN_LEFT_RAIL_HEADER_CHANGED } from './plugin-left-rail-header.js';
 const STORAGE_KEY = 'hikari_shared_left_rail_width_v2';
 const DEFAULT_WIDTH = 280;
 const MIN_WIDTH = 240;
@@ -129,19 +130,23 @@ export function initSharedLeftRailResizers({
 
   function syncToggle() {
     const rail = getActiveRail();
+    const pluginRail = rail ? null : getActivePluginLeftRailHeader(windowObject, rootDocument.querySelector('.view.is-active'));
     const layout = rail?.parentElement;
-    const folded = Boolean(rail && (layout.classList.contains(FOLDED_CLASS)
+    const available = Boolean(rail || pluginRail);
+    const folded = pluginRail ? pluginRail.folded : Boolean(rail && (layout.classList.contains(FOLDED_CLASS)
       || windowObject.getComputedStyle(rail).display === 'none'));
     if (toggle) {
-      toggle.hidden = !rail;
-      toggle.setAttribute('aria-expanded', String(Boolean(rail) && !folded));
-      if (rail) toggle.setAttribute('aria-controls', rail.id);
+      toggle.hidden = !available;
+      toggle.setAttribute('aria-expanded', String(available && !folded));
+      const target = rail || pluginRail?.frame;
+      if (target && !target.id) target.id = `${target.closest('.view').id}-frame`;
+      if (target) toggle.setAttribute('aria-controls', target.id);
       else toggle.removeAttribute('aria-controls');
       const label = folded ? 'leftRail.show' : 'leftRail.hide';
       setShellAttribute(toggle, 'aria-label', label);
       setShellAttribute(toggle, 'title', label);
     }
-    rootDocument.body?.classList?.toggle('has-folded-shared-left-rail', folded);
+    rootDocument.body?.classList?.toggle('has-folded-shared-left-rail', Boolean(rail && folded));
   }
 
   function applyWidth(width) {
@@ -250,7 +255,15 @@ export function initSharedLeftRailResizers({
 
   toggle?.addEventListener('click', () => {
     const rail = getActiveRail();
-    if (!rail) return;
+    if (!rail) {
+      const pluginRail = getActivePluginLeftRailHeader(windowObject, rootDocument.querySelector('.view.is-active'));
+      if (pluginRail) {
+        toggle.focus({ preventScroll: true });
+        pluginRail.setFolded(!pluginRail.folded);
+        syncToggle();
+      }
+      return;
+    }
     finishResize();
     const layout = rail.parentElement;
     const folded = layout.classList.contains(FOLDED_CLASS)
@@ -293,6 +306,8 @@ export function initSharedLeftRailResizers({
 
   applyWidth(readStoredWidth(windowObject));
   ensureHandles();
+  windowObject.addEventListener?.(PLUGIN_LEFT_RAIL_HEADER_CHANGED, syncToggle);
+  windowObject.addEventListener?.(SHARED_LEFT_RAIL_CHANGED_EVENT, syncToggle);
 
   return {
     ensureHandles,

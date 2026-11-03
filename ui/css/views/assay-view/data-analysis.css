@@ -87,6 +87,40 @@
   color: var(--theme-accent);
 }
 
+#assay-analysis-panel .assay-analysis-action-row > .assay-analysis-action-btn[aria-pressed="true"] {
+  border-color: var(--theme-accent-line);
+  background: var(--theme-accent-wash);
+  color: var(--theme-accent);
+}
+
+.assay-workspace-group-hint {
+  position: absolute;
+  z-index: 5;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: max-content;
+  max-width: calc(100% - 32px);
+  padding: 8px 10px;
+  border: 1px solid var(--theme-accent-line);
+  border-radius: 6px;
+  background: var(--theme-surface-elevated);
+  box-shadow: 0 4px 16px var(--theme-shadow-color);
+  color: var(--theme-accent);
+  font-size: var(--text-xs);
+}
+.assay-workspace-group-hint > span { min-width: 0; }
+.assay-workspace-group-hint button { flex-shrink: 0; padding: 4px 8px; }
+#assay-result-table[data-group-selection],
+#assay-result-table[data-group-selection] :is(.tabulator, .tabulator-cell, .tabulator-col, .tabulator-col *) {
+  cursor: crosshair !important;
+}
+#assay-result-table[data-group-selection] { touch-action: none; }
+
 #assay-analysis-panel .assay-analysis-action-row > button:focus-visible {
   outline: 2px solid var(--theme-focus);
   outline-offset: 2px;
@@ -126,6 +160,58 @@
   min-height: 34px;
   padding: 6px 9px;
   font-size: var(--text-xs);
+}
+
+/* The method description lives on hover; screen readers get it through the
+   select's aria-describedby instead of the (aria-hidden) icon. */
+.assay-analysis-label-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.assay-info-tip {
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  color: var(--theme-text-muted);
+  font-size: var(--text-2xs);
+  font-style: italic;
+  font-weight: 600;
+  line-height: 1;
+  cursor: help;
+}
+
+.assay-info-tip:hover {
+  color: var(--theme-accent);
+}
+
+.assay-info-tip__text {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  padding: 6px 9px;
+  border: 1px solid var(--theme-border);
+  border-radius: 7px;
+  background: var(--theme-surface-elevated);
+  box-shadow: var(--theme-shadow-small);
+  color: var(--theme-text);
+  font-size: var(--text-xs);
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.4;
+  pointer-events: none;
+}
+
+.assay-info-tip:hover .assay-info-tip__text {
+  display: block;
 }
 
 #assay-analysis-settings-panel .assay-analysis-checkbox {

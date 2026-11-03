@@ -172,6 +172,8 @@ function createAssayFormAndList({
       // a save from Setup has to carry them forward instead of rebuilding them away.
       chartStyle: existing?.chartStyle || null,
       analysisDataSource: existing?.analysisDataSource || null,
+      analysisGroups: existing?.analysisGroups || null,
+      plateCsvFiles: existing?.plateCsvFiles || null,
       plotToolReceipts: existing?.plotToolReceipts || [],
       transformSpec: existing?.transformSpec || null,
       updatedAt: new Date().toISOString()
@@ -227,9 +229,6 @@ function createAssayFormAndList({
     }
     if (elements.assayAnalysisXAxisInput) {
       elements.assayAnalysisXAxisInput.value = 'auto';
-    }
-    if (elements.assayAnalysisAsymmetricInput) {
-      elements.assayAnalysisAsymmetricInput.checked = false;
     }
     if (elements.assayAnalysisPolyOrderInput) {
       elements.assayAnalysisPolyOrderInput.value = '2';

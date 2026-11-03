@@ -1,6 +1,7 @@
 import { createQuickSampleController } from '../../lib/quick-sample-controller.js';
 import { escapeHtml } from '../../lib/html.js';
 import { dnaAttributes } from './localization.js';
+import { normalizeTopology } from './shared.js';
 
 export function samplePositionButtonHtml(attribute, id) {
   return `<button type="button" class="sequence-viewer-sample-position-btn" ${attribute}="${escapeHtml(id)}"
@@ -25,12 +26,34 @@ export function createSequenceSamplePositionController({ rootDocument, appState 
     onCreated: async () => { await persist?.({ label: 'Record sample position' }); }
   });
 
+  function openItem(item, kind, defaults) {
+    const sourceLink = { kind, id: item.id };
+    const samples = Array.isArray(appState.samples) ? appState.samples : [];
+    const linked = samples.find(sample => sample?.sourceLink?.kind === kind && sample.sourceLink.id === item.id);
+    // Samples recorded before library links existed can still be found by name
+    // and, for primers, by sequence. Never reuse another item's explicit link.
+    const existing = linked || samples.find(sample => !sample?.sourceLink
+      && sample?.name === item.name
+      && (kind === 'sequence-library'
+        ? ['dna', 'plasmid', 'rna'].includes(sample.type)
+        : sample.type === 'primer' && (!sample.details?.sequence || sample.details.sequence === item.sequence)));
+    picker.open({
+      ...defaults,
+      ...existing,
+      sampleId: existing?.id || '',
+      sourceLink
+    });
+  }
+
   return {
     openSequence(entry) {
-      if (entry) picker.open({ name: entry.name, type: 'dna' });
+      if (entry) openItem(entry, 'sequence-library', {
+        name: entry.name,
+        type: normalizeTopology(entry.topology) === 'circular' ? 'plasmid' : 'dna'
+      });
     },
     openPrimer(primer) {
-      if (primer) picker.open({
+      if (primer) openItem(primer, 'primer-library', {
         name: primer.name,
         type: 'primer',
         details: { sequence: primer.sequence, target: primer.sourceName || '' }

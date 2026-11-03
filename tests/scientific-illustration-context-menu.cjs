@@ -40,7 +40,7 @@ async function verifyContextMenu({ tool, evaluate, check, win, pause, temp }) {
     await evaluate('document.fonts.ready.then(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))');
     const empty = await center('#main-canvas'); await mouse(empty);
     let available = await availability();
-    check(!await menuHidden() && available.paste && !available.copy && !available.group && !available.ungroup && !available['save-asset'], `Empty canvas opens a menu with only Paste available: ${JSON.stringify({hidden:await menuHidden(),available,empty})}`);
+    check(!await menuHidden() && available.paste && available['generate-here'] && !available.copy && !available.group && !available.ungroup && !available['save-asset'], `Empty canvas offers Paste and Generate here: ${JSON.stringify({hidden:await menuHidden(),available,empty})}`);
     await key('Escape', 27);
     check(await menuHidden() && await evaluate('document.activeElement.id==="main-canvas"'), 'Escape closes the menu and returns focus to canvas');
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 60"><ellipse cx="50" cy="30" rx="48" ry="28" fill="#70aca7"/></svg>';
@@ -106,7 +106,7 @@ async function verifyContextMenu({ tool, evaluate, check, win, pause, temp }) {
     await key('F10', 121, 8);
     check(!await menuHidden(), 'Shift+F10 opens the menu from the focused canvas');
     await key('End', 35);
-    check(await evaluate('document.activeElement.dataset.contextAction==="save-asset"'), 'End focuses the last available menu item');
+    check(await evaluate('document.activeElement.dataset.contextAction==="generate-here"'), 'End focuses the last available canvas menu item');
     await key('Escape', 27);
     await evaluate(`document.body.classList.add('theme-night');document.getElementById('main-canvas').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:innerWidth-1,clientY:innerHeight-1}));`);
     check(await evaluate('(()=>{const r=document.getElementById("canvas-context-menu").getBoundingClientRect();return r.left>=8 && r.top>=8 && r.right<=innerWidth-7 && r.bottom<=innerHeight-7})()'), 'Menu stays inside the viewport at its bottom-right corner');

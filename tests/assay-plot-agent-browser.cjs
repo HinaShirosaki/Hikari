@@ -68,8 +68,8 @@ fs.writeFileSync(path.join(output, 'index.html'), html);
     assert.equal((await tool(update({ xColumn: 'wrong' }))).status, 'invalid_arguments');
     assert.equal((await tool(update({ lineWidth: 999 }))).status, 'invalid_arguments');
     assert.equal(await page.locator('#assay-component-canvas').count(), 0);
-    // Native plots retain their controls without the agent Elements tab.
-    assert(await page.locator('[data-cc-tab="elements"]').isHidden());
+    // Plot elements still render without an Elements formatting tab.
+    assert.equal(await page.locator('[data-cc-tab="elements"]').count(), 0);
     // Directly dragging a label round-trips into the same style data.
     await page.evaluate(async () => { await Plotly.relayout(qa.host, { 'annotations[2].x': 0.65, 'annotations[2].y': 0.8 }); await qa.ready(); });
     current = await tool({ action: 'read' });
@@ -104,47 +104,38 @@ fs.writeFileSync(path.join(output, 'index.html'), html);
     current = await tool({ action: 'read' });
     assert.equal(current.style.title, 'Reporter response');
     current = await tool(update({ title: 'Reporter response' })); assert.equal(current.ok, true);
-    await page.evaluate(() => { document.getElementById('assay-analysis-panel').open = false; document.getElementById('assay-chart-format-panel').open = true; });
-    assert(await page.locator('[data-cc-tab="elements"]').isHidden());
+    await page.click('#assay-workspace-format-btn');
+    assert.equal(await page.locator('[data-cc-tab="elements"]').count(), 0);
     await page.setViewportSize({ width: 1000, height: 950 });
     await page.waitForTimeout(200);
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
     await page.screenshot({ path: path.join(output, 'plot-narrow.png') });
-    // Only an active agent figure exposes Elements; edits preserve original objects.
+    // Agent figures use the same four format tabs and retain their annotations.
     await page.evaluate(() => qa.module.renderAgentPlotlyGraph({ id: 'test-custom', name: 'Custom', figure: { data: [{ type: 'scatter', x: [1, 2], y: [2, 3] }], layout: {
       annotations: [{text: 'Original annotation', x: 1, y: 2, showarrow: false}],
       shapes: [{type: 'line', x0: 1, x1: 2, y0: 2, y1: 2}]
     } } }));
     await page.waitForFunction(() => document.querySelector('[data-assay-agent-plotly-chart]')?._fullLayout);
     assert.equal((await tool({ action: 'read' })).status, 'plot_unavailable');
-    assert(await page.locator('[data-cc-tab="elements"]').isVisible());
-    await page.click('[data-cc-tab="elements"]');
-    await page.click('[data-plot-element="add"]');
-    await page.waitForFunction(() => document.querySelector('[data-assay-agent-plotly-chart]').layout.annotations.length === 2);
-    await page.fill('[data-plot-element="text"]', 'Agent figure label');
-    await page.locator('[data-plot-element="text"]').blur();
-    await page.waitForFunction(() => document.querySelector('[data-assay-agent-plotly-chart]').layout.annotations[1].text === 'Agent figure label');
-    await page.evaluate(() => Plotly.relayout(document.querySelector('[data-assay-agent-plotly-chart]'), {'annotations[1].x': 0.7}));
-    assert.equal(await page.inputValue('[data-plot-element="x"]'), '0.7');
-    const baseShapes = await page.evaluate(() => document.querySelector('[data-assay-agent-plotly-chart]').layout.shapes.length);
-    for (const type of ['line', 'band']) {
-      await page.selectOption('[data-plot-element="newType"]', type);
-      await page.click('[data-plot-element="add"]');
-      await page.waitForFunction((count) => document.querySelector('[data-assay-agent-plotly-chart]').layout.shapes.length === count, baseShapes + (type === 'line' ? 1 : 2));
-    }
+    assert.equal(await page.locator('[data-cc-tab="elements"], [data-cc-panel="elements"], [data-plot-element]').count(), 0);
+    assert.deepEqual(await page.locator('[data-cc-tab]').allTextContents(), ['Frame', 'Axis', 'Data Series', 'Text']);
+    await page.locator('[data-cc-tab="frame"]').focus(); await page.keyboard.press('End');
+    assert.equal(await page.locator('[data-cc-tab="text"]').getAttribute('aria-selected'), 'true');
+    await page.keyboard.press('ArrowRight');
+    assert.equal(await page.locator('[data-cc-tab="frame"]').getAttribute('aria-selected'), 'true');
     assert.equal(await page.evaluate(() => JSON.stringify(qa.state.assays[0].chartStyle)), savedStyle);
     const agentSvg = await page.evaluate(async () => decodeURIComponent(await Plotly.toImage(document.querySelector('[data-assay-agent-plotly-chart]'), {format: 'svg'})));
-    assert(agentSvg.includes('Agent figure label')); assert(agentSvg.includes('Original annotation'));
-    await page.screenshot({path: path.join(output, 'agent-elements.png')});
-    await page.click('[data-cc="resetTabBtn"]');
-    await page.waitForFunction((count) => document.querySelector('[data-assay-agent-plotly-chart]').layout.annotations.length === 1 && document.querySelector('[data-assay-agent-plotly-chart]').layout.shapes.length === count, baseShapes);
+    assert(agentSvg.includes('Original annotation'));
+    assert(await page.evaluate(() => document.querySelector('[data-assay-agent-plotly-chart]').layout.shapes
+      .some((shape) => shape.type === 'line' && shape.x0 === 1 && shape.x1 === 2 && shape.y0 === 2 && shape.y1 === 2)));
+    await page.screenshot({path: path.join(output, 'agent-format.png')});
     await page.evaluate(() => { const kind = document.getElementById('assay-analysis-kind'); kind.value = 'linear'; kind.dispatchEvent(new Event('change', {bubbles: true})); });
     await page.evaluate(() => qa.ready());
-    assert(await page.locator('[data-cc-tab="elements"]').isHidden());
+    assert.equal(await page.locator('[data-cc-tab="elements"]').count(), 0);
     assert.equal(await page.locator('[data-cc-tab="frame"]').getAttribute('aria-selected'), 'true');
     await page.locator('[data-cc-tab="frame"]').focus(); await page.keyboard.press('End');
     assert.equal(await page.locator('[data-cc-tab="text"]').getAttribute('aria-selected'), 'true');
     assert.deepEqual(errors, []);
-    console.log(`Assay plot live MCP, rendering, elements UI, drag, export, reload, Setup and rollback checks passed. Screenshots: ${output}`);
+    console.log(`Assay plot live MCP, rendering, format tabs, drag, export, reload, Setup and rollback checks passed. Screenshots: ${output}`);
   } finally { await service?.stop(); await browser.close(); }
 })().catch((error) => { console.error(error); process.exitCode = 1; });

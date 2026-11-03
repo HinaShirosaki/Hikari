@@ -27,41 +27,72 @@ export function createDnaDigestionController({ rootDocument, getSelectedRecord, 
       && getEntryId() === context.entryId;
   }
 
-  function endHtml(end) {
-    if (end.kind === 'original') return i18nUi.html('Original template end');
-    if (end.kind === 'blunt') return i18nUi.html('{enzyme}: blunt end', { enzyme: end.enzyme });
-    return i18nUi.html('{enzyme}: {prime} overhang {sequence} (5′ → 3′)', {
-      enzyme: end.enzyme, prime: end.kind === '5-prime' ? '5′' : '3′', sequence: end.sequence
+  function updateControls() {
+    field('fields').disabled = saving;
+    field('sites').querySelectorAll('select').forEach(select => { select.disabled = saving || context.locked; });
+    field('products').querySelectorAll('[data-digest-save]').forEach(button => {
+      const index = Number(button.dataset.digestSave);
+      const saved = context.saved.has(index);
+      button.disabled = saving || saved;
+      button.dataset.digestState = saved ? 'saved' : 'unsaved';
+      button.classList.toggle('primary-btn', !saved);
+      button.classList.toggle('ghost-btn', saved);
+      if (saved) {
+        i18nUi.setText(button, '');
+        i18nUi.setHtml(button, `<span aria-hidden="true">✓</span><span class="sr-only">${i18nUi.html('Saved')}</span>`);
+      } else {
+        i18nUi.setText(button, i18nUi.message(saving && context.savingIndex === index ? 'Saving…' : 'Save'));
+      }
+      field('products').querySelector(`[data-digest-name="${index}"]`).disabled = saving || saved;
     });
   }
 
-  function updateSelection() {
-    if (saving) return;
-    const selected = [...field('products').querySelectorAll('[data-digest-keep]:checked')];
-    field('save').disabled = !selected.length;
-  }
-
   function preview() {
-    if (!context || saving || context.pending) return;
+    if (!context || saving || context.locked) return;
     try {
       const selections = context.sites.map((site, index) => ({ site, enzymeName: field(`enzyme-${index}`).value }));
       const products = buildRestrictionDigestProducts(context.template, selections);
       context.products = products;
       context.ids = products.map(() => globalThis.crypto.randomUUID());
+      context.saved = new Set();
       i18nUi.setHtml(field('products'), products.map((product, index) => `<div class="sequence-viewer-digest-product">
-        <label class="sequence-viewer-digest-keep"><input type="checkbox" data-digest-keep="${index}" checked>
-          ${i18nUi.html('Fragment {number} · {length} bp', { number: index + 1, length: product.sequence.length.toLocaleString() })}</label>
-        <label>${i18nUi.html('Fragment name')}<input data-digest-name="${index}" maxlength="140" value="${escapeHtml(product.name)}"></label>
-        <p class="small-note">${i18nUi.html('Left end:')} ${endHtml(product.digestEnds.left)}</p>
-        <p class="small-note">${i18nUi.html('Right end:')} ${endHtml(product.digestEnds.right)}</p>
+        <label>${i18nUi.html('Fragment {number} · {length} bp', { number: index + 1, length: product.sequence.length.toLocaleString() })}
+          <input data-digest-name="${index}" maxlength="140" value="${escapeHtml(product.name)}"></label>
+        <button type="button" class="primary-btn" data-digest-save="${index}" aria-live="polite">${i18nUi.html('Save')}</button>
       </div>`).join(''));
       i18nUi.setText(field('error'), '');
-      updateSelection();
+      updateControls();
     } catch (error) {
       context.products = [];
       i18nUi.setHtml(field('products'), '');
       i18nUi.setOwnedText(field('error'), error.message);
-      field('save').disabled = true;
+    }
+  }
+
+  async function saveProduct(index) {
+    if (!context || saving || !context.products[index] || context.saved.has(index)) return;
+    try {
+      if (!templateIsCurrent()) throw new Error(i18nUi.text('The template changed. Close this dialog and try again.'));
+      const name = field('products').querySelector(`[data-digest-name="${index}"]`).value.trim();
+      if (!name) throw new Error(i18nUi.text('Enter a fragment name.'));
+      saving = true;
+      context.savingIndex = index;
+      // Preserve this digest and its IDs through retries and individual saves.
+      context.locked = true;
+      i18nUi.setText(field('error'), '');
+      updateControls();
+      await saveFragments(context.template, [{ ...context.products[index], name }], {
+        entryIds: [context.ids[index]], openAfterSave: false
+      });
+      context.saved.add(index);
+    } catch (error) {
+      i18nUi.setOwnedText(field('error'), error.message);
+    } finally {
+      // Saving an unsaved template can assign it an entry ID, even if the
+      // subsequent fragment write fails. Retain that parent for the next save.
+      if (context && getSelectedRecord() === context.template) context.entryId = getEntryId();
+      saving = false;
+      if (context) updateControls();
     }
   }
 
@@ -78,59 +109,24 @@ export function createDnaDigestionController({ rootDocument, getSelectedRecord, 
       <p class="small-note" data-digest-template></p>
       <fieldset data-digest-fields>
         <div class="sequence-viewer-digest-sites" data-digest-sites></div>
-        <p class="small-note">${i18nUi.html('Choose which fragments to save. Each becomes a GenBank child of the template; lengths refer to the plus strand.')}</p>
         <div class="sequence-viewer-digest-products" data-digest-products></div>
       </fieldset>
       <p class="sequence-viewer-fragment-error" role="alert" data-digest-error></p>
       <div class="form-actions">
-        <button type="button" class="ghost-btn" data-digest-cancel>${i18nUi.html('Cancel')}</button>
-        <button type="submit" class="primary-btn" data-digest-save>${i18nUi.html('Confirm digestion and save')}</button>
+        <button type="button" class="ghost-btn" data-digest-cancel>${i18nUi.html('Close')}</button>
       </div>
     </form>`);
     rootDocument.body.appendChild(dialog);
     dialog.addEventListener('cancel', event => { if (saving) event.preventDefault(); else context = null; });
     dialog.addEventListener('click', event => {
+      const save = event.target.closest('[data-digest-save]');
+      if (save) { void saveProduct(Number(save.dataset.digestSave)); return; }
       if (event.target === dialog || event.target.closest('[data-digest-close], [data-digest-cancel]')) cancel();
     });
     dialog.addEventListener('change', event => {
       if (event.target.matches('[data-digest-enzyme]')) preview();
-      else updateSelection();
     });
-    dialog.querySelector('form').addEventListener('submit', event => {
-      event.preventDefault();
-      void (async () => {
-        if (!context || saving) return;
-        try {
-          if (!templateIsCurrent()) throw new Error(i18nUi.text('The template changed. Close this dialog and try again.'));
-          if (!context.pending) {
-            const indices = [...field('products').querySelectorAll('[data-digest-keep]:checked')].map(input => Number(input.dataset.digestKeep));
-            if (!indices.length) throw new Error(i18nUi.text('Choose at least one fragment to save.'));
-            const products = indices.map(index => {
-              const name = field('products').querySelector(`[data-digest-name="${index}"]`).value.trim();
-              if (!name) throw new Error(i18nUi.text('Enter a fragment name.'));
-              return { ...context.products[index], name };
-            });
-            // Stable IDs make retrying a partly completed save idempotent.
-            context.pending = { products, entryIds: indices.map(index => context.ids[index]) };
-          }
-          saving = true;
-          field('fields').disabled = true;
-          field('save').disabled = true;
-          i18nUi.setText(field('save'), i18nUi.message('Saving…'));
-          await saveFragments(context.template, context.pending.products, { entryIds: context.pending.entryIds });
-          saving = false;
-          cancel();
-        } catch (error) {
-          i18nUi.setOwnedText(field('error'), error.message);
-          if (context && getSelectedRecord() === context.template) context.entryId = getEntryId();
-        } finally {
-          saving = false;
-          field('fields').disabled = Boolean(context?.pending);
-          field('save').disabled = false;
-          i18nUi.setText(field('save'), i18nUi.message('Confirm digestion and save'));
-        }
-      })();
-    });
+    dialog.querySelector('form').addEventListener('submit', event => event.preventDefault());
     return dialog;
   }
 
@@ -143,14 +139,14 @@ export function createDnaDigestionController({ rootDocument, getSelectedRecord, 
     i18nUi.setText(field('title'), i18nUi.message(context.sites.length === 1 ? 'Single digestion' : 'Double digestion'));
     i18nUi.setText(field('template'), i18nUi.message('Template: {name}', { name: context.template.name }));
     i18nUi.setHtml(field('sites'), context.sites.map((site, index) => `<label>
-      ${i18nUi.html('Site {number}: {name} · bases {range}', { number: index + 1, name: site.name,
+      ${i18nUi.html('Site {number} · bases {range}', { number: index + 1,
         range: site.segments.map(part => `${part.start + 1}–${part.end}`).join(', ') })}
       <select data-digest-enzyme data-digest-enzyme-${index}>${digestSiteEnzymes(site).map(enzyme =>
-        `<option value="${escapeHtml(enzyme.name)}"${enzyme.name === site.name ? ' selected' : ''}>${escapeHtml(enzyme.name)} · ${escapeHtml(enzyme.cut || '?')}</option>`).join('')}</select>
+        `<option value="${escapeHtml(enzyme.name)}"${enzyme.name === site.name ? ' selected' : ''}>${escapeHtml(enzyme.name)}</option>`).join('')}</select>
     </label>`).join(''));
     preview();
     if (!dialog.open) dialog.showModal();
-    field('save').focus();
+    field('enzyme-0').focus();
   }
 
   function start(site, mode = 'single') {
@@ -158,7 +154,7 @@ export function createDnaDigestionController({ rootDocument, getSelectedRecord, 
     cancel();
     const template = getSelectedRecord();
     if (!template?.sequence?.length) return;
-    context = { template, snapshot: snapshot(template), entryId: getEntryId(), sites: [site], products: [], pending: null };
+    context = { template, snapshot: snapshot(template), entryId: getEntryId(), sites: [site], products: [], saved: new Set(), locked: false };
     hideMenus();
     if (mode !== 'double') { showConfirmation(); return; }
     picker = rootDocument.createElement('div');

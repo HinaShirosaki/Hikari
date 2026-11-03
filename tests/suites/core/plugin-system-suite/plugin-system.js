@@ -860,10 +860,14 @@ test('plugin system: bridge gates verbs on manifest permissions and frame identi
     min: 240,
     max: 400,
     mobileBreakpoint: 980,
+    headerToggleAvailable: false,
     foldable: true,
     folded: false
   });
   assert.equal(send(reader, 'app.setLeftRailWidth', { width: '360' }).ok, false, 'layout writes require a number');
+  assert.equal(send(noLayout, 'app.setLeftRail', { available: true }).ok, false, 'header registration requires layout permission');
+  assert.equal(send(reader, 'app.setLeftRail', { available: 'true' }).ok, false, 'header registration requires a boolean');
+  assert.equal(send(reader, 'app.setLeftRail', { available: true }).ok, false, 'hosts without a header keep local controls available');
   // The rail write touches host CSS, host localStorage, and every other frame, so it
   // is gated like any other write verb rather than being free.
   const deniedRail = send(noLayout, 'app.setLeftRailWidth', { width: 360 });

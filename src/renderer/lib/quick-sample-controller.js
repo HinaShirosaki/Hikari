@@ -75,6 +75,7 @@ export function createQuickSampleController({
   let selectedLocation = '';
   let selectedContainer = null;
   let selectedWellIndex = null;
+  let editingSampleId = '';
   let defaults = {};
   let busy = false;
 
@@ -93,7 +94,9 @@ export function createQuickSampleController({
     busy = Boolean(isBusy);
     if (submitBtn) {
       submitBtn.disabled = Boolean(isBusy);
-      const label = isBusy ? 'Adding sample' : 'Add Sample';
+      const label = editingSampleId
+        ? (isBusy ? 'Saving sample' : 'Save Sample')
+        : (isBusy ? 'Adding sample' : 'Add Sample');
       i18nUi.setAttribute(submitBtn, 'aria-label', i18nUi.message(label));
       i18nUi.setAttribute(submitBtn, 'title', i18nUi.message(label));
       if (isBusy) {
@@ -103,7 +106,7 @@ export function createQuickSampleController({
       }
       const screenReaderLabel = submitBtn.querySelector?.('.sr-only');
       if (screenReaderLabel) {
-        i18nUi.setText(screenReaderLabel, label);
+        i18nUi.setText(screenReaderLabel, i18nUi.message(label));
       }
     }
   }
@@ -242,6 +245,20 @@ export function createQuickSampleController({
   function renderLocationOptions() {
     containers = listContainers(state?.inventory);
     locationNames = getSampleInventoryLocationNames(state?.settings, state?.inventory);
+    const link = defaults.inventoryLink;
+    const storedContainer = link && findContainer(containers, `${link.section}::${link.containerId}`);
+    if (storedContainer) {
+      selectLocation(storedContainer.section);
+      selectContainer(storedContainer.key);
+      const wellIndex = Number(link.wellIndex);
+      if (isMultiWellContainer(storedContainer.container)
+        && link.wellIndex !== null && link.wellIndex !== undefined && link.wellIndex !== ''
+        && Number.isInteger(wellIndex) && wellIndex >= 0 && wellIndex < getWellCount(storedContainer.container)) {
+        selectedWellIndex = wellIndex;
+        renderGrid();
+      }
+      return;
+    }
     const nextLocation = (selectedLocation && locationNames.includes(selectedLocation) ? selectedLocation : '')
       || locationNames.find((locationName) => containers.some((item) => item.section === locationName))
       || locationNames[0]
@@ -274,6 +291,7 @@ export function createQuickSampleController({
       return;
     }
     defaults = { ...initialValues };
+    editingSampleId = String(defaults.sampleId || '');
     resetFields();
     renderLocationOptions();
     overlay.hidden = false;
@@ -315,7 +333,7 @@ export function createQuickSampleController({
       return null;
     }
     const requestedCode = normalizeSampleCode(codeInput?.value);
-    if (requestedCode && asArray(state?.samples).some((sample) => sample?.code === requestedCode)) {
+    if (requestedCode && asArray(state?.samples).some((sample) => sample?.code === requestedCode && sample.id !== editingSampleId)) {
       setStatus(i18nUi.text("Sample code {p0} already exists.", { p0: requestedCode }), true);
       codeInput?.focus?.();
       return null;
@@ -325,33 +343,41 @@ export function createQuickSampleController({
     setStatus('');
     try {
       const context = await prepareCreate?.();
+      const previousRecord = editingSampleId
+        ? asArray(state?.samples).find(sample => sample.id === editingSampleId)
+        : null;
+      if (editingSampleId && !previousRecord) throw new Error(i18nUi.text('Could not save the sample.'));
       const nowIso = new Date().toISOString();
       const wellIndex = isMultiWellContainer(selectedContainer.container) ? selectedWellIndex : null;
       const record = {
-        id: String(createId?.() || `sample-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`),
-        code: requestedCode || uniqueGeneratedCode(),
+        ...previousRecord,
+        id: previousRecord?.id || String(createId?.() || `sample-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`),
+        code: requestedCode || previousRecord?.code || uniqueGeneratedCode(),
         name,
         type: String(typeInput?.value || 'plasmid').trim() || 'plasmid',
         lot: String(lotInput?.value || '').trim(),
         concentration: String(concentrationInput?.value || '').trim(),
-        notes: '',
-        cellPassage: null,
+        notes: previousRecord?.notes || '',
+        cellPassage: previousRecord?.cellPassage ?? null,
         location: buildSampleLocation(selectedContainer.section, selectedContainer.container, wellIndex),
         inventoryLink: { section: selectedContainer.section, containerId: selectedContainer.container.id, wellIndex },
-        chemicalLinks: [],
-        compoundStructure: null,
+        chemicalLinks: previousRecord?.chemicalLinks || [],
+        compoundStructure: previousRecord?.compoundStructure || null,
         updatedAt: nowIso
       };
+      if (previousRecord && record.type !== previousRecord.type) delete record.details;
       if (record.type === defaults.type && defaults.details) {
         record.details = { ...defaults.details };
       }
+      if (defaults.sourceLink) record.sourceLink = { ...defaults.sourceLink };
       state.samples = asArray(state.samples);
-      state.samples.push(record);
+      if (previousRecord) state.samples[state.samples.indexOf(previousRecord)] = record;
+      else state.samples.push(record);
       // A failed persistence or capture must leave no sample behind.
       try {
         await onCreated?.({ record, context });
       } catch (error) {
-        state.samples = state.samples.filter((sample) => sample !== record);
+        state.samples = state.samples.flatMap(sample => sample === record ? (previousRecord ? [previousRecord] : []) : [sample]);
         throw error;
       }
       setBusy(false);

@@ -26,17 +26,13 @@ export function createDnaFragmentDialog({ rootDocument, getSelectedRecord, getEn
       : buildPcrFragmentRecord(context.template, context.primer, context.partner, name);
   }
 
-  function preview() {
+  function validate() {
     if (!context || saving) return;
     try {
-      const product = makeProduct();
-      i18nUi.setText(field('preview'), i18nUi.message('{length} bp · linear DNA · {features} annotations', {
-        length: product.sequence.length.toLocaleString(), features: product.features.length
-      }));
+      makeProduct();
       i18nUi.setText(field('error'), '');
       field('save').disabled = false;
     } catch (error) {
-      i18nUi.setText(field('preview'), '');
       i18nUi.setOwnedText(field('error'), error.message);
       field('save').disabled = true;
     }
@@ -52,7 +48,6 @@ export function createDnaFragmentDialog({ rootDocument, getSelectedRecord, getEn
         <h4 id="sequence-viewer-fragment-title" data-fragment-title></h4>
         <button type="button" class="app-dialog-close-btn" data-fragment-close ${i18nUi.attribute('aria-label', 'Close')}>×</button>
       </div>
-      <p class="small-note" data-fragment-parent></p>
       <fieldset data-fragment-fields>
         <label>${i18nUi.html('Fragment name')}<input data-fragment-name required maxlength="140" autocomplete="off"></label>
         <div data-fragment-pcr>
@@ -61,7 +56,6 @@ export function createDnaFragmentDialog({ rootDocument, getSelectedRecord, getEn
           <button type="button" class="ghost-btn" data-fragment-pick-partner>${i18nUi.html('Choose a different partner in the sequence')}</button>
         </div>
       </fieldset>
-      <p class="small-note" data-fragment-preview aria-live="polite"></p>
       <p class="sequence-viewer-fragment-error" data-fragment-error role="alert"></p>
       <div class="form-actions">
         <button type="button" class="ghost-btn" data-fragment-cancel>${i18nUi.html('Cancel')}</button>
@@ -69,8 +63,8 @@ export function createDnaFragmentDialog({ rootDocument, getSelectedRecord, getEn
       </div>
     </form>`);
     rootDocument.body.appendChild(dialog);
-    dialog.addEventListener('input', preview);
-    dialog.addEventListener('change', preview);
+    dialog.addEventListener('input', validate);
+    dialog.addEventListener('change', validate);
     dialog.addEventListener('cancel', event => { if (saving) event.preventDefault(); else context = null; });
     dialog.addEventListener('click', event => {
       if (event.target.closest('[data-fragment-pick-partner]') && !saving && context?.primer) {
@@ -122,14 +116,13 @@ export function createDnaFragmentDialog({ rootDocument, getSelectedRecord, getEn
     context = { template, entryId: getEntryId(), range: range && { ...range }, primer, partner };
     field('pcr').hidden = !primer;
     i18nUi.setText(field('title'), i18nUi.message(primer ? 'Create PCR fragment' : 'Save DNA fragment'));
-    i18nUi.setText(field('parent'), i18nUi.message('Saved as GenBank DNA under {name}.', { name: template.name }));
     if (primer) {
       i18nUi.setText(field('primer'), i18nUi.message('Starting primer: {name}', { name: primer.name || i18nUi.text('Primer') }));
       i18nUi.setText(field('partner'), i18nUi.message('Partner primer: {name}', { name: partner.name || i18nUi.text('Primer') }));
     }
     field('name').value = primer ? `${template.name}_PCR`
       : feature?.name ? `${template.name}_${feature.name}` : buildDnaFragmentRecord(template, range).name;
-    preview();
+    validate();
     rootDocument.querySelectorAll('[data-sequence-hover-tooltip]').forEach(node => { node.hidden = true; });
     if (!dialog.open) dialog.showModal();
     field('name').focus();

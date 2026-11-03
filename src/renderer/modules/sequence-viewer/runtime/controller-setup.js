@@ -10,6 +10,7 @@ import { createSequenceSamplePositionController } from '../sample-position.js';
 import { createDnaFragmentDialog } from '../fragment-dialog.js';
 import { createPcrPrimerPicker } from '../pcr-primer-picker.js';
 import { createDnaDigestionController } from '../digestion-dialog.js';
+import { createDnaAssemblyController } from '../assembly-picker.js';
 import { getCommercialRestrictionFeaturesForRecord } from '../restriction-analysis.js';
 import { createSequenceViewerDetailController } from '../detail-controller.js';
 import { createSequenceViewerHomeController } from '../home-controller.js';
@@ -23,6 +24,24 @@ import {
 
 export function setupSequenceViewerControllers(ctx) {
   const { actions, controllers, elements, onNavigateDetail, onNavigateHome, options, rootDocument, state } = ctx;
+  controllers.assembly = createDnaAssemblyController({
+    rootDocument, getBridge: actions.getBridge, getStoragePath: actions.getStoragePath,
+    getActiveInput: () => ({ entryId: state.activeEntryId, record: actions.getSelectedRecord() }),
+    getEntryName: entryId => state.libraryEntries?.find(entry => entry.id === entryId)?.name || 'DNA',
+    saveAssembly: actions.saveAssembledDna,
+    beforeOpen: () => {
+      controllers.digestion?.cancel();
+      controllers.pcrPicker?.cancel();
+      controllers.detail?.hideFeatureContextMenu();
+      controllers.vectorBuilder?.hideOverlays();
+      rootDocument?.querySelectorAll?.('[data-sequence-hover-tooltip]').forEach(node => { node.hidden = true; });
+    }
+  });
+  rootDocument?.addEventListener('click', event => {
+    if (event.target.closest?.('[data-sequence-assembly-current]')) {
+      void controllers.assembly.open({ entryId: state.activeEntryId, record: actions.getSelectedRecord() });
+    }
+  });
   controllers.samplePosition = createSequenceSamplePositionController({
     rootDocument, appState: options?.state, persist: options?.persist, createId: options?.createId
   });
@@ -51,6 +70,9 @@ export function setupSequenceViewerControllers(ctx) {
     onDeleteLibraryFolder: actions.deleteLibraryFolder,
     onMoveLibraryEntry: actions.moveLibraryEntryToFolder,
     onRecognizeBackbone: actions.recognizeCurrentBackboneInsert,
+    onAssembleDna: entryId => controllers.assembly.open({ entryId,
+      record: entryId === state.activeEntryId ? actions.getSelectedRecord() : null }),
+    onLibraryRendered: () => controllers.assembly.refreshHighlights(),
     onRecordSamplePosition: (entry) => controllers.samplePosition.openSequence(entry),
     onLibraryEntryLoaded: ({ alignments }) => {
       actions.setAlignmentSessions(alignments);
@@ -91,6 +113,7 @@ export function setupSequenceViewerControllers(ctx) {
       return Number.isInteger(index) ? controllers.detail?.getVisibleFeaturesForRecord(actions.getSelectedRecord())[index] : null;
     },
     onBeginPicking: primer => {
+      controllers.assembly?.close();
       controllers.digestion?.cancel();
       controllers.vectorBuilder?.hideOverlays();
       controllers.detail?.hideFeatureContextMenu();
@@ -122,6 +145,7 @@ export function setupSequenceViewerControllers(ctx) {
       return null;
     },
     hideMenus: () => {
+      controllers.assembly?.close();
       controllers.detail?.hideFeatureContextMenu();
       if (elements.vectorBuilderContextMenu) elements.vectorBuilderContextMenu.hidden = true;
       rootDocument?.querySelectorAll?.('[data-sequence-hover-tooltip]').forEach(node => { node.hidden = true; });

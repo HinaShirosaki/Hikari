@@ -11,7 +11,6 @@
                   <section id="gel-lane-table-panel" class="gel-lane-table-panel" aria-labelledby="gel-lane-table-title" hidden>
                     <header class="gel-lane-table-head gel-table-bar">
                       <h3 id="gel-lane-table-title"><span data-i18n="gel.full.ce603a37">Lane table</span></h3>
-                      <button type="button" id="gel-add-table-btn" class="ghost-btn" disabled><span data-i18n="gel.full.3e07b230">Add table</span></button>
                       <button type="button" class="ghost-btn" data-gel-table-add-row hidden><span data-i18n="gel.full.9e623ff8">Add row</span></button>
                       <button type="button" class="ghost-btn" data-gel-table-remove-row hidden><span data-i18n="gel.full.5944b415">Remove row</span></button>
                       <label class="gel-lane-table-ladder-choice" data-gel-table-ladder hidden><input type="checkbox" data-gel-table-include-ladder checked /><span data-i18n="gel.full.5fb2df59">Include ladder lane</span></label>
@@ -32,6 +31,7 @@
                 <aside class="gel-inspector" aria-label="Gel tools" data-i18n-aria-label="gel.full.45dc4f94">
                 <div class="gel-viewer-card" aria-label="Viewer" data-i18n-aria-label="gel.full.8d4262ef">
                   <div class="gel-viewer-toolbar" role="toolbar" aria-label="Gel viewer tools" aria-orientation="vertical" data-i18n-aria-label="gel.full.a27df7ec">
+                    <button type="button" id="gel-add-table-btn" class="gel-tool-icon-btn" aria-controls="gel-lane-table-panel" aria-expanded="false" aria-pressed="false" aria-label="Add table" title="Add table" disabled data-i18n-title="gel.full.3e07b230" data-i18n-aria-label="gel.full.3e07b230"><svg class="gel-card-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18M9 3v18M15 9v12M3 15h18"></path></svg><span class="gel-card-label"><span data-i18n="gel.full.3e07b230">Add table</span></span></button>
                     <button type="button" id="gel-crop-mode-btn" class="gel-tool-icon-btn" aria-label="Start crop" title="Start crop" aria-pressed="false" disabled data-i18n-title="gel.full.b97551cf" data-i18n-aria-label="gel.full.b97551cf"><svg class="gel-card-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 3v13a2 2 0 0 0 2 2h13"></path><path d="M18 21V8a2 2 0 0 0-2-2H3"></path></svg><span class="gel-card-label"><span data-i18n="gel.full.1909c537">Crop</span></span></button>
                     <div id="gel-crop-bar" class="gel-crop-bar" role="group" aria-label="Crop" hidden data-i18n-aria-label="gel.full.1909c537">
                       <label class="gel-crop-angle">
@@ -133,7 +133,6 @@
                               </div>
                               <button type="button" id="gel-tool-dividers-btn" class="ghost-btn" aria-pressed="false" aria-label="Lane dividers" title="Click to add lane boundaries; drag an existing divider to move it. The outermost dividers define the gel edges." data-i18n-title="gel.full.47e913bf" data-i18n-aria-label="gel.full.5391a987"><span data-i18n="gel.full.406336ef">Dividers</span></button>
                               <button type="button" id="gel-tool-lane-vertices-btn" class="ghost-btn" aria-label="Lane vertices" title="Drag a lane's corners to correct tilt" data-i18n-title="gel.full.b1429b3c" data-i18n-aria-label="gel.full.8fa2fd36"><span data-i18n="gel.full.75f221ae">Vertices</span></button>
-                              <button type="button" id="gel-open-lane-table-btn" class="ghost-btn" aria-controls="gel-lane-table-panel" aria-expanded="false" aria-label="Lane table" title="Sample labels above the lanes, included in exports" data-i18n-title="gel.full.20ca14e1" data-i18n-aria-label="gel.full.ce603a37"><span data-i18n="gel.full.d70ceb7f">Table</span></button>
                             </div>
                           </div>
                         </details>

@@ -5,6 +5,8 @@ import { VERBS } from './plugin-bridge/verbs.js';
 import { pluginOrigin } from './plugin-origin.js';
 import { createPluginWorkspaceTools } from './plugin-workspace-tools.js';
 import { createPluginContextActions } from './plugin-context-actions.js';
+import { createPluginLeftRailHeader } from './plugin-left-rail-header.js';
+import { getPluginLeftRailLayout, setPluginLeftRailFolded } from './plugin-left-rail.js';
 import { PLUGIN_SETTINGS_CHANGED, readPluginSettings } from '../lib/plugin-settings.js';
 
 export function createPluginBridge({
@@ -22,6 +24,10 @@ export function createPluginBridge({
   // WindowProxy identity survives navigation, so a grant also needs the
   // loopback origin assigned before the plugin document is loaded.
   const frames = new Map();
+  const leftRailHeader = createPluginLeftRailHeader({ windowObject,
+    getRegistration: frame => frames.get(frame),
+    readLayout: pluginId => getPluginLeftRailLayout(pluginId, { windowObject }),
+    setFolded: (pluginId, folded) => setPluginLeftRailFolded(pluginId, folded, { windowObject }) });
   const workspaceTools = createPluginWorkspaceTools({ windowObject, getRegistration: frame => frames.get(frame) });
   const contextActions = createPluginContextActions({ state, windowObject, api,
     getRegistration: frame => frames.get(frame), activate: onPluginActivate });
@@ -84,6 +90,7 @@ export function createPluginBridge({
   function register(frameWindow, plugin, baseUrl) {
     const origin = pluginOrigin(baseUrl);
     if (frameWindow && plugin && origin) {
+      leftRailHeader.clear(frameWindow);
       workspaceTools.clear(frameWindow);
       contextActions.clear(frameWindow);
       frames.set(frameWindow, { plugin, origin });
@@ -262,6 +269,7 @@ export function createPluginBridge({
         frameWindow: event.source,
         windowObject,
         workspaceTools,
+        leftRailHeader,
         contextActions
       });
       // Filesystem verbs are async; the rest stay synchronous so a reply still

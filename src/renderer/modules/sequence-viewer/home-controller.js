@@ -156,6 +156,7 @@ export function createSequenceViewerHomeController(config = {}) {
     libraryStatusSaved,
     previewZoom,
     setPreviewedRecord: (next) => { previewedRecord = next; },
+    onRendered: config.onLibraryRendered,
     getLibraryListElements
   });
 
@@ -482,6 +483,11 @@ export function createSequenceViewerHomeController(config = {}) {
           const entryId = getLibraryContextId();
           hideLibraryContextMenus();
           void recognizeLibraryEntryBackbone(entryId);
+        } else if (action === 'assemble') {
+          const entryId = getLibraryContextId();
+          hideLibraryContextMenus();
+          clearLibraryPreviewTimer();
+          void config.onAssembleDna?.(entryId);
         }
       });
     });

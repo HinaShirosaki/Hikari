@@ -1,6 +1,6 @@
 // This plugin is self-contained; the menu uses the same editor actions as the
 // toolbar and shortcuts, without requiring a host menu or clipboard permission.
-export function installCanvasContextMenu({ document, canOpen, selectTarget, getActions, status, hitTest }) {
+export function installCanvasContextMenu({ document, canOpen, selectTarget, getActions, getContext = () => null, status, hitTest }) {
   const menu = document.getElementById('canvas-context-menu');
   const stage = document.getElementById('main-canvas');
   const layers = document.getElementById('layers');
@@ -20,20 +20,25 @@ export function installCanvasContextMenu({ document, canOpen, selectTarget, getA
     const id = hit?.dataset.objectId || hit?.dataset.resizeId || hit?.dataset.rotateId || hit?.dataset.layerId;
     // Read the anchor before selection redraws and replaces its SVG/layer row.
     const anchor = (hit || stage.querySelector('[data-object-id][aria-pressed="true"]') || surface).getBoundingClientRect();
+    const x = keyboard || !event.clientX && !event.clientY ? anchor.left + Math.min(anchor.width, 24) : event.clientX;
+    const y = keyboard || !event.clientX && !event.clientY ? anchor.top + Math.min(anchor.height, 24) : event.clientY;
+    const context = getContext({ surface, keyboard, clientX: x, clientY: y });
     if (id) selectTarget(id, { individual: event.altKey || surface === layers, forceIndividual: event.altKey });
     document.querySelectorAll('.popover[open]').forEach(popover => { popover.open = false; });
-    actions = getActions();
+    actions = getActions(context);
     for (const button of buttons) {
+      button.hidden = actions[button.dataset.contextAction]?.visible === false;
       button.disabled = !actions[button.dataset.contextAction]?.enabled;
       button.tabIndex = -1;
     }
+    menu.querySelectorAll('[data-context-separator]').forEach(separator => {
+      separator.hidden = actions[separator.dataset.contextSeparator]?.visible === false;
+    });
     menu.hidden = false;
     const margin = 8, bounds = menu.getBoundingClientRect();
-    const x = keyboard || !event.clientX && !event.clientY ? anchor.left + Math.min(anchor.width, 24) : event.clientX;
-    const y = keyboard || !event.clientX && !event.clientY ? anchor.top + Math.min(anchor.height, 24) : event.clientY;
     menu.style.left = `${Math.max(margin, Math.min(x, window.innerWidth - bounds.width - margin))}px`;
     menu.style.top = `${Math.max(margin, Math.min(y, window.innerHeight - bounds.height - margin))}px`;
-    const first = buttons.find(button => !button.disabled);
+    const first = buttons.find(button => !button.hidden && !button.disabled);
     if (first) { first.tabIndex = 0; first.focus({ preventScroll: true }); }
   }
   for (const surface of [stage, layers]) {
@@ -46,7 +51,7 @@ export function installCanvasContextMenu({ document, canOpen, selectTarget, getA
   }
   menu.addEventListener('click', event => {
     const button = event.target.closest('[data-context-action]');
-    if (!button || button.disabled) return;
+    if (!button || button.hidden || button.disabled) return;
     const action = actions[button.dataset.contextAction];
     close(true);
     if (action?.enabled) Promise.resolve().then(() => action.run()).catch(error => status(error.message));
@@ -60,12 +65,12 @@ export function installCanvasContextMenu({ document, canOpen, selectTarget, getA
     if (event.key === 'Tab') { close(true); return; }
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      if (buttons.includes(document.activeElement) && !document.activeElement.disabled) document.activeElement.click();
+      if (buttons.includes(document.activeElement) && !document.activeElement.hidden && !document.activeElement.disabled) document.activeElement.click();
       return;
     }
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
     event.preventDefault();
-    const enabled = buttons.filter(button => !button.disabled), index = enabled.indexOf(document.activeElement);
+    const enabled = buttons.filter(button => !button.hidden && !button.disabled), index = enabled.indexOf(document.activeElement);
     const next = event.key === 'Home' ? 0 : event.key === 'End' ? enabled.length - 1
       : (index + (event.key === 'ArrowDown' ? 1 : -1) + enabled.length) % enabled.length;
     buttons.forEach(button => { button.tabIndex = -1; });

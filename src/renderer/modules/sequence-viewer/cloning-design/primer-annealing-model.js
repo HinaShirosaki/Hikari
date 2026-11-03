@@ -148,7 +148,7 @@ export function annealingStats(alignment) {
 
 // Reserve the available resizing span once. Reference columns and their gap
 // slots belong to the DNA context, rather than the current oligo length.
-export function buildPrimerReferenceFrame(record, alignment, maxPrimerLength) {
+export function buildPrimerReferenceFrame(record, alignment, maxPrimerLength, bounds = null) {
   if (!alignment) return null;
   const first = alignment.columns.find(column => column.targetIndex !== null)?.targetIndex ?? 0;
   const last = alignment.columns.findLast(column => column.targetIndex !== null)?.targetIndex ?? first;
@@ -156,14 +156,14 @@ export function buildPrimerReferenceFrame(record, alignment, maxPrimerLength) {
   const flank = targetIndex => ({ targetIndex, referenceBase: orientedBase(record, targetIndex, alignment.strand) });
   return { alignment, sequence: record.sequence, topology: record.topology, strand: alignment.strand,
     columns: [
-      ...Array.from({ length: 10 }, (_, i) => flank(first - 10 + i)),
+      ...Array.from({ length: 10 + Math.max(0, -(bounds?.minStart || 0)) }, (_, i) => flank(first - 10 + Math.min(0, bounds?.minStart || 0) + i)),
       ...alignment.columns.map(column => ({ targetIndex: column.targetIndex, referenceBase: column.referenceBase,
         insertionIndex: column.targetIndex === null ? column.primerIndex : null })),
-      ...Array.from({ length: 10 + Math.max(0, maxPrimerLength - primerLength) }, (_, i) => flank(last + i + 1))
+      ...Array.from({ length: 10 + Math.max(0, (bounds?.maxEnd ?? maxPrimerLength) - primerLength) }, (_, i) => flank(last + i + 1))
     ] };
 }
 
-export function primerAlignmentInReferenceFrame(sequence, record, frame, searchAlignment = frame?.alignment) {
+export function primerAlignmentInReferenceFrame(sequence, record, frame, searchAlignment = frame?.alignment, offset = 0) {
   if (!frame) return searchAlignment;
   const primer = dna(sequence);
   const original = frame.alignment;
@@ -171,52 +171,96 @@ export function primerAlignmentInReferenceFrame(sequence, record, frame, searchA
   // Length edits keep the original site and strand. A shorter repeated seed
   // may make the specificity search ambiguous, but must not move this drawing
   // to a different matching location on the plasmid.
-  const lastRetained = original.columns.findLastIndex(column => column.primerIndex !== null && column.primerIndex < primer.length);
-  const columns = original.columns.slice(0, lastRetained + 1).map(column => ({ ...column,
-    base: column.primerIndex === null ? '' : primer[column.primerIndex] }));
+  const end = offset + primer.length;
+  const firstTarget = original.columns.find(column => column.targetIndex !== null)?.targetIndex ?? original.start;
   const lastTarget = original.columns.findLast(column => column.targetIndex !== null)?.targetIndex ?? original.start - 1;
-  for (let i = originalLength; i < primer.length; i++) {
-    const targetIndex = lastTarget + 1 + i - originalLength;
+  const columns = [];
+  const append = (sourcePrimerIndex, targetIndex) => {
     const referenceBase = orientedBase(record, targetIndex, frame.strand);
-    columns.push({ primerIndex: i, targetIndex, base: primer[i], referenceBase,
-      paired: concrete(primer[i]) && primer[i] === referenceBase, unpaired: !referenceBase });
+    const base = primer[sourcePrimerIndex - offset];
+    columns.push({ primerIndex: sourcePrimerIndex - offset, sourcePrimerIndex, targetIndex, base, referenceBase,
+      paired: concrete(base) && base === referenceBase, unpaired: !referenceBase });
+  };
+  for (let i = offset; i < Math.min(0, end); i++) append(i, firstTarget + i);
+  const retained = column => column.primerIndex !== null && column.primerIndex >= offset && column.primerIndex < end;
+  const from = original.columns.findIndex(retained), to = original.columns.findLastIndex(retained);
+  if (from >= 0) {
+    for (const column of original.columns.slice(from, to + 1)) {
+      const primerIndex = column.primerIndex === null ? null : column.primerIndex - offset;
+      columns.push({ ...column, sourcePrimerIndex: column.primerIndex, primerIndex,
+        base: primerIndex === null ? '' : primer[primerIndex] });
+    }
   }
+  for (let i = Math.max(originalLength, offset); i < end; i++) append(i, lastTarget + 1 + i - originalLength);
   return { ...original, columns, ambiguous: searchAlignment?.ambiguous ?? original.ambiguous,
     siteCount: searchAlignment?.siteCount ?? original.siteCount };
 }
 
-export function primerLengthOptions(primer, product, alignment = alignPrimerToDna(primer?.sequence, product), templateAlignment = null) {
-  const sequence = dna(primer?.sequence);
-  const tail = dna(primer?.tailSequence);
-  let lastDisruption = -1, previousIndex = -1;
-  for (const column of templateAlignment?.columns || []) {
-    if (column.primerIndex !== null) previousIndex = column.primerIndex;
-    if (!column.paired) lastDisruption = Math.max(lastDisruption, previousIndex);
-  }
-  const min = Math.min(sequence.length, Math.max(12, tail.length + 8, lastDisruption + 9));
-  let extension = '';
-  const last = alignment?.columns.findLast(column => column.primerIndex === sequence.length - 1);
-  if (alignment && !alignment.ambiguous && last?.paired) {
-    const limit = Math.min(Math.max(120, sequence.length) - sequence.length, dna(product.sequence).length - sequence.length);
-    for (let offset = 1; offset <= limit; offset++) {
-      const base = orientedBase(product, last.targetIndex + offset, alignment.strand);
+export function primerResizeWindow(primer, product, alignment = alignPrimerToDna(primer?.sequence, product)) {
+  const seed = dna(primer.sequence);
+  const minLength = Math.min(8, seed.length), maxLength = Math.max(120, seed.length);
+  const first = alignment?.columns.find(column => column.primerIndex === 0);
+  const last = alignment?.columns.findLast(column => column.primerIndex === seed.length - 1);
+  let upstream = '', downstream = '';
+  if (alignment && !alignment.ambiguous) {
+    const limit = Math.min(maxLength - minLength, Math.max(0, dna(product.sequence).length - minLength));
+    for (let i = 1; first?.targetIndex !== null && first && i <= limit; i++) {
+      const base = orientedBase(product, first.targetIndex - i, alignment.strand);
       if (!concrete(base)) break;
-      extension += base;
+      upstream = base + upstream;
+    }
+    for (let i = 1; last?.targetIndex !== null && last && i <= limit; i++) {
+      const base = orientedBase(product, last.targetIndex + i, alignment.strand);
+      if (!concrete(base)) break;
+      downstream += base;
     }
   }
-  return { min, max: sequence.length + extension.length, sequence: sequence + extension };
+  return { sequence: upstream + seed + downstream, origin: upstream.length,
+    minStart: upstream.length ? -upstream.length : 0, maxEnd: seed.length + downstream.length, minLength,
+    maxLength: Math.max(seed.length, Math.min(maxLength, dna(product.sequence).length || seed.length)), seedLength: seed.length };
 }
 
-export function resizedPrimer(primer, length, options) {
-  const sequence = options.sequence.slice(0, Math.max(options.min, Math.min(options.max, Math.round(length))));
-  const originalSequence = dna(primer.sequence);
-  // The 5′ end (including every cloning tail) stays fixed. Only the 3′ binding
-  // region changes, following the final construct in the primer's orientation.
-  let bindingSequence = dna(primer.bindingSequence);
-  const delta = sequence.length - originalSequence.length;
-  bindingSequence = delta >= 0 ? bindingSequence + sequence.slice(originalSequence.length)
-    : bindingSequence.slice(0, Math.max(0, bindingSequence.length + delta));
-  return { ...primer, ...buildPrimerRecord({ ...primer, sequence, bindingSequence }), manuallyAdjusted: true };
+export function clampPrimerEnd(range, end, position, window) {
+  if (end === '5') {
+    return { start: Math.max(window.minStart, range.end - window.maxLength,
+      Math.min(Math.round(position), range.end - window.minLength)), end: range.end };
+  }
+  return { start: range.start, end: Math.min(window.maxEnd, range.start + window.maxLength,
+    Math.max(Math.round(position), range.start + window.minLength)) };
+}
+
+export function resizePrimerInterval(primer, range, window) {
+  const sequence = window.sequence.slice(window.origin + range.start, window.origin + range.end);
+  const tailLength = Math.max(0, Math.min(range.end, dna(primer.tailSequence).length) - range.start);
+  const tailSequence = dna(primer.tailSequence).length ? sequence.slice(0, tailLength) : '';
+  return { ...primer, ...buildPrimerRecord({ ...primer, sequence, tailSequence, bindingSequence: sequence.slice(tailSequence.length) }), manuallyAdjusted: true };
+}
+
+export function primerWithTemplateBinding(primer, alignment, originalPrimer = null, offset = 0) {
+  // An incidental match inside an insertion tail is not a contiguous PCR
+  // binding sequence. Keep only the exact paired suffix at the extending 3′
+  // end, so reconstructing a linked pair uses the actual physical template.
+  let bindingStart = primer.sequence.length;
+  const bindingFloor = originalPrimer?.bindingSequence
+    ? Math.max(0, originalPrimer.sequence.length - originalPrimer.bindingSequence.length - offset) : 0;
+  const columns = alignment?.columns || [];
+  for (let i = columns.length - 1; i >= 0; i--) {
+    const column = columns[i];
+    if (!column.paired || column.primerIndex === null || column.primerIndex < bindingFloor || column.primerIndex !== bindingStart - 1) break;
+    bindingStart = column.primerIndex;
+  }
+  return { ...primer, tailSequence: primer.sequence.slice(0, bindingStart), bindingSequence: primer.sequence.slice(bindingStart) };
+}
+
+export function normalizePrimerTmFloor(value) {
+  const number = value === '' || value === null || value === undefined ? NaN : Number(value);
+  return Number.isFinite(number) ? Math.max(0, Math.min(100, number)) : CLONING_PRIMER_TM_THRESHOLDS.relaxed.primerTm.min;
+}
+
+export function templateBindingTooLow(alignment, floor) {
+  if (!alignment) return false;
+  const { tm } = annealingStats(alignment);
+  return tm === null || tm < normalizePrimerTmFloor(floor);
 }
 
 export function replacePlanPrimer(displayPlan, index, nextPrimer, bindingAlignment) {
@@ -252,4 +296,63 @@ export function replacePlanPrimer(displayPlan, index, nextPrimer, bindingAlignme
     warnings: [...new Set([...baseline.warnings, adjustmentWarning, ...quality.qualityWarnings,
       ...(invalid ? ['The adjusted primer needs review: check its 3′ binding site, primer quality, binding Tm, and primer-pair Tm difference.'] : [])])],
     summary: { ...displayPlan.summary, ...quality } };
+}
+
+export function replacePlanPrimers(displayPlan, updates, { links = [], product } = {}) {
+  let next = updates.reduce((plan, update) => replacePlanPrimer(plan, update.index, update.primer, update.templateAlignment), displayPlan);
+  const group = primer => [primer.templateId, primer.groupLabel, primer.pcrStage, primer.templateEntryId].join('|');
+  const deltas = new Map();
+  for (const update of updates) {
+    const key = group(displayPlan.primers[update.index]);
+    deltas.set(key, (deltas.get(key) || 0) + (Number(update.startDelta) || 0));
+  }
+  const lengths = new Map();
+  for (const primer of displayPlan.primers) {
+    const key = group(primer);
+    if (!deltas.has(key)) continue;
+    const before = Number(primer.ampliconLength) || (displayPlan.strategy === 'q5-kld' ? product?.sequence?.length : 0);
+    if (before) lengths.set(key, displayPlan.strategy === 'q5-kld' && product?.sequence
+      ? product.sequence.length : Math.max(0, before - deltas.get(key)));
+  }
+  const changedLinks = links.filter(link => !link.unavailable && product?.sequence && link.kind === 'overlap'
+    && updates.some(update => update.startDelta && [link.first.index, link.second.index].includes(update.index)));
+  const junctions = changedLinks.map(link => {
+    const forward = next.primers[link.first.index], reverse = next.primers[link.second.index];
+    const range = updates.find(update => update.index === link.first.index)?.range;
+    const start = link.forwardStart + (range?.start || 0);
+    const overlapSequence = Array.from({ length: link.overlapLength }, (_, i) => orientedBase(product, start + i)).join('');
+    return { ...link.junction, overlapSequence, overlapLength: link.overlapLength,
+      overlapTm: cloningPrimerTm(overlapSequence), overlapGcContent: (overlapSequence.match(/[GC]/g) || []).length / overlapSequence.length * 100,
+      leftBindingTm: reverse.tm,
+      leftReverseTargetTail: reverseComplementIupac(reverse.tailSequence), rightForwardTargetTail: forward.tailSequence };
+  });
+  const primerKey = primer => [primer.role, primer.templateId, primer.sequence].join('|');
+  const primerChanges = new Map(next.primers.map(primer => {
+    const ampliconLength = lengths.get(group(primer));
+    const updated = ampliconLength === undefined ? primer : { ...primer, ampliconLength };
+    if (displayPlan.strategy === 'q5-kld' && updates.length > 1) {
+      updated.warnings = [...(updated.warnings || []).filter(warning => !/^(Carries |Anneals back-to-back|Adds \d+ nt at the 5′ end; the linked primer pair retains)/.test(warning)),
+        `Adds ${updated.tailSequence.length} nt at the 5′ end; the linked primer pair retains the complete Q5/KLD product.`];
+    }
+    return [primerKey(primer), updated];
+  }));
+  const refresh = value => {
+    if (Array.isArray(value)) return value.map(refresh);
+    if (!value || typeof value !== 'object') return value;
+    if (value.role && value.sequence && primerChanges.has(primerKey(value))) {
+      const updated = primerChanges.get(primerKey(value));
+      return { ...value, ampliconLength: updated.ampliconLength, warnings: updated.warnings };
+    }
+    const replacement = junctions.find(junction => value.leftFragmentId === junction.leftFragmentId
+      && value.rightFragmentId === junction.rightFragmentId && value.mode === junction.mode);
+    const current = replacement ? { ...value, ...replacement } : value;
+    return Object.fromEntries(Object.entries(current).map(([key, child]) => [key, refresh(child)]));
+  };
+  next = refresh(next);
+  const limits = displayPlan.strategy === 'in-fusion' ? { min: 45, max: 75 } : CLONING_PRIMER_TM_THRESHOLDS.relaxed.overlapTm;
+  if (junctions.some(junction => junction.overlapTm < limits.min || junction.overlapTm > limits.max)) {
+    next.feasible = false;
+    next.warnings = [...next.warnings, 'The adjusted overlap needs review: its melting temperature is outside the overlap range.'];
+  }
+  return next;
 }

@@ -8,9 +8,8 @@ import { PANEL_HTML, TABS, TAB_KEYS } from './chart-controls-markup.js';
 import { createChartControlsForm, GLOBAL_FIELDS, SERIES_FIELDS, POINT_FIELDS, AXIS_FIELDS, axisStyleKey } from './chart-controls-form.js';
 import { pointsToPixels } from './chart-style-model.js';
 import { axisStylePatch, seriesStylePatch, validateAxisRange, figureClassicPatch } from './chart-style-targets.js';
-import { mountPlotElementControls } from './plot-element-controls.js';
 
-export function mountChartControls(container, { store, promptForName, agentElements } = {}) {
+export function mountChartControls(container, { store, promptForName } = {}) {
   if (!container || !store) return { refresh() {}, destroy() {} };
   const askName = promptForName || ((message, initial) => globalThis.prompt?.(message, initial));
   i18nUi.setHtml(container, PANEL_HTML);
@@ -19,7 +18,6 @@ export function mountChartControls(container, { store, promptForName, agentEleme
   let activeTab = 'frame';
   let refreshing = false;
   let form;
-  let elementControls;
   function notice(message = '') {
     i18nUi.setOwnedText(q('validation'), message);
     q('validation').hidden = !message;
@@ -51,36 +49,20 @@ export function mountChartControls(container, { store, promptForName, agentEleme
     }
   });
   form = createChartControlsForm({ q, store, selection, pickers, textControls });
-  elementControls = mountPlotElementControls(q('plotElements'), {
-    store: { getStyle: () => agentElements?.getStyle() || { plotElements: [] }, getContext: () => store.getContext() },
-    apply: (patch) => {
-      notice();
-      return Promise.resolve().then(() => agentElements?.apply(patch)).then(() => refresh()).catch((error) => notice(error.message));
-    }, notice
-  });
   function refresh() {
     refreshing = true;
     form.refresh();
-    elementControls?.refresh();
     refreshing = false;
     selectTab(activeTab);
   }
-  function visibleTabs() {
-    return TABS.filter((tab) => tab.id !== 'elements' || store.getContext().method === 'agent_plotly');
-  }
   function selectTab(id) {
-    const available = visibleTabs();
-    const focusedTab = container.querySelector('[data-cc-tab="elements"]') === document.activeElement;
-    activeTab = available.some((tab) => tab.id === id) ? id : 'frame';
-    container.querySelector('.assay-chart-style-tabs').classList.toggle('has-agent-elements', available.length === TABS.length);
+    activeTab = TABS.some((tab) => tab.id === id) ? id : 'frame';
     container.querySelectorAll('[data-cc-tab]').forEach((button) => {
-      button.hidden = !available.some((tab) => tab.id === button.dataset.ccTab);
       const selected = button.dataset.ccTab === activeTab;
       button.setAttribute('aria-selected', String(selected));
       button.tabIndex = selected ? 0 : -1;
     });
     container.querySelectorAll('[data-cc-panel]').forEach((panel) => { panel.hidden = panel.dataset.ccPanel !== activeTab; });
-    if (focusedTab && activeTab !== 'elements') container.querySelector(`[data-cc-tab="${activeTab}"]`).focus();
   }
   function refreshPresets(selected = '') {
     form.options('presetSelect', [['', i18nUi.message('Custom')], [FIGURE_CLASSIC_PRESET, i18nUi.message('Figure Classic')],
@@ -178,10 +160,6 @@ export function mountChartControls(container, { store, promptForName, agentEleme
     if (button.dataset.ccTab) { selectTab(button.dataset.ccTab); return; }
     const key = button.dataset.cc;
     if (key === 'resetBtn') { notice(); selection.customTick = {}; store.resetStyle(); refresh(); refreshPresets(); }
-    if (key === 'resetTabBtn' && activeTab === 'elements') {
-      Promise.resolve().then(() => agentElements?.apply({ plotElements: [] })).then(refresh).catch((error) => notice(error.message));
-      return;
-    }
     if (key === 'resetTabBtn') {
       const defaults = store.getDefaultStyle();
       if (activeTab === 'axis') selection.customTick = {};
@@ -210,7 +188,7 @@ export function mountChartControls(container, { store, promptForName, agentEleme
   }
   function onKeyDown(event) {
     if (!event.target.closest('[role="tab"]')) return;
-    const tabs = visibleTabs();
+    const tabs = TABS;
     const index = tabs.findIndex((tab) => tab.id === activeTab);
     const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length
       : event.key === 'ArrowLeft' ? (index - 1 + tabs.length) % tabs.length

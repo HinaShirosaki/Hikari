@@ -36,6 +36,7 @@ export function initPluginLeftRailResizer({
   let destroyed = false;
   let commitVersion = 0;
   let folded = false, foldable = false, folding = false;
+  let headerToggle = false;
   const toggle = documentObject.getElementById?.('toggle-illustrations');
   let constraints = {
     width: DEFAULT_WIDTH,
@@ -92,12 +93,15 @@ export function initPluginLeftRailResizer({
   function syncFoldState() {
     const hidden = foldable && folded;
     if (hidden && activeResize) finishResize({ shouldCommit: false });
-    if (hidden && rail?.contains(documentObject.activeElement)) toggle?.focus({ preventScroll: true });
+    if (hidden && rail?.contains(documentObject.activeElement)) {
+      const focusTarget = headerToggle ? documentObject.getElementById('figure-title') : toggle;
+      focusTarget?.focus({ preventScroll: true });
+    }
     layout?.classList.toggle('is-left-rail-folded', hidden);
     if (rail) { rail.hidden = hidden; rail.inert = hidden; }
     if (handle) handle.hidden = hidden;
     if (toggle) {
-      toggle.hidden = !foldable;
+      toggle.hidden = !foldable || headerToggle;
       toggle.setAttribute('aria-busy', String(folding));
       toggle.setAttribute('aria-expanded', String(!hidden));
       i18nUi.setAttribute(toggle, "aria-label", (hidden ? i18nUi.message("Show library") : i18nUi.message("Hide library")));
@@ -234,6 +238,10 @@ export function initPluginLeftRailResizer({
 
   return {
     applyContext,
+    setHeaderToggle(mounted) {
+      headerToggle = mounted === true;
+      syncFoldState();
+    },
     ensureHandle,
     destroy
   };

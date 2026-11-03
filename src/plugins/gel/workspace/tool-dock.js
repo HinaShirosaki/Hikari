@@ -60,6 +60,8 @@ export function createGelToolDock({ documentObject: doc, onProcess, onSelect }) 
   // Crop is a mode, not a page: it sits with the tools but keeps its own handler.
   const crop = get('crop-mode-btn');
   buttons.get('image').after(crop);
+  const table = get('add-table-btn');
+  buttons.get('lanes').after(table);
   categoryGroup.append(layout); toolbar.prepend(categoryGroup); buttons.set('layout', layout);
   i18nUi.setAttribute(layout, "title", i18nUi.message("Layout")); i18nUi.setAttribute(layout, "aria-label", i18nUi.message("Layout")); layout.setAttribute('aria-controls', 'gel-tools-panel');
   for (const [id, label] of [['export-menu-btn', 'Export']]) {
@@ -84,6 +86,7 @@ export function createGelToolDock({ documentObject: doc, onProcess, onSelect }) 
     for (const [key, page] of pages) page.hidden = key !== active;
     name.hidden = active !== 'image';
     crop.inert = stack;
+    table.disabled = crop.disabled || stack || cropping;
     for (const [key, button] of buttons) {
       const selected = open && !cropping && active === key;
       button.setAttribute('aria-expanded', String(selected));

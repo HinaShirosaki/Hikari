@@ -103,7 +103,6 @@ async function main() {
     assert.equal(await run('menu.hidden'), false);
     await click('[data-sequence-feature-action="save-fragment"]');
     assert.equal(await run(open), true);
-    assert.match(await run(`${field('preview')}.textContent`), /50 bp/);
     await run(`${field('name')}.value='Selection child'`);
     await screenshot('save-selection.png');
     failChild = true;
@@ -147,7 +146,6 @@ async function main() {
     await run(`primerNode('Primer R').dispatchEvent(new MouseEvent('mousedown',{bubbles:true,cancelable:true,button:0}))`);
     assert.equal(await run(open), true);
     assert.match(await run(`${field('partner')}.textContent`), /Primer R/);
-    assert.match(await run(`${field('preview')}.textContent`), /156 bp/);
     assert.equal(await run(`document.querySelectorAll('[data-pcr-primer-state]').length`), 0);
     await click('[data-fragment-pick-partner]');
     assert.equal(await run(open), false);
@@ -185,7 +183,6 @@ async function main() {
     await run(`primerNode('Primer F').click()`);
     assert.equal(await run(open), true);
     assert.match(await run(`${field('partner')}.textContent`), /Primer F/);
-    assert.match(await run(`${field('preview')}.textContent`), /156 bp/);
     win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
     win.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' });
     await waitFor(`!${open}`);
@@ -206,7 +203,6 @@ async function main() {
     // Right-clicking a feature saves its full span, even when other bases are selected.
     await run(`selectRange(50,100);(()=>{const e=document.querySelector('#sequence-viewer-feature-rail-host [aria-label^="Test gene"]'),r=e.getBoundingClientRect();e.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:r.left,clientY:r.top}))})()`);
     await click('[data-sequence-feature-action="save-fragment"]');
-    assert.match(await run(`${field('preview')}.textContent`), /90 bp/);
     assert.equal(await run(`${field('name')}.value`), 'Parent DNA_Test gene');
     await run(`${field('name')}.value='Feature child'`);
     await click('[data-fragment-save]');
@@ -218,7 +214,6 @@ async function main() {
     // Origin-spanning reverse features keep the short genomic fragment and their strand.
     await run(`(()=>{const index=document.querySelector('#sequence-viewer-feature-rail-host [aria-label^="Origin feature"]').dataset.featureIndex,e=host.querySelector('[data-feature-index="'+index+'"]'),r=e.getBoundingClientRect();e.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:r.left,clientY:r.top}))})()`);
     await click('[data-sequence-feature-action="save-fragment"]');
-    assert.match(await run(`${field('preview')}.textContent`), /22 bp/);
     await run(`${field('name')}.value='Origin feature child'`);
     await click('[data-fragment-save]');
     await waitFor(`!${open}`);
@@ -233,7 +228,6 @@ async function main() {
     await click('#sequence-viewer-vector-builder-btn');
     await run(`(()=>{const index=document.querySelector('#sequence-viewer-feature-rail-host [aria-label^="Test gene"]').dataset.featureIndex,e=document.querySelector('#sequence-viewer-vector-builder-map [data-feature-index="'+index+'"]'),r=e.getBoundingClientRect();e.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:r.left,clientY:r.top}))})()`);
     await click('#sequence-viewer-vector-builder-context-menu [data-vector-action="save-fragment"]');
-    assert.match(await run(`${field('preview')}.textContent`), /90 bp/);
     await run(`${field('name')}.value='Map feature child'`);
     await click('[data-fragment-save]');
     await waitFor(`!${open}`);

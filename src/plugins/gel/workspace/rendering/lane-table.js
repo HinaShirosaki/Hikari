@@ -189,14 +189,15 @@ export function createLaneTableController({ runtime, elements, deps = {} }) {
     const ladderLane = resolveLadderLane(layout);
     const includeLadder = runtime.figureExportIncludeLadder !== false;
 
-    // The table strip shows with any gel image until closed, so Add table stays
-    // in reach; without finished dividers, clicking it says what is missing.
-    const panelVisible = !runtime.cropperActive && (panelOpen ?? (hasTable || Boolean(runtime.currentImage)));
+    // The dedicated toolbar tool creates or reopens the table. Keep the stage
+    // clear until it has rows; missing lane dividers are explained on click.
+    const panelVisible = hasTable && (panelOpen ?? true);
     if (elements.gelLaneTablePanel) elements.gelLaneTablePanel.hidden = !panelVisible;
-    elements.gelOpenLaneTableBtn?.setAttribute('aria-expanded', String(panelVisible));
-    elements.gelOpenLaneTableBtn?.classList.toggle('is-active', panelVisible);
-    elements.gelAddTableBtn.hidden = hasTable;
-    elements.gelAddTableBtn.disabled = hasTable || !runtime.currentImage || runtime.cropperActive;
+    elements.gelAddTableBtn.setAttribute('aria-expanded', String(panelVisible));
+    elements.gelAddTableBtn.setAttribute('aria-pressed', String(panelVisible));
+    elements.gelAddTableBtn.classList.toggle('is-active', panelVisible);
+    const showingLayout = elements.gelAddTableBtn.closest?.('.gel-workspace')?.classList.contains('is-showing-layout');
+    elements.gelAddTableBtn.disabled = !runtime.currentImage || runtime.cropperActive || showingLayout;
     elements.gelLaneTablePanel?.querySelectorAll?.('[data-gel-table-add-row],[data-gel-table-remove-row]')
       .forEach((node) => { node.hidden = !hasTable; });
     const ladderChoice = elements.gelLaneTablePanel?.querySelector?.('[data-gel-table-ladder]');
@@ -459,19 +460,13 @@ export function createLaneTableController({ runtime, elements, deps = {} }) {
     render();
   }
 
-  function onTogglePanel() {
-    panelOpen = Boolean(elements.gelLaneTablePanel?.hidden);
-    render();
-  }
-
   function onClosePanel() {
     panelOpen = false;
     render();
-    elements.gelOpenLaneTableBtn?.focus({ preventScroll: true });
+    elements.gelAddTableBtn?.focus({ preventScroll: true });
   }
 
   return {
-    onTogglePanel,
     onClosePanel,
     onAddTableClick,
     onGenerateFigureClick,

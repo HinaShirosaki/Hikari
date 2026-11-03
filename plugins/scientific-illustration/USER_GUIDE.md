@@ -33,10 +33,12 @@ scrolls independently. The UI follows Hikari's day/night appearance and font
 scale. The tools share one outer strip with the folded agent chat toggle.
 Opening Layers folds chat, and opening chat folds Layers. Older Hikari builds
 retain a compact local right toolbar. The plugin uses Hikari's shared left rail
-width. Drag the rail divider to resize. Use the chevron beside the figure title
-to hide or show the library and give the canvas more room. Hikari saves the
+width. Drag the rail divider to resize. Use Hikari's left-rail button beside the
+clock in the header to hide or show the library and give the canvas more room.
+Figura registers this control through `app.setLeftRail`. Hikari saves the
 folded state per plugin through `app.setLeftRailFolded` (the `layout` permission).
-On older Hikari builds the toggle stays hidden until this API is available.
+Older Hikari builds with folding support keep the chevron beside the figure
+title; builds without folding support keep the library visible.
 An existing installation without `layout` permission needs the folder re-added
 to grant it.
 
@@ -49,12 +51,14 @@ Select objects on a canvas or in the layer list; drag to move and use a single
 object's eight handles to resize. Vector and raster artwork stretches with the box:
 corners adjust both dimensions, edge midpoints adjust one dimension. Hold Shift
 while dragging a handle to keep the proportions; the artwork then scales without
-stretching, and the opposite corner or edge stays in place. Text always resizes
-proportionally.
+stretching, and the opposite corner or edge stays in place.
 Clicks on transparent pixels in images and vector artwork pass through to
 visible components underneath. On empty canvas they begin area selection.
-Text keeps a fixed aspect ratio with every handle; its box and font scale together.
-The font-size control remains independently editable.
+Selecting text shows its actual text box. Drag its handles to change the box's
+width and height while keeping the font size fixed. Shift preserves the box's
+proportions. The font-size field changes the type size independently. The three
+text alignment buttons place text at the left, center or right of its own box
+without moving or resizing the box.
 Drag SVG, PNG, JPEG, or WebP files from Finder or Explorer onto the canvas to add
 them as layers. One review dialog covers every dropped file; the first is centred
 where you drop it and the rest cascade from there. **Add layer → Import artwork…** takes
@@ -88,7 +92,7 @@ Drag the round handle connected to the selection frame to rotate around its
 center. It works on a single selected artwork or text layer.
 Hold Shift to snap to 15° increments. Escape cancels rotation
 without changing the figure; releasing the pointer saves one undoable edit.
-Text rotates around its visible bounds while keeping its font and layout size.
+Text rotates around its text box while keeping its font and layout size.
 The handle keeps a fixed screen size and moves to an available edge when needed.
 Focus the rotation handle and use arrow keys for 1° steps, or Shift for 15° steps;
 Enter or Space rotates 15° clockwise.
@@ -128,8 +132,7 @@ to the canvas. Saved geometry,
 exports and agent readbacks keep their original canvas coordinates. Handles
 retain their screen size at every zoom. Layer rows show component previews and a visibility button
 on hover or keyboard focus.
-Use **Add layer (+)** in the right toolbar for text labels, vector components,
-or imported artwork.
+Use **Add layer (+)** in the right toolbar for text labels or imported artwork.
 
 Use the right toolbar to choose **Select & move** (V) or **Freehand select** (L).
 Select & move combines rectangle selection,
@@ -156,7 +159,7 @@ The inspector shows the selected component's relevant controls first. Select a
 canvas object and open **Layers** from the toolbar, or select its layer row. Selecting or dragging
 on the canvas keeps the current panel layout steady. Double-click a label to
 edit its text inline without changing the canvas zoom. Open Layers for the compact font,
-size, color, bold/italic/underline, alignment, weight and anchor controls.
+size, color, bold/italic/underline and alignment controls.
 An SVG layer lists its colors as swatches; pick a new color for one swatch to
 recolor every part painted with it, as one undoable edit. While a swatch is
 active, the canvas outlines the parts that use its color with a moving dashed
@@ -164,8 +167,20 @@ line and fades the rest of that layer. Only hex colors get a swatch.
 Opacity has a slider and a linked percentage field. Drag the handle for a live
 preview, or enter an exact percentage from 0 to 100. Releasing the slider saves
 one undoable adjustment; Escape cancels an unfinished preview.
-Layer actions duplicate, reorder, delete, or
-copy the selection to the other canvas. No label is part of an artwork asset.
+Drag a layer row to change the stacking order; the top row is in front. The
+insertion line shows where it will land, and the list scrolls at its edges.
+Groups move together; dragging a selected row moves the selected layers while
+preserving their relative order. Release to save one undoable edit, or press
+Escape to cancel. With a layer row focused, Alt+↑/↓ changes its stacking order
+from the keyboard. Layer actions duplicate or delete the selection.
+No label is part of an artwork asset.
+
+Right-click a spot on the canvas and choose **Generate here with Codex…** to
+add a component there. Describe it and choose **Automatic**, **Editable SVG**,
+or **Image generation**. Codex centers the new component at that canvas
+position, preserving the existing artwork and figure settings. Zoom and pan
+do not change the chosen position; near an edge, Codex shifts the component
+only enough to keep it on the canvas. Follow the result in the chat rail.
 
 For an empty illustration with chat closed, describe your figure in the compact
 composer beneath the canvas. Click the arrow or press **⌘Enter / Ctrl+Enter** to
@@ -239,6 +254,11 @@ in SVG exports and MCP previews. Labels remain editable text. Other fonts
 still require the corresponding system font on the machine displaying an SVG.
 The plugin reads Inter from its own local asset server when exporting; it
 does not contact an external font service.
+
+The Font field suggests installed system font families supplied by Hikari,
+alongside Inter and common defaults. You can also type a family name or font
+stack directly. On older hosts without font discovery, these defaults and
+manual entry remain available.
 
 Data plots use Hikari's locally vendored Plotly.js. Ask the agent to plot the
 data you provide, calculate derived values when needed, or revise an existing

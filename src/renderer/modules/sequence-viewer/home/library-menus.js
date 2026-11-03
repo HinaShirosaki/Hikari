@@ -63,7 +63,7 @@ function createLibraryMenus({
     libraryContextType = contextType;
     libraryContextId = contextId;
     const visibleActions = contextType === 'entry'
-      ? new Set(['new-folder', 'rename', 'move-entry', 'recognize-backbone'])
+      ? new Set(['new-folder', 'rename', 'move-entry', 'recognize-backbone', 'assemble'])
       : contextType === 'folder'
         ? new Set(['new-folder', 'rename-folder', 'delete-folder'])
         : new Set(['new-folder']);

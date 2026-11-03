@@ -21,7 +21,8 @@ function createLibraryRendering({
   libraryStatusSaved,
   previewZoom,
   setPreviewedRecord,
-  getLibraryListElements
+  getLibraryListElements,
+  onRendered = () => {}
 } = {}) {
   const folderTree = createFolderTreeState({
     defaultExpanded: false,
@@ -67,6 +68,7 @@ function createLibraryRendering({
       libraryLists.forEach((libraryList) => {
         i18nUi.setHtml(libraryList, `<p class="small-note">${dnaMessage(emptyKey)}</p>`);
       });
+      onRendered();
       return;
     }
 
@@ -88,6 +90,7 @@ function createLibraryRendering({
       libraryLists.forEach((libraryList) => {
         i18nUi.setHtml(libraryList, `<p class="small-note">${dnaMessage('library.noMatch', { query })}</p>`);
       });
+      onRendered();
       return;
     }
 
@@ -106,7 +109,7 @@ function createLibraryRendering({
           'data-i18n-aria-label': disclosure.i18nKey,
           'data-i18n-params': JSON.stringify(disclosure.i18nParams)
         },
-        mainHtml: `<button type="button" class="sequence-viewer-library-item folder-tree-template__leaf-control${active ? ' sequence-viewer-library-item-active is-active' : ''}" data-sequence-entry-id="${escapeHtml(entry.id)}" draggable="true">
+        mainHtml: `<button type="button" class="sequence-viewer-library-item folder-tree-template__leaf-control"${active ? ' aria-current="true"' : ''} data-sequence-entry-id="${escapeHtml(entry.id)}" draggable="true">
             <span class="sequence-viewer-library-item-name folder-tree-template__leaf-label">${i18nUi.render(entry.name || i18nUi.message('sequence'))}</span>
           </button>`,
         actionHtml: samplePositionButtonHtml('data-sequence-sample-position', entry.id),
@@ -157,6 +160,7 @@ function createLibraryRendering({
     libraryLists.forEach((libraryList) => {
       i18nUi.setHtml(libraryList, html);
     });
+    onRendered();
   }
 
   function isLibraryFolderExpanded(folderId) {

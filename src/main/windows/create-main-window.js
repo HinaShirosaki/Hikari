@@ -1,5 +1,26 @@
 'use strict';
 
+const { pathToFileURL } = require('node:url');
+
+function configureMainWindowPermissions(mainWindow, appUrl) {
+  const withoutHash = value => {
+    try { const url = new URL(value); url.hash = ''; return url.href; } catch { return ''; }
+  };
+  const isHostFontRequest = (webContents, permission, details) => permission === 'local-fonts'
+    && webContents === mainWindow.webContents
+    && details?.isMainFrame === true
+    && withoutHash(details.requestingUrl) === appUrl
+    && withoutHash(webContents.getURL()) === appUrl;
+  // Only the host may enumerate fonts. Canvas plugins receive family names
+  // through app.listFonts, never FontData objects or their raw font blobs.
+  mainWindow.webContents.session.setPermissionCheckHandler((webContents, permission, _origin, details) => (
+    permission === 'clipboard-sanitized-write' || isHostFontRequest(webContents, permission, details)
+  ));
+  mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback, details) => {
+    callback(permission === 'clipboard-sanitized-write' || isHostFontRequest(webContents, permission, details));
+  });
+}
+
 function safeProtocol(url) {
   try {
     return new URL(url).protocol;
@@ -85,11 +106,7 @@ function createMainWindow({
     }
   });
 
-  // Nothing in the app requests camera, mic, geolocation, or notifications.
-  // navigator.clipboard.writeText (copy buttons) needs clipboard-sanitized-write.
-  mainWindow.webContents.session.setPermissionRequestHandler((_wc, permission, callback) => {
-    callback(permission === 'clipboard-sanitized-write');
-  });
+  configureMainWindowPermissions(mainWindow, pathToFileURL(path.join(projectRoot, 'index.html')).href);
 
   mainWindow.loadFile(path.join(projectRoot, 'index.html'));
   mainWindow.on('close', (event) => {
@@ -107,5 +124,6 @@ function createMainWindow({
 }
 
 module.exports = {
-  createMainWindow
+  createMainWindow,
+  configureMainWindowPermissions
 };

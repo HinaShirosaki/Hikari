@@ -145,7 +145,9 @@ if (!process.versions.electron) {
         assert.equal(await js('JSON.stringify(qa.host.data.map(trace=>({x:trace.x,y:trace.y})))'),dataBefore,'formatting preserves plotted scientific data');
         assert.equal(await js("document.querySelector('#assay-analysis-summary-table table')?.textContent"),tableBefore,'formatting preserves analysis results');
         await shot('08-assay-workspace');
+        await require('./support/assay-cell-editing.cjs')({ js, settle, win });
         await require('./support/assay-workspace-layout.cjs')({ js, settle, shot, win });
+        await require('./support/assay-group-selection.cjs')({ js, settle, shot, win });
         fs.writeFileSync(path.join(temp,'workspace-expected.json'),JSON.stringify(await js('qa.getStyle()')));
       } else {
         const expected=JSON.parse(fs.readFileSync(path.join(temp,'workspace-expected.json'),'utf8'));
@@ -190,6 +192,28 @@ if (!process.versions.electron) {
         assert.equal(await js("document.getElementById('assay-analysis-data-source').value"),'raw','removing Table2 restores Table1');
         assert.equal(await js("document.querySelector('#assay-analysis-data-source option[value=transformed]').disabled"),true);
       }
+      const styleBeforeAgent = await js('JSON.stringify(qa.getStyle())');
+      await js("document.getElementById('assay-workspace-format-btn').click()");await settle();
+      await js(`qa.module.renderAgentPlotlyGraph({id:'qa-agent',figure:{data:[{type:'scatter',x:[1,2],y:[2,3]}],
+          layout:{annotations:[{text:'Preserved annotation',x:1,y:2,showarrow:false}],
+            shapes:[{type:'line',x0:1,x1:2,y0:2,y1:2}]}}})`);
+      for (let i=0;i<100 && !(await js("Boolean(document.querySelector('[data-assay-agent-plotly-chart]')?._fullLayout)"));i++) await settle();
+      assert.deepEqual(await js("[...document.querySelectorAll('[data-cc-tab]')].map(e=>e.textContent)"),['Frame','Axis','Data Series','Text'],'agent plots retain four formatting tabs');
+      assert.equal(await js("document.querySelector('[data-cc-tab=elements], [data-cc-panel=elements], [data-plot-element]')"),null,'Elements controls are removed');
+      await js("document.querySelector('[data-cc-tab=frame]').focus()");
+      win.webContents.focus();
+      win.webContents.sendInputEvent({type:'keyDown',keyCode:'End'});
+      win.webContents.sendInputEvent({type:'keyUp',keyCode:'End'});
+      await settle();
+      assert.equal(await js("document.activeElement.dataset.ccTab"),'text','End selects the last remaining tab');
+      win.webContents.sendInputEvent({type:'keyDown',keyCode:'Right'});
+      win.webContents.sendInputEvent({type:'keyUp',keyCode:'Right'});
+      await settle();
+      assert.equal(await js("document.activeElement.dataset.ccTab"),'frame','keyboard navigation wraps across four tabs');
+      assert.ok(await js("Plotly.toImage(document.querySelector('[data-assay-agent-plotly-chart]'),{format:'svg'}).then(svg=>decodeURIComponent(svg).includes('Preserved annotation'))"),'agent annotations remain exportable');
+      assert.ok(await js("document.querySelector('[data-assay-agent-plotly-chart]').layout.shapes.some(shape=>shape.type==='line' && shape.x0===1 && shape.x1===2 && shape.y0===2 && shape.y1===2)"),'agent shapes remain rendered alongside the chart frame');
+      assert.equal(await js('JSON.stringify(qa.getStyle())'),styleBeforeAgent,'viewing agent formatting preserves saved chart style');
+      await shot('21-agent-format-'+phase);
       assert.equal(await js('JSON.stringify(qa.state.assays[0].resultValues)'),rawBefore,'plate values remain intact');
       console.log('Production Assay module '+phase+' passed');
     } else if (phase === 'restart') {
@@ -203,7 +227,7 @@ if (!process.versions.electron) {
       await shot('06-restarted');
       console.log('Electron restart persistence passed');
     } else {
-      // Elements is only offered for agent-built plots, so it stays hidden here.
+      // Native and agent plots share the same four formatting tabs.
       assert.deepEqual(await js("[...document.querySelectorAll('[role=tab]:not([hidden])')].map(e=>e.textContent)"),['Frame','Axis','Data Series','Text']);
       await js("qa.q('frameStyle').querySelector('button').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}))");
       assert.equal(await js("document.activeElement.getAttribute('role')"),'option','frame preview opens from the keyboard');

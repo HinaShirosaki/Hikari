@@ -43,7 +43,7 @@ async function main() {
       });
       window.show=id=>document.querySelectorAll('.view').forEach(e=>{e.classList.toggle('is-active',e.id===id);e.hidden=e.id!==id});
       window.failPersist=false;window.holdPersist=false;window.getRequests=0;window.navigations=0;
-      const library=[{id:'dna-1',name:'pTest <long construct name>',status:'saved',folderId:'folder-1'},{id:'dna-2',name:'Temporary construct',status:'temporary'}];
+      const library=window.library=[{id:'dna-1',name:'pTest <long construct name>',topology:'circular',status:'saved',folderId:'folder-1'},{id:'dna-2',name:'Temporary construct',topology:'linear',status:'temporary'}];
       const gbkText=buildRecordGenbankText({name:'pTest',sequence:'ATGCGATCGATCGATCGATCGATC',topology:'circular',features:[]});
       window.viewer=initSequenceViewer({document,state:appState,storagePath:'/fixture-library',createId:()=>crypto.randomUUID(),
         homeViewId:'sequence-viewer-view',detailViewId:'sequence-viewer-detail-view',
@@ -82,7 +82,7 @@ async function main() {
     await click('#sequence-viewer-library-list [data-sequence-sample-position]');
     assert.equal(await run(pickerOpen), true);
     assert.equal(await run(`${field('name')}.value`), 'pTest <long construct name>');
-    assert.equal(await run(`${field('type')}.value`), 'dna');
+    assert.equal(await run(`${field('type')}.value`), 'plasmid', 'Circular DNA defaults to Plasmid');
     assert.equal(await run(`Array.from(${field('type')}.options).some(option=>option.value==='rna' && option.textContent==='RNA')`), true);
     await click('#sequence-viewer-quick-sample-location-list [data-quick-sample-location="-20 Degree"]');
     assert.equal(await run(`${field('grid-label')}.textContent`), 'Cloning box · W2');
@@ -94,20 +94,28 @@ async function main() {
     await waitFor(`!${pickerOpen}`);
     const dna = await run(`appState.samples.at(-1)`);
     assert.equal(dna.name, 'pTest <long construct name>');
-    assert.equal(dna.type, 'dna');
+    assert.equal(dna.type, 'plasmid');
     assert.equal(dna.concentration, '80 ng/uL');
     assert.deepEqual(dna.inventoryLink, { section: '-20 Degree', containerId: 'box-1', wellIndex: 4 });
     assert.equal(dna.location.position, 'W5');
+    assert.deepEqual(dna.sourceLink, { kind: 'sequence-library', id: 'dna-1' });
 
     // The detail rail uses the same action, including temporary entries.
     await run(`show('sequence-viewer-detail-view');viewer.render({activeViewId:'sequence-viewer-detail-view'})`);
     await click('#sequence-viewer-detail-library-list [data-sequence-sample-position]');
     assert.equal(await run(pickerOpen), true);
+    assert.equal(await run(`${field('type')}.value`), 'plasmid', 'The detail rail uses the circular topology too');
+    assert.equal(await run(`${field('grid-label')}.textContent`), 'Cloning box · W5', 'Reopening highlights the recorded well');
+    assert.equal(await run(`${field('grid')}.querySelector('[aria-pressed="true"]').dataset.quickSampleWell`), '4');
+    assert.equal(await run(`${field('code')}.value`), 'DNA-1');
+    assert.equal(await run(`${field('concentration')}.value`), '80 ng/uL');
+    assert.equal(await run(`${field('submit-btn')}.getAttribute('aria-label')`), 'Save Sample');
     await click('#sequence-viewer-quick-sample-cancel-btn');
     await click('#sequence-viewer-detail-library-filter-temporary');
     await waitFor(`!!document.querySelector('#sequence-viewer-detail-library-list [data-sequence-sample-position="dna-2"]')`);
     await click('#sequence-viewer-detail-library-list [data-sequence-sample-position="dna-2"]');
     assert.equal(await run(`${field('name')}.value`), 'Temporary construct');
+    assert.equal(await run(`${field('type')}.value`), 'dna', 'Linear DNA defaults to DNA');
     win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
     win.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Escape' });
     await waitFor(`!${pickerOpen}`);
@@ -138,26 +146,38 @@ async function main() {
     assert.deepEqual(primer.inventoryLink, { section: '4 Degree', containerId: 'tube-1', wellIndex: null });
     assert.equal(await run(`document.getElementById('sequence-viewer-primer-library-overlay').open`), true);
 
-    // Persistence errors roll back the new sample and keep the picker retryable.
+    // Reopening a single-container sample edits the existing record, including
+    // older samples that were recorded before explicit library links existed.
+    await run(`delete appState.samples.find(s=>s.code==='PRIMER-1').sourceLink;appState.samples.find(s=>s.code==='PRIMER-1').notes='Keep stock notes'`);
     await click('[data-primer-sample-position]');
-    await run(`failPersist=true`);
+    assert.equal(await run(`${field('container')}.value`), '4 Degree::tube-1');
+    assert.equal(await run(`${field('grid-label')}.textContent`), 'Primer stocks · Single position');
+    assert.equal(await run(`${field('code')}.value`), 'PRIMER-1');
+    await click('#sequence-viewer-quick-sample-location-list [data-quick-sample-location="-20 Degree"]');
+    await click('#sequence-viewer-quick-sample-grid [data-quick-sample-well="0"]');
+    await run(`failPersist=true;${field('concentration')}.value='100 uM'`);
     await click('#sequence-viewer-quick-sample-submit-btn');
     await waitFor(`${field('status')}.textContent.includes('Fixture save failed')`);
     assert.equal(await run(`appState.samples.length`), 3);
+    assert.deepEqual(await run(`appState.samples.find(s=>s.code==='PRIMER-1').inventoryLink`), primer.inventoryLink, 'Failed edits restore the old location');
     assert.equal(await run(pickerOpen), true);
     await run(`failPersist=false;holdPersist=true`);
     await click('#sequence-viewer-quick-sample-submit-btn');
     await run(`${field('form')}.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}))`);
-    assert.equal(await run(`appState.samples.length`), 4, 'Repeated submission during persistence must create one sample');
+    assert.equal(await run(`appState.samples.length`), 3, 'Saving an existing location must not create another sample');
     await run(`holdPersist=false;releasePersist()`);
     await waitFor(`!${pickerOpen}`);
+    assert.equal(await run(`appState.samples.find(s=>s.code==='PRIMER-1').id`), primer.id);
+    assert.equal(await run(`appState.samples.find(s=>s.code==='PRIMER-1').notes`), 'Keep stock notes');
+    assert.equal(await run(`appState.samples.find(s=>s.code==='PRIMER-1').concentration`), '100 uM');
 
     await click('[data-primer-sample-position]');
+    assert.equal(await run(`${field('grid-label')}.textContent`), 'Cloning box · W1', 'A recorded well index of zero is restored');
     // Empty locations are explicit and cannot create unplaced samples.
     await click('#sequence-viewer-quick-sample-location-list [data-quick-sample-location="Room Temp"]');
     assert.equal(await run(`${field('container')}.value`), '');
     await run(`${field('form')}.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}))`);
-    assert.equal(await run(`appState.samples.length`), 4);
+    assert.equal(await run(`appState.samples.length`), 3);
     assert.equal(await run(pickerOpen), true);
     await click('#sequence-viewer-quick-sample-location-list [data-quick-sample-location="-20 Degree"]');
     for (const width of [1280, 800, 480]) {
@@ -169,12 +189,21 @@ async function main() {
       await screenshot(`picker-${width}.png`);
     }
     await click('#sequence-viewer-quick-sample-cancel-btn');
-    await win.reload();
+    await win.loadFile(fixture);
     await waitFor(`window.ready`);
-    assert.equal(await run(`appState.samples.length`), 4);
+    assert.equal(await run(`appState.samples.length`), 3);
     assert.equal(await run(`appState.samples.find(s=>s.code==='PRIMER-1').details.sequence`), primer.details.sequence);
+    win.setSize(1280, 850);
+    await run(`library[0].name='Renamed construct';viewer.render({activeViewId:'sequence-viewer-view'})`);
+    await waitFor(`document.querySelector('#sequence-viewer-library-list [data-sequence-entry-id="dna-1"]').textContent.includes('Renamed construct')`);
+    await click('#sequence-viewer-library-list [data-sequence-sample-position="dna-1"]');
+    assert.equal(await run(`${field('grid-label')}.textContent`), 'Cloning box · W5', 'Library links survive reload and item renaming');
+    assert.equal(await run(`${field('code')}.value`), 'DNA-1');
+    await click('#sequence-viewer-quick-sample-submit-btn');
+    await waitFor(`!${pickerOpen}`);
+    assert.equal(await run(`appState.samples.length`), 3);
     assert.deepEqual(errors, []);
-    console.log('Sequence sample position Electron QA passed: both rails, saved/temporary DNA, primer modal stacking, prefilled types/names, wells/single containers, duplicates, cancellation, failure rollback, repeated submits, reload, and responsive layouts.');
+    console.log('Sequence sample position Electron QA passed: topology defaults, both rails, recorded wells/single containers, legacy matching, location edits without duplicates, failure rollback, repeated submits, reload/rename, primer modal stacking, and responsive layouts.');
   } finally {
     win.destroy();
     await fs.promises.rm(scratch, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
