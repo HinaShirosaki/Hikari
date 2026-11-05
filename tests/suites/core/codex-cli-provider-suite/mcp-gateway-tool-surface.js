@@ -445,7 +445,7 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
       assert.equal(literatureSearchDefinition.annotations.openWorldHint, true);
       assert.equal(literatureSearchDefinition.inputSchema.type, 'object');
       assert.deepEqual(Object.keys(literatureSearchDefinition.inputSchema.properties).sort(), [
-        'allow_unfiltered_fallback', 'journals', 'message', 'prefer_recent', 'query', 'research_id', 'sources'
+        'allow_unfiltered_fallback', 'journals', 'message', 'prefer_recent', 'project_id', 'project_name', 'query', 'research_id', 'sources'
       ]);
       assert.equal(literatureSearchDefinition.inputSchema.properties.source, undefined);
       assert.equal(literatureSearchDefinition.inputSchema.properties.limit, undefined);
@@ -485,7 +485,9 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
         'collection_name',
         'doi',
         'linked_name',
-        'paper_title'
+        'paper_title',
+        'project_id',
+        'project_name'
       ]);
       assert.equal(paperDownloadDefinition.inputSchema.properties.linked_name.deprecated, true);
       const checkedPaperDownload = checkedContract.mcp.tools.find((tool) => tool.name === 'paper_download');

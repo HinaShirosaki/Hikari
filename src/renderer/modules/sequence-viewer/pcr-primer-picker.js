@@ -2,6 +2,7 @@ import { createPresentation } from '../../lib/i18n/presentation.js';
 import './localization.js';
 import { isPrimerBindingFeature } from './feature-types.js';
 import { resolvePcrPrimerPair } from './dna-fragments.js';
+import { createPickerStatusPositioner } from './picker-status.js';
 
 const i18nUi = createPresentation('dna');
 const primerKey = primer => JSON.stringify([primer?.id, primer?.name, primer?.strand, primer?.primerSequence, primer?.segments]);
@@ -20,9 +21,11 @@ export function evaluatePcrPrimerCandidates(record, first) {
 }
 
 export function createPcrPrimerPicker({ rootDocument, elements, getSelectedRecord, getEntryId,
-  getFeatureFromEvent, onBeginPicking = () => {}, onPairSelected = () => {} } = {}) {
+  getFeatureFromEvent, getStatusAnchor = () => elements.pickerStatusAnchor,
+  onBeginPicking = () => {}, onPairSelected = () => {} } = {}) {
   let context = null;
   let banner = null;
+  const statusPositioner = createPickerStatusPositioner({ rootDocument, getAnchor: getStatusAnchor });
   const marked = new Map();
   const surfaces = () => [elements.sequenceHost, elements.featureRailHost].filter(Boolean);
 
@@ -39,7 +42,7 @@ export function createPcrPrimerPicker({ rootDocument, elements, getSelectedRecor
 
   function cancel() {
     context = null;
-    banner?.remove();
+    statusPositioner.clear();
     banner = null;
     clearHighlights();
   }
@@ -76,18 +79,17 @@ export function createPcrPrimerPicker({ rootDocument, elements, getSelectedRecor
     context = { record, recordKey: recordKey(record), entryId: getEntryId(), primer,
       candidates: new Map(candidates.map(candidate => [primerKey(candidate.primer), candidate])) };
     banner = rootDocument.createElement('div');
-    banner.className = 'sequence-viewer-pcr-picker';
+    banner.className = 'sequence-viewer-pcr-picker sequence-viewer-picker-status';
     banner.setAttribute('role', 'status');
-    const feasible = candidates.filter(candidate => candidate.state === 'feasible').length;
+    const hasPartner = candidates.some(candidate => candidate.state === 'feasible');
     i18nUi.setHtml(banner, `<div id="sequence-viewer-pcr-pick-prompt">
       <p>${i18nUi.html('PCR: {name}. Click a highlighted partner primer in the sequence.', { name: primer.name || i18nUi.text('Primer') })}</p>
-      <p class="small-note">${feasible
-        ? i18nUi.html('Compatible partners: {count}. Other primers are greyed out.', { count: feasible })
+      <p class="small-note"${hasPartner ? ' hidden' : ''}>${hasPartner ? ''
         : i18nUi.html('No compatible partner primers are annotated on this template. Add a partner primer, then start PCR again.')}</p>
     </div><button type="button" class="ghost-btn" data-pcr-pick-cancel>${i18nUi.html('Cancel')}</button>`);
     banner.querySelector('button').addEventListener('click', cancel);
-    rootDocument.body.appendChild(banner);
     onBeginPicking(primer);
+    statusPositioner.show(banner);
     refreshHighlights();
     return true;
   }
@@ -104,6 +106,7 @@ export function createPcrPrimerPicker({ rootDocument, elements, getSelectedRecor
     const candidate = context.candidates.get(primerKey(primer));
     if (candidate?.state !== 'feasible') {
       const note = banner.querySelector('.small-note');
+      note.hidden = false;
       i18nUi.setText(note, i18nUi.message(candidate?.state === 'selected'
         ? 'Choose a highlighted partner primer.' : 'This primer cannot form a PCR product with {name}. Choose a highlighted primer.', { name: context.primer.name }));
       return;
@@ -121,5 +124,5 @@ export function createPcrPrimerPicker({ rootDocument, elements, getSelectedRecor
   rootDocument?.addEventListener('click', event => {
     if (context && event.target?.closest?.('[data-sequence-digest-action]')) cancel();
   });
-  return { start, cancel, refreshHighlights };
+  return { start, cancel, refreshHighlights, refreshStatusPosition: statusPositioner.refresh };
 }

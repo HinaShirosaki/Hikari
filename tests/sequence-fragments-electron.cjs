@@ -130,6 +130,13 @@ async function main() {
     await click('#sequence-viewer-feature-detail [data-sequence-primer-pcr]');
     assert.equal(await run(open), false, 'PCR starts by picking a partner on the sequence');
     assert.equal(await run(`!!document.querySelector('.sequence-viewer-pcr-picker')`), true);
+    for (const width of [1600, 1280, 900, 480]) {
+      win.setSize(width, 850);
+      await run(`document.body.classList.toggle('theme-night',${width === 900})`);
+      await new Promise(resolve => setTimeout(resolve, 150));
+      assert.equal(await run(`(()=>{const b=document.querySelector('.sequence-viewer-pcr-picker'),t=document.getElementById('sequence-viewer-detail-toolbar'),r=b.getBoundingClientRect(),tr=t.getBoundingClientRect(),content=document.querySelector('.sequence-viewer-results').getBoundingClientRect();const before=[tr.top,tr.height,content.top];b.style.display='none';const after=[t.getBoundingClientRect().top,t.getBoundingClientRect().height,document.querySelector('.sequence-viewer-results').getBoundingClientRect().top];b.style.removeProperty('display');return b.parentElement===document.body&&getComputedStyle(b).position==='fixed'&&r.left>=tr.left-1&&r.right<=tr.right+1&&r.top>=0&&r.bottom<=content.top+1&&JSON.stringify(before)===JSON.stringify(after)})()`), true, `PCR card floats over the header without moving controls or covering DNA at ${width}px`);
+      await screenshot(`pcr-toolbar-${width}.png`);
+    }
     assert.equal(await run(`primerNode('Primer F').dataset.pcrPrimerState`), 'selected');
     assert.equal(await run(`primerNode('Primer R').dataset.pcrPrimerState`), 'feasible');
     for (const name of ['Other F', 'Invalid R']) {
@@ -146,6 +153,7 @@ async function main() {
     await run(`primerNode('Primer R').dispatchEvent(new MouseEvent('mousedown',{bubbles:true,cancelable:true,button:0}))`);
     assert.equal(await run(open), true);
     assert.match(await run(`${field('partner')}.textContent`), /Primer R/);
+    assert.equal(await run(`document.querySelector('.sequence-viewer-pcr-picker')===null`), true, 'finishing primer selection removes the floating card');
     assert.equal(await run(`document.querySelectorAll('[data-pcr-primer-state]').length`), 0);
     await click('[data-fragment-pick-partner]');
     assert.equal(await run(open), false);
@@ -240,6 +248,7 @@ async function main() {
     await run(`(()=>{const e=document.querySelector('#sequence-viewer-vector-builder-map [data-feature-index="0"]'),r=e.getBoundingClientRect();e.dispatchEvent(new MouseEvent('mousemove',{bubbles:true,clientX:r.left,clientY:r.top}))})()`);
     await click('[data-sequence-hover-tooltip="map"] [data-sequence-primer-pcr]');
     assert.equal(await run(`document.getElementById('sequence-viewer-vector-builder-workspace').hidden`), true);
+    assert.equal(await run(`document.querySelector('.sequence-viewer-pcr-picker').dataset.pickerAnchor`), 'sequence-viewer-detail-toolbar', 'PCR from the map floats over the DNA header after navigation');
     assert.equal(await run(`primerNode('Primer R').dataset.pcrPrimerState`), 'feasible');
     await run(`primerNode('Primer R').click()`);
     assert.equal(await run(open), true);

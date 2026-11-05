@@ -1,5 +1,11 @@
 // Japanese preview. Missing entries use the English catalog.
 export const agentJapanese = Object.freeze({
+  "citation.open": "論文で開く：{source}",
+
+  'evidence.title': '論文の抜粋',
+  'evidence.why': '選定理由',
+  'evidence.notes': '自分のメモ',
+  'evidence.untitled': '無題の論文',
   "menu.newFolder": "新しいフォルダー",
   "menu.renameFolder": "フォルダー名を変更",
   "menu.deleteFolder": "フォルダーを削除",
@@ -100,6 +106,7 @@ export const agentJapanese = Object.freeze({
   "status.appendRejected": "実験ノートへの追記案を却下しました。",
   "status.copyFailed": "回答をコピーできませんでした。",
   "status.externalUnavailable": "このビルドでは外部リンクを開けません。",
+  "status.paperSourceUnavailable": "保存済み論文の出典を開けません。",
   "status.productOpened": "製品ページを開きました。",
   "status.productFailed": "製品ページを開けませんでした。",
   "status.pageUnavailable": "実験ノートのページを開けません。",

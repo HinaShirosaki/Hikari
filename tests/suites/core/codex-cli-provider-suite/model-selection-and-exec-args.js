@@ -639,7 +639,7 @@ process.stdin.on('data', (chunk) => {
         assert.match(describe('literature_search'), /download relevant papers with paper_download/);
         assert.match(describe('paper_download'), /After literature_search returns, do not download its papers again/);
         assert.match(describe('paper_download'), /Pass `paper_title` for the PDF filename/);
-        assert.match(describe('paper_download'), /share its original query as `collection_name`/);
+        assert.match(describe('paper_download'), /normally the original literature-search query/);
         assert.doesNotMatch(describe('paper_download'), /linked_name/);
         assert.match(describe('paper_download'), /deny_paper_download: true/);
         assert.match(describe('assay_table'), /already-created complete scratch table ID/);

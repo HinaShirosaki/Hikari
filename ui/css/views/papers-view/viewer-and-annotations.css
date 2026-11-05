@@ -356,6 +356,12 @@
   outline-color: color-mix(in srgb, var(--theme-focus) 88%, transparent);
 }
 
+.papers-viewer-search-highlight.is-active[data-search-match-id="paper-citation"] {
+  background: color-mix(in srgb, var(--theme-accent) 16%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--theme-accent) 35%, transparent);
+  opacity: 1;
+}
+
 .papers-viewer-text-layer {
   color-scheme: only light;
   text-align: initial;

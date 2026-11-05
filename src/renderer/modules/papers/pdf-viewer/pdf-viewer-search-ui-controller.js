@@ -44,8 +44,8 @@ export const installPdfViewerSearchUiController = (ctx) => {
   function paintSearchHighlights() {
     renderSearchHighlights({
       pageRecords: state.pageRecords,
-      matches: state.searchMatches,
-      activeMatchId: getActiveSearchMatch()?.id || '',
+      matches: state.searchMatches.length ? state.searchMatches : (state.citationMatch ? [state.citationMatch] : []),
+      activeMatchId: getActiveSearchMatch()?.id || state.citationMatch?.id || '',
       activeTone: state.searchToneIndex
     });
   }

@@ -1,4 +1,8 @@
 (function (root) { root.HikariUiEnglish = { ...(root.HikariUiEnglish || {}), figura: {
+  "assets.description": "Description (optional)",
+  "assets.details": "Asset details",
+  "assets.editDetails": "Edit details for {name}",
+  "assets.detailsSaved": "Asset details saved",
   "full.804e0152": "Chemical structure pasted as vector artwork",
   "full.769a2ec4": "Chemical structure pasted as an image. Copy as SVG or PDF in ChemDraw for vector quality.",
   "full.7b2f3f65": "Clipboard access is unavailable in this Hikari install. Copy the structure as an image and use Edit → Paste.",
@@ -419,7 +423,6 @@
   "full.3c8aa2a3": "Close layers",
   "full.d5e79aa2": "Generate asset",
   "full.b2a4f44": "Describe the component",
-  "full.e78fea14": "A mitochondrion cut open to show its cristae",
   "full.663b5409": "Generate with Codex",
   "full.d9f5e181": "Hide layers and properties",
   "full.f6bfea9f": "Show library",

@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('node:fs/promises');
+const { extractPaperEvidenceFromToolEvent } = require('../runtime/tool-artifacts/paper-evidence.js');
 const path = require('node:path');
 const { asArray } = require('../../lib/normalize.js');
 const { createUniqueStrings } = require('../../lib/value-utils.js');
@@ -133,6 +134,10 @@ function recordLifecycleEvent(recorder, rawEvent = {}) {
   if (event.meta && typeof event.meta === 'object') {
     normalized.meta = sanitizeJsonValue(event.meta);
   }
+  // The audit summary is deliberately shallow. The evidence card needs the
+  // full verified source lines before that summary drops nested tool output.
+  const paperEvidence = extractPaperEvidenceFromToolEvent(event);
+  if (paperEvidence.length) normalized.meta = { ...normalized.meta, paper_evidence: paperEvidence };
   recorder.events.push(normalized);
   if (typeof recorder.onEvent === 'function') {
     try {

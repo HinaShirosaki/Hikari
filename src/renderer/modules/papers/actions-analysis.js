@@ -265,7 +265,7 @@ function createPaperAnalysisActions({
   async function viewPaperPdf(paperId) {
     const paper = getPaperById(paperId);
     if (!paper) {
-      return;
+      return false;
     }
 
     try {
@@ -288,12 +288,14 @@ function createPaperAnalysisActions({
       const opened = await openPaperPromise;
       if (!opened) {
         context.renderLibrarySidebar?.(libraryState.selectedFolderKey);
-        return;
+        return false;
       }
       context.comments?.syncViewerComments();
       context.renderCommentSidebar?.();
+      return true;
     } catch (error) {
       paperNotice(paperFailure(error, 'notice.viewerFailed'), { type: 'error' });
+      return false;
     }
   }
 

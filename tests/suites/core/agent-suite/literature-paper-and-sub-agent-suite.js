@@ -4,6 +4,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
     require('./literature-paper-and-sub-agent-suite/paper-context-loading.js'),
     require('./literature-paper-and-sub-agent-suite/literature-search-workflow.js'),
     require('./literature-paper-and-sub-agent-suite/paper-download-and-knowledge-database.js'),
+    require('./literature-paper-and-sub-agent-suite/paper-project-destination.js'),
     require('./literature-paper-and-sub-agent-suite/paper-intake-retrieval.js'),
     require('./literature-paper-and-sub-agent-suite/paper-experiment-database.js'),
     require('./literature-paper-and-sub-agent-suite/paper-experiment-sql.js'),

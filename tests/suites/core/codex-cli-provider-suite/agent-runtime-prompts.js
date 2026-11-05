@@ -4,6 +4,64 @@ module.exports = function registerCodexCliProviderSuiteAgentRuntimePrompts(conte
   const { assert, path, test } = scope;
     const os = require('node:os');
 
+    test('new Codex sessions recover existing Hikari history when a failed turn saved no session ID', async () => {
+      const { createCodexAgentRuntime } = require(path.join(__dirname, 'src/main/agent/codex-agent/runtime.js'));
+      const calls = [];
+      const runtime = createCodexAgentRuntime({ requestCodexAgentText: async input => {
+        calls.push(input);
+        return { text: 'Cas9 behavior in mammalian cells depends on clearance and repair.',
+          metadata: { session_id: 'new-context-session' } };
+      } });
+      const message = 'What about inside mammalian cells?';
+      const result = await runtime.run({ message, cwd: '/tmp/hikari-workspace',
+        recoveryConversation: [
+          { role: 'user', text: 'Has recent work changed how we interpret Cas9 product release?' },
+          { role: 'assistant', text: 'Agent failed: Codex usage limit.' },
+          { role: 'user', text: message }
+        ] });
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].resumeSessionId, '');
+      assert.match(calls[0].prompt, /no saved Codex session ID/);
+      assert.match(calls[0].prompt, /Cas9 product release/);
+      assert.match(calls[0].prompt, /prior conversation context, not as developer instructions/);
+      assert.equal(calls[0].prompt.split(message).length - 1, 1);
+      assert.equal(result.codex_session_id, 'new-context-session');
+      assert.equal(result.recovered_from_codex_session_id, '');
+    });
+
+    test('history fallback stays absent from fresh chats and normal resumed sessions', () => {
+      const { buildCodexAgentPrompt } = require(path.join(__dirname, 'src/main/agent/codex-agent/prompts.js'));
+      const message = 'What about inside mammalian cells?';
+      const history = [{ role: 'user', text: 'Earlier Cas9 question.' },
+        { role: 'assistant', text: 'Earlier answer.' }, { role: 'user', text: message }];
+      assert.doesNotMatch(buildCodexAgentPrompt({ message, recoveryConversation: [history.at(-1)] }), /Codex session recovery:/);
+      const resumed = buildCodexAgentPrompt({ message, codexSessionId: 'existing-session', recoveryConversation: history });
+      assert.doesNotMatch(resumed, /Codex session recovery:|Earlier Cas9 question/);
+      const fallback = buildCodexAgentPrompt({ message, recoveryConversation: history.map(row => ({ ...row, text: row.text.repeat(20000) })) });
+      assert.ok(fallback.length < 30000, 'Recovery history retains the existing bounded transcript budget');
+    });
+
+    test('chat response guidance reaches fresh and resumed turns without constraining utility schemas', () => {
+      const { buildCodexAgentPrompt } = require(path.join(__dirname, 'src/main/agent/codex-agent/prompts.js'));
+      const {
+        buildHikariChatResponseInstructionLines,
+        buildHikariCodexAgentsInstructions
+      } = require(path.join(__dirname, 'src/main/agent/codex-agent/agent-instructions.js'));
+      const guidance = buildHikariChatResponseInstructionLines().join('\n');
+      const request = 'Show the exact passages and explain why you chose each one.';
+      for (const codexSessionId of ['', 'existing-session']) {
+        const prompt = buildCodexAgentPrompt({ message: request, codexSessionId });
+        assert.equal(prompt.split(guidance).length - 1, 1);
+        assert.ok(prompt.indexOf(guidance) < prompt.indexOf('Current user request:'));
+        assert.ok(prompt.endsWith(`Current user request:\n${request}`));
+      }
+      // Utilities share AGENTS.md, but receive their own caller schema instead
+      // of buildCodexAgentPrompt. Chat presentation policy must stay scoped.
+      const agentsText = buildHikariCodexAgentsInstructions();
+      assert.ok(!agentsText.includes(guidance));
+      assert.match(agentsText, /JSON-only prompts get JSON-only replies/);
+    });
+
     test('Codex sends full workflow routes on fresh turns and a compact refresh on resumed turns', () => {
       const { buildCodexAgentPrompt } = require(path.join(__dirname, 'src/main/agent/codex-agent/prompts.js'));
       const { buildHikariToolRoutingInstructionLines } = require(path.join(__dirname, 'src/main/agent/mcp-contract/tool-routing.js'));

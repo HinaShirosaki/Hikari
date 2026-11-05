@@ -73,6 +73,36 @@ async function verifyGenerateHere({ tool, evaluate, check, win, pause, temp }) {
       await wait(async () => await host('qaScopedState.agentChat.messages.filter(message=>message.role==="assistant").length') > replies, 'The fixture agent did not settle');
       check(await host('qaRequests.length') === count + 1, 'Repeated submissions start only one generation request');
     }
+    const styleSelect = id => `document.getElementById('${id}')`;
+    const chooseRenderer = value => evaluate(`${styleSelect('generate-here-renderer')}.value='${value}';${styleSelect('generate-here-renderer')}.dispatchEvent(new Event('change'))`);
+    const generated = async (form, description, preset) => {
+      const count = await host('qaRequests.length'), replies = await host('qaScopedState.agentChat.messages.filter(message=>message.role==="assistant").length');
+      await evaluate(`${styleSelect(`${form}-description`)}.value=${JSON.stringify(description)};${styleSelect(`${form}-style`)}.value='${preset}';${styleSelect(`${form}-form`)}.requestSubmit()`);
+      await wait(async () => await host('qaRequests.length') === count + 1, `${form} did not reach the agent`);
+      await wait(async () => await host('qaScopedState.agentChat.messages.filter(message=>message.role==="assistant").length') > replies, 'The fixture agent did not settle');
+      return (await host('qaRequests.at(-1)')).message;
+    };
+    await host('qaRailRuntime.setExpanded(false)');
+    await open();
+    check(await evaluate(`${styleSelect('generate-here-style')}.value==='automatic' && ${styleSelect('generate-here-style')}.options.length===7`), 'Generate here starts on the figure image style and lists every preset');
+    await chooseRenderer('svg');
+    check(await evaluate(`${styleSelect('generate-here-style')}.disabled`), 'Editable SVG disables the image style');
+    await chooseRenderer('auto');
+    check(await evaluate(`!${styleSelect('generate-here-style')}.disabled`), 'Automatic format allows an image style');
+    const hereMessage = await generated('generate-here', 'A styled mitochondrion', 'watercolor');
+    check(hereMessage.includes('Image style for this request only: Watercolor'), 'Generate here sends the chosen image style');
+    await host('qaRailRuntime.setExpanded(false)');
+    await open();
+    check(await evaluate(`${styleSelect('generate-here-style')}.value==='automatic'`), 'A one-off style does not stick to the next generation');
+    const unchangedMessage = await generated('generate-here', 'A plain mitochondrion', 'automatic');
+    check(!unchangedMessage.includes('Image style for this request only'), 'Leaving the figure style adds no override');
+    await host('qaRailRuntime.setExpanded(false)');
+    await evaluate(`document.getElementById('assets-view-tab').click();document.getElementById('generate-asset').click()`);
+    check(await evaluate(`document.getElementById('generate-asset-dialog').open && ${styleSelect('generate-asset-style')}.value==='automatic'`), 'Generate asset starts on the figure image style');
+    const assetMessage = await generated('generate-asset', 'A styled ribosome', 'ink');
+    check(assetMessage.startsWith('Generate a reusable asset: A styled ribosome.') && assetMessage.includes('for this request only: Pen and ink'), 'Generate asset sends the chosen image style');
+    check(JSON.stringify((await read()).imageGenerationStyle) === JSON.stringify(before.imageGenerationStyle), 'One-off styles leave the saved figure style unchanged');
+    await evaluate(`document.getElementById('illustrations-view-tab').click()`);
     await host('qaRailRuntime.setExpanded(false)');
     await open(); await fill('Retry this request', 'svg');
     const accepted = await host('qaRequests.length');

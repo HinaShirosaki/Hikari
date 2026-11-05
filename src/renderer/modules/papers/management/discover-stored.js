@@ -15,18 +15,25 @@ function createStoredPaperDiscovery({
     lastRunAt: 0
   };
   let currentRun = null;
+  let metadataRun = null;
   // Set when main reports a newly saved PDF: the next scan skips the throttle.
   let stale = false;
 
   // Callers that need the result (force: a file saved elsewhere since the last
   // scan) get the scan already in flight rather than a no-op.
-  function maybeDiscoverStoredPapers({ force = false } = {}) {
+  function maybeDiscoverStoredPapers({ force = false, metadataOnly = false } = {}) {
     const storagePath = String(state.settings?.storagePath || '').trim();
     if (!storagePath || !elements.papersView?.classList?.contains?.('is-active')) {
       return Promise.resolve();
     }
     if (!windowRef?.hikariApi?.discoverStoredPapers) {
       return Promise.resolve();
+    }
+    // A citation already has a verified local PDF. Do not make navigation wait
+    // behind a library-wide Markdown/intake job started when Papers opened.
+    if (metadataOnly) {
+      metadataRun ||= discover(storagePath, { metadataOnly: true }).finally(() => { metadataRun = null; });
+      return metadataRun;
     }
     if (currentRun) {
       return currentRun;
@@ -50,9 +57,10 @@ function createStoredPaperDiscovery({
     stale = true;
   }
 
-  async function discover(storagePath) {
+  async function discover(storagePath, { metadataOnly = false } = {}) {
     const result = await windowRef.hikariApi.discoverStoredPapers({
       storagePath,
+      ...(metadataOnly ? { metadataOnly: true } : {}),
       knownPapers: state.papers || [],
       projects: state.projects || [],
       journalClubs: state.journalClubs || []

@@ -7,6 +7,7 @@ const {
   resolveToolParserPayload,
   hasOwn,
   buildExecutorSummary,
+  resolvePaperProject,
   resolvePaperDownloadContext
 } = require('./shared.js');
 
@@ -55,9 +56,11 @@ function registerResearchToolExecutors(genericAgentToolRuntime, context = {}) {
     const snapshot = context?.snapshot && typeof context.snapshot === 'object'
       ? context.snapshot
       : {};
-    const project = args?.project && typeof args.project === 'object'
-      ? args.project
-      : (context?.project && typeof context.project === 'object' ? context.project : {});
+    const resolvedProject = args?.research_id ? { project: context?.project || {} } : resolvePaperProject(args, context);
+    if (resolvedProject.error) {
+      return { ok: false, status: 'invalid_project', error: resolvedProject.error };
+    }
+    const project = resolvedProject.project;
     const storagePath = cleanText(
       args?.storage_path
       || args?.storagePath
@@ -117,20 +120,34 @@ function registerResearchToolExecutors(genericAgentToolRuntime, context = {}) {
         error: 'Paper download runtime is not configured.'
       };
     }
-    const resolved = resolvePaperDownloadContext(args, context);
     const research = getLiteratureResearchSession(context?.snapshot);
     if (context?.snapshot?.literature_research && !research) {
       return { ok: false, status: 'error', error: 'Paper research session is no longer active.' };
     }
+    const resolved = resolvePaperDownloadContext(args, research
+      ? { ...context, project: research.input.project || {} }
+      : context);
+    if (resolved.error) {
+      return { ok: false, status: 'invalid_project', error: resolved.error };
+    }
     if (research) {
-      resolved.linked_name = research.input.project?.name || research.input.query;
-      resolved.linked_type = research.input.project?.name ? 'project' : 'literature-search';
+      const projectName = research.input.project?.name || '';
+      if (resolved.linked_type === 'project' && resolved.linked_name !== projectName) {
+        return { ok: false, status: 'invalid_project', error: 'Paper destination differs from the original research project. Keep the project passed to literature_search.' };
+      }
+      resolved.linked_name = projectName || research.input.query;
+      resolved.linked_type = projectName ? 'project' : 'literature-search';
       const previous = research.downloads.find((paper) => paper.ok && paper.knowledge_markdown_path
         && args.doi && String(paper.doi).toLowerCase() === String(args.doi).toLowerCase());
       const reused = previous || await research.findLocalPaper?.(args);
       if (reused) {
-        recordLiteratureResearchDownload(context?.snapshot, args, reused);
-        return { ...reused, summary: `Reused extracted paper Markdown for ${args.paper_title || args.doi}.` };
+        // Readable Markdown means the PDF is saved. A saved `running` status would
+        // otherwise repeat forever, since this path never consults the job again.
+        const result = { ...reused, status: reused.download_status || reused.status,
+          linked_type: resolved.linked_type, linked_name: resolved.linked_name,
+          summary: `Reused extracted paper Markdown for ${args.paper_title || args.doi}.` };
+        recordLiteratureResearchDownload(context?.snapshot, args, result);
+        return result;
       }
     }
     const result = await paperDownloadRuntime.downloadPaper({

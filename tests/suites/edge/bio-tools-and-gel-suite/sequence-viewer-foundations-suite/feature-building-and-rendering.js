@@ -261,6 +261,26 @@ test('[EDGE] sequence-viewer restriction geometry helper is deterministic for Kp
   assert.equal(x2, x3);
   assert.equal(x3, x4);
 });
+test('[EDGE] sequence-viewer leaves the complement blank under a sticky-end overhang', () => {
+  const sequence = 'CAACGGTTACGTAACC';
+  const render = (unpairedStrandEnds) => sequenceViewerInternals.renderDualStrandSequenceLinesHtml(sequence, [], {
+    lineLength: 16, charAdvancePx: 10, sequenceLineHeightPx: 16, selectedFeatureIndex: -1, features: [], unpairedStrandEnds
+  });
+  const bases = (html) => (stripI18nMarkup(html).match(/<span class="sequence-viewer-seq-base[^"]*">(?:[^<]*)<\/span>/g) || [])
+    .map((cell) => (/-unpaired/.test(cell) ? ' ' : cell.replace(/<[^>]*>/g, '')));
+  // Left 5′ and right 3′ overhangs protrude on the stored plus strand, so the
+  // partner bases under them do not exist.
+  const cells = bases(render({ left: 4, right: 3 }));
+  assert.equal(cells.length, sequence.length * 2, 'both strands still render one cell per base');
+  assert.equal(cells.slice(0, sequence.length).join(''), sequence, 'the plus strand keeps every base');
+  assert.equal(cells.slice(sequence.length).join(''), '    CCAATGCAT   ', 'only the overhang columns lose their partner');
+
+  const paired = bases(render({ left: 0, right: 0 }));
+  assert.equal(paired.slice(sequence.length).join(''), sequenceViewerInternals.complementSequence(sequence),
+    'a blunt fragment stays double-stranded end to end');
+  assert.equal(bases(render({ left: 12, right: 12 })).slice(sequence.length).join(''),
+    sequenceViewerInternals.complementSequence(sequence), 'overhangs cannot consume the whole complement');
+});
 test('[EDGE] sequence-viewer restriction split-site draws per-line boxes and one cut marker', () => {
   const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml('A'.repeat(40), [], {
     lineLength: 24,

@@ -18,6 +18,7 @@ import { searchPaperDatabaseForSelectedText } from './management/paper-search-te
 import { createPaperResearchBrief } from './research-brief.js';
 import { createPapersWorkspaceControls } from './workspace-controls.js';
 import { createPaperAgentChatContextGetter } from './agent-context.js';
+import { createPaperCitationNavigator } from './citation-navigation.js';
 import { paperFailure, paperNotice, paperUi, setPaperAttribute } from './localization.js';
 
 // Papers view: library rail (folders = projects + journal clubs), pdf.js
@@ -554,21 +555,23 @@ export function initPapersManagement({
     ));
     let paper = findPaper();
     if (!paper) {
-      await maybeDiscoverStoredPapers({ force: true });
+      await maybeDiscoverStoredPapers({ force: true, metadataOnly: true });
       paper = findPaper();
     }
     if (!paper) {
       paperNotice(paperUi('notice.notInLibrary'), { type: 'error' });
       return false;
     }
-    await actions.viewPaperPdf(paper.id);
-    return true;
+    // Reopening would reread the file and reset the reader's zoom.
+    if (paperViewer.isPaperOpen(paper.id)) return true;
+    return await actions.viewPaperPdf(paper.id) === true;
   }
 
   return {
     getAgentChatContext,
     getActivePaperId: () => paperViewer.getActivePaperId(),
     openStoredPaper,
+    openPaperCitation: createPaperCitationNavigator({ state, api: windowRef?.hikariApi, openStoredPaper, paperViewer }),
     // Main saved a PDF under the storage root: rescan now if Papers is open,
     // otherwise on the next visit, regardless of the scan throttle.
     handleStoredPaperSaved() {

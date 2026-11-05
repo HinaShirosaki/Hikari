@@ -177,7 +177,9 @@ No label is part of an artwork asset.
 
 Right-click a spot on the canvas and choose **Generate here with Codex…** to
 add a component there. Describe it and choose **Automatic**, **Editable SVG**,
-or **Image generation**. Codex centers the new component at that canvas
+or **Image generation**. **Image style** starts on the figure's saved style; another
+choice applies to this component only and leaves the saved style unchanged, and
+it is unavailable for **Editable SVG**. Codex centers the new component at that canvas
 position, preserving the existing artwork and figure settings. Zoom and pan
 do not change the chosen position; near an edge, Codex shifts the component
 only enough to keep it on the canvas. Follow the result in the chat rail.
@@ -375,13 +377,21 @@ or scientific uncertainty.
 ### Reusable components
 
 Select one layer, a group, or several layers on one canvas. Right-click the
-selection, choose **Save as an asset…**, and give it a name; the left rail
-then switches to **Assets**. **Assets** provides searchable previews. Click an asset to place an editable
-copy on the active canvas. Large assets fit within 70% of the destination;
+selection, choose **Save as an asset…**, and give it a name and optional description; the left rail
+then switches to **Assets**. **Assets** provides a searchable thumbnail grid.
+Hover a thumbnail or focus it with the keyboard to see a larger preview, its full
+name and description in the pane under the grid, which never covers the canvas.
+The info button on a thumbnail opens **Asset details** to edit or remove it.
+Click a thumbnail to place an editable copy on the active canvas. Large assets fit within 70% of the destination;
 smaller assets keep their saved size. Copies get fresh IDs and keep their
 rotations, relative positions, paint order, raster bytes, and text formatting.
 Multiple components form one named group with independently editable children.
 Remove an asset with its trash control; already placed copies are retained.
+Use its **Asset details** info button to edit the name or description, including
+for imported or older assets. Search matches both names and descriptions. Describe
+the subject, visible parts, colors, style, orientation and intended use to help
+Codex find suitable artwork. Descriptions are limited to 2,000 characters and are
+shared with Codex alongside the editable sources and native image preview.
 
 Use **Assets → Import asset…** to save SVG, PNG, JPEG, or WebP files directly
 to the library. A single file gets a name in the preview. Raster imports require
@@ -393,10 +403,12 @@ artwork already in the library is reused rather than duplicated.
 
 Use **Assets → Generate asset…** to have Codex make one new reusable component
 without changing the canvas. Describe it and click **Generate with Codex**. Codex picks SVG or image
-generation from the figure's **Image generation settings**, as when drawing. The
+generation from the figure's **Image generation settings**, as when drawing.
+**Image style** starts on the figure's saved style; another choice applies to this
+asset only, and Codex uses image generation if SVG cannot show it. The
 request goes to this figure's chat, which opens to show progress. An SVG asset
 is a set of separately editable vector layers; an image-generation asset is one
-text-free image that follows the figure's image style. Codex previews the saved
+text-free image in the chosen style. Codex previews the saved
 asset, replaces it if it needs fixes, and the asset appears in Assets ready to
 insert. The button is hidden while Codex is unavailable.
 
@@ -443,11 +455,12 @@ saves survive reloads, and retries do not duplicate a committed snapshot.
 
 | Action | Fields and result |
 | --- | --- |
-| `asset_list` | Takes only `action`; returns asset names, IDs, dimensions, layer counts and `assets_revision`. |
-| `asset_read` | `asset_id`, optional `include_assets:true`; returns `component` with relative object coordinates, SVG and text properties. Raster bytes are omitted by default. |
-| `asset_render` | `asset_id`; returns a native PNG preview up to 400 pixels. Does not satisfy or invalidate canvas inspection. |
+| `asset_list` | Takes only `action`; returns asset names, descriptions, IDs, dimensions, layer counts and `assets_revision`. Older assets have an empty description. |
+| `asset_read` | `asset_id`, optional `include_assets:true`; returns `component` with name, description, relative object coordinates, SVG and text properties. Raster bytes are omitted by default. |
+| `asset_render` | `asset_id`; returns a native PNG preview up to 400 pixels with the asset ID, name and description. Does not satisfy or invalidate canvas inspection. |
 | `asset_save` | `illustration_id`, `expected_revision`, `expected_assets_revision`, unique `request_id`, `name`, and exactly one of component/group `id`, component `ids`, `raster_asset` plus `textFree:true`, or `objects`. A raster file can be saved without placing it. `objects` builds an asset from 1–200 `type:"vector"` SVG objects in one coordinate space, without placing them or needing `illustration_id`/`expected_revision`. Saves without altering canvas geometry or revision. |
 | `asset_delete` | `asset_id`, `expected_assets_revision`, unique `request_id`. Removes only the saved snapshot. |
+| `asset_update` | `asset_id`, `expected_assets_revision`, unique `request_id`, and `name` and/or `description`. Updates metadata without changing artwork, placed copies or canvas revision. An empty description clears it. `asset_save` also accepts `description`. |
 
 Insert through normal revision-guarded `apply`, for example:
 

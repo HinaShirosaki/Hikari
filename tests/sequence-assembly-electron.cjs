@@ -55,6 +55,7 @@ async function main() {
       import {initSequenceViewer} from '${url('src/renderer/modules/sequence-viewer/index.js')}';
       import {buildRecordGenbankText} from '${url('src/renderer/modules/sequence-viewer/storage.js')}';
       import {buildRestrictionDigestProducts} from '${url('src/renderer/modules/sequence-viewer/restriction-digestion.js')}';
+      import {orientDnaAssemblyFragment} from '${url('src/renderer/modules/sequence-viewer/dna-assembly.js')}';
       import {i18n} from '${url('src/renderer/lib/i18n/index.js')}';
       import {bindTranslations} from '${url('src/renderer/lib/i18n/dom.js')}';
       bindTranslations(document);window.switchLocale=locale=>i18n.setLocale(locale);
@@ -67,6 +68,12 @@ async function main() {
       window.records={a:{name:'Overlap A',sequence:'TTCGAACGTA'+overlap,topology:'linear',features:[]},
         b:{name:'Overlap B',sequence:overlap+'GGACTCCAGTA'+overlap2,topology:'linear',features:[{id:'gene',name:'Gene B',type:'CDS',strand:-1,segments:[{start:3,end:12}]}]},
         c:{name:'Overlap C',sequence:overlap2+'CGATTTGCATA',topology:'linear',features:[]}};
+      records['b-reversed']={...orientDnaAssemblyFragment({record:records.b,orientation:'reverse'}),name:'Reverse B input'};
+      records.unrelated={name:'Unrelated DNA',sequence:'AAAACCCCGGGGTTTT',topology:'linear',features:[]};
+      const closing='GCTAACGTCAGTCCA';
+      records['circle-a']={name:'Circular overlap A',sequence:closing+'GGAACCTTAA'+overlap,topology:'linear',features:[]};
+      records['circle-c']={name:'Circular overlap C',sequence:overlap2+'CGATTTGCATA'+closing,topology:'linear',features:[
+        {id:'closing-gene',name:'Origin crossing CDS',type:'CDS',strand:-1,segments:[{start:21,end:40}]}]};
       const sequence='ACGTTACGTA'+'GAATTC'+'TATCCGATGCTAGTACGTAC'+'GGATCC'+'CTAGTCGTAA'+'CCCGGG'+'ATGCTAGC';
       window.template={name:'Source template',sequence,topology:'circular',features:[]};
       const site=(name,site,cut,start)=>({name,site,cut,type:'restriction_site',strand:1,segments:[{start,end:start+site.length}]});
@@ -99,7 +106,6 @@ async function main() {
   const open = `!!document.querySelector('.sequence-viewer-assembly-banner:not([hidden])')`;
   const count = `document.querySelectorAll('[data-assembly-row]').length`;
   const entries = async () => (await library.listSequenceEntries({ storagePath: scratch })).entries;
-  const change = (key, value) => run(`${field(key)}.value=${JSON.stringify(value)};${field(key)}.dispatchEvent(new Event('change',{bubbles:true}))`);
   const add = async id => {
     const before = await run(count);
     const list = await run(`document.getElementById('sequence-viewer-view').hidden?'sequence-viewer-detail-library-list':'sequence-viewer-library-list'`);
@@ -135,11 +141,11 @@ async function main() {
     assert.equal(await run(`${field('save')}.disabled`), true);
     assert.equal(await run(`!!document.querySelector('dialog[open]')`), false, 'starting assembly opens a banner without a modal');
     assert.equal(await run(`${field('details')}.hidden`), true, 'advanced options start collapsed');
+    assert.equal(await run(`document.querySelectorAll('[data-assembly-method], [data-assembly-orientation], [data-assembly-topology]').length`), 0, 'method, orientation and topology are inferred without selectors');
     const initialLoads = await run('detailLoads');
-    await change('method', 'overlap-pcr');
-    assert.equal(await run(`${field('topology')}.disabled && ${field('topology')}.value==='linear'`), true);
     await add('b');
     await add('c');
+    assert.match(await run(`${field('summary')}.textContent`), /Linear DNA/, 'unclosed terminal homology infers linear topology');
     assert.equal(await run('detailLoads'), initialLoads, 'picking DNA items does not navigate or load a different record');
     assert.equal(await run(`document.querySelectorAll('#sequence-viewer-detail-library-list [data-assembly-selected="true"]').length`), 3);
     await click('#sequence-viewer-detail-library-list [data-sequence-entry-id="c"]');
@@ -155,9 +161,10 @@ async function main() {
     await screenshot('banner-picking.png');
     assert.equal(await run(`(()=>{const a=document.querySelector('#sequence-viewer-detail-library-list [data-sequence-entry-id="a"]'),b=document.querySelector('#sequence-viewer-detail-library-list [data-sequence-entry-id="b"]');return getComputedStyle(a.closest('.sequence-viewer-dna-row')).backgroundColor===getComputedStyle(b.closest('.sequence-viewer-dna-row')).backgroundColor&&getComputedStyle(a).backgroundColor==='rgba(0, 0, 0, 0)'})()`), true, 'picked items use one consistent highlight layer');
     await click('[data-assembly-options]');
-    await run(`const orientation=document.querySelectorAll('[data-assembly-orientation]')[2];orientation.value='reverse';orientation.dispatchEvent(new Event('change',{bubbles:true}))`);
-    assert.equal(await run(`${field('save')}.disabled`), true, 'wrong orientation blocks an incompatible assembly');
-    await run(`const orientation2=document.querySelectorAll('[data-assembly-orientation]')[2];orientation2.value='forward';orientation2.dispatchEvent(new Event('change',{bubbles:true}))`);
+    await click('#sequence-viewer-detail-library-list [data-sequence-entry-id="b"]');
+    await add('b-reversed');
+    await click('[data-assembly-row]:nth-child(3) [data-assembly-move="up"]');
+    assert.equal(await run(`${field('save')}.disabled`), false, 'a reverse-complemented input is oriented automatically');
     await click('[data-assembly-row]:nth-child(2) [data-assembly-move="up"]');
     assert.equal(await run(`${field('save')}.disabled`), true, 'fragment order controls the junctions');
     await click('[data-assembly-row]:nth-child(1) [data-assembly-move="down"]');
@@ -165,11 +172,13 @@ async function main() {
     assert.equal(await run(count), 2);
     await add('c');
     await run(`${field('name')}.value='Overlap product'`);
-    for (const [locale, label] of [['es', 'Ensamblar'], ['zh-Hans', '组装'], ['zh-Hant', '組裝'], ['ja', '組み立て']]) {
+    for (const [locale, label, topology] of [['es', 'Ensamblar', 'ADN lineal'], ['zh-Hans', '组装', '线性 DNA'], ['zh-Hant', '組裝', '線性 DNA'], ['ja', '組み立て', '直鎖状 DNA']]) {
       await run(`${field('name')}.focus();${field('name')}.setSelectionRange(1,5);switchLocale('${locale}')`);
       assert.equal(await run(`${field('save')}.textContent`), label);
+      assert.equal(await run(`${field('summary')}.textContent.includes(${JSON.stringify(topology)})`), true, 'detected topology follows language changes');
       assert.deepEqual(await run(`[${field('name')}.value,document.activeElement===${field('name')},${field('name')}.selectionStart,${field('name')}.selectionEnd]`), ['Overlap product', true, 1, 5]);
-      assert.deepEqual(await run(`[...document.querySelectorAll('[data-assembly-orientation]')].map(e=>e.value)`), ['forward', 'forward', 'forward']);
+      assert.deepEqual(await run(`[...document.querySelectorAll('.sequence-viewer-assembly-source strong')].map(e=>e.textContent)`), ['Overlap A', 'Reverse B input', 'Overlap C']);
+      assert.equal(await run(`document.querySelectorAll('[data-assembly-method], [data-assembly-orientation]').length`), 0);
     }
     await run(`switchLocale('en')`);
     for (const [width, height] of [[1280, 900], [800, 700], [480, 650]]) {
@@ -191,17 +200,20 @@ async function main() {
     const assembled = (await entries()).filter(entry => entry.name === 'Overlap product');
     assert.equal(assembled.length, 1, 'retry reuses the output ID');
     assert.equal(assembled[0].parentEntryId, '');
+    assert.equal(assembled[0].topology, 'linear');
     assert.ok(assembled[0].gbkRelPath.endsWith('.gbk'));
     const expected = await run(`records.a.sequence+records.b.sequence.slice(15)+records.c.sequence.slice(15)`);
     assert.equal(await run('readSequence()'), expected);
     const stored = await library.getSequenceEntry({ storagePath: scratch, id: assembled[0].id, includeGbk: true });
-    assert.match(stored.gbkText, /hikari_assembly_method="overlap-pcr"/);
+    assert.match(stored.gbkText, /overlap-pcr/, 'the inferred method is recorded in the definition');
+    assert.doesNotMatch(stored.gbkText, /hikari_assembly_/, 'no full-span fragment feature is written over the product');
+    assert.match(stored.gbkText.split('\n')[0], /\blinear\b/i);
     assert.equal((await entries()).filter(entry => ['a', 'b', 'c'].includes(entry.id)).every(entry => entry.parentEntryId === 'template'), true);
     win.setSize(1280, 900);
     await openAssembly('sticky-a', true);
     await add('sticky-b');
+    assert.match(await run(`${field('summary')}.textContent`), /Circular DNA/, 'closing sticky ends automatically infer a circle');
     await click('[data-assembly-options]');
-    await change('topology', 'circular');
     assert.equal(await run(`${field('save')}.disabled`), false);
     await run(`${field('name')}.value='Sticky circle'`);
     await screenshot('sticky-circle.png');
@@ -211,29 +223,47 @@ async function main() {
     assert.equal(circle.parentEntryId, '');
     assert.equal(circle.topology, 'circular');
     assert.equal(await run('readSequence()'), await run('template.sequence.slice(11)+template.sequence.slice(0,11)'));
-    await openAssembly('a');
+    assert.match((await library.getSequenceEntry({ storagePath: scratch, id: circle.id, includeGbk: true })).gbkText.split('\n')[0], /\bcircular\b/i);
+    await openAssembly('circle-a');
     await add('b');
-    await change('method', 'blunt');
+    assert.match(await run(`${field('summary')}.textContent`), /Linear DNA/);
+    await add('circle-c');
+    assert.match(await run(`${field('summary')}.textContent`), /Circular DNA/, 'adding the closing homologous fragment changes the inferred topology');
+    await click('#sequence-viewer-detail-library-list [data-sequence-entry-id="circle-c"]');
+    assert.match(await run(`${field('summary')}.textContent`), /Linear DNA/, 'removing the closing fragment restores linear topology');
+    await add('circle-c');
     await click('[data-assembly-options]');
-    await run(`const reverse=document.querySelectorAll('[data-assembly-orientation]')[1];reverse.value='reverse';reverse.dispatchEvent(new Event('change',{bubbles:true}));${field('name')}.value='Blunt product'`);
-    assert.equal(await run(`${field('save')}.disabled`), false);
-    await screenshot('blunt.png');
+    await run(`${field('name')}.value='Overlap circle'`);
+    await screenshot('overlap-circle.png');
     await click('[data-assembly-save]');
     await waitFor(`!${open}`);
-    const blunt = (await entries()).find(entry => entry.name === 'Blunt product');
-    assert.equal(blunt.parentEntryId, '');
-    assert.equal(blunt.sequenceLength, await run('records.a.sequence.length+records.b.sequence.length'));
+    const overlapCircle = (await entries()).find(entry => entry.name === 'Overlap circle');
+    assert.equal(overlapCircle.topology, 'circular');
+    assert.equal(overlapCircle.parentEntryId, '');
+    assert.equal(await run('readSequence()'), await run(`(records['circle-a'].sequence+records.b.sequence.slice(15)+records['circle-c'].sequence.slice(15)).slice(0,-15)`));
+    const circleGbk = (await library.getSequenceEntry({ storagePath: scratch, id: overlapCircle.id, includeGbk: true })).gbkText;
+    assert.match(circleGbk.split('\n')[0], /\bcircular\b/i);
+    assert.match(circleGbk, /overlap-assembly/);
+    assert.match(circleGbk, /complement\(join\(/, 'annotations crossing the closed origin survive GenBank storage');
+    await openAssembly('a');
+    await add('unrelated');
+    assert.equal(await run(`${field('save')}.disabled`), true, 'unrelated blunt fragments cannot be ligated');
+    assert.match(await run(`${field('error')}.textContent`), /No compatible assembly/);
+    await screenshot('incompatible.png');
+    await click('[data-assembly-cancel]');
+    const loadsBeforeSequence = await run('detailLoads');
+    await run(`openEntry('a')`);
+    await waitFor(`detailLoads>${loadsBeforeSequence}`);
     // An ordinary sequence right-click also opens assembly for the current DNA.
     await run(`rightClick('#sequence-viewer-sequence-host .sequence-viewer-strand-row-top .sequence-viewer-seq-base')`);
     await click('#sequence-viewer-feature-context-menu [data-sequence-assembly-current]');
     await waitFor(`${open} && ${count}===1 && !document.querySelector('[data-assembly-loading="true"]')`);
-    assert.equal(await run(`document.querySelector('.sequence-viewer-assembly-source strong').textContent`), 'Blunt product');
+    assert.equal(await run(`document.querySelector('.sequence-viewer-assembly-source strong').textContent`), 'Overlap A');
     const beforeCancel = (await entries()).length;
     await click('[data-assembly-cancel]');
     assert.equal((await entries()).length, beforeCancel);
     assert.equal(await run(`document.querySelectorAll('[data-assembly-selected]').length`), 0, 'cancelling clears all assembly selection');
     await openAssembly('a');
-    await change('method', 'blunt');
     holdRead = true;
     await click('#sequence-viewer-detail-library-list [data-sequence-entry-id="c"]');
     await waitFor(`!!document.querySelector('[data-assembly-loading="true"]')`);
@@ -259,7 +289,7 @@ async function main() {
     await waitFor(`detailLoads>${previousLoads}`);
     assert.equal((await entries()).length, beforeCancel, 'Escape cancels assembly and restores ordinary DNA navigation');
     assert.deepEqual(errors, []);
-    console.log('Sequence assembly Electron QA passed: right-click initiation, nonmodal banner, DNA rail picking/toggle without navigation, fold/reflow highlights, options/order/orientation, all three methods, circular ligation, independent GBK outputs, stable retries, duplicate submits, localization, responsive layout, and cancellation.');
+    console.log('Sequence assembly Electron QA passed: automatic method/orientation/topology, sticky and homology circles, reactive linear/circular previews, closing-overlap trimming and origin annotations, independent GBK outputs, retries, localization, responsive/native interaction, and cancellation.');
   } finally {
     win.destroy();
     await fs.promises.rm(scratch, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });

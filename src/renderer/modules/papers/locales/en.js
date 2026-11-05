@@ -1,4 +1,7 @@
 export const papersEnglish = Object.freeze({
+  "citation.locating": "Locating the cited passage…",
+  "citation.notLocated": "Paper opened, but the cited passage could not be located in the PDF.",
+
   'library.upload': 'Upload PDF',
   'library.processing': 'Processing',
   'library.processingTitle': 'Reading the PDF and building its notes',

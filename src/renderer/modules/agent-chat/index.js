@@ -41,6 +41,7 @@ export function initAgentChat({
   safeText,
   onNotebookEntriesChanged,
   onOpenNotebookEntry = () => {},
+  onOpenPaperCitation,
   onAppendNotebookEntry = async () => ({ ok: false, error: 'Notebook append is unavailable.' }),
   onProtocolsChanged = () => {},
   notebookDraftAdapter: providedNotebookDraftAdapter = null,
@@ -181,6 +182,7 @@ export function initAgentChat({
     answerAssistantQuestion: questionController.answerAssistantQuestion,
     notebookDraftAdapter,
     onOpenNotebookEntry,
+    onOpenPaperCitation,
     openReviewForMessage: (message) => reviewController?.openForMessage?.(message),
     reviewInline: (messageId, itemId, decision) => reviewController?.reviewInline?.(messageId, itemId, decision),
     onAppendNotebookEntry

@@ -161,23 +161,45 @@ async function hydrateToolSnapshot({
   }
 }
 
+function resolvePaperProject(args = {}, context = {}) {
+  const selected = resolveProjectSelector(cleanTextValue, {}, context);
+  const { projectId, projectName } = resolveProjectSelector(cleanTextValue, args);
+  // `projects` follows the chat's scope and caps. Main-built snapshots have no directory.
+  const snapshot = ensureObject(context?.snapshot);
+  const projects = Array.isArray(snapshot.project_directory) && snapshot.project_directory.length
+    ? snapshot.project_directory
+    : (Array.isArray(snapshot.projects) ? snapshot.projects : []);
+  if (projectId || projectName) {
+    // Validate explicit destinations rather than creating a stray folder from a
+    // misspelled project name. The selected project may be outside a thin list.
+    const candidates = projects.slice();
+    if (selected.projectName && !candidates.some((item) => selected.projectId
+      ? item?.id === selected.projectId
+      : cleanTextValue(item?.name, 220).toLowerCase() === selected.projectName.toLowerCase())) {
+      candidates.push({ id: selected.projectId, name: selected.projectName });
+    }
+    const matches = candidates.filter((item) => cleanTextValue(item?.name, 220)
+      && (!projectId || cleanTextValue(item.id, 120) === projectId)
+      && (!projectName || cleanTextValue(item.name, 220).toLowerCase() === projectName.toLowerCase()));
+    if (matches.length !== 1) {
+      return { error: matches.length
+        ? 'Paper destination matches multiple projects. Pass project_id or select the intended project.'
+        : 'Paper destination project was not found in the current context. Use an existing project name/id or select that project; no download was started.' };
+    }
+    return { project: { id: cleanTextValue(matches[0].id, 120), name: cleanTextValue(matches[0].name, 220) } };
+  }
+  // A stale id must not become a folder name. Keep the selected-project default.
+  const id = selected.projectId;
+  const name = selected.projectName
+    || cleanTextValue(projects.find((item) => id && cleanTextValue(item?.id, 120) === id)?.name, 220);
+  return { project: { id: name ? id : '', name } };
+}
+
 function resolvePaperDownloadContext(args = {}, context = {}) {
-  const snapshot = context?.snapshot && typeof context.snapshot === 'object'
-    ? context.snapshot
-    : {};
-  const project = context?.project && typeof context.project === 'object'
-    ? context.project
-    : {};
-  const message = cleanTextValue(args?.message || context?.message, 12000);
-  // A project id with no name (stale chat scope, deleted project) must not
-  // become a folder name; look it up in the snapshot, else treat as no project.
-  const projectId = cleanTextValue(project?.id, 120);
-  const projectName = cleanTextValue(project?.name, 220)
-    || cleanTextValue(
-      (Array.isArray(snapshot.projects) ? snapshot.projects : [])
-        .find((item) => projectId && cleanTextValue(item?.id, 120) === projectId)?.name,
-      220
-    );
+  const snapshot = ensureObject(context?.snapshot);
+  const resolved = resolvePaperProject(args, context);
+  if (resolved.error) return resolved;
+  const projectName = resolved.project.name;
   const hasProjectContext = Boolean(projectName);
   const collectionName = [
     args?.collection_name,
@@ -198,7 +220,7 @@ function resolvePaperDownloadContext(args = {}, context = {}) {
       ? 'project'
       : (cleanTextValue(args?.linked_type || args?.linkedType, 80) || 'literature-search'),
     linked_name: hasProjectContext ? projectName : collectionName,
-    message
+    message: cleanTextValue(args?.message || context?.message, 12000)
   };
 }
 
@@ -215,6 +237,7 @@ module.exports = {
   resolveContextProject,
   resolveProjectSelector,
   hydrateToolSnapshot,
+  resolvePaperProject,
   resolvePaperDownloadContext,
   cleanTextValue
 };

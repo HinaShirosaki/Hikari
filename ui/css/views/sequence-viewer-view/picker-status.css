@@ -1,0 +1,43 @@
+.sequence-viewer-picker-status {
+  position: fixed;
+  z-index: 2600;
+  display: flex;
+  align-items: center;
+  gap: var(--space-12);
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--space-12);
+  border: 1px solid var(--theme-accent);
+  border-radius: 8px;
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text-strong);
+  box-shadow: var(--theme-shadow-small);
+}
+
+.sequence-viewer-picker-status > :first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-height: 100%;
+  overflow: auto;
+}
+
+.sequence-viewer-picker-status :is(p, span) {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.sequence-viewer-picker-status .small-note {
+  margin-top: var(--space-6);
+}
+
+.sequence-viewer-picker-status button {
+  flex: 0 0 auto;
+}
+
+.sequence-viewer-picker-status.is-header-constrained {
+  padding: var(--space-8);
+}
+
+.sequence-viewer-picker-status.is-header-constrained .small-note {
+  margin-top: 0;
+}

@@ -1,5 +1,7 @@
 'use strict';
 
+const { extractPaperEvidenceFromToolEvent } = require('../runtime/tool-artifacts/paper-evidence.js');
+
 const { extractHtmlArtifactFromToolEvent } = require('../runtime/tool-artifacts/html-output.js');
 const { extractImageArtifactFromToolEvent } = require('../runtime/tool-artifacts/image-output.js');
 const { mergeNotebookDraftArtifacts } = require('../runtime/tool-artifacts/notebook-drafts.js');
@@ -144,7 +146,9 @@ function createCodexStreamProgressHandler({
       const htmlArtifact = extractHtmlArtifactFromToolEvent(streamEvent);
       const imageArtifact = extractImageArtifactFromToolEvent(streamEvent);
       const plotlyGraphArtifact = extractPlotlyGraphArtifactFromToolEvent(streamEvent);
+      const paperEvidence = extractPaperEvidenceFromToolEvent(streamEvent);
       const meta = {
+        ...(paperEvidence.length ? { paper_evidence: paperEvidence } : {}),
         ...(htmlArtifact ? { html_artifact: htmlArtifact } : {}),
         ...(imageArtifact ? { image_artifact: imageArtifact } : {}),
         sequence_actions: sequenceActions,

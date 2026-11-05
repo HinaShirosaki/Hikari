@@ -24,6 +24,7 @@ import {
 
 export function setupSequenceViewerControllers(ctx) {
   const { actions, controllers, elements, onNavigateDetail, onNavigateHome, options, rootDocument, state } = ctx;
+  const getPickerStatusAnchor = () => state.localWorkspaceMode === 'vector' ? elements.vectorPickerStatusAnchor : elements.pickerStatusAnchor;
   controllers.assembly = createDnaAssemblyController({
     rootDocument, getBridge: actions.getBridge, getStoragePath: actions.getStoragePath,
     getActiveInput: () => ({ entryId: state.activeEntryId, record: actions.getSelectedRecord() }),
@@ -73,6 +74,10 @@ export function setupSequenceViewerControllers(ctx) {
     onAssembleDna: entryId => controllers.assembly.open({ entryId,
       record: entryId === state.activeEntryId ? actions.getSelectedRecord() : null }),
     onLibraryRendered: () => controllers.assembly.refreshHighlights(),
+    onWorkspaceChanged: () => {
+      controllers.pcrPicker?.refreshStatusPosition();
+      controllers.digestion?.refreshStatusPosition();
+    },
     onRecordSamplePosition: (entry) => controllers.samplePosition.openSequence(entry),
     onLibraryEntryLoaded: ({ alignments }) => {
       actions.setAlignmentSessions(alignments);
@@ -108,6 +113,7 @@ export function setupSequenceViewerControllers(ctx) {
 
   controllers.pcrPicker = createPcrPrimerPicker({
     rootDocument, elements, getSelectedRecord: actions.getSelectedRecord, getEntryId: () => state.activeEntryId,
+    getStatusAnchor: getPickerStatusAnchor,
     getFeatureFromEvent: event => {
       const index = Number(event.target?.closest?.('[data-feature-index]')?.dataset.featureIndex);
       return Number.isInteger(index) ? controllers.detail?.getVisibleFeaturesForRecord(actions.getSelectedRecord())[index] : null;
@@ -131,6 +137,7 @@ export function setupSequenceViewerControllers(ctx) {
 
   controllers.digestion = createDnaDigestionController({
     rootDocument, getSelectedRecord: actions.getSelectedRecord, getEntryId: () => state.activeEntryId,
+    getStatusAnchor: getPickerStatusAnchor,
     getSites: () => getCommercialRestrictionFeaturesForRecord(actions.getSelectedRecord(), { vendorFilter: state.restrictionVendorFilter }),
     getFeatureFromEvent: event => {
       const surface = event.target?.closest?.('[data-feature-index]');

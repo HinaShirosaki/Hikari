@@ -236,6 +236,7 @@ async function discoverPapersFromStorageRoot({
   knownPapers = [],
   projects = [],
   journalClubs = [],
+  metadataOnly = false,
   transformPaperRecordsToMarkdown = null
 } = {}) {
   const storageRootPath = cleanText(storagePath, 2400);
@@ -286,7 +287,7 @@ async function discoverPapersFromStorageRoot({
     }
   }
 
-  const paperMarkdown = typeof transformPaperRecordsToMarkdown === 'function'
+  const paperMarkdown = !metadataOnly && typeof transformPaperRecordsToMarkdown === 'function'
     ? await transformPaperRecordsToMarkdown({
         storagePath: storageRootPath,
         papers: discoveredPapers,

@@ -1,5 +1,11 @@
 // Spanish preview. Missing entries use the English catalog.
 export const agentSpanish = Object.freeze({
+  "citation.open": "Abrir en Artículos: {source}",
+
+  'evidence.title': 'Fragmentos de artículos',
+  'evidence.why': 'Motivo de selección',
+  'evidence.notes': 'Tus notas',
+  'evidence.untitled': 'Artículo sin título',
   "menu.newFolder": "Nueva carpeta",
   "menu.renameFolder": "Cambiar nombre",
   "menu.deleteFolder": "Eliminar carpeta",
@@ -100,6 +106,7 @@ export const agentSpanish = Object.freeze({
   "status.appendRejected": "Añadido al cuaderno rechazado.",
   "status.copyFailed": "No se pudo copiar la respuesta.",
   "status.externalUnavailable": "Esta versión no puede abrir enlaces externos.",
+  "status.paperSourceUnavailable": "La fuente guardada del artículo no está disponible.",
   "status.productOpened": "Página del producto abierta.",
   "status.productFailed": "No se pudo abrir la página del producto.",
   "status.pageUnavailable": "No se puede abrir la página del cuaderno.",

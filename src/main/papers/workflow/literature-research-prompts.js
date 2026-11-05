@@ -6,7 +6,8 @@ function buildLiteratureResearchSystemPrompt() {
     'Use literature_search repeatedly with refined keyword queries and native web search as useful. In this research session literature_search returns candidates directly; it does not create another sub-agent.',
     'Assess what the evidence answers and what is missing after each search or paper read. Continue searching, downloading, and reading when another targeted step can fill a material gap. There is no one-search or fixed-round limit.',
     'Use paper_download freely for relevant papers without asking the main agent or user for permission. Reuse successful downloads and avoid repeatedly attempting the same failed URL. Use the original collection_name for every download unless project context determines the folder.',
-    'A paper_download result with status running means the same job continues in the background. Repeat the same DOI/title and collection to check it, rather than starting another copy or switching mirrors just because a call timed out. You may read a returned knowledge_markdown_path while experiment extraction continues.',
+    'Keep the project supplied in copied context for every download; do not substitute its name into a general collection. Confirm the returned relative_path is under that project before reporting a project save. A reused Markdown file from another folder alone does not confirm project placement.',
+    'A paper_download result with status running means the same job continues in the background. Repeat the same DOI/title, candidate_urls and destination until it completes or fails; do not return while a requested PDF save is running. download_status completed means the PDF is saved and only background extraction remains. After a genuine failure, find a legitimate open-access copy and pass its PDF URL in candidate_urls instead of repeatedly opening an inaccessible publisher. You may read a returned knowledge_markdown_path while experiment extraction continues.',
     'Read the knowledge_markdown_path returned by successful paper_download results with nl -ba or an equivalent physical line-numbered reader. You may read as many sections as needed.',
     'Do not call paper_analysis or create other sub-agents: read the downloaded Markdown directly.',
     'Stop when the requested evidence is sufficient, or when available sources cannot fill the remaining gaps. Report gaps, inaccessible papers, and conflicting evidence honestly; never keep repeating unproductive searches.',
@@ -20,6 +21,7 @@ function buildLiteratureResearchMessage(input, copiedContext) {
   return [
     `Main-agent research request:\n${input.message || input.query}`,
     `Initial query: ${input.query}`,
+    ...(copiedContext.project?.name ? [`Destination project: ${JSON.stringify(copiedContext.project)}`] : []),
     `collection_name: ${copiedContext.project?.name || input.query}`,
     `Search constraints and copied context:\n${JSON.stringify({
       ...copiedContext,

@@ -55,10 +55,12 @@ conversation and its unsent draft.
 - **Right-click** (or Shift+F10) for Copy, Paste, Group, Ungroup and
   **Save as an asset…**.
 - **Assets**, beside **Illustrations** in the left rail's switch, keeps reusable
-  components shared by all figures. Save a selection,
+  components shared by all figures in a thumbnail grid. Hover or focus a thumbnail
+  to see its larger preview and description under the grid; click it to insert a copy. Save a selection,
   use **Import asset…** or **Import folder…** for SVG, PNG, JPEG or WebP files, or use
   **Generate asset…** to have Codex make one (SVG or image generation, per the
-  figure's Image generation settings) without touching the canvas.
+  figure's Image generation settings, in the figure's image style or one chosen
+  for that asset) without touching the canvas.
 - **Drag images in:** drop SVG, PNG, JPEG or WebP files on the canvas to add them
   as layers.
 - **Colors** in Layers recolor an SVG layer one color at a time; the active swatch
@@ -96,7 +98,10 @@ On Windows use Ctrl in place of ⌘.
 - **Plots** are rendered by Hikari's bundled Plotly.js through `plotly.render`.
   Each plot keeps its data, layout and processing notes so Codex can revise it.
 - **Assets first:** before each drawing or edit, Codex checks the asset library
-  and reuses suitable components. Generated images and finished multi-layer groups
+  descriptions, reads editable sources, previews candidates as native images,
+  and reuses suitable components. Add descriptions when saving, or edit them with
+  each asset's info button; search matches names and descriptions.
+  Generated images and finished multi-layer groups
   are saved there automatically.
 - **Visual review:** a run that edited the canvas completes only after Codex
   renders the latest canvas and records what it checked with `inspect`. Hikari prompts once if the step is
@@ -146,4 +151,11 @@ Run the plugin's tests from this folder:
 
 ```bash
 node --test tests/*.test.mjs
+```
+
+From the repository root, verify asset descriptions, native MCP image previews
+and reuse through the installed-plugin UI with disposable storage:
+
+```bash
+HIKARI_ASSET_DESCRIPTIONS_QA_ONLY=1 node node_modules/electron/cli.js tests/scientific-illustration-electron.cjs
 ```

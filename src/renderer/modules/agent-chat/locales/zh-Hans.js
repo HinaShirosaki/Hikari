@@ -1,5 +1,11 @@
 // Simplified Chinese preview. Missing entries use the English catalog.
 export const agentSimplifiedChinese = Object.freeze({
+  "citation.open": "在论文中打开：{source}",
+
+  'evidence.title': '论文摘录',
+  'evidence.why': '选择原因',
+  'evidence.notes': '你的批注',
+  'evidence.untitled': '未命名论文',
   "menu.newFolder": "新建文件夹",
   "menu.renameFolder": "重命名文件夹",
   "menu.deleteFolder": "删除文件夹",
@@ -100,6 +106,7 @@ export const agentSimplifiedChinese = Object.freeze({
   "status.appendRejected": "实验记录追加内容已拒绝。",
   "status.copyFailed": "无法复制回复。",
   "status.externalUnavailable": "此版本无法打开外部链接。",
+  "status.paperSourceUnavailable": "无法打开已保存的论文来源。",
   "status.productOpened": "已打开产品页面。",
   "status.productFailed": "无法打开产品页面。",
   "status.pageUnavailable": "无法打开实验记录页面。",

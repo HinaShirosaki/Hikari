@@ -1,4 +1,5 @@
 import { mergeAgentHtmlArtifacts } from './html-artifacts.js';
+import { mergePaperEvidence } from '../../../shared/paper-evidence.mjs';
 import { mergeAgentImageArtifacts } from './image-artifacts.js';
 import { mergeAgentPlotlyGraphArtifacts } from './plotly-artifacts.js';
 
@@ -16,6 +17,7 @@ export function buildAssistantResponseMessage({
     text: response.assistantText,
     createdAt: new Date().toISOString(),
     meta: {
+      paper_evidence: mergePaperEvidence(traceRows.paperEvidence, response.paperEvidence),
       parser: response.parser,
       protocol_to_notebook: response.protocolWorkflow,
       notebook_draft: response.notebookDraftWorkflow,
@@ -58,6 +60,7 @@ export function buildAssistantErrorMessage({
     text: `Agent failed: ${errorText}`,
     createdAt: new Date().toISOString(),
     meta: {
+      paper_evidence: mergePaperEvidence(traceRows.paperEvidence),
       parser: {
         primary_intent: 'unclear',
         reasoning_effort: 0,

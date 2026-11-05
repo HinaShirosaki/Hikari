@@ -1,5 +1,9 @@
 // Spanish preview; other messages fall back to English.
 (function(root){root.HikariUiSpanish={...(root.HikariUiSpanish||{}),figura:{
+  "assets.description": "Descripción (opcional)",
+  "assets.details": "Detalles del recurso",
+  "assets.editDetails": "Editar detalles de {name}",
+  "assets.detailsSaved": "Detalles del recurso guardados",
   "text.alignLeft": "Alinear el texto a la izquierda del cuadro",
   "text.alignCenter": "Centrar el texto en el cuadro",
   "text.alignRight": "Alinear el texto a la derecha del cuadro",

@@ -14,7 +14,13 @@ function getSequenceRunClass(kind) {
 function buildSequenceBaseCells(sourceText, start, end) {
   const cells = [];
   for (let baseIndex = start; baseIndex < end; baseIndex += 1) {
-    cells.push(`<span class="sequence-viewer-seq-base">${escapeHtml(sourceText[baseIndex] || '')}</span>`);
+    const base = sourceText[baseIndex] || '';
+    // A blank stands for a base the strand does not have, such as the missing
+    // partner of a sticky-end overhang. It keeps its column so the strands
+    // stay aligned.
+    cells.push(base === ' '
+      ? '<span class="sequence-viewer-seq-base sequence-viewer-seq-base-unpaired">&nbsp;</span>'
+      : `<span class="sequence-viewer-seq-base">${escapeHtml(base)}</span>`);
   }
   return cells.join('');
 }

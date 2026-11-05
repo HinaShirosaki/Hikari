@@ -76,37 +76,6 @@
   cursor: not-allowed;
 }
 
-.sequence-viewer-pcr-picker {
-  position: fixed;
-  z-index: 2600;
-  right: var(--space-18);
-  bottom: var(--space-18);
-  display: flex;
-  align-items: center;
-  gap: var(--space-12);
-  max-width: min(620px, calc(100vw - 36px));
-  box-sizing: border-box;
-  padding: var(--space-12);
-  border: 1px solid var(--theme-accent);
-  border-radius: 8px;
-  background: var(--theme-surface-elevated);
-  color: var(--theme-text-strong);
-  box-shadow: var(--theme-shadow-small);
-}
-
-.sequence-viewer-pcr-picker p {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
-.sequence-viewer-pcr-picker .small-note {
-  margin-top: var(--space-6);
-}
-
-.sequence-viewer-pcr-picker button {
-  flex-shrink: 0;
-}
-
 .sequence-viewer-dna-row {
   box-sizing: border-box;
   grid-template-columns: 22px minmax(0, 1fr) 28px;

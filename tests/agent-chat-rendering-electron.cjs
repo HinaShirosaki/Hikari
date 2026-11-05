@@ -30,7 +30,7 @@ async function main() {
     body{display:block;margin:0;height:100vh;padding:0;overflow:hidden;background:var(--theme-surface)}
     #agent-view{height:100vh}.agent-session-rail{display:none!important}.agent-chat-layout{grid-template-columns:minmax(0,1fr)!important;gap:0!important}
     .agent-chat-panel{padding:0!important}.agent-review-overlay{display:none!important}
-  </style></head><body class="ui-neutral-compact theme-day">${view}</body></html>`);
+  </style></head><body class="ui-neutral-compact theme-day" data-agent-availability="connected">${view}</body></html>`);
   const win = new BrowserWindow({ width: 1000, height: 1000, show: false, webPreferences: { sandbox: true, contextIsolation: true } });
   await win.loadFile(fixture);
   const run = async code => {
@@ -52,7 +52,7 @@ async function main() {
       { id: 'a1', role: 'assistant', text: '### Run 03 is missing its raw results.\\n\\nThe notebook has entries for both runs, but only Run 02 has an attached result file. A numerical comparison needs the Run 03 data.\\n\\n| Record | Run 02 | Run 03 |\\n| --- | --- | --- |\\n| Notebook | Recorded | Recorded |\\n| Raw results | Attached | Missing |', createdAt: '2026-09-13T16:00:08Z', meta: { notebookDraft: draft, activity_trace_rows: ['Read the project notebook', 'Checked Run 02 and Run 03', 'Prepared a summary draft'] } }
     ] } };
     window.runtime = { liveAssistantMessage: null, inFlight: false };
-    window.copied = ''; window.protocolsAdded = []; window.answers = []; window.notices = [];
+    window.copied = ''; window.openedSources = []; window.protocolsAdded = []; window.answers = []; window.notices = [];
     const notebookDraftAdapter = {
       normalizeDraft: value => value || null, normalizeState: value => value,
       findEntryForDraft: () => state.notebookEntries[0] || null,
@@ -69,6 +69,7 @@ async function main() {
     let review;
     window.historyActions = createHistoryActionController({
       api: { writeTextToClipboard: text => { copied = text; return { ok: true }; } }, state, input: dom.input,
+      onOpenPaperCitation: async source => { openedSources.push(source.path); return { ok: true }; },
       persist: () => {}, setStatus: text => notices.push(text), syncComposerHeight: shell.syncComposerHeight,
       renderContextSummary: () => {}, renderHistoryView: shell.renderHistoryView,
       answerAssistantQuestion: (id, text) => answers.push({ id, text }), notebookDraftAdapter, onOpenNotebookEntry: () => {},
@@ -88,7 +89,10 @@ async function main() {
     const range = document.createRange(); range.setStart(retainedText, 0); range.setEnd(retainedText, 12);
     getSelection().removeAllRanges(); getSelection().addRange(range);
     runtime.liveAssistantMessage = { id: 'live', role: 'assistant', text: 'Working…', meta: { live_progress: { response_text: 'Stable streaming text' } } }; redraw();`);
-  assert.equal(await run('getSelection().toString()'), 'The notebook');
+  assert.equal(await run('getSelection().toString()'), 'The notebook', JSON.stringify(await run(`({
+    retained: retainedText.isConnected, same: document.querySelector('.agent-chat-markdown p').firstChild === retainedText,
+    text: retainedText.textContent, rangeCount: getSelection().rangeCount
+  })`)));
   assert.equal(await run('document.querySelector(".agent-draft-card") === retainedDraft && retainedDraft.open && document.querySelector(".agent-thinking-trace").open'), true);
   await run(`window.liveText = document.querySelector('.agent-stream-live p').firstChild;
     const range = document.createRange(); range.setStart(liveText, 0); range.setEnd(liveText, 6);
@@ -98,6 +102,25 @@ async function main() {
   await run('runtime.liveAssistantMessage = null; getSelection().removeAllRanges(); redraw();');
   await run('document.querySelector("[data-agent-copy-message]").click();');
   assert.equal(await run('copied === state.agentChat.messages[1].text'), true);
+  await run(`state.settings.storagePath='/workspace/Lab papers';
+    state.agentChat.messages.push({id:'paper-source',role:'assistant',
+      text:'The control is in [*the saved paper*](</Users/user/Library/Application Support/Hikari/KnowledgeBase/papers.md/Cas9 (2014)/paper.md:32>). [Unknown](</tmp/unknown paper.md:1>)',
+      meta:{paper_evidence:[{paper_id:'cas9',paper_title:'Cas9',section_label:'Results',source_path:'KnowledgeBase/papers.md/Cas9 (2014)/paper.md',source_lines:[{line_number:32,content:'Verified source text.'}]}]}});
+    redraw(); window.sourceButton=document.querySelector('[data-agent-paper-source]');`);
+  assert.equal(await run('document.querySelectorAll("[data-agent-paper-source]").length'), 1);
+  assert.equal(await run('sourceButton.textContent'), '1');
+  assert.equal(await run('sourceButton.title'), 'Open in Papers: Cas9 — Results');
+  assert.equal(await run('document.querySelectorAll(".agent-chat-item-assistant")[1].textContent.includes("](</")'), false);
+  await run('sourceButton.focus(); sourceButton.click();');
+  assert.deepEqual(await run('openedSources'), ['/workspace/Lab papers/KnowledgeBase/papers.md/Cas9 (2014)/paper.md']);
+  assert.equal(await run('document.activeElement === sourceButton'), true);
+  await run(`state.agentChat.messages.push({id:'paper-followup',role:'assistant',
+    text:'The same control is in [this passage](</workspace/Lab papers/KnowledgeBase/papers.md/Cas9 (2014)/paper.md:32>).'});
+    redraw(); window.followupSource=document.querySelector('[data-agent-source-message="paper-followup"]');`);
+  assert.equal(await run('Boolean(followupSource)'), true, 'A follow-up renders citations from earlier evidence');
+  await run('followupSource.click();');
+  assert.deepEqual(await run('openedSources'), Array(2).fill('/workspace/Lab papers/KnowledgeBase/papers.md/Cas9 (2014)/paper.md'));
+  await run('state.agentChat.messages.splice(-2); redraw();');
   await run("dom.input.value=Array.from({length:10},()=> 'A line of a longer message').join('\\n'); shell.syncComposerHeight();");
   assert.equal(await run('dom.input.getBoundingClientRect().height > 100 && dom.input.getBoundingClientRect().height <= parseFloat(getComputedStyle(dom.input).maxHeight)'), true, 'Composer grows to the resolved CSS limit, including rem values');
   await run("dom.input.value=''; shell.syncComposerHeight();");
@@ -172,6 +195,7 @@ async function main() {
   await runWorkspace(`
     document.querySelector('#app-loading-cover').remove();
     document.body.className = 'ui-neutral-compact theme-day agent-view-fixed-scroll has-shared-left-rail-view';
+    document.body.dataset.agentAvailability = 'connected';
     document.querySelectorAll('.view').forEach(node => node.classList.toggle('is-active', node.id === 'agent-view'));
     document.querySelector('#agent-view .agent-conversation-shell').classList.remove('is-empty-chat');
     document.querySelector('#agent-chat-history').innerHTML = Array.from({length: 20}, (_, i) =>
@@ -208,8 +232,8 @@ async function main() {
   await runWorkspace(`document.querySelector('#agent-chat-history').scrollTop = 0; new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));`);
   fs.writeFileSync(path.join(out, 'workspace-layout.png'), (await win.webContents.capturePage()).toPNG());
   fs.writeFileSync(path.join(out, 'workspace-layout.json'), JSON.stringify(workspaceMeasurements, null, 2));
-  fs.writeFileSync(path.join(out, 'verification.json'), JSON.stringify({ measurements, checks: ['selection during streaming', 'stable disclosures', 'copy', 'inline notebook approval', 'protocol approval idempotency', 'clarification focus and custom answer', 'scroll anchoring', 'empty conversation'] }, null, 2));
-  console.log('Agent Chat Electron: 8 day/night layouts, 5 full-workspace sizes, streaming selection, stable cards, copy, inline approvals, clarification, scroll anchoring and empty state passed.');
+  fs.writeFileSync(path.join(out, 'verification.json'), JSON.stringify({ measurements, checks: ['selection during streaming', 'stable disclosures', 'copy', 'saved paper source citation and click', 'inline notebook approval', 'protocol approval idempotency', 'clarification focus and custom answer', 'scroll anchoring', 'empty conversation'] }, null, 2));
+  console.log('Agent Chat Electron: 8 day/night layouts, 5 full-workspace sizes, paper source citation clicks, streaming selection, stable cards, copy, inline approvals, clarification, scroll anchoring and empty state passed.');
   win.destroy(); app.quit();
 }
 

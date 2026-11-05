@@ -2,6 +2,7 @@
 import { COMPLEXITY_LEVELS } from '../complexity.mjs';
 import { IMAGE_STYLE_IDS, MAX_IMAGE_STYLE_PROMPT, MAX_IMAGE_STYLE_LINE } from '../image-style.mjs';
 import { MAX_OBJECTS, MAX_PALETTE } from '../model.mjs';
+import { MAX_ASSET_DESCRIPTION } from '../reusable-assets.mjs';
 const objectProperties = {
   id: { type: 'string', maxLength: 100, description: 'Logical object ID, unchanged by rendering. DOM and SVG fragment IDs are namespaced separately.' }, name: { type: 'string', maxLength: 200, description: 'Layer name shown to the user; defaults to id.' },
   type: { type: 'string', enum: ['vector', 'raster', 'text', 'plot'] }, canvas: { type: 'string', enum: ['main'] },
@@ -26,10 +27,11 @@ export const CANVAS_TOOL_CONTRACT = Object.freeze({
   inputSchema: {
     type: 'object', additionalProperties: false, required: ['action'],
     properties: {
-      action: { type: 'string', enum: ['list', 'create', 'open', 'duplicate', 'read', 'render', 'apply', 'inspect', 'asset_list', 'asset_read', 'asset_render', 'asset_save', 'asset_delete'] }, canvas: { type: 'string', enum: ['main'], description: 'For render; defaults to the illustration canvas.' },
-      asset_id: { type: 'string', maxLength: 100, description: 'Reusable asset ID from read.reusable_assets or asset_list. asset_read returns editable component sources; asset_render returns a PNG preview without changing canvas inspection.' },
-      expected_assets_revision: { type: 'string', maxLength: 100, description: 'Required by asset_save and asset_delete; obtain from read or asset_list. Asset library is shared across illustrations.' },
-      name: { type: 'string', minLength: 1, maxLength: 200, description: 'Required for asset_save. Short searchable name for the saved component snapshot.' },
+      action: { type: 'string', enum: ['list', 'create', 'open', 'duplicate', 'read', 'render', 'apply', 'inspect', 'asset_list', 'asset_read', 'asset_render', 'asset_save', 'asset_update', 'asset_delete'] }, canvas: { type: 'string', enum: ['main'], description: 'For render; defaults to the illustration canvas.' },
+      asset_id: { type: 'string', maxLength: 100, description: 'Reusable asset ID from read.reusable_assets or asset_list. asset_read returns its description and editable component sources; asset_render returns a native PNG image to see the asset without changing canvas inspection. Reuse it with apply insert_asset.' },
+      expected_assets_revision: { type: 'string', maxLength: 100, description: 'Required by asset_save, asset_update and asset_delete; obtain from read or asset_list. Asset library is shared across illustrations.' },
+      name: { type: 'string', minLength: 1, maxLength: 200, description: 'Required for asset_save; optional for asset_update. Short searchable name for the saved component snapshot.' },
+      description: { type: 'string', maxLength: MAX_ASSET_DESCRIPTION, description: 'asset_save/asset_update: describe the subject, visible parts, colors, style, orientation and intended use. Returned in read.reusable_assets, asset_list, asset_read component and asset_render alongside the native image. Empty string clears it. Metadata edits preserve artwork and placed copies.' },
       id: { type: 'string', maxLength: 100, description: 'asset_save: component or group ID, instead of ids or raster_asset.' },
       raster_asset: { type: 'string', maxLength: 100, description: 'asset_save: save an image supplied in plugin_canvas assets directly to the reusable library without placing it. Requires name and textFree:true; PNG transparent borders are trimmed. Save every Codex image_gen output, including unused candidates. Then place with apply insert_asset.' },
       textFree: { type: 'boolean', description: 'asset_save with raster_asset: confirm the image has no baked-in text.' },

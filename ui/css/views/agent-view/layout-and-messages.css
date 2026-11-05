@@ -615,6 +615,46 @@ body.agent-view-fixed-scroll .workspace-main {
   text-underline-offset: 2px;
 }
 
+.agent-chat-markdown .agent-chat-paper-source {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 28px;
+  height: 22px;
+  margin-inline: 3px;
+  padding: 1px 5px;
+  border: 0;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--theme-accent) 9%, transparent);
+  color: var(--theme-accent);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  vertical-align: baseline;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.agent-chat-markdown .agent-chat-paper-source svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.3;
+  stroke-linejoin: round;
+}
+
+.agent-chat-markdown .agent-chat-paper-source:hover {
+  background: color-mix(in srgb, var(--theme-accent) 17%, transparent);
+}
+
+.agent-chat-markdown .agent-chat-paper-source:focus-visible {
+  outline: 2px solid var(--theme-accent);
+  outline-offset: 2px;
+}
+
 .agent-chat-markdown hr {
   border: 0;
   border-top: 1px solid var(--theme-border);

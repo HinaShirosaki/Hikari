@@ -28,7 +28,18 @@ export function allowChatImage(url) {
 // escaped first, then swapped out for @@MDTOKEN_n@@ markers; the rest of the
 // text is HTML-escaped as a whole before emphasis tags are added, and the
 // markers are swapped back last. No raw model text reaches the output unescaped.
-function createInlineRenderer(safeText) {
+function formatEmphasis(text) {
+  return text
+    .replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>')
+    .replace(/___([^_]+)___/g, '<strong><em>$1</em></strong>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/__([^_]+)__/g, '<strong>$1</strong>')
+    .replace(/(^|[\s([{-])\*([^*\n]+)\*(?=$|[\s).,;:!?}\]-])/g, '$1<em>$2</em>')
+    .replace(/(^|[\s([{-])_([^_\n]+)_(?=$|[\s).,;:!?}\]-])/g, '$1<em>$2</em>')
+    .replace(/~~([^~]+)~~/g, '<del>$1</del>');
+}
+
+function createInlineRenderer(safeText, { renderLocalLink } = {}) {
   return function renderInline(text) {
     const source = String(text || '');
     if (!source) {
@@ -67,24 +78,21 @@ function createInlineRenderer(safeText) {
       );
     });
 
-    escaped = escaped.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_match, label, href) => {
-      const safeUrl = sanitizeUrl(href);
+    escaped = escaped.replace(/\[([^\]\n]+)\]\(\s*(<[^<>\n]+>|(?:[^()\s]|\([^()\s]*\))+)(?:\s+"[^"\n]*")?\s*\)/g, (_match, label, href) => {
+      const target = href.replace(/^<|>$/g, '');
+      const renderedLabel = restoreTokens(formatEmphasis(safeText(label)));
+      const localLink = renderLocalLink?.(target, renderedLabel);
+      if (localLink) return pushToken(localLink);
+      const safeUrl = sanitizeUrl(target);
       if (!safeUrl) {
-        return pushToken(safeText(label));
+        return pushToken(renderedLabel);
       }
       return pushToken(
-        `<a href="${safeText(safeUrl)}" target="_blank" rel="noreferrer noopener">${restoreTokens(safeText(label))}</a>`
+        `<a href="${safeText(safeUrl)}" target="_blank" rel="noreferrer noopener">${renderedLabel}</a>`
       );
     });
 
-    escaped = safeText(escaped)
-      .replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>')
-      .replace(/___([^_]+)___/g, '<strong><em>$1</em></strong>')
-      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-      .replace(/__([^_]+)__/g, '<strong>$1</strong>')
-      .replace(/(^|[\s([{-])\*([^*\n]+)\*(?=$|[\s).,;:!?}\]-])/g, '$1<em>$2</em>')
-      .replace(/(^|[\s([{-])_([^_\n]+)_(?=$|[\s).,;:!?}\]-])/g, '$1<em>$2</em>')
-      .replace(/~~([^~]+)~~/g, '<del>$1</del>');
+    escaped = formatEmphasis(safeText(escaped));
 
     return restoreTokens(escaped);
   };
@@ -127,8 +135,8 @@ function isListItem(line) {
 // Small Markdown subset for chat replies: fenced code, pipe tables, headings,
 // rules, blockquotes (recursive), flat lists, HTTP(S) images and paragraphs.
 // Nested lists and raw HTML are not supported (HTML is shown escaped).
-export function renderMarkdown(text, safeText) {
-  const renderInline = createInlineRenderer(safeText);
+export function renderMarkdown(text, safeText, options = {}) {
+  const renderInline = createInlineRenderer(safeText, options);
   const source = normalizeSource(text).trim();
   if (!source) {
     return '';
@@ -241,7 +249,7 @@ export function renderMarkdown(text, safeText) {
         quoteLines.push(quoteLine.replace(/^\s*> ?/, ''));
         index += 1;
       }
-      blocks.push(`<blockquote>${renderMarkdown(quoteLines.join('\n'), safeText)}</blockquote>`);
+      blocks.push(`<blockquote>${renderMarkdown(quoteLines.join('\n'), safeText, options)}</blockquote>`);
       continue;
     }
 

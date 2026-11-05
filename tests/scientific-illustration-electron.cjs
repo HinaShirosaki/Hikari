@@ -23,6 +23,7 @@ const { verifySelectionToolbar } = require('./scientific-illustration-selection-
 const { verifyOpacity } = require('./scientific-illustration-opacity.cjs');
 const { verifyShiftDrag } = require('./scientific-illustration-shift-drag.cjs');
 const { verifyReusableAssets } = require('./scientific-illustration-assets.cjs');
+const { verifyAssetDescriptions } = require('./scientific-illustration-asset-descriptions.cjs');
 const { verifyAreaSelection } = require('./scientific-illustration-selection.cjs');
 const { verifySharedWorkspaceTools } = require('./scientific-illustration-workspace-tools.cjs');
 const { verifyImageGenerationPreference } = require('./scientific-illustration-image-preference.cjs');
@@ -50,6 +51,7 @@ const sharedToolsQA = process.env.HIKARI_SHARED_TOOLS_QA_ONLY === '1';
 const headerRailQA = process.env.HIKARI_HEADER_RAIL_QA_ONLY === '1';
 const sourceActionsQA = process.env.HIKARI_SOURCE_ACTIONS_QA_ONLY === '1';
 const automaticAssetsQA = process.env.HIKARI_AUTOMATIC_ASSETS_QA_ONLY === '1';
+const assetDescriptionsQA = process.env.HIKARI_ASSET_DESCRIPTIONS_QA_ONLY === '1';
 const fontsQA = process.env.HIKARI_FONTS_QA_ONLY === '1';
 const { registerPluginIpc } = require(path.join(runtime, 'src/main/ipc/register-plugin-ipc.js'));
 const { createMainMcpService } = require(path.join(runtime, 'src/main/core/services/create-mcp-service.js'));
@@ -186,7 +188,7 @@ async function run() {
   const nativeHome = path.join(temp, 'codex-home');
   const nativeImageFolder = path.join(nativeHome, 'generated_images');
   await fs.mkdir(nativeImageFolder, { recursive: true });
-  const mcpEnv = { HIKARI_CODEX_HOME: nativeHome, ...(automaticAssetsQA ? { HIKARI_CODEX_REQUEST_CONTEXT: JSON.stringify({ pluginInspectionRunId: 'automatic-assets-run' }) } : {}) };
+  const mcpEnv = { HIKARI_CODEX_HOME: nativeHome, ...(automaticAssetsQA || assetDescriptionsQA ? { HIKARI_CODEX_REQUEST_CONTEXT: JSON.stringify({ pluginInspectionRunId: 'automatic-assets-run' }) } : {}) };
   server = createAgentMcpStdioServer({ runTool, workspacePath: storage, env: mcpEnv });
   client = new Client({ name: 'illustration-host-qa', version: '1' });
   const [ct, st] = InMemoryTransport.createLinkedPair(); await server.connect(st); await client.connect(ct);
@@ -195,6 +197,11 @@ async function run() {
     const result = await client.callTool({ name: 'plugin_canvas', arguments: { plugin_id: 'scientific-illustration', request, ...(assets ? { assets } : {}) } });
     return { ...result.structuredContent, content: result.content };
   };
+  if (assetDescriptionsQA) {
+    await verifyAssetDescriptions({ tool, evaluate, check, win, pause, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura asset descriptions: ${checks} checks passed. Artifacts: ${temp}`); return;
+  }
   if (headerRailQA) {
     await verifyHeaderRail({ tool, evaluate, check, win, pause, temp, reloadPlugin: async () => {
       await evaluate('location.reload()'); await pause(350);

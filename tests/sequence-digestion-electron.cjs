@@ -133,11 +133,19 @@ async function main() {
     await run(`hover('EcoRI')`);
     await click('[data-sequence-hover-tooltip="feature"] [data-sequence-digest-action="double"]');
     assert.equal(await run(`!!document.querySelector('.sequence-viewer-digest-picker')`), true);
+    for (const width of [1600, 1280, 800, 480]) {
+      win.setSize(width, 850);
+      await run(`document.body.classList.toggle('theme-night',${width === 800})`);
+      await new Promise(resolve => setTimeout(resolve, 120));
+      assert.equal(await run(`(()=>{const b=document.querySelector('.sequence-viewer-digest-picker'),t=document.getElementById('sequence-viewer-detail-toolbar'),r=b.getBoundingClientRect(),tr=t.getBoundingClientRect(),content=document.querySelector('.sequence-viewer-results').getBoundingClientRect();const before=[tr.top,tr.height,content.top];b.style.display='none';const after=[t.getBoundingClientRect().top,t.getBoundingClientRect().height,document.querySelector('.sequence-viewer-results').getBoundingClientRect().top];b.style.removeProperty('display');return b.parentElement===document.body&&getComputedStyle(b).position==='fixed'&&r.left>=tr.left-1&&r.right<=tr.right+1&&r.top>=0&&r.bottom<=content.top+1&&JSON.stringify(before)===JSON.stringify(after)})()`), true, `restriction card floats over the header without moving controls or covering DNA at ${width}px`);
+      await screenshot(`restriction-toolbar-${width}.png`);
+    }
     assert.equal(await run(open), false);
     await run(`rail('EcoRI').click()`);
     assert.equal(await run(open), false, 'the same site cannot be selected twice');
     await run(`rail('BamHI').click()`);
     assert.equal(await run(open), true);
+    assert.equal(await run(`document.querySelector('.sequence-viewer-digest-picker')===null`), true, 'choosing the second restriction site removes the floating card');
     assert.equal(await run(`document.querySelectorAll('[data-digest-save]').length`), 2);
     assert.match(await run(`${field('sites')}.textContent`), /EcoRI/);
     assert.match(await run(`${field('sites')}.textContent`), /BamHI/);
@@ -214,6 +222,13 @@ async function main() {
     await run(`(()=>{const e=document.querySelector('#sequence-viewer-vector-builder-map [data-feature-index="'+rail('EcoRI').dataset.featureIndex+'"]'),r=e.getBoundingClientRect();e.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:r.left,clientY:r.top}))})()`);
     await click('#sequence-viewer-vector-builder-context-menu [data-sequence-digest-action="double"]');
     assert.equal(await run(`!!document.querySelector('.sequence-viewer-digest-picker')`), true);
+    assert.equal(await run(`document.querySelector('.sequence-viewer-digest-picker').dataset.pickerAnchor`), 'sequence-viewer-vector-toolbar');
+    assert.equal(await run(`(()=>{const b=document.querySelector('.sequence-viewer-digest-picker').getBoundingClientRect(),content=document.querySelector('.sequence-viewer-vector-builder-layout').getBoundingClientRect();return b.bottom<=content.top+1})()`), true, 'the map prompt stays above the map and sequence');
+    await screenshot('restriction-toolbar-vector.png');
+    await click('#sequence-viewer-vector-builder-back-btn');
+    await waitFor(`document.querySelector('.sequence-viewer-digest-picker').dataset.pickerAnchor==='sequence-viewer-detail-toolbar'`);
+    await click('#sequence-viewer-vector-builder-btn');
+    await waitFor(`document.querySelector('.sequence-viewer-digest-picker').dataset.pickerAnchor==='sequence-viewer-vector-toolbar'`);
     await run(`document.querySelector('#sequence-viewer-vector-builder-map [data-feature-index="'+rail('BamHI').dataset.featureIndex+'"]').dispatchEvent(new MouseEvent('mousedown',{bubbles:true,cancelable:true,button:0}))`);
     assert.equal(await run(open), true, 'map mousedown picks the second site before its selection rerenders');
     await click('[data-digest-cancel]');

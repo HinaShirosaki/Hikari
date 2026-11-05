@@ -5,6 +5,7 @@ import { updateHistoryKeepingHtmlFrames } from './html-history.js';
 import { renderAgentImages } from './image-artifacts.js';
 import { renderSequenceActions } from '../sequence-viewer/mcp/action-rendering.js';
 import { renderMarkdown } from './markdown.js';
+import { createPaperSourceLinkRenderer } from './paper-source-links.js';
 import { renderUserAttachments } from './rendering-attachments.js';
 import { renderEmptyHistory } from './rendering-empty-state.js';
 import { renderAssistantMeta } from './rendering-meta.js';
@@ -43,18 +44,19 @@ function renderLiveActivityLine(message) {
   return `<div class="agent-stream-activity agent-progress-flow-text">${i18nUi.renderOwned(text)}</div>`;
 }
 
-function renderAssistantMessageBody(message, safeText, { hasLiveProgress = false } = {}) {
+function renderAssistantMessageBody(message, safeText, { hasLiveProgress = false, state = {}, messages = [] } = {}) {
+  const markdownOptions = { renderLocalLink: createPaperSourceLinkRenderer(message, state, safeText, messages) };
   const liveStreamText = hasLiveProgress ? getLiveStreamText(message) : '';
   if (liveStreamText) {
     return `
-      <div class="agent-chat-body agent-chat-markdown agent-stream-live">${renderMarkdown(liveStreamText, safeText)}</div>
+      <div class="agent-chat-body agent-chat-markdown agent-stream-live">${renderMarkdown(liveStreamText, safeText, markdownOptions)}</div>
       ${renderLiveActivityLine(message)}
     `;
   }
   if (hasLiveProgress) {
     return `<div class="agent-chat-body agent-chat-body-plain agent-progress-flow-text">${message.text ? i18nUi.renderOwned(message.text) : agentMessage('status.working')}</div>`;
   }
-  return `<div class="agent-chat-body agent-chat-markdown">${renderMarkdown(message.text || '', safeText)}</div>`;
+  return `<div class="agent-chat-body agent-chat-markdown">${renderMarkdown(message.text || '', safeText, markdownOptions)}</div>`;
 }
 
 export function renderActiveUserQuestion(messages, safeText) {
@@ -112,7 +114,7 @@ export function renderHistory({
       })
       : '';
     const messageBody = role === 'assistant'
-      ? renderAssistantMessageBody(message, safeText, { hasLiveProgress })
+      ? renderAssistantMessageBody(message, safeText, { hasLiveProgress, state, messages: safeMessages })
       : `<p class="agent-chat-body agent-chat-body-plain">${safeText(message.text || '')}</p>`;
     return `
       <div data-agent-render-key="${safeText(`${state.agentChat?.currentSessionId || ''}:${message.meta?.html_artifacts?.[0]?.id || message.id || index}`)}" class="agent-chat-row ${rowClass}${hasLiveProgress ? ' is-live' : ''}">

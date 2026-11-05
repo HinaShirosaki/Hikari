@@ -1,4 +1,6 @@
 'use strict';
+
+const { extractPaperEvidenceFromToolOutput } = require('../../agent/runtime/tool-artifacts/paper-evidence.js');
 const { extractNotebookDraftArtifactFromToolOutput } = require('../../agent/runtime/tool-artifacts/notebook-drafts.js');
 
 const { extractHtmlArtifactFromToolOutput } = require('../../agent/runtime/tool-artifacts/html-output.js');
@@ -146,6 +148,7 @@ function extractCodexJsonEventToolCall(event = {}) {
   const imageArtifact = extractImageArtifactFromToolOutput(toolName, outputValue);
   const plotlyGraphArtifact = extractPlotlyGraphArtifactFromToolOutput(toolName, outputValue, { status });
   const notebookDraftArtifact = extractNotebookDraftArtifactFromToolOutput(toolName, outputValue);
+  const paperEvidence = extractPaperEvidenceFromToolOutput(toolName, outputValue);
   return {
     type: 'codex_tool_call',
     event_type: type,
@@ -154,6 +157,7 @@ function extractCodexJsonEventToolCall(event = {}) {
     call_id: cleanText(source.call_id || source.callId || item.call_id || item.callId || call.call_id || call.callId, 160),
     tool_call_text: toolCallText,
     tool_output_text: outputText,
+    ...(paperEvidence.length ? { paper_evidence: paperEvidence } : {}),
     ...(notebookDraftArtifact ? { notebook_draft_artifact: notebookDraftArtifact } : {}),
     ...(htmlArtifact ? { html_artifact: htmlArtifact } : {}),
     ...(imageArtifact ? { image_artifact: imageArtifact } : {}),

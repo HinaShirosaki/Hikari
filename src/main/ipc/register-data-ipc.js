@@ -347,6 +347,7 @@ function registerDataIpc(deps = {}) {
     try {
       const discovered = await discoverPapersFromStorageRoot({
         storagePath,
+        metadataOnly: normalizedPayload?.metadataOnly === true,
         knownPapers: asArray(normalizedPayload?.knownPapers),
         projects: asArray(normalizedPayload?.projects),
         journalClubs: asArray(normalizedPayload?.journalClubs)

@@ -169,7 +169,7 @@ export const installPdfViewerRenderController = (ctx) => {
     }
   }
 
-  async function renderDocumentPages({ preserveScroll = false, resetScroll = false } = {}) {
+  async function renderDocumentPageRecords({ preserveScroll = false, resetScroll = false } = {}) {
     if (state.renderFrame) {
       ctx.cancelScheduledRender?.();
     }
@@ -245,6 +245,19 @@ export const installPdfViewerRenderController = (ctx) => {
         return;
       }
       ctx.setStatus(paperFailure(error, 'viewer.renderFailed'), true);
+    }
+  }
+
+  let latestRender = null;
+  async function renderDocumentPages(options = {}) {
+    let pending = renderDocumentPageRecords(options);
+    latestRender = pending;
+    // Scrolling can replace an in-flight render. Awaiters need the replacement's
+    // text layer too, rather than continuing after the canceled render returns.
+    while (pending) {
+      await pending;
+      if (pending === latestRender) return;
+      pending = latestRender;
     }
   }
 

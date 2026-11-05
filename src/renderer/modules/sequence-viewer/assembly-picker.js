@@ -60,20 +60,17 @@ export function createDnaAssemblyController({ rootDocument, getBridge, getStorag
 
   function product() {
     return buildDnaAssemblyRecord(context.inputs.filter(input => !input.loading), {
-      name: field('name').value, method: field('method').value,
-      topology: field('topology').value, minimumOverlap: Number(field('overlap').value)
+      name: field('name').value,
+      minimumOverlap: Number(field('overlap').value)
     });
   }
 
   function preview() {
     if (!context) return;
     const loading = context.inputs.some(input => input.loading);
-    const pcr = field('method').value === 'overlap-pcr';
-    field('overlap-field').hidden = !pcr;
-    if (pcr) field('topology').value = 'linear';
-    field('topology').disabled = pcr;
+    field('overlap-field').hidden = false;
+    field('overlap').disabled = false;
     field('fields').disabled = saving;
-    field('method').disabled = saving;
     field('close').disabled = saving;
     field('save').disabled = true;
     i18nUi.setText(field('save'), i18nUi.message(saving ? 'Saving…' : 'Assemble'));
@@ -81,11 +78,15 @@ export function createDnaAssemblyController({ rootDocument, getBridge, getStorag
     i18nUi.setHtml(field('junctions'), '');
     try {
       const result = product();
-      i18nUi.setText(field('summary'), i18nUi.message('{length} bp · {count} fragments', {
-        length: result.sequence.length.toLocaleString(), count: context.inputs.length
-      }));
+      const overlap = result.assemblyMethod !== 'sticky';
+      field('overlap-field').hidden = !overlap;
+      field('overlap').disabled = !overlap;
+      i18nUi.setText(field('summary'), i18nUi.compose([
+        i18nUi.message('{length} bp · {count} fragments', { length: result.sequence.length.toLocaleString(), count: context.inputs.length }),
+        ' · ', i18nUi.message(result.topology === 'circular' ? 'Circular DNA' : 'Linear DNA')
+      ]));
       i18nUi.setHtml(field('junctions'), result.junctions.map(junction => `<li>${i18nUi.html(
-        pcr ? '{left} → {right}: {length} bp overlap' : '{left} → {right}: compatible ends',
+        overlap ? '{left} → {right}: {length} bp overlap' : '{left} → {right}: compatible ends',
         { left: junction.left, right: junction.right, length: junction.overlap })}</li>`).join(''));
       field('save').disabled = saving || loading;
     } catch (error) {
@@ -100,10 +101,6 @@ export function createDnaAssemblyController({ rootDocument, getBridge, getStorag
     i18nUi.setHtml(field('inputs'), context.inputs.map((input, index) => `<div class="sequence-viewer-assembly-input" data-assembly-row="${input.key}" data-assembly-loading="${input.loading ? 'true' : 'false'}">
       <div class="sequence-viewer-assembly-source"><strong>${escapeHtml(input.record.name)}</strong>
         <span class="small-note">${input.loading ? i18nUi.html('Loading…') : i18nUi.html('{length} bp', { length: input.record.sequence.length.toLocaleString() })}</span></div>
-      <select data-assembly-orientation="${input.key}"${input.loading ? ' disabled' : ''} ${i18nUi.attribute('aria-label', 'Fragment orientation')}>
-        ${i18nUi.option('forward', i18nUi.message('Forward')).replace('<option', `<option${input.orientation === 'forward' ? ' selected' : ''}`)}
-        ${i18nUi.option('reverse', i18nUi.message('Reverse complement')).replace('<option', `<option${input.orientation === 'reverse' ? ' selected' : ''}`)}
-      </select>
       <div class="sequence-viewer-assembly-row-actions">
         <button type="button" class="ghost-btn" data-assembly-move="up" ${index === 0 ? 'disabled' : ''} ${i18nUi.attribute('aria-label', 'Move fragment up')}>↑</button>
         <button type="button" class="ghost-btn" data-assembly-move="down" ${index === context.inputs.length - 1 ? 'disabled' : ''} ${i18nUi.attribute('aria-label', 'Move fragment down')}>↓</button>
@@ -120,7 +117,7 @@ export function createDnaAssemblyController({ rootDocument, getBridge, getStorag
     if (!current(operation)) { close(); return; }
     const existing = operation.inputs.findIndex(input => input.entryId === entryId && entryId);
     if (existing >= 0) { operation.inputs.splice(existing, 1); renderInputs(); return; }
-    const input = { entryId, key: globalThis.crypto.randomUUID(), orientation: 'forward', loading: true,
+    const input = { entryId, key: globalThis.crypto.randomUUID(), loading: true,
       record: { name: record?.name || getEntryName(entryId), sequence: '' } };
     operation.inputs.push(input);
     renderInputs();
@@ -162,13 +159,11 @@ export function createDnaAssemblyController({ rootDocument, getBridge, getStorag
       <p class="small-note" id="sequence-viewer-assembly-prompt">${i18nUi.html('Click DNA items to add or remove fragments, then click Assemble.')}</p>
       <p class="small-note sequence-viewer-assembly-selected" data-assembly-selected-names aria-live="polite"></p>
       <div class="sequence-viewer-assembly-controls">
-        <select data-assembly-method ${i18nUi.attribute('aria-label', 'Method')}>${i18nUi.option('sticky', i18nUi.message('Sticky-end ligation'))}${i18nUi.option('blunt', i18nUi.message('Blunt-end T4 ligation'))}${i18nUi.option('overlap-pcr', i18nUi.message('Overlap PCR'))}</select>
         <button type="button" class="ghost-btn" data-assembly-options aria-expanded="false">${i18nUi.html('Options')}</button>
         <button type="submit" class="primary-btn" data-assembly-save>${i18nUi.html('Assemble')}</button>
       </div>
       <div class="sequence-viewer-assembly-body" data-assembly-details hidden><fieldset data-assembly-fields>
         <div class="sequence-viewer-assembly-settings">
-          <label>${i18nUi.html('Product topology')}<select data-assembly-topology>${i18nUi.option('linear', i18nUi.message('Linear'))}${i18nUi.option('circular', i18nUi.message('Circular'))}</select></label>
           <label data-assembly-overlap-field hidden>${i18nUi.html('Minimum overlap (bp)')}<input type="number" min="12" max="1000" step="1" value="15" data-assembly-overlap></label>
         </div>
         <div class="sequence-viewer-assembly-inputs" data-assembly-inputs></div>
@@ -198,13 +193,7 @@ export function createDnaAssemblyController({ rootDocument, getBridge, getStorag
       banner.querySelector(`[data-assembly-row="${row.dataset.assemblyRow}"] [data-assembly-move="${move.dataset.assemblyMove}"]`)?.focus();
     });
     banner.addEventListener('input', preview);
-    banner.addEventListener('change', event => {
-      if (event.target.matches('[data-assembly-orientation]')) {
-        const input = context?.inputs.find(input => input.key === event.target.dataset.assemblyOrientation);
-        if (input) input.orientation = event.target.value;
-      }
-      preview();
-    });
+    banner.addEventListener('change', preview);
     banner.addEventListener('submit', event => {
       event.preventDefault();
       void (async () => {
@@ -232,8 +221,6 @@ export function createDnaAssemblyController({ rootDocument, getBridge, getStorag
     close();
     beforeOpen();
     context = { storagePath: getStoragePath(), inputs: [], outputId: globalThis.crypto.randomUUID() };
-    field('method').value = 'sticky';
-    field('topology').value = 'linear';
     field('overlap').value = '15';
     field('name').value = `${record?.name || getEntryName(entryId)}_assembly`;
     field('details').hidden = true;

@@ -2,6 +2,7 @@ import { createPresentation } from "../../lib/i18n/presentation.js";
 import "./localization.js";
 const i18nUi = createPresentation("agent");
 import * as renderingModule from './rendering.js';
+import { createPaperEvidenceCard } from './paper-evidence-card.js';
 import { asArray, trimText } from './shared.js';
 import { ensureAgentChatFolderState } from './session-folders.js';
 import { agentEnglishText, agentOption, bindAgentMessage, setAgentAttribute, setAgentText } from './localization.js';
@@ -59,6 +60,7 @@ export function createAgentChatShellController({
   hasImageCapture = false
 }) {
   let sessionManager = null;
+  const paperEvidenceCard = createPaperEvidenceCard(dom.paperEvidence);
 
   function setSessionManager(nextSessionManager) {
     sessionManager = nextSessionManager;
@@ -170,6 +172,7 @@ export function createAgentChatShellController({
     const visibleMessages = runtime.liveAssistantMessage
       ? [...state.agentChat.messages, runtime.liveAssistantMessage]
       : state.agentChat.messages;
+    paperEvidenceCard.render(visibleMessages, state.agentChat.currentSessionId);
     const hasMessages = asArray(visibleMessages).length > 0;
     dom.conversationShell?.classList?.toggle('is-empty-chat', !hasMessages);
     if (!hasMessages && dom.scrollToBottomBtn) {

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createDocument, normalizeDocument, applyOperations } from '../model.mjs';
-import { imageGenerationStyle, IMAGE_STYLE_PRESETS, imageStyleInstructions } from '../image-style.mjs';
+import { imageGenerationStyle, IMAGE_STYLE_PRESETS, imageStyleInstructions, oneOffImageStyle } from '../image-style.mjs';
 import { agentInstructions } from '../agent/workflow.mjs';
 import { CANVAS_TOOL_CONTRACT } from '../agent/canvas-contract.mjs';
 
@@ -90,4 +90,11 @@ test('the saved style line reaches the agent verbatim and a style change clears 
     assert.throws(() => applyOperations(original, [{ op: 'title', title: 'Changed' }, { op: 'image_style_line', imageStyleLine: invalid }]), /Image style line/);
     assert.equal(original.title, 'Untitled figure');
   }
+});
+test('a one-off image style overrides the figure only when it differs from the saved preset', () => {
+  assert.equal(oneOffImageStyle('flat', 'flat'), '');
+  const note = oneOffImageStyle('watercolor', 'flat');
+  assert.match(note, /for this request only: Watercolor/);
+  assert.ok(note.includes(IMAGE_STYLE_PRESETS.watercolor.guidance));
+  assert.match(note, /save neither/);
 });
