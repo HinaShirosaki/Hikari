@@ -68,6 +68,7 @@ export const installPdfViewerToolbarController = (ctx) => {
     releasePageRecords({ pageLayer, pageRecords: state.pageRecords });
     state.pageRecords = [];
     state.paperId = '';
+    state.citationMatch = null;
     state.paperTitle = '';
     state.paperMeta = '';
     state.pageNumber = 1;

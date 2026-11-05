@@ -87,5 +87,7 @@ export const prepareAndSwapPageRecords = async (ctx, { pdfDocument, activeLoadTo
   attachPageRecords({ pageLayer, pageRecords: newPageRecords });
   ctx.setStageScrollTop((startRecord?.element?.offsetTop || 0) - 8);
   await ctx.renderDocumentPages({ resetScroll: false, preserveScroll: false });
+  if (isLoadStale()) return false;
+  state.openLoadToken = activeLoadToken;
   return true;
 };

@@ -1,5 +1,7 @@
 // Traditional Chinese preview. Missing entries use the English catalog.
 export const agentTraditionalChinese = Object.freeze({
+  "citation.open": "在論文中開啟：{source}",
+
   'evidence.title': '論文摘錄',
   'evidence.why': '選擇原因',
   'evidence.notes': '你的註記',

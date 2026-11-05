@@ -144,7 +144,10 @@ async function verifyReusableAssets({ tool, evaluate, check, win, pause, temp })
   check(list.reusable_assets.some(asset => asset.id === entry.id), 'Saved asset survives plugin reload');
   check(JSON.stringify(placed.objects) === JSON.stringify(beforeReload.objects), 'Independently inserted copies survive plugin reload');
   check((await tool(scaled.args)).status === 'already_applied', 'Insertion idempotency survives reload with its original IDs');
-  await evaluate(openAssets+`document.querySelector('[data-saved-asset="${entry.id}"] .asset-remove').click()`); await settle();
+  await evaluate(openAssets+`document.querySelector('[data-saved-asset="${entry.id}"] .asset-edit').click()`);
+  check(await evaluate('document.getElementById("save-asset-dialog").open && !document.getElementById("remove-asset").hidden'), 'Asset details offer Remove');
+  await evaluate('document.getElementById("remove-asset").click()'); await settle();
+  check(await evaluate('!document.getElementById("save-asset-dialog").open && document.activeElement.id==="asset-search"'), 'Removing an asset closes its details and keeps focus in the panel');
   const remaining = await tool({ action: 'asset_list' });
   check(!remaining.reusable_assets.some(asset => asset.id === entry.id) && otherAssetIds.every(id => remaining.reusable_assets.some(asset => asset.id === id))
     && JSON.stringify((await read()).objects) === JSON.stringify(placed.objects), 'User removes one saved asset without changing other assets or any placed copy');

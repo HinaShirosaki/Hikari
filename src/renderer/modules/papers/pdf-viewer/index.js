@@ -9,6 +9,7 @@ import { installPdfViewerDocumentCleanupController } from './pdf-viewer-document
 import { installPdfViewerDocumentOpenController } from './pdf-viewer-document-open-controller.js';
 import { installPdfViewerDomController } from './pdf-viewer-dom-controller.js';
 import { installPdfViewerEventsController } from './pdf-viewer-events-controller.js';
+import { installPdfViewerCitationController } from './pdf-viewer-citation-controller.js';
 import { installPdfViewerHighlightController } from './pdf-viewer-highlight-controller.js';
 import { installPdfViewerPageNavigationController } from './pdf-viewer-page-navigation-controller.js';
 import { installPdfViewerPdfNavigationController } from './pdf-viewer-pdf-navigation-controller.js';
@@ -52,6 +53,7 @@ function installPdfViewerControllers(ctx) {
   installPdfViewerSearchUiController(ctx);
   installPdfViewerSelectionActionsController(ctx);
   installPdfViewerSearchExecutionController(ctx);
+  installPdfViewerCitationController(ctx);
   installPdfViewerHighlightController(ctx);
   installPdfViewerPageNavigationController(ctx);
   installPdfViewerToolbarController(ctx);
@@ -72,9 +74,14 @@ export function createPapersPdfViewer(elements = {}) {
 
   return {
     openPaper: ctx.openPaper,
+    revealCitation: ctx.revealCitation,
     resetViewer: ctx.resetViewer,
     getActivePaperId() {
       return ctx.state.paperId;
+    },
+    // paperId changes as soon as a load starts; this is only true once it finishes.
+    isPaperOpen(paperId) {
+      return paperId === ctx.state.paperId && ctx.state.openLoadToken === ctx.state.loadToken;
     },
     getCurrentPageNumber() {
       return ctx.state.pageNumber;

@@ -1,6 +1,7 @@
 #!/bin/sh
 # curl -fsSL https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.sh | bash
 # Prefer a verified release archive; HIKARI_BUILD_FROM_SOURCE=1 forces a local build.
+# Asks for the install folder in the system dialog; HIKARI_OUT_DIR skips it for scripts.
 set -eu
 
 [ "$(uname -s)" = Darwin ] || { echo "Hikari supports macOS and Windows only." >&2; exit 1; }
@@ -15,6 +16,8 @@ HIKARI_NODE="${HIKARI_NODE_DIR:-$HOME/.hikari/node}"
 HIKARI_NODE="${HIKARI_NODE%/}"
 [ -n "$HIKARI_NODE" ] || { echo 'HIKARI_NODE_DIR must name a cache folder.' >&2; exit 1; }
 output="${HIKARI_OUT_DIR:-$PWD/hikari-out}"
+picked=''
+stage=''
 tmp=''
 node_tmp=''
 node_lock=''
@@ -22,6 +25,7 @@ cleanup() {
   status=$?
   [ -z "$tmp" ] || rm -rf "$tmp"
   [ -z "$node_tmp" ] || rm -rf "$node_tmp"
+  [ -z "$stage" ] || rm -rf "$stage"
   [ -z "$node_lock" ] || rmdir "$node_lock"
   trap - 0
   exit "$status"
@@ -34,7 +38,42 @@ download() {
   curl -fSL --retry 3 --connect-timeout 15 --max-time 300 "$1" -o "$2"
 }
 
+# Fails without a desktop session. The build is staged in the chosen folder, so
+# the finished app arrives in one rename and a rejected folder fails right away.
+choose_folder() {
+  # A dialog in a session with no desktop, such as SSH, would wait forever.
+  [ "$(launchctl managername 2>/dev/null)" = Aqua ] || return 1
+  prompt='Choose where to install Hikari'
+  while :; do
+    if ! folder="$(osascript -e activate -e "POSIX path of (choose folder with prompt \"$prompt\" default location (path to applications folder))" 2>"$tmp/picker-error" </dev/null)"; then
+      if grep -q -- '-128' "$tmp/picker-error"; then echo 'Installation cancelled.' >&2; exit 1; fi
+      return 1
+    fi
+    folder="${folder%/}"
+    if [ -e "$folder/Hikari.app" ]; then
+      prompt='Hikari is already in that folder. Choose another folder.'
+    elif stage="$(mktemp -d "$folder/.hikari-install.XXXXXX" 2>/dev/null)"; then
+      picked="${folder:-/}"
+      output="$stage"
+      return 0
+    else
+      prompt='Hikari cannot be installed in that folder. Choose another folder.'
+    fi
+  done
+}
+
+# bin/hikari.js names the folder after Node's architecture, which can differ from the shell's.
+finish_install() {
+  [ -n "$picked" ] || return 0
+  set -- "$output"/Hikari-darwin-*/Hikari.app
+  mv "$1" "${picked%/}/Hikari.app"
+  echo "Hikari is installed: ${picked%/}/Hikari.app"
+}
+
 tmp="$(mktemp -d)"
+if [ -z "${HIKARI_OUT_DIR:-}" ]; then
+  choose_folder || echo "No desktop session to choose a folder; installing to $output"
+fi
 version="${HIKARI_VERSION:-}"
 if [ -z "$version" ]; then
   download 'https://registry.npmjs.org/-/package/@hinashirosaki%2fhikari/dist-tags' "$tmp/tags.json"
@@ -61,8 +100,11 @@ if [ "${HIKARI_BUILD_FROM_SOURCE:-0}" != 1 ]; then
     [ -f "$node_tmp/Hikari-darwin-$arch/Hikari.app/Contents/Info.plist" ] \
       || { echo 'Hikari archive is missing the app bundle.' >&2; exit 1; }
     mv "$node_tmp/Hikari-darwin-$arch" "$destination"
-    echo "Hikari: $destination/Hikari.app"
-    echo 'Move Hikari.app to Applications, then open it.'
+    [ -n "$picked" ] || {
+      echo "Hikari: $destination/Hikari.app"
+      echo 'Move Hikari.app to Applications, then open it.'
+    }
+    finish_install
     exit 0
   fi
   echo 'A prebuilt archive is unavailable; building Hikari locally.'
@@ -122,4 +164,5 @@ fi
 
 # A local package spec is useful for testing this bootstrap before publishing.
 # Explicit version avoids accidentally running a different locally installed Hikari.
-npx --yes "${HIKARI_PACKAGE_SPEC:-@hinashirosaki/hikari@$version}"
+HIKARI_OUT_DIR="$output" npx --yes "${HIKARI_PACKAGE_SPEC:-@hinashirosaki/hikari@$version}"
+finish_install

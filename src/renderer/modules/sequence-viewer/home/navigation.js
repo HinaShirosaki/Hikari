@@ -10,6 +10,7 @@ function createHomeNavigation({
   hideFeatureEditor,
   onNavigateHome,
   onNavigateDetail,
+  onWorkspaceChanged = () => {},
   getLibrarySavedFilterButtons,
   getLibraryTemporaryFilterButtons
 } = {}) {
@@ -46,6 +47,7 @@ function createHomeNavigation({
     if (elements.alignmentWorkspace) {
       elements.alignmentWorkspace.hidden = next !== 'alignment';
     }
+    onWorkspaceChanged();
     if (previous !== next && (next === 'home' || next === 'detail')) {
       const list = next === 'home' ? elements.libraryList : elements.detailLibraryList;
       const scroll = list?.closest?.('.left-rail-template__scroll');

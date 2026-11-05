@@ -1,5 +1,8 @@
 // Simplified Chinese preview. Missing entries use the English catalog.
 export const papersSimplifiedChinese = Object.freeze({
+  "citation.locating": "正在定位引用段落…",
+  "citation.notLocated": "已打开论文，但未能在 PDF 中定位引用段落。",
+
   "library.upload": "上传 PDF",
   "library.processing": "处理中",
   "library.processingTitle": "正在读取 PDF 并生成笔记",

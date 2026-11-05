@@ -1,4 +1,6 @@
 export const agentEnglish = Object.freeze({
+  "citation.open": "Open in Papers: {source}",
+
   'evidence.title': 'Paper excerpts',
   'evidence.why': 'Why selected',
   'evidence.notes': 'Your notes',

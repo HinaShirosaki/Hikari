@@ -268,15 +268,23 @@ body.theme-night .canvas-context-menu > button:is(:hover, :focus-visible):not(:d
 #generate-asset-dialog, #generate-here-dialog { width: min(420px, 92vw); }
 #generate-asset-error, #generate-here-error { font-size: 0.75rem; color: var(--theme-danger); }
 #assets-hint { margin: 0 2px 8px; }
-.saved-asset { display: flex; align-items: center; gap: 3px; border-radius: 6px; margin: 3px 0; }
-.saved-asset:hover { background: var(--rail-hover); }
-.asset-insert { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; padding: 6px 3px; text-align: left; }
-.asset-insert:hover { background: transparent; }
-.asset-preview { width: 48px; height: 48px; object-fit: contain; flex-shrink: 0; background: #ffffff; border: 1px solid var(--theme-border-soft); border-radius: 4px; }
-.asset-description { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.asset-description small { color: var(--theme-text-muted); font-size: 0.625rem; }
-.asset-remove { flex-shrink: 0; opacity: 0; width: 26px; }
-.saved-asset:hover .asset-remove, .saved-asset:focus-within .asset-remove { opacity: 1; }
+#saved-assets { display: grid; grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap: 8px; padding: 3px; }
+.saved-asset { position: relative; min-width: 0; }
+.asset-insert { display: grid; place-items: center; width: 100%; aspect-ratio: 1; min-width: 0; padding: 6px; border: 1px solid var(--theme-border-soft); border-radius: 8px; background: #ffffff; }
+.asset-insert:hover, .asset-insert:focus-visible, .is-inspected .asset-insert { background: #ffffff; border-color: var(--theme-accent); }
+.asset-preview { display: block; width: 100%; height: 100%; min-width: 0; min-height: 0; object-fit: contain; }
+#asset-dock { display: flex; flex-direction: column; gap: 8px; height: 236px; padding: 10px calc(16px + var(--theme-scrollbar-size)) 12px 16px; border-top: 1px solid var(--theme-border-soft); }
+#assets-panel[hidden] + #asset-dock { display: none; }
+#asset-dock-preview { flex: 0 0 104px; width: 100%; min-height: 0; object-fit: contain; border-radius: 6px; background: #ffffff; }
+#asset-dock .asset-description { flex: 1; min-height: 0; overflow-y: auto; }
+.asset-description { display: flex; flex-direction: column; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
+.asset-name { font-size: 0.8125rem; line-height: 1.4; }
+.asset-description small { color: var(--theme-text-muted); font-size: 0.6875rem; }
+.asset-summary { white-space: pre-line; }
+.asset-edit { position: absolute; top: 3px; right: 3px; width: 22px; height: 22px; padding: 3px; opacity: 0; background: var(--theme-surface-elevated); }
+.asset-edit .ui-icon { width: 14px; height: 14px; }
+.saved-asset:hover .asset-edit, .saved-asset:focus-within .asset-edit { opacity: 1; }
+#remove-asset { margin-right: auto; }
 #save-asset-dialog { width: min(360px, 92vw); }
 #save-asset-dialog p { font-size: 0.75rem; line-height: 1.5; color: var(--theme-text-muted); }
 #asset-save-error { color: var(--theme-danger) !important; }
@@ -405,7 +413,7 @@ dialog .actions { justify-content: flex-end; margin-top: 12px; }
   .toolbar .complexity-control { padding-left: 0; }
   .toolbar-actions { gap: 6px; }
 }
-@media (hover: none) { .layer-visibility, .asset-remove { opacity: 1; } }
+@media (hover: none) { .layer-visibility, .asset-edit { opacity: 1; } }
 @media (max-width: 1100px) { .text-toolbar { gap: 4px; } .format-group button { width: 27px; } }
 @media (max-width: 980px) {
   .app-left-rail-handle { display: none; }
@@ -426,13 +434,17 @@ dialog .actions { justify-content: flex-end; margin-top: 12px; }
   .illustrations-rail { flex: 0 0 160px; max-height: 160px; border-right: 0; border-bottom: 1px solid var(--theme-border); }
   .illustrations-pinned { gap: 6px; padding: 8px calc(12px + var(--theme-scrollbar-size)) 8px 12px; }
   .illustration-list { padding: 8px 12px; }
-  /* Asset rows are taller than figure rows; show about two of them. */
-  .illustrations-rail:has(#assets-panel:not([hidden])) { flex-basis: 260px; max-height: 260px; }
+  /* Asset rows are taller than figure rows; show about two of them above the dock. */
+  .illustrations-rail:has(#assets-panel:not([hidden])) { flex-basis: 340px; max-height: 340px; }
   .workspace { flex: 1; padding: 6px 8px 0; }
   .toolbar { gap: 4px; }
   .toolbar-actions { gap: 4px; }
   .canvas-stage { padding: 8px; }
   .canvas-zoom { margin-left: 0; }
+}
+@media (max-width: 720px), (max-height: 620px) {
+  #asset-dock { flex-direction: row; height: 84px; padding-block: 8px; }
+  #asset-dock-preview { flex-basis: 68px; width: 68px; }
 }
 @media (max-width: 480px) {
   .export-label, .export-chevron { display: none; }

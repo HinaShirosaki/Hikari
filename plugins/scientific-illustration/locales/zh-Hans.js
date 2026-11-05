@@ -1,5 +1,9 @@
 // Simplified Chinese preview; other messages fall back to English.
 (function(root){const all=root.HikariUiTranslations=root.HikariUiTranslations||{};all["zh-Hans"]={...(all["zh-Hans"]||{}),figura:{
+  "assets.description": "描述（可选）",
+  "assets.details": "素材详情",
+  "assets.editDetails": "编辑 {name} 的详情",
+  "assets.detailsSaved": "素材详情已保存",
   "text.alignLeft": "在文本框内左对齐",
   "text.alignCenter": "在文本框内居中",
   "text.alignRight": "在文本框内右对齐",
@@ -420,7 +424,6 @@
   "full.3c8aa2a3": "关闭图层",
   "full.d5e79aa2": "生成素材",
   "full.b2a4f44": "描述组件",
-  "full.e78fea14": "切开展示嵴的线粒体",
   "full.663b5409": "用 Codex 生成",
   "full.d9f5e181": "隐藏图层和属性",
   "full.f6bfea9f": "显示素材库",

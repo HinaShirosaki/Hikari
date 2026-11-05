@@ -30,6 +30,8 @@ curl -fsSL https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.sh | bash
 iwr -useb https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.ps1 | iex
 ```
 
+A folder dialog opens first, so you pick the install location without typing a path. It starts at Applications on macOS and at your user folder on Windows, and you can make a new folder in it. If the folder already holds Hikari or cannot be written to, the dialog returns with the reason; Cancel stops without installing. macOS gets `Hikari.app` in that folder. Windows gets `Hikari\Hikari.exe` plus Desktop and Start menu shortcuts; remove it by deleting that folder and the shortcuts. Over SSH, or anywhere else with no desktop session, no dialog can open, so the script writes to `./hikari-out/` instead.
+
 No Node.js needed: the script first resolves the current npm release and downloads its SHA-256-verified app archive from GitHub Releases. Prebuilt archives cover macOS Apple Silicon, macOS Intel, and Windows x64. If an archive is unavailable, it builds that same version locally. For local builds, a missing or incomplete Node.js/npm/npx installation is replaced with a validated private runtime at `~/.hikari/node` (macOS) or `%LOCALAPPDATA%\HikariNode` (Windows). Downloads are staged and checked before replacing the cache; failed downloads leave the previous cache intact.
 
 With Node.js 20+ and npm already installed, you can build directly:
@@ -38,13 +40,13 @@ With Node.js 20+ and npm already installed, you can build directly:
 npx --yes @hinashirosaki/hikari@latest
 ```
 
-Both paths write `Hikari.app` to `./hikari-out/Hikari-darwin-<arch>/` on macOS. Move it to Applications and open it. On Windows, `./hikari-out/Hikari-win32-<arch>/` holds a portable `Hikari\Hikari.exe` (move the `Hikari` folder anywhere and run it, no install needed) and `HikariSetup.exe` (installs to `%LOCALAPPDATA%\hikari` with Desktop and Start menu shortcuts). Existing prebuilt output is preserved; choose another `HIKARI_OUT_DIR` if the destination already exists.
+This build, and the script when it has no dialog or `HIKARI_OUT_DIR` is set, writes `Hikari.app` to `./hikari-out/Hikari-darwin-<arch>/` on macOS. Move it to Applications and open it. On Windows, `./hikari-out/Hikari-win32-<arch>/` holds a portable `Hikari\Hikari.exe` (move the `Hikari` folder anywhere and run it, no install needed) and `HikariSetup.exe` (installs to `%LOCALAPPDATA%\hikari` with Desktop and Start menu shortcuts). Existing prebuilt output is preserved; choose another `HIKARI_OUT_DIR` if the destination already exists.
 
 Installer environment options:
 
 | Variable | Purpose |
 | --- | --- |
-| `HIKARI_OUT_DIR` | Choose the output folder. |
+| `HIKARI_OUT_DIR` | Skip the folder dialog and write the build output there, for scripts. |
 | `HIKARI_VERSION` | Download or build an exact release, such as `1.1.0-beta.9`. Defaults to npm's `latest` tag, including beta releases. |
 | `HIKARI_BUILD_FROM_SOURCE=1` | Skip prebuilt archives and build locally. |
 | `HIKARI_NODE_DIR` | Choose the private Node.js cache folder. |

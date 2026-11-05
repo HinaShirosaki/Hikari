@@ -1,5 +1,6 @@
 # iwr -useb https://cdn.jsdelivr.net/npm/@hinashirosaki/hikari/install.ps1 | iex
 # Prefer a verified release archive; HIKARI_BUILD_FROM_SOURCE=1 forces a local build.
+# Asks for the install folder in the system dialog; HIKARI_OUT_DIR skips it for scripts.
 $ErrorActionPreference = 'Stop'
 # Windows PowerShell 5.1 may otherwise negotiate an obsolete TLS version.
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
@@ -30,6 +31,74 @@ function Move-HikariDirectory($From, $To) {
   }
 }
 
+# Returns the chosen folder and a staging folder inside it, or nothing without a
+# desktop session. Staging there makes the finished app arrive in one rename and
+# rejects an unwritable folder right away.
+function Select-HikariFolder {
+  # A dialog in a session with no desktop, such as SSH, would wait forever.
+  if (-not [Environment]::UserInteractive) { return }
+  # The dialog needs an STA thread, which pwsh may lack. Without a shown topmost
+  # owner it opens behind the terminal. Base64 keeps non-ASCII paths intact
+  # through the console code page.
+  $picker = @'
+try {
+  Add-Type -AssemblyName System.Windows.Forms
+  $owner = New-Object Windows.Forms.Form -Property @{ TopMost = $true; ShowInTaskbar = $false; Opacity = 0 }
+  $owner.Show()
+  $dialog = New-Object Windows.Forms.FolderBrowserDialog -Property @{ Description = 'PROMPT'; SelectedPath = $env:USERPROFILE }
+  if ($dialog.ShowDialog($owner) -ne 'OK') { exit 2 }
+  [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($dialog.SelectedPath))
+} catch { exit 3 }
+'@
+  $prompt = 'Choose where to install Hikari'
+  while ($true) {
+    $encoded = & powershell.exe -NoProfile -STA -Command $picker.Replace('PROMPT', $prompt)
+    if ($LASTEXITCODE -eq 2) { throw 'Installation cancelled.' }
+    if ($LASTEXITCODE -ne 0) { return }
+    $folder = [Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($encoded))
+    if (Test-Path -LiteralPath (Join-Path $folder 'Hikari')) {
+      $prompt = 'Hikari is already in that folder. Choose another folder.'
+      continue
+    }
+    try {
+      $stage = Join-Path $folder ('.hikari-install-' + [IO.Path]::GetRandomFileName())
+      New-Item -ItemType Directory $stage -ErrorAction Stop | Out-Null
+      return $folder, $stage
+    } catch { $prompt = 'Hikari cannot be installed in that folder. Choose another folder.' }
+  }
+}
+
+function Complete-HikariInstall($Stage, $Folder) {
+  # bin/hikari.js names the folder after Node's architecture, which can differ from the shell's.
+  $built = Get-ChildItem -LiteralPath $Stage -Directory -Filter 'Hikari-win32-*' | Select-Object -First 1
+  $app = Join-Path $Folder 'Hikari'
+  Move-HikariDirectory (Join-Path $built.FullName 'Hikari') $app
+  $exe = Join-Path $app 'Hikari.exe'
+  $wsh = New-Object -ComObject WScript.Shell
+  $shell = New-Object -ComObject Shell.Application
+  foreach ($place in 'Programs', 'Desktop') {
+    $links = [Environment]::GetFolderPath($place)
+    try {
+      # WScript.Shell rejects a target outside the ANSI code page, so it only creates the file.
+      $placeholder = $wsh.CreateShortcut((Join-Path $links 'Hikari.lnk'))
+      $placeholder.TargetPath = $env:SystemRoot
+      $placeholder.Save()
+      $link = $shell.NameSpace($links).ParseName('Hikari.lnk').GetLink
+      $link.Path = $exe
+      $link.Save()
+    } catch { Write-Host "Could not add the $place shortcut: $_" }
+  }
+  Write-Host "Hikari is installed: $exe"
+}
+
+function Remove-HikariStage($Stage) {
+  for ($attempt = 1; $attempt -le 10 -and (Test-Path -LiteralPath $Stage); $attempt++) {
+    # Defender and the indexer briefly lock freshly extracted files.
+    Remove-Item -LiteralPath $Stage -Recurse -Force -ErrorAction SilentlyContinue
+    if (Test-Path -LiteralPath $Stage) { Start-Sleep -Milliseconds (200 * $attempt) }
+  }
+}
+
 function Test-HikariRuntime($Node, $NpmCli, $NpxCli, $Arch = '') {
   try {
     if (-not (Test-Path $Node)) { return $false }
@@ -54,8 +123,14 @@ function Install-Hikari {
   $tmp = Join-Path ([IO.Path]::GetTempPath()) ('hikari-install-' + [IO.Path]::GetRandomFileName())
   $nodeTmp = $null
   $nodeLock = $null
+  $picked = $null
+  $stage = $null
   New-Item -ItemType Directory $tmp | Out-Null
   try {
+    if (-not $env:HIKARI_OUT_DIR) {
+      $picked, $stage = Select-HikariFolder
+      if ($picked) { $output = $stage } else { Write-Host "No desktop session to choose a folder; installing to $output" }
+    }
     $version = $env:HIKARI_VERSION
     if (-not $version) {
       Get-HikariDownload 'https://registry.npmjs.org/-/package/@hinashirosaki%2fhikari/dist-tags' (Join-Path $tmp 'tags.json')
@@ -86,10 +161,14 @@ function Install-Hikari {
         $nodeTmp = Join-Path $output ('.hikari-extract-' + [IO.Path]::GetRandomFileName())
         Expand-Archive $archive -DestinationPath $nodeTmp
         $extracted = Join-Path $nodeTmp "Hikari-win32-$arch"
-        if (-not (Test-Path (Join-Path $extracted 'Hikari\Hikari.exe')) -or -not (Test-Path (Join-Path $extracted 'HikariSetup.exe'))) {
+        if (-not (Test-Path -LiteralPath (Join-Path $extracted 'Hikari\Hikari.exe')) -or -not (Test-Path -LiteralPath (Join-Path $extracted 'HikariSetup.exe'))) {
           throw 'Hikari archive is missing the portable app or installer.'
         }
         Move-HikariDirectory $extracted $destination
+        if ($picked) {
+          Complete-HikariInstall $stage $picked
+          return
+        }
         Write-Host "Hikari portable: $destination\Hikari\Hikari.exe"
         Write-Host "Hikari installer: $destination\HikariSetup.exe"
         return
@@ -157,11 +236,16 @@ function Install-Hikari {
     }
     $package = if ($env:HIKARI_PACKAGE_SPEC) { $env:HIKARI_PACKAGE_SPEC } else { "@hinashirosaki/hikari@$version" }
     # .cmd works with PowerShell's Restricted execution policy.
-    & npx.cmd --yes $package
+    # iex runs in the caller's session, so its environment has to be put back.
+    $requestedOutput = $env:HIKARI_OUT_DIR
+    $env:HIKARI_OUT_DIR = $output
+    try { & npx.cmd --yes $package } finally { $env:HIKARI_OUT_DIR = $requestedOutput }
     if ($LASTEXITCODE -ne 0) { throw "Hikari build failed (exit $LASTEXITCODE)." }
+    if ($picked) { Complete-HikariInstall $stage $picked }
   } finally {
-    if ($nodeTmp -and (Test-Path $nodeTmp)) { Remove-Item $nodeTmp -Recurse -Force }
+    if ($nodeTmp -and (Test-Path -LiteralPath $nodeTmp)) { Remove-Item -LiteralPath $nodeTmp -Recurse -Force }
     if ($nodeLock -and (Test-Path $nodeLock)) { Remove-Item $nodeLock -Force }
+    if ($stage) { Remove-HikariStage $stage }
     Remove-Item $tmp -Recurse -Force
   }
 }

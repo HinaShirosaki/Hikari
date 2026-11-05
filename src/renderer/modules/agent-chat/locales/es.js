@@ -1,5 +1,7 @@
 // Spanish preview. Missing entries use the English catalog.
 export const agentSpanish = Object.freeze({
+  "citation.open": "Abrir en Artículos: {source}",
+
   'evidence.title': 'Fragmentos de artículos',
   'evidence.why': 'Motivo de selección',
   'evidence.notes': 'Tus notas',

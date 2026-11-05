@@ -65,6 +65,10 @@ export const agentChatRailManifest = {
       }
       return modules?.assay?.renderAgentPlotlyGraph?.(artifact, payload) === true;
     },
+    onOpenPaperCitation: (source) => {
+      showView(views.PAPERS);
+      return modules.papers?.openPaperCitation?.(source);
+    },
     onOpenNotebookEntry: (entryId = '') => {
       showView(views.BIOLOGY_NOTEBOOK);
       modules.biologyNotebook?.openEntry?.(entryId);

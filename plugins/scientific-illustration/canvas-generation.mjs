@@ -1,4 +1,5 @@
 import { i18n } from './i18n.mjs';
+import { oneOffImageStyle } from './image-style.mjs';
 const text = key => i18n.t(`figura.generateHere.${key}`);
 
 export function canvasGenerationPoint(matrix, clientX, clientY, canvas) {
@@ -11,7 +12,7 @@ export function canvasGenerationPoint(matrix, clientX, clientY, canvas) {
   return { x: Math.min(canvas.width, Math.round(x * 100) / 100), y: Math.min(canvas.height, Math.round(y * 100) / 100) };
 }
 
-export function canvasGenerationMessage(description, target, renderer) {
+export function canvasGenerationMessage(description, target, renderer, imageStyle = '') {
   const prompt = String(description || '').trim();
   if (!prompt || prompt.length > 2000) throw new Error(text('descriptionRequired'));
   if (!target || ![target.x, target.y, target.width, target.height].every(Number.isFinite)
@@ -22,14 +23,16 @@ export function canvasGenerationMessage(description, target, renderer) {
     image: 'Use Codex image_gen for this addition, with a transparent background and no baked-in text. This choice applies only to this addition; do not change the saved renderer preference.'
   }[renderer];
   if (!choice) throw new Error(text('rendererRequired'));
-  return `Add a new component to this illustration: ${prompt}\n\nPlace the center of the new component at canvas coordinates (${target.x}, ${target.y}) on the main canvas (${target.width} × ${target.height}). Choose a compact size; near an edge, shift only enough to keep the component inside the canvas. Keep existing layers, the canvas size, and figure settings unchanged; do not recenter or rearrange the figure. ${choice} Keep any requested labels as separate text layers. Inspect the placement before finishing.`;
+  return `Add a new component to this illustration: ${prompt}\n\nPlace the center of the new component at canvas coordinates (${target.x}, ${target.y}) on the main canvas (${target.width} × ${target.height}). Choose a compact size; near an edge, shift only enough to keep the component inside the canvas. Keep existing layers, the canvas size, and figure settings unchanged; do not recenter or rearrange the figure. ${choice}${renderer === 'svg' ? '' : imageStyle} Keep any requested labels as separate text layers. Inspect the placement before finishing.`;
 }
 
 export function createCanvasGeneration({ document, workspace, getContext, canGenerate, beforeSend, sendToChat, status }) {
   const $ = id => document.getElementById(id), dialog = $('generate-here-dialog');
-  const description = $('generate-here-description'), renderer = $('generate-here-renderer');
+  const description = $('generate-here-description'), renderer = $('generate-here-renderer'), style = $('generate-here-style');
   const error = $('generate-here-error'), submit = $('confirm-generate-here'), cancel = $('cancel-generate-here');
   let target = null, submitting = false;
+  const savedStyle = () => getContext().document.imageGenerationStyle.preset;
+  const syncStyle = () => { style.disabled = renderer.value === 'svg'; };
   function close() { target = null; dialog.close(); }
   function capture({ clientX, clientY, keyboard }) {
     const context = getContext(), canvas = context.document?.canvases.main;
@@ -45,9 +48,10 @@ export function createCanvasGeneration({ document, workspace, getContext, canGen
   }
   function open(point) {
     if (!point || submitting || !canGenerate() || point.illustrationId !== getContext().illustrationId) return;
-    target = point; error.textContent = '';
+    target = point; error.textContent = ''; style.value = savedStyle(); syncStyle();
     dialog.showModal(); description.focus();
   }
+  renderer.addEventListener('change', syncStyle);
   cancel.addEventListener('click', close);
   dialog.addEventListener('close', () => { if (!dialog.open) target = null; });
   dialog.addEventListener('cancel', event => { if (submitting) event.preventDefault(); });
@@ -57,7 +61,7 @@ export function createCanvasGeneration({ document, workspace, getContext, canGen
     submitting = true; submit.disabled = cancel.disabled = true; error.textContent = '';
     try {
       if (!canGenerate()) throw new Error(text('unavailable'));
-      const message = canvasGenerationMessage(description.value, intent, renderer.value);
+      const message = canvasGenerationMessage(description.value, intent, renderer.value, oneOffImageStyle(style.value, savedStyle()));
       await beforeSend(); await workspace.ready;
       if (target !== intent || intent.illustrationId !== getContext().illustrationId) return;
       const current = await workspace.request({ action: 'read', illustration_id: intent.illustrationId });

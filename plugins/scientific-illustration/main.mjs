@@ -1047,7 +1047,7 @@ async function exportFigure(format) {
 $('export-svg').addEventListener('click', () => void exportFigure('svg')); $('export-png').addEventListener('click', () => void exportFigure('png'));
 $('export-pptx').addEventListener('click', () => void exportFigure('pptx'));
 $('complexity').addEventListener('change', event => void edit([{ op: 'complexity', complexity: event.target.value }]));
-for (const [value, { label }] of Object.entries(IMAGE_STYLE_PRESETS)) { const option = new Option(label, value); i18nUi.setOwnedText(option, label); $('image-generation-style').add(option); };
+for (const id of ['image-generation-style', 'generate-asset-style', 'generate-here-style']) for (const [value, { label }] of Object.entries(IMAGE_STYLE_PRESETS)) { const option = new Option(label, value); i18nUi.setOwnedText(option, label); $(id).add(option); };
 function boundImagePreferences() {
   if (!$('figure-menu').open) return;
   const panel = $('figure-menu').querySelector('.popover-panel');

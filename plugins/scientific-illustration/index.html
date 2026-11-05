@@ -27,6 +27,7 @@
         <div id="saved-assets" role="list" aria-label="Reusable components" data-i18n-aria-label="figura.full.547e04c0"></div>
         <p id="assets-empty" class="layers-empty"><span data-i18n="figura.full.fc1b4a14">Your reusable components will appear here.</span></p>
       </section>
+      <div id="asset-dock" hidden><img id="asset-dock-preview" alt=""><div id="asset-dock-text" class="asset-description"><strong class="asset-name"></strong><small class="asset-summary"></small></div></div>
     </aside>
     <section class="workspace left-rail-template__main" aria-label="Illustration editor" data-i18n-aria-label="figura.full.15b5b70c">
       <header class="toolbar">
@@ -185,17 +186,24 @@
     <label id="text-free-review" class="check"><input id="text-free" type="checkbox" required><span id="raster-text-free-label" data-i18n="figura.full.4e019848">I inspected this image and it contains no text. Labels belong in separate text layers.</span></label>
     <p id="raster-error" role="alert"></p><div class="actions"><button type="button" id="cancel-raster"><span data-i18n="figura.full.35afca3b">Cancel</span></button><button id="confirm-raster" type="submit"><span data-i18n="figura.full.91b7bafc">Add artwork</span></button></div>
   </form></dialog>
-  <dialog id="save-asset-dialog" aria-labelledby="save-asset-title"><form id="save-asset-form"><h2 id="save-asset-title"><span data-i18n="figura.full.25246562">Save reusable component</span></h2><label><span data-i18n="figura.full.fe07306">Name</span><input id="asset-name" maxlength="200" required></label><p id="asset-save-error" role="alert"></p><div class="actions"><button id="cancel-save-asset" type="button"><span data-i18n="figura.full.35afca3b">Cancel</span></button><button id="confirm-save-asset" type="submit"><span data-i18n="figura.full.62cf0158">Save asset</span></button></div></form></dialog>
+  <dialog id="save-asset-dialog" aria-labelledby="save-asset-title"><form id="save-asset-form">
+    <h2 id="save-asset-title"><span data-i18n="figura.full.25246562">Save reusable component</span></h2>
+    <label><span data-i18n="figura.full.fe07306">Name</span><input id="asset-name" maxlength="200" required></label>
+    <label><span data-i18n="figura.assets.description">Description (optional)</span><textarea id="asset-description" rows="4" maxlength="2000"></textarea></label>
+    <p id="asset-save-error" role="alert"></p><div class="actions"><button id="remove-asset" type="button" class="icon-button danger-button" data-icon="trash" hidden></button><button id="cancel-save-asset" type="button"><span data-i18n="figura.full.35afca3b">Cancel</span></button><button id="confirm-save-asset" type="submit"><span data-i18n="figura.full.62cf0158">Save asset</span></button></div>
+  </form></dialog>
   <dialog id="generate-asset-dialog" aria-labelledby="generate-asset-title"><form id="generate-asset-form">
     <h2 id="generate-asset-title"><span data-i18n="figura.full.d5e79aa2">Generate asset</span></h2>
-    <label><span data-i18n="figura.full.b2a4f44">Describe the component</span><textarea id="generate-asset-description" rows="4" maxlength="2000" required placeholder="A mitochondrion cut open to show its cristae" data-i18n-placeholder="figura.full.e78fea14"></textarea></label>
+    <label><span data-i18n="figura.full.b2a4f44">Describe the component</span><textarea id="generate-asset-description" rows="4" maxlength="2000" required></textarea></label>
+    <label><span data-i18n="figura.full.b1146843">Image style</span><select id="generate-asset-style"></select></label>
     <p id="generate-asset-error" role="alert"></p>
     <div class="actions"><button id="cancel-generate-asset" type="button"><span data-i18n="figura.full.35afca3b">Cancel</span></button><button id="confirm-generate-asset" type="submit"><span data-i18n="figura.full.663b5409">Generate with Codex</span></button></div>
   </form></dialog>
   <dialog id="generate-here-dialog" aria-labelledby="generate-here-title"><form id="generate-here-form">
     <h2 id="generate-here-title"><span data-i18n="figura.generateHere.title">Generate here</span></h2>
-    <label><span data-i18n="figura.full.b2a4f44">Describe the component</span><textarea id="generate-here-description" rows="4" maxlength="2000" required placeholder="A mitochondrion cut open to show its cristae" data-i18n-placeholder="figura.full.e78fea14"></textarea></label>
+    <label><span data-i18n="figura.full.b2a4f44">Describe the component</span><textarea id="generate-here-description" rows="4" maxlength="2000" required></textarea></label>
     <label><span data-i18n="figura.generateHere.renderer">Format</span><select id="generate-here-renderer"><option value="auto" data-i18n="figura.generateHere.auto">Automatic</option><option value="svg" data-i18n="figura.generateHere.svg">Editable SVG</option><option value="image" data-i18n="figura.generateHere.image">Image generation</option></select></label>
+    <label><span data-i18n="figura.full.b1146843">Image style</span><select id="generate-here-style"></select></label>
     <p id="generate-here-error" role="alert"></p>
     <div class="actions"><button id="cancel-generate-here" type="button"><span data-i18n="figura.full.35afca3b">Cancel</span></button><button id="confirm-generate-here" type="submit"><span data-i18n="figura.full.663b5409">Generate with Codex</span></button></div>
   </form></dialog>

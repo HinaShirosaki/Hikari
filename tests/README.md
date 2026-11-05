@@ -242,3 +242,5 @@ CropperJS. Deferred model callbacks use the controller factory's defaultable mod
 dependency, preserve output geometry/scores/settings and verify translated busy/error
 states without touching user images, user files or a model/network service. Colony
 and crop-menu layout captures run at 1300px and 800px.
+
+`node tests/agent-paper-source-links-selfcheck.cjs` and `node tests/paper-citation-navigation-selfcheck.cjs` check trusted citation targets, exact reader passages, workspace-relative PDF metadata, text matching and superseded PDF renders. `node tests/agent-paper-citations-electron.cjs` exercises sentence buttons through the actual Agent manifest into the PDF viewer, temporary highlights, keyboard/reload behavior and day/night layouts. Set `HIKARI_CITATION_REAL_PAPER=1` to also check the saved FACT paper in the local TestData3 fixture. `node tests/paper-citation-discovery-selfcheck.cjs` verifies that navigation scans file metadata without waiting for background Markdown extraction or model intake, and that overlapping scans preserve added, edited and deleted annotations in memory and persistence.

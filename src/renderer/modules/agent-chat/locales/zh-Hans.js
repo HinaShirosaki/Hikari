@@ -1,5 +1,7 @@
 // Simplified Chinese preview. Missing entries use the English catalog.
 export const agentSimplifiedChinese = Object.freeze({
+  "citation.open": "在论文中打开：{source}",
+
   'evidence.title': '论文摘录',
   'evidence.why': '选择原因',
   'evidence.notes': '你的批注',

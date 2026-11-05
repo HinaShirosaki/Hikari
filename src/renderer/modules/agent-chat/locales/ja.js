@@ -1,5 +1,7 @@
 // Japanese preview. Missing entries use the English catalog.
 export const agentJapanese = Object.freeze({
+  "citation.open": "論文で開く：{source}",
+
   'evidence.title': '論文の抜粋',
   'evidence.why': '選定理由',
   'evidence.notes': '自分のメモ',

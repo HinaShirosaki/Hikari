@@ -54,6 +54,10 @@ function createDiscoveryMerge({ state } = {}) {
           ...normalized,
           id: existing.id || normalized.id
         };
+        // Discovery only echoes its input annotations. The live arrays may have
+        // been edited while intake ran; empty arrays also preserve deletions.
+        if (Array.isArray(existing.highlights)) merged.highlights = existing.highlights;
+        if (Array.isArray(existing.comments)) merged.comments = existing.comments;
         const previousJson = JSON.stringify(existing);
         const nextJson = JSON.stringify(merged);
         if (previousJson !== nextJson) {

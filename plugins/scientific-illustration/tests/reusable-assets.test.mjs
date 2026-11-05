@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createWorkspace, encodeText } from '../workspace.mjs';
 import { createDocument, normalizeObject } from '../model.mjs';
 import { selectionBounds } from '../grouping.mjs';
-import { ASSETS_PATH, snapshotAsset, componentAsset, instantiateAsset, normalizeAssetLibrary, validateAssetRequest } from '../reusable-assets.mjs';
+import { ASSETS_PATH, assetPath, snapshotAsset, componentAsset, instantiateAsset, normalizeAssetLibrary, validateAssetRequest } from '../reusable-assets.mjs';
 
 function fixture() {
   const files = new Map(); let stored;
@@ -73,11 +73,15 @@ test('snapshot and placement retain rotated vector/raster/text geometry and inde
 test('asset save is a durable snapshot shared across figures without changing canvas revision', async () => {
   const host = fixture(), w = host.open(); await w.ready; assert.ok((await seed(w)).ok);
   const before = await w.request({ action: 'read' });
-  const saved = await w.request(await saveArgs(w)); assert.ok(saved.ok);
+  const description = '青緑の細胞 · two editable labels, angled 35°';
+  const saved = await w.request(await saveArgs(w, { description })); assert.ok(saved.ok);
   const after = await w.request({ action: 'read' });
   assert.equal(after.revision, before.revision); assert.equal(after.library_revision, before.library_revision);
   assert.deepEqual(after.objects, before.objects); assert.equal(after.assets_revision, saved.assets_revision);
   const asset = (await w.request({ action: 'asset_read', asset_id: saved.asset_id })).component;
+  assert.equal(asset.description, description);
+  assert.equal(saved.reusable_assets[0].description, description);
+  assert.equal(after.reusable_assets[0].description, description);
   await apply(w, [{ op: 'update', id: 'a', patch: { text: 'Changed later' } }]);
   assert.deepEqual((await w.request({ action: 'asset_read', asset_id: saved.asset_id })).component, asset);
   await w.manage('create');
@@ -85,6 +89,56 @@ test('asset save is a durable snapshot shared across figures without changing ca
   const reloaded = host.open(); await reloaded.ready;
   assert.deepEqual((await reloaded.request({ action: 'asset_read', asset_id: saved.asset_id })).component, asset);
   assert.equal(host.json(ASSETS_PATH).assets.length, 1);
+});
+
+test('legacy asset descriptions can be edited atomically without rewriting artwork or placed copies', async () => {
+  const host = fixture(), w = host.open(); await w.ready; await seed(w);
+  const saved = await w.request(await saveArgs(w));
+  // Existing version-1 indexes did not contain descriptions.
+  const legacy = host.json(ASSETS_PATH); delete legacy.assets[0].description;
+  host.files.set(ASSETS_PATH, encodeText(JSON.stringify(legacy)));
+  const reload = host.open(); await reload.ready;
+  assert.equal(reload.getAssets().reusable_assets[0].description, '');
+  await apply(reload, [{ op: 'insert_asset', asset_id: saved.asset_id, canvas: 'main', x: 10, y: 10 }]);
+  const before = await reload.request({ action: 'read' }), artwork = host.files.get(assetPath(saved.asset_id));
+  const args = { action: 'asset_update', asset_id: saved.asset_id, expected_assets_revision: before.assets_revision,
+    request_id: crypto.randomUUID(), name: 'Renamed component', description: '  Teal schematic cell.\nEditable labels, angled view.  ' };
+  const writes = host.writes.length;
+  host.failPath = ASSETS_PATH;
+  assert.equal((await reload.request(args)).ok, false);
+  assert.equal(reload.getAssets().assets_revision, before.assets_revision);
+  host.failPath = '';
+  const updated = await reload.request(args); assert.equal(updated.status, 'asset_updated');
+  assert.deepEqual(host.writes.slice(writes), [ASSETS_PATH]);
+  assert.equal(host.files.get(assetPath(saved.asset_id)), artwork);
+  const reloaded = host.open(); await reloaded.ready;
+  const after = await reloaded.request({ action: 'read' });
+  assert.equal(after.revision, before.revision); assert.deepEqual(after.objects, before.objects); assert.deepEqual(after.groups, before.groups);
+  const component = (await reloaded.request({ action: 'asset_read', asset_id: saved.asset_id })).component;
+  assert.equal(component.description, args.description.trim()); assert.equal(component.name, args.name);
+  assert.equal((await reloaded.request(args)).status, 'already_applied');
+  assert.equal((await reloaded.request({ ...args, description: 'Different' })).status, 'request_id_conflict');
+  assert.equal((await reloaded.request({ ...args, request_id: crypto.randomUUID() })).status, 'revision_conflict');
+  await reloaded.manage('create');
+  const inserted = await apply(reloaded, [{ op: 'insert_asset', asset_id: saved.asset_id, canvas: 'main' }]);
+  assert.equal(inserted.groups[0].name, args.name);
+  const cleared = await reloaded.manageAsset('asset_update', { asset_id: saved.asset_id, description: '' });
+  assert.equal(cleared.reusable_assets[0].description, ''); assert.equal(cleared.reusable_assets[0].name, args.name);
+});
+
+test('asset metadata rejects malformed descriptions, empty updates and unrelated fields before writing', async () => {
+  const host = fixture(), w = host.open(); await w.ready; await seed(w);
+  const saved = await w.request(await saveArgs(w)), writes = host.writes.length;
+  const args = { action: 'asset_update', asset_id: saved.asset_id, expected_assets_revision: saved.assets_revision, request_id: crypto.randomUUID() };
+  for (const extra of [{}, { description: null }, { description: {} }, { description: 'x'.repeat(2001) },
+    { name: ' ' }, { description: 'valid', objects: [] }, { description: 'valid', illustration_id: 'other' }]) {
+    assert.equal((await w.request({ ...args, ...extra })).status, 'invalid_arguments');
+  }
+  assert.equal((await w.request({ ...args, asset_id: 'missing', description: 'Valid' })).status, 'not_found');
+  const saving = await saveArgs(w, { description: 42 });
+  assert.equal((await w.request(saving)).status, 'invalid_arguments');
+  assert.equal(host.writes.length, writes);
+  assert.throws(() => normalizeAssetLibrary({ ...host.json(ASSETS_PATH), assets: [{ ...host.json(ASSETS_PATH).assets[0], description: [] }] }), /Invalid asset description/);
 });
 
 test('asset insertion creates independent groups, honors preceding canvas changes, and supports undo/redo', async () => {

@@ -1,5 +1,8 @@
 // Spanish preview. Missing entries use the English catalog.
 export const papersSpanish = Object.freeze({
+  "citation.locating": "Buscando el pasaje citado…",
+  "citation.notLocated": "Se abrió el artículo, pero no se pudo localizar el pasaje citado en el PDF.",
+
   "library.upload": "Subir PDF",
   "library.processing": "Procesando",
   "library.processingTitle": "Leyendo el PDF y preparando sus notas",

@@ -1,5 +1,8 @@
 // Traditional Chinese preview. Missing entries use the English catalog.
 export const papersTraditionalChinese = Object.freeze({
+  "citation.locating": "正在定位引用段落…",
+  "citation.notLocated": "已開啟論文，但未能在 PDF 中定位引用段落。",
+
   "library.upload": "上傳 PDF",
   "library.processing": "處理中",
   "library.processingTitle": "正在讀取 PDF 並建立筆記",

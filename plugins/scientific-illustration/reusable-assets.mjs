@@ -4,9 +4,11 @@ import { normalizeObject, MAX_DOCUMENT_CHARS, MAX_OBJECTS, CANVASES, validId, re
 import { selectionBounds, transformSelection } from './grouping.mjs';
 
 export const ASSETS_PATH = 'reusable-assets.json';
-export const ASSET_ACTIONS = ['asset_list', 'asset_read', 'asset_render', 'asset_save', 'asset_delete'];
+export const ASSET_ACTIONS = ['asset_list', 'asset_read', 'asset_render', 'asset_save', 'asset_update', 'asset_delete'];
+export const MAX_ASSET_DESCRIPTION = 2000;
 export const assetPath = id => `assets/${id}/component.json`;
 const validName = value => typeof value === 'string' && value.trim().length > 0 && value.length <= 200;
+const validDescription = value => typeof value === 'string' && value.length <= MAX_ASSET_DESCRIPTION;
 export const createAssetLibrary = () => ({ version: 1, revision: crypto.randomUUID(), assets: [], receipts: [] });
 
 export function normalizeAssetLibrary(raw) {
@@ -16,7 +18,8 @@ export function normalizeAssetLibrary(raw) {
       || !Number.isInteger(entry.objectCount) || entry.objectCount < 1 || entry.objectCount > MAX_OBJECTS) throw new Error('Invalid reusable asset entry.');
     if (entry.fingerprint !== undefined && !/^[a-f0-9]{64}$/.test(entry.fingerprint)) throw new Error('Invalid asset fingerprint.');
     if (entry.origin !== undefined && !['manual', 'codex', 'storage', 'agent', 'agent-group'].includes(entry.origin)) throw new Error('Invalid asset origin.');
-    return { id: entry.id, name: entry.name, width: entry.width, height: entry.height,
+    if (entry.description !== undefined && !validDescription(entry.description)) throw new Error('Invalid asset description.');
+    return { id: entry.id, name: entry.name, description: entry.description?.trim() || '', width: entry.width, height: entry.height,
       objectCount: entry.objectCount, updatedAt: String(entry.updatedAt || ''),
       ...(entry.fingerprint ? { fingerprint: entry.fingerprint } : {}), ...(entry.origin ? { origin: entry.origin } : {}) };
   });
@@ -38,10 +41,16 @@ export function validateAssetRequest(args) {
     return;
   }
   fields(args, ['action', 'expected_assets_revision', 'request_id', ...(args.action === 'asset_save'
-    ? ['illustration_id', 'expected_revision', 'name', 'id', 'ids', 'raster_asset', 'textFree', 'objects'] : ['asset_id'])]);
+    ? ['illustration_id', 'expected_revision', 'name', 'description', 'id', 'ids', 'raster_asset', 'textFree', 'objects']
+    : args.action === 'asset_update' ? ['asset_id', 'name', 'description'] : ['asset_id'])]);
   if (!validId(args.expected_assets_revision) || !validId(args.request_id)) throw new Error('Supply expected_assets_revision from asset_list/read and a unique request_id.');
-  if (args.action === 'asset_delete') {
+  if (args.description !== undefined && !validDescription(args.description)) throw new Error(`Asset description must be at most ${MAX_ASSET_DESCRIPTION} characters.`);
+  if (['asset_delete', 'asset_update'].includes(args.action)) {
     if (!validId(args.asset_id)) throw new Error('Choose an asset_id from asset_list.');
+    if (args.action === 'asset_update') {
+      if (args.name === undefined && args.description === undefined) throw new Error('Supply a name or description to update.');
+      if (args.name !== undefined && !validName(args.name)) throw new Error('Give the asset a name of 1–200 characters.');
+    }
     return;
   }
   // Generated components never touch a figure, so only canvas saves need one.

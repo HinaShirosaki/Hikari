@@ -3,7 +3,7 @@ import { setNotebookAppendInFlight } from './review-overlay/review-status.js';
 import { trimText } from './shared.js';
 import { allowChatImage } from './markdown.js';
 import { getPaperSourceEvidence, resolvePaperSourceLink } from './paper-source-links.js';
-import { agentUi, setAgentAttribute } from './localization.js';
+import { agentUi, agentNotice, setAgentAttribute } from './localization.js';
 
 function getNotebookAppendFromMessage(message) {
   const meta = message?.meta && typeof message.meta === 'object' ? message.meta : {};
@@ -46,6 +46,7 @@ export function createHistoryActionController({
   answerAssistantQuestion,
   notebookDraftAdapter,
   onOpenNotebookEntry,
+  onOpenPaperCitation,
   openReviewForMessage = () => {},
   reviewInline = () => {},
   onAppendNotebookEntry = async () => ({ ok: false, error: 'Notebook append is unavailable.' })
@@ -126,15 +127,21 @@ export function createHistoryActionController({
       const message = findMessage(sourceButton.dataset.agentSourceMessage);
       const source = resolvePaperSourceLink(sourceButton.dataset.agentPaperSource,
         getPaperSourceEvidence(message, state.agentChat?.messages || []), state.settings?.storagePath);
-      if (!source || !api?.openFilePath) {
+      if (!source || typeof onOpenPaperCitation !== 'function') {
         setStatus(agentUi('status.paperSourceUnavailable'));
         return;
       }
       try {
-        const result = await api.openFilePath(source.path);
-        if (result?.ok !== true) setStatus(trimText(result?.error, 320) || agentUi('status.paperSourceUnavailable'));
+        const result = await onOpenPaperCitation(source);
+        if (result?.ok !== true) {
+          const message = trimText(result?.error, 320) || agentUi('status.paperSourceUnavailable');
+          setStatus(message);
+          agentNotice(message, { type: 'error' });
+        }
       } catch (error) {
-        setStatus(trimText(error?.message, 320) || agentUi('status.paperSourceUnavailable'));
+        const message = trimText(error?.message, 320) || agentUi('status.paperSourceUnavailable');
+        setStatus(message);
+        agentNotice(message, { type: 'error' });
       }
       return;
     }

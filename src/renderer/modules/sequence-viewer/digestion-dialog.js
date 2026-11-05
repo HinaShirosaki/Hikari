@@ -2,21 +2,24 @@ import { createPresentation } from '../../lib/i18n/presentation.js';
 import './localization.js';
 import { escapeHtml } from '../../lib/html.js';
 import { buildRestrictionDigestProducts, digestSiteEnzymes, digestSiteKey, isDigestSite } from './restriction-digestion.js';
+import { createPickerStatusPositioner } from './picker-status.js';
 
 const i18nUi = createPresentation('dna');
 const snapshot = record => JSON.stringify(record);
 
 export function createDnaDigestionController({ rootDocument, getSelectedRecord, getEntryId, getSites, getFeatureFromEvent,
+  getStatusAnchor = () => rootDocument?.getElementById?.('sequence-viewer-detail-toolbar'),
   hideMenus = () => {}, saveFragments, setStatus = () => {} } = {}) {
   let context = null;
   let picker = null;
   let dialog = null;
   let saving = false;
+  const statusPositioner = createPickerStatusPositioner({ rootDocument, getAnchor: getStatusAnchor });
   const field = key => dialog.querySelector(`[data-digest-${key}]`);
 
   function cancel() {
     if (saving) return;
-    picker?.remove();
+    statusPositioner.clear();
     picker = null;
     dialog?.close();
     context = null;
@@ -132,7 +135,7 @@ export function createDnaDigestionController({ rootDocument, getSelectedRecord, 
 
   function showConfirmation() {
     if (!ensureDialog() || !templateIsCurrent()) { cancel(); return; }
-    picker?.remove();
+    statusPositioner.clear();
     picker = null;
     hideMenus();
     field('fields').disabled = false;
@@ -158,12 +161,12 @@ export function createDnaDigestionController({ rootDocument, getSelectedRecord, 
     hideMenus();
     if (mode !== 'double') { showConfirmation(); return; }
     picker = rootDocument.createElement('div');
-    picker.className = 'sequence-viewer-digest-picker';
+    picker.className = 'sequence-viewer-digest-picker sequence-viewer-picker-status';
     picker.setAttribute('role', 'status');
     i18nUi.setHtml(picker, `<span data-digest-prompt>${i18nUi.html('Double digestion: {name} selected. Click a second restriction site, then confirm.', { name: site.name })}</span>
       <button type="button" class="ghost-btn" data-digest-pick-cancel>${i18nUi.html('Cancel')}</button>`);
     picker.querySelector('button').addEventListener('click', cancel);
-    rootDocument.body.appendChild(picker);
+    statusPositioner.show(picker);
   }
 
   function pickSecondSite(event) {
@@ -191,5 +194,5 @@ export function createDnaDigestionController({ rootDocument, getSelectedRecord, 
     if (site) start(site, button.dataset.sequenceDigestAction);
     else setStatus(i18nUi.text('The restriction site changed. Please try again.'), true);
   });
-  return { start, cancel };
+  return { start, cancel, refreshStatusPosition: statusPositioner.refresh };
 }

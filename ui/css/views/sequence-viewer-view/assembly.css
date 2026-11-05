@@ -34,7 +34,7 @@
   flex-shrink: 0;
 }
 
-.sequence-viewer-assembly-controls select { flex: 1 1 auto; }
+.sequence-viewer-assembly-controls { justify-content: flex-end; }
 
 .sequence-viewer-assembly-body {
   flex: 1 1 auto;
@@ -79,7 +79,7 @@
 
 .sequence-viewer-assembly-input {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(130px, 170px) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-8);
 }
@@ -115,11 +115,6 @@
   --hikari-left-rail-list-hover: var(--theme-accent-wash);
   background: var(--theme-accent-wash);
   color: var(--theme-accent);
-}
-
-@media (max-width: 600px) {
-  .sequence-viewer-assembly-input { grid-template-columns: minmax(0, 1fr) auto; }
-  .sequence-viewer-assembly-source { grid-column: 1 / -1; }
 }
 
 @media (max-width: 900px) {

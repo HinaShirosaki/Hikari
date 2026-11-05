@@ -1,5 +1,9 @@
 // Japanese preview; other messages fall back to English.
 (function(root){const all=root.HikariUiTranslations=root.HikariUiTranslations||{};all["ja"]={...(all["ja"]||{}),figura:{
+  "assets.description": "説明（任意）",
+  "assets.details": "アセットの詳細",
+  "assets.editDetails": "{name} の詳細を編集",
+  "assets.detailsSaved": "アセットの詳細を保存しました",
   "text.alignLeft": "テキストボックス内で左揃え",
   "text.alignCenter": "テキストボックス内で中央揃え",
   "text.alignRight": "テキストボックス内で右揃え",
@@ -420,7 +424,6 @@
   "full.3c8aa2a3": "レイヤーを閉じる",
   "full.d5e79aa2": "素材を生成",
   "full.b2a4f44": "コンポーネントを説明",
-  "full.e78fea14": "クリステを示すために切り開いたミトコンドリア",
   "full.663b5409": "Codex で生成",
   "full.d9f5e181": "レイヤーとプロパティを非表示",
   "full.f6bfea9f": "ライブラリを表示",

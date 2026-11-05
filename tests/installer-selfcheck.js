@@ -90,7 +90,7 @@ try {
   const fixtureRoot = path.join(scratch, 'fixtures');
   const runtimeRoot = path.join(fixtureRoot, `node-v24.0.0-${windows ? 'win' : 'darwin'}-${arch}`);
   const cliDir = windows ? 'node_modules/npm/bin' : 'lib/node_modules/npm/bin';
-  const cli = `const fs=require('node:fs');if(process.argv.includes('--version')){console.log('11.0.0');}else{fs.appendFileSync(process.env.HIKARI_TEST_INVOCATIONS,JSON.stringify(process.argv.slice(2))+'\\n');process.exit(Number(process.env.HIKARI_TEST_BUILD_EXIT||0));}`;
+  const cli = `const fs=require('node:fs');if(process.argv.includes('--version')){console.log('11.0.0');}else{fs.appendFileSync(process.env.HIKARI_TEST_INVOCATIONS,JSON.stringify(process.argv.slice(2))+'\\n');if(process.env.HIKARI_OUT_DIR)fs.mkdirSync(process.env.HIKARI_OUT_DIR+'/Hikari-'+process.platform+'-node-arch/Hikari.app',{recursive:true});process.exit(Number(process.env.HIKARI_TEST_BUILD_EXIT||0));}`;
   write(path.join(runtimeRoot, cliDir, 'npm-cli.js'), cli);
   write(path.join(runtimeRoot, cliDir, 'npx-cli.js'), cli);
   if (windows) {
@@ -130,6 +130,9 @@ try {
     args = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', driver];
   } else {
     write(path.join(shim, 'curl'), `#!${process.execPath}\nrequire(${JSON.stringify(downloader)});`, 0o755);
+    write(path.join(shim, 'launchctl'), '#!/bin/sh\necho "$HIKARI_TEST_SESSION"\n', 0o755);
+    // Answers each dialog in turn: a folder, or the error text osascript prints.
+    write(path.join(shim, 'osascript'), `#!${process.execPath}\nconst fs=require('node:fs');const file=process.env.HIKARI_TEST_PICKER;const [answer,...rest]=JSON.parse(fs.readFileSync(file,'utf8'));fs.writeFileSync(file,JSON.stringify(rest));if(answer.error){console.error(answer.error);process.exit(1);}console.log(answer.folder);`, 0o755);
     command = '/bin/bash'; args = [path.join(root, 'install.sh')];
   }
   let sequence = 0;
@@ -147,6 +150,12 @@ try {
       HIKARI_TEST_INVOCATIONS: path.join(work, 'invocations'), HIKARI_TEST_BUILD_EXIT: String(options.buildExit || 0),
       HIKARI_NODE_DIR: cache, HIKARI_OUT_DIR: path.join(work, 'output'),
       HIKARI_BUILD_FROM_SOURCE: options.forceSource ? '1' : '0' });
+    if (options.picker) {
+      delete env.HIKARI_OUT_DIR;
+      env.HIKARI_TEST_SESSION = options.session || 'Aqua';
+      env.HIKARI_TEST_PICKER = path.join(work, 'picker.json');
+      write(env.HIKARI_TEST_PICKER, JSON.stringify(options.picker));
+    }
     if (options.version) env.HIKARI_VERSION = options.version;
     if (options.cache === 'unrelated') write(path.join(cache, 'keep'), 'user files');
     else if (options.cache) {
@@ -158,6 +167,7 @@ try {
     write(env.HIKARI_TEST_FIXTURE, JSON.stringify(config));
     const result = spawnSync(command, args, { cwd: work, env, encoding: 'utf8', timeout: 30_000 });
     if (result.error) throw result.error;
+    result.pickerLeft = options.picker ? JSON.parse(fs.readFileSync(env.HIKARI_TEST_PICKER, 'utf8')) : [];
     const requests = fs.existsSync(config.requests) ? fs.readFileSync(config.requests, 'utf8') : '';
     const invocations = fs.existsSync(env.HIKARI_TEST_INVOCATIONS) ? fs.readFileSync(env.HIKARI_TEST_INVOCATIONS, 'utf8') : '';
     return { ...result, requests, invocations, work, cache, env };
@@ -173,6 +183,64 @@ try {
     assert.equal(result.invocations, '');
     assert.ok(!fs.existsSync(result.cache));
   });
+  // install.ps1's dialog needs a desktop, so it is exercised in the Windows VM instead.
+  if (!windows) {
+    const app = (folder) => path.join(folder, 'Hikari.app', 'Contents/Info.plist');
+    const folder = (name) => {
+      const created = path.join(scratch, `chosen ${name}`);
+      fs.mkdirSync(created);
+      return created;
+    };
+    check('chosen folder receives Hikari.app directly with nothing else left behind', () => {
+      const chosen = folder('prebuilt');
+      const result = install({ prebuilt: true, picker: [{ folder: `${chosen}/` }] }); succeeds(result);
+      assert.deepEqual(fs.readdirSync(chosen), ['Hikari.app'], result.stdout + result.stderr);
+      assert.ok(fs.existsSync(app(chosen)));
+      assert.ok(!fs.existsSync(path.join(result.work, 'hikari-out')));
+    });
+    check('a local build also lands in the chosen folder', () => {
+      const chosen = folder('source');
+      const result = install({ cache: 'valid', forceSource: true, picker: [{ folder: chosen }] }); succeeds(result);
+      assert.deepEqual(fs.readdirSync(chosen), ['Hikari.app'], result.stdout + result.stderr);
+    });
+    check('a folder that already has Hikari is refused and the dialog returns', () => {
+      const taken = folder('taken');
+      const chosen = folder('after taken');
+      write(app(taken), 'existing app');
+      const result = install({ prebuilt: true, picker: [{ folder: taken }, { folder: chosen }] }); succeeds(result);
+      assert.equal(fs.readFileSync(app(taken), 'utf8'), 'existing app');
+      assert.deepEqual(fs.readdirSync(taken), ['Hikari.app']);
+      assert.ok(fs.existsSync(app(chosen)));
+      assert.deepEqual(result.pickerLeft, []);
+    });
+    check('an unwritable folder is refused and the dialog returns', () => {
+      const chosen = folder('after unwritable');
+      const result = install({ prebuilt: true, picker: [{ folder: path.join(scratch, 'missing') }, { folder: chosen }] }); succeeds(result);
+      assert.ok(fs.existsSync(app(chosen)));
+    });
+    check('cancelling the dialog stops without downloading or writing', () => {
+      const result = install({ prebuilt: true, picker: [{ error: 'execution error: User canceled. (-128)' }] });
+      assert.notEqual(result.status, 0);
+      assert.equal(result.requests, '');
+      assert.ok(!fs.existsSync(path.join(result.work, 'hikari-out')));
+    });
+    check('without a desktop session the dialog stays closed and the install uses ./hikari-out', () => {
+      const answers = [{ folder: folder('never asked') }];
+      const result = install({ prebuilt: true, session: 'Background', picker: answers }); succeeds(result);
+      assert.deepEqual(result.pickerLeft, answers);
+      assert.ok(fs.existsSync(path.join(result.work, 'hikari-out', `Hikari-darwin-${arch}`, 'Hikari.app')));
+    });
+    check('a dialog that cannot open also falls back to ./hikari-out', () => {
+      const result = install({ prebuilt: true, picker: [{ error: 'execution error: No user interaction allowed. (-1713)' }] }); succeeds(result);
+      assert.ok(fs.existsSync(path.join(result.work, 'hikari-out', `Hikari-darwin-${arch}`, 'Hikari.app')));
+    });
+    check('a failed build leaves nothing in the chosen folder', () => {
+      const chosen = folder('failed build');
+      const result = install({ cache: 'valid', forceSource: true, buildExit: 7, picker: [{ folder: chosen }] });
+      assert.notEqual(result.status, 0);
+      assert.deepEqual(fs.readdirSync(chosen), []);
+    });
+  }
   check('corrupt prebuilt download fails without falling through to a build', () => {
     const result = install({ prebuilt: true, badChecksum: true });
     assert.notEqual(result.status, 0);

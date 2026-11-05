@@ -80,15 +80,18 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
     return { document: normalizeDocument(migrated, validateSvg), migrated: migrated !== raw };
   }
   async function loadAsset(id) {
-    if (!assetLibrary.assets.some(asset => asset.id === id)) throw new Error('This reusable asset does not exist. Refresh Assets.');
-    return normalizeAsset(await readJson(assetPath(id)), validateSvg);
+    const entry = assetLibrary.assets.find(asset => asset.id === id);
+    if (!entry) throw new Error('This reusable asset does not exist. Refresh Assets.');
+    // Metadata lives in the index so edits have one atomic commit point and
+    // never rewrite the saved artwork or change placed copies.
+    return { ...normalizeAsset(await readJson(assetPath(id)), validateSvg), name: entry.name, description: entry.description };
   }
   function rasterComponent(raster, name, source = null) {
     return normalizeAsset({ version: 1, name, objects: [{ id: `raster-${crypto.randomUUID()}`, name, type: 'raster', canvas: 'main',
       x: 0, y: 0, ...fitRasterBox(raster.width, raster.height),
       ...(source?.chemicalStructure ? { chemicalStructure: true, textFree: source.textFree } : { textFree: true }), dataUrl: raster.dataUrl }] });
   }
-  const assetEntry = (asset, fingerprint, origin) => ({ id: crypto.randomUUID(), name: asset.name, width: asset.width, height: asset.height,
+  const assetEntry = (asset, fingerprint, origin, description = '') => ({ id: crypto.randomUUID(), name: asset.name, description: description.trim(), width: asset.width, height: asset.height,
     objectCount: asset.objects.length, updatedAt: new Date().toISOString(), fingerprint, origin });
   async function saveAutomaticAssets(snapshots, deadline) {
     const additions = [], saved = [];
@@ -97,7 +100,7 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
       const existing = [...assetLibrary.assets, ...additions.map(item => item.entry)].find(entry => entry.fingerprint === fingerprint);
       const entry = existing || assetEntry(asset, fingerprint, origin);
       if (!existing) additions.push({ entry, asset });
-      saved.push({ ...reference, asset_id: entry.id, name: entry.name, reused: Boolean(existing) });
+      saved.push({ ...reference, asset_id: entry.id, name: entry.name, description: entry.description, reused: Boolean(existing) });
     }
     if (!additions.length) return saved;
     const next = normalizeAssetLibrary({ ...assetLibrary, revision: crypto.randomUUID(), assets: [...assetLibrary.assets, ...additions.map(item => item.entry)] });
@@ -118,7 +121,8 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
         component: readAsset(asset, args.include_assets), ...readAssetLibrary(assetLibrary) };
       const preview = await renderPreview(assetPreviewDocument(asset), 'main', 400);
       if (Date.now() >= deadline) return failure('expired', 'The asset preview expired.');
-      return { ok: true, status: 'asset_render', asset_id: args.asset_id, previews: [{ ...preview, canvas: 'asset' }] };
+      return { ok: true, status: 'asset_render', asset_id: args.asset_id, name: asset.name, description: asset.description,
+        assets_revision: assetLibrary.revision, previews: [{ ...preview, canvas: 'asset', asset_id: args.asset_id, name: asset.name, description: asset.description }] };
     }
     const imported = args.raster_asset && Object.hasOwn(assets, args.raster_asset) && assets[args.raster_asset];
     if (args.raster_asset && !imported?.data_url) throw new Error(`Missing raster asset: ${args.raster_asset}`);
@@ -136,30 +140,33 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
       const fingerprint = await signature(assetContent(asset));
       entry = raster && assetLibrary.assets.find(item => item.fingerprint === fingerprint);
       if (entry) asset = null;
-      else entry = assetEntry(asset, fingerprint, imported?.source === 'codex' ? 'codex' : imported ? 'storage' : args.objects ? 'agent' : 'manual');
+      else entry = assetEntry(asset, fingerprint, imported?.source === 'codex' ? 'codex' : imported ? 'storage' : args.objects ? 'agent' : 'manual', args.description);
+      if (!asset && args.description !== undefined) entry = { ...entry, description: args.description.trim(), updatedAt: new Date().toISOString() };
     } else {
       entry = assetLibrary.assets.find(item => item.id === args.asset_id);
       if (!entry) return failure('not_found', 'This reusable asset does not exist.');
+      if (args.action === 'asset_update') entry = { ...entry, ...(args.name !== undefined ? { name: args.name.trim() } : {}),
+        ...(args.description !== undefined ? { description: args.description.trim() } : {}), updatedAt: new Date().toISOString() };
     }
-    const saving = args.action === 'asset_save';
-    const next = normalizeAssetLibrary({ ...assetLibrary, revision: crypto.randomUUID(), assets: asset ? [...assetLibrary.assets, entry] : saving ? assetLibrary.assets : assetLibrary.assets.filter(item => item.id !== entry.id),
+    const saving = args.action === 'asset_save', updating = args.action === 'asset_update';
+    const next = normalizeAssetLibrary({ ...assetLibrary, revision: crypto.randomUUID(), assets: asset ? [...assetLibrary.assets, entry]
+      : saving || updating ? assetLibrary.assets.map(item => item.id === entry.id ? entry : item) : assetLibrary.assets.filter(item => item.id !== entry.id),
       receipts: [...assetLibrary.receipts, { id: args.request_id, hash, assetId: entry.id }].slice(-64) });
     if (Date.now() >= deadline) return failure('expired', 'The asset request expired before saving.');
     await hikari.call('app.setUnsaved', { unsaved: true });
     try {
       if (asset) await writeJson(assetPath(entry.id), asset);
       await writeJson(ASSETS_PATH, next);
-      assetLibrary = next; onAssetsChange(readAssetLibrary(assetLibrary)); onStatus(saving ? 'Asset saved' : 'Asset removed');
+      assetLibrary = next; onAssetsChange(readAssetLibrary(assetLibrary)); onStatus(updating ? 'Asset details saved' : saving ? 'Asset saved' : 'Asset removed');
       // No file-removal verb is needed. Reclaim deleted bytes only after the
       // index commits; failure here cannot invalidate the committed library.
-      if (!saving) await writeJson(assetPath(entry.id), { deleted: true }).catch(() => {});
+      if (!saving && !updating) await writeJson(assetPath(entry.id), { deleted: true }).catch(() => {});
       const trim = raster && (({ dataUrl, ...metadata }) => metadata)(raster);
-      return { ok: true, status: saving ? 'asset_saved' : 'asset_deleted', persisted: true, asset_id: entry.id,
+      return { ok: true, status: updating ? 'asset_updated' : saving ? 'asset_saved' : 'asset_deleted', persisted: true, asset_id: entry.id,
         ...(trim ? { raster_import: trim } : {}), ...readAssetLibrary(assetLibrary) };
     } finally { await hikari.call('app.setUnsaved', { unsaved: false }); }
   }
   async function save(next) {
-    onStatus('Saving…');
     await hikari.call('app.setUnsaved', { unsaved: true });
     try {
       const entry = library.illustrations.find(item => item.id === library.activeId);

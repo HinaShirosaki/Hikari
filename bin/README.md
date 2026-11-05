@@ -4,7 +4,16 @@
 `https://github.com/HinaShirosaki/Hikari/releases/download/v<version>/Hikari-<version>-<platform>-<arch>.zip`
 and its `.sha256` sidecar. This works for prerelease tags too. A missing archive
 falls back to a source build; an invalid checksum stops the install. Downloads
-and extraction are staged before moving the completed app into `hikari-out/`.
+and extraction are staged before moving the completed app into place.
+
+Both scripts ask for the install folder with a native dialog first, unless
+`HIKARI_OUT_DIR` is set or the session has no desktop (`launchctl managername` is
+not `Aqua`, or `[Environment]::UserInteractive` is false): a dialog there would
+wait forever. Those cases keep the `hikari-out/Hikari-<platform>-<arch>/` layout.
+With a chosen folder the build is staged in a hidden folder inside it and only
+the app is renamed out: `Hikari.app`, or on Windows the portable `Hikari` folder
+plus Desktop and Start menu shortcuts. `HikariSetup.exe` is not kept, since
+Squirrel always installs to `%LOCALAPPDATA%\hikari`.
 
 `hikari.js` always builds from source. `source-build.js` copies published source
 paths into a temporary workspace and runs `npm ci` followed by `npm run dist`.

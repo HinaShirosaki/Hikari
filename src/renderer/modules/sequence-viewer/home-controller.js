@@ -141,6 +141,7 @@ export function createSequenceViewerHomeController(config = {}) {
     hideFeatureEditor,
     onNavigateHome,
     onNavigateDetail,
+    onWorkspaceChanged: config.onWorkspaceChanged,
     getLibrarySavedFilterButtons,
     getLibraryTemporaryFilterButtons
   });

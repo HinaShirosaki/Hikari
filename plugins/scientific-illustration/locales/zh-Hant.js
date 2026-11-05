@@ -1,5 +1,9 @@
 // Traditional Chinese preview; other messages fall back to English.
 (function(root){const all=root.HikariUiTranslations=root.HikariUiTranslations||{};all["zh-Hant"]={...(all["zh-Hant"]||{}),figura:{
+  "assets.description": "描述（選填）",
+  "assets.details": "素材詳情",
+  "assets.editDetails": "編輯 {name} 的詳情",
+  "assets.detailsSaved": "素材詳情已儲存",
   "text.alignLeft": "在文字方塊內靠左對齊",
   "text.alignCenter": "在文字方塊內置中",
   "text.alignRight": "在文字方塊內靠右對齊",
@@ -420,7 +424,6 @@
   "full.3c8aa2a3": "關閉圖層",
   "full.d5e79aa2": "產生素材",
   "full.b2a4f44": "描述元件",
-  "full.e78fea14": "切開以顯示嵴的粒線體",
   "full.663b5409": "使用 Codex 產生",
   "full.d9f5e181": "隱藏圖層與屬性",
   "full.f6bfea9f": "顯示素材庫",

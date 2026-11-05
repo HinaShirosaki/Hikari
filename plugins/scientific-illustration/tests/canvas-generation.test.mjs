@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { canvasGenerationPoint, canvasGenerationMessage } from '../canvas-generation.mjs';
 import { agentInstructions } from '../agent/workflow.mjs';
+import { IMAGE_STYLE_IDS, oneOffImageStyle } from '../image-style.mjs';
 
 const canvas = { width: 1200, height: 800 };
 test('canvas insertion coordinates account for zoom, pan, and affine screen transforms', () => {
@@ -33,9 +34,16 @@ test('generation briefs retain the requested point and renderer without changing
     assert.match(message, /Keep existing layers/);
     assert.match(message, /do not recenter or rearrange/);
     assert.match(message, /Inspect the placement/);
-    assert.ok(canvasGenerationMessage('x'.repeat(2000), target, renderer).length <= 3000, 'The complete prompt fits the host limit');
+    for (const preset of IMAGE_STYLE_IDS) {
+      const style = oneOffImageStyle(preset, 'none');
+      assert.ok(canvasGenerationMessage('x'.repeat(2000), { ...target, x: 11999.99, y: 7999.99, width: 12000, height: 8000 }, renderer, style).length <= 3000, `The complete ${preset} prompt fits the host limit`);
+    }
   }
   assert.match(canvasGenerationMessage('Mitochondrion', target, 'svg'), /do not use image generation/);
+  const watercolor = oneOffImageStyle('watercolor', 'automatic');
+  assert.ok(canvasGenerationMessage('Mitochondrion', target, 'auto', watercolor).includes(watercolor));
+  assert.ok(canvasGenerationMessage('Mitochondrion', target, 'image', watercolor).includes(watercolor));
+  assert.ok(!canvasGenerationMessage('Mitochondrion', target, 'svg', watercolor).includes(watercolor), 'Editable SVG ignores the image style');
   assert.match(canvasGenerationMessage('Mitochondrion', target, 'image'), /Use Codex image_gen/);
   assert.match(canvasGenerationMessage('Mitochondrion', target, 'image'), /do not change the saved renderer preference/);
   for (const description of ['', 'x'.repeat(2001)]) assert.throws(() => canvasGenerationMessage(description, target, 'auto'));

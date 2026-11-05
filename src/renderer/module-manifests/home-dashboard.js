@@ -40,6 +40,10 @@ export const homeDashboardManifest = {
         loadPersistentSessions: false,
         state: createScopedAgentChatState(state, { getScopeContext: () => ({ scopeType: 'home' }) }),
         persist, createId, safeText,
+        onOpenPaperCitation: (source) => {
+          showView(views.PAPERS);
+          return modules.papers?.openPaperCitation?.(source);
+        },
         onNotebookEntriesChanged: rendererServices.notebook.handleAgentNotebookEntriesChanged,
         onProtocolsChanged: () => {
           rendererServices.protocol.handleProtocolsChanged();

@@ -21,6 +21,13 @@ export function imageGenerationStyle(value = { preset: 'automatic', prompt: '' }
   return { preset: value.preset, prompt: value.prompt ?? '' };
 }
 
+// One generation only, so nothing is saved. Kept terse: the host caps chat messages at 3000 characters.
+export function oneOffImageStyle(preset, savedPreset) {
+  if (preset === savedPreset) return '';
+  const { label, guidance } = IMAGE_STYLE_PRESETS[preset];
+  return ` Image style for this request only: ${label}. ${guidance} It replaces the saved style and style line; save neither. If SVG cannot show it, use image_gen.`;
+}
+
 export function imageStyleInstructions(value, line = '') {
   const style = imageGenerationStyle(value), profile = IMAGE_STYLE_PRESETS[style.preset], notes = style.prompt.trim();
   const styleLine = line

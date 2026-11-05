@@ -68,8 +68,8 @@ async function main() {
     window.shell = createAgentChatShellController({ dom, state, runtime, safeText, persist: () => {}, notebookDraftAdapter, protocolReviewAdapter });
     let review;
     window.historyActions = createHistoryActionController({
-      api: { writeTextToClipboard: text => { copied = text; return { ok: true }; },
-        openFilePath: async path => { openedSources.push(path); return { ok: true }; } }, state, input: dom.input,
+      api: { writeTextToClipboard: text => { copied = text; return { ok: true }; } }, state, input: dom.input,
+      onOpenPaperCitation: async source => { openedSources.push(source.path); return { ok: true }; },
       persist: () => {}, setStatus: text => notices.push(text), syncComposerHeight: shell.syncComposerHeight,
       renderContextSummary: () => {}, renderHistoryView: shell.renderHistoryView,
       answerAssistantQuestion: (id, text) => answers.push({ id, text }), notebookDraftAdapter, onOpenNotebookEntry: () => {},
@@ -105,12 +105,11 @@ async function main() {
   await run(`state.settings.storagePath='/workspace/Lab papers';
     state.agentChat.messages.push({id:'paper-source',role:'assistant',
       text:'The control is in [*the saved paper*](</Users/user/Library/Application Support/Hikari/KnowledgeBase/papers.md/Cas9 (2014)/paper.md:32>). [Unknown](</tmp/unknown paper.md:1>)',
-      meta:{paper_evidence:[{paper_id:'cas9',source_path:'KnowledgeBase/papers.md/Cas9 (2014)/paper.md',source_lines:[{line_number:32,content:'Verified source text.'}]}]}});
+      meta:{paper_evidence:[{paper_id:'cas9',paper_title:'Cas9',section_label:'Results',source_path:'KnowledgeBase/papers.md/Cas9 (2014)/paper.md',source_lines:[{line_number:32,content:'Verified source text.'}]}]}});
     redraw(); window.sourceButton=document.querySelector('[data-agent-paper-source]');`);
   assert.equal(await run('document.querySelectorAll("[data-agent-paper-source]").length'), 1);
-  assert.equal(await run('sourceButton.textContent'), 'the saved paper');
-  assert.equal(await run('Boolean(sourceButton.querySelector("em"))'), true);
-  assert.equal(await run('sourceButton.title'), '/workspace/Lab papers/KnowledgeBase/papers.md/Cas9 (2014)/paper.md');
+  assert.equal(await run('sourceButton.textContent'), '1');
+  assert.equal(await run('sourceButton.title'), 'Open in Papers: Cas9 — Results');
   assert.equal(await run('document.querySelectorAll(".agent-chat-item-assistant")[1].textContent.includes("](</")'), false);
   await run('sourceButton.focus(); sourceButton.click();');
   assert.deepEqual(await run('openedSources'), ['/workspace/Lab papers/KnowledgeBase/papers.md/Cas9 (2014)/paper.md']);
