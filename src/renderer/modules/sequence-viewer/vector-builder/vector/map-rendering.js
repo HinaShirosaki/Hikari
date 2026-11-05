@@ -2,6 +2,7 @@ import { createPresentation } from "../../../../lib/i18n/presentation.js";
 import "../../localization.js";
 const i18nUi = createPresentation("dna");
 import { computeSequenceLayoutMetrics } from '../../detail-layout.js';
+import { getUnpairedStrandEnds } from '../../dna-assembly.js';
 import {
   normalizeHighlightSegments,
   renderDualStrandSequenceLinesHtml
@@ -95,6 +96,7 @@ function createVectorMapRendering({
       sequenceLineHeightPx: layout.lineHeightPx,
       lineFeatureOffsetPx: layout.lineFeatureOffsetPx,
       features,
+      unpairedStrandEnds: getUnpairedStrandEnds(record),
       selectedFeatureIndex: selectedIndex,
       cursorBaseIndex: vb().cursorBase
     }));

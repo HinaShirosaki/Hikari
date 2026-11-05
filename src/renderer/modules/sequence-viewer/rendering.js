@@ -52,6 +52,22 @@ function indexFeaturesByLine(indexedFeatures, lineLength, sequenceLength) {
   return buckets;
 }
 
+// A digest or ligation product is single-stranded across a protruding
+// overhang, so the complement row stays blank under those bases instead of
+// drawing an intact duplex to the very last base. Blanks keep their column,
+// leaving every base index and measured advance unchanged.
+function buildComplementaryStrand(text, unpaired) {
+  const complementary = complementSequence(text);
+  const left = Math.max(0, Math.floor(Number(unpaired?.left) || 0));
+  const right = Math.max(0, Math.floor(Number(unpaired?.right) || 0));
+  if (!left && !right) {
+    return complementary;
+  }
+  return left + right >= complementary.length
+    ? complementary
+    : ' '.repeat(left) + complementary.slice(left, complementary.length - right) + ' '.repeat(right);
+}
+
 export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments = [], options = {}) {
   const text = normalizeSequenceText(sequence);
   if (!text.length) {
@@ -79,7 +95,7 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
     ? options.features.map((feature, index) => ({ feature, index }))
     : [];
   const orfTranslationContext = options?.orfTranslationContext || null;
-  const complementary = complementSequence(text);
+  const complementary = buildComplementaryStrand(text, options?.unpairedStrandEnds);
   const sortedHighlights = normalizeHighlightSegments(highlightedSegments, text.length);
   const alignmentSequenceTrack = normalizeAlignmentSequenceTrack(options?.alignmentSequenceTrack, text.length);
   // In alignment mode the cursor highlights a whole nt column (reference + aligned)

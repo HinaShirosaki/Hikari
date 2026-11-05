@@ -11,6 +11,7 @@ import {
   hashTypeToColor
 } from './feature-model.js';
 import { isPrimerBindingFeature } from './feature-types.js';
+import { getUnpairedStrandEnds } from './dna-assembly.js';
 import { buildSelectedOrfTranslationContext } from './orf-analysis.js';
 import { summarizeFastqQuality } from './parsing.js';
 import { computeSequenceLayoutMetrics } from './detail-layout.js';
@@ -216,6 +217,7 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
       sequenceLineHeightPx: lineHeightPx,
       lineFeatureOffsetPx,
       features,
+      unpairedStrandEnds: getUnpairedStrandEnds(record),
       selectedFeatureIndex: state.selectedFeatureIndex,
       cursorBaseIndex: state.sequenceCursorBase,
       alignmentSequenceTrack,
