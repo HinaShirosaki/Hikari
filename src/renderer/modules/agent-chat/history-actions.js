@@ -2,6 +2,7 @@ import { createNotebookHistoryActions } from './history-notebook-actions.js';
 import { setNotebookAppendInFlight } from './review-overlay/review-status.js';
 import { trimText } from './shared.js';
 import { allowChatImage } from './markdown.js';
+import { getPaperSourceEvidence, resolvePaperSourceLink } from './paper-source-links.js';
 import { agentUi, setAgentAttribute } from './localization.js';
 
 function getNotebookAppendFromMessage(message) {
@@ -119,6 +120,24 @@ export function createHistoryActionController({
   }
 
   async function onHistoryClick(event) {
+    const sourceButton = event?.target?.closest?.('[data-agent-paper-source]');
+    if (sourceButton) {
+      event.preventDefault();
+      const message = findMessage(sourceButton.dataset.agentSourceMessage);
+      const source = resolvePaperSourceLink(sourceButton.dataset.agentPaperSource,
+        getPaperSourceEvidence(message, state.agentChat?.messages || []), state.settings?.storagePath);
+      if (!source || !api?.openFilePath) {
+        setStatus(agentUi('status.paperSourceUnavailable'));
+        return;
+      }
+      try {
+        const result = await api.openFilePath(source.path);
+        if (result?.ok !== true) setStatus(trimText(result?.error, 320) || agentUi('status.paperSourceUnavailable'));
+      } catch (error) {
+        setStatus(trimText(error?.message, 320) || agentUi('status.paperSourceUnavailable'));
+      }
+      return;
+    }
     const imageButton = event?.target?.closest?.('[data-agent-load-image]');
     if (imageButton) {
       // Inside a Markdown link, the click must load the image, not follow the link.

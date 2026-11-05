@@ -434,6 +434,7 @@ function createMockDocument(ids = []) {
       return appended.find((node) => node.hasAttribute(attribute[1])) || null;
     },
     addEventListener() {},
+    removeEventListener() {},
     getElementById(id) {
       const key = String(id || '');
       if (!elements.has(key)) {

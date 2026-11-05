@@ -1,5 +1,9 @@
 // Traditional Chinese preview. Missing entries use the English catalog.
 export const agentTraditionalChinese = Object.freeze({
+  'evidence.title': '論文摘錄',
+  'evidence.why': '選擇原因',
+  'evidence.notes': '你的註記',
+  'evidence.untitled': '未命名論文',
   "menu.newFolder": "新增資料夾",
   "menu.renameFolder": "重新命名資料夾",
   "menu.deleteFolder": "刪除資料夾",
@@ -100,6 +104,7 @@ export const agentTraditionalChinese = Object.freeze({
   "status.appendRejected": "實驗紀錄附加內容已拒絕。",
   "status.copyFailed": "無法複製回覆。",
   "status.externalUnavailable": "此版本無法開啟外部連結。",
+  "status.paperSourceUnavailable": "無法開啟已儲存的論文來源。",
   "status.productOpened": "已開啟產品頁面。",
   "status.productFailed": "無法開啟產品頁面。",
   "status.pageUnavailable": "無法開啟實驗紀錄頁面。",

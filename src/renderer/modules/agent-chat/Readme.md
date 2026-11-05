@@ -25,6 +25,7 @@ The rest of the folder is split by responsibility:
 - `rendering.js`: public `renderHistory(...)` entry point for chat history rendering.
 - `html-history.js`: patches the conversation without resetting open disclosures, selection, or live HTML frames.
 - `html-artifacts.js`, `image-artifacts.js`, `plotly-artifacts.js`: inline HTML (sandboxed `hikari-html://` frames), image, and Plotly artifact rendering.
+- `paper-evidence-card.js`: the main Agent chat's right-side Paper excerpts card. Groups `meta.paper_evidence` by paper, showing paper excerpts as plain text and the reader's relevance comments. It follows the current conversation, preserves disclosures during streaming, and stacks below the chat in narrow windows. Saved user notes have their own label.
 - `rendering-drafts.js`, `notebook-draft-list.js`: notebook draft cards and draft lookup.
 - `assistant-message-meta.js`: builds persisted assistant response and error messages.
 - `icons.js`: the chat's SVG icon set.
@@ -50,5 +51,9 @@ The rest of the folder is split by responsibility:
   in `tests/fixtures/i18n/agent-checks.mjs`. Live progress, trace, Python and purchase rendering are a later batch.
 
 Notebook-draft normalization and persistence live in `modules/biology-notebook/agent/`; generated-protocol normalization and persistence live in `modules/protocol/agent/`. Agent Chat renders and dispatches those review items through the feature adapters without owning either record schema.
+
+Paper evidence is normalized by `src/shared/paper-evidence.mjs` and collected from `paper_analysis` / `literature_search` tool results before display previews are shortened. The main request handler saves it with assistant messages, including stopped or failed turns, so the card restores when a chat is reopened. The card appears after a reader returns excerpts; it stays hidden for conversations without paper evidence.
+
+Paper citations support angle-bracket Markdown destinations containing spaces and line suffixes. A citation to a source in that message's paper evidence renders as a button that opens its saved Markdown through `openFilePath`. Resolution uses the current storage root and the complete knowledge-base relative path, so older citations with an incorrect working-directory prefix also work. Unknown local paths, traversal paths and arbitrary file URLs remain inert. MCP paper result shaping preserves `source_absolute_path` so new answers can cite the reader's actual file without guessing a root.
 
 When adding behavior, prefer putting it near the controller that owns the interaction, then importing pure helpers from `shared.js`, `response.js`, or an owning feature's public adapter. Keep `index.js` as composition glue only.

@@ -119,8 +119,8 @@ function dedupeCandidateUrls(entries = []) {
 function extractPaperDownloadTargets(input = {}) {
   const source = ensureObject(input);
   const doiUrl = resolveDoiUrl(source.doi || source.paper_doi || source.paperDoi || '');
-  const pageUrl = resolveAbsoluteUrl(source.page_url || source.pageUrl || source.paper_url || source.paperUrl || '')
-    || doiUrl;
+  const explicitPageUrl = resolveAbsoluteUrl(source.page_url || source.pageUrl || source.paper_url || source.paperUrl || '');
+  const pageUrl = explicitPageUrl || doiUrl;
   const pageHtml = defaultCleanText(source.page_html || source.pageHtml);
   const message = defaultCleanText(source.message);
 
@@ -145,7 +145,10 @@ function extractPaperDownloadTargets(input = {}) {
     .sort((left, right) => right.score - left.score);
 
   const selectedPdfUrl = pdfCandidates[0]?.url || '';
-  const browserEntryUrl = pageUrl || selectedPdfUrl || candidates[0]?.url || '';
+  // DOI is an identity and a last-resort source. A supplied mirror/PDF must
+  // remain the browser fallback when its direct transfer needs a browser too.
+  const suppliedSourceUrl = candidates.find((entry) => ['candidate_urls', 'pdf_urls', 'url'].includes(entry.source))?.url;
+  const browserEntryUrl = explicitPageUrl || selectedPdfUrl || suppliedSourceUrl || doiUrl || candidates[0]?.url || '';
   return {
     ok: true,
     selected_pdf_url: selectedPdfUrl,

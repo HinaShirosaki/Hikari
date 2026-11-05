@@ -32,7 +32,7 @@ const { createAgentMcpHostToolRunner } = require('./host-client.js');
 const { getDirectMcpToolDefinitions } = require('./direct-tools/index.js');
 const { buildHikariAgentMcpInstructions } = require('./instructions.js');
 const { ensureObject } = require('../../lib/normalize.js');
-const { buildMcpToolResponseContent, isPaperAnalysisResult } = require('./result-shaping/paper-results.js');
+const { buildMcpToolResponseContent, isInvalidProjectResult, isPaperAnalysisResult } = require('./result-shaping/paper-results.js');
 
 const SERVER_NAME = 'hikari-agent-mcp';
 const SERVER_VERSION = '0.1.0';
@@ -151,10 +151,10 @@ function createAgentMcpStdioServer(deps = {}) {
     const toolName = cleanText(params.name, 160);
     const requestContext = getRequestContextFromEnv(env);
     const turnKey = cleanText(requestContext.traceRequestId || requestContext.codexSessionId, 240);
-    if (toolName === 'literature_search'
+    const startsLiteratureSearch = toolName === 'literature_search'
       && !ensureObject(params.arguments).research_id
-      && !requestContext.snapshot?.literature_research?.id
-      && !claimLiteratureSearchCall(turnKey)) {
+      && !requestContext.snapshot?.literature_research?.id;
+    if (startsLiteratureSearch && !claimLiteratureSearchCall(turnKey)) {
       const result = {
         ok: false,
         status: 'rejected',
@@ -179,6 +179,9 @@ function createAgentMcpStdioServer(deps = {}) {
         mcpRequest: request
       }
     );
+    if (startsLiteratureSearch && isInvalidProjectResult(result)) {
+      literatureSearchCalls = 0;
+    }
     if (toolName === 'html_output'
       && typeof buildHtmlOutputMcpResponse === 'function'
       && result?.ok === true

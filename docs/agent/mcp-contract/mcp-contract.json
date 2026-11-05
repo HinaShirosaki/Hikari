@@ -550,7 +550,7 @@
       },
       {
         "name": "literature_search",
-        "description": "Delegate paper research to a sub-agent. Pass a compact initial query and the complete research objective in message, including evidence needed and constraints. The sub-agent can refine literature searches, use native web search, download relevant papers with paper_download, and read their extracted Markdown until it has sufficient evidence or cannot fill remaining gaps. Returns validated source line ranges, exact source lines, relevance comments, download results, and gaps. In a delegated research session, this same tool returns database candidates directly for repeated discovery. Metadata-only scheduled tasks remain discovery-only. Saved preferred journals are soft preferences; journals is a hard filter that relaxes on no matches unless allow_unfiltered_fallback is false. Pass journals only when the user restricts results to those journals (\"only\" or \"exclusively\"). Start at most one delegation per turn and answer from its returned evidence. If status is running, call again with only the returned research_id until it completes; these waits resume the same researcher and do not start new research, and a final answer must not be given while research is running. There is no overall research deadline. Inside a research session, use the API sources (pubmed, crossref, europe_pmc) for database discovery and native web search instead of the web source.",
+        "description": "Delegate paper research to a sub-agent. Pass a compact initial query and the complete research objective in message, including evidence needed and constraints. When the user names a destination project, pass project_name (or project_id) on the initial call, including in All projects chats; naming it only in message does not set the destination. Otherwise the selected chat project is used, or a general collection when none is selected. The sub-agent can refine literature searches, use native web search, download relevant papers with paper_download, and read their extracted Markdown until it has sufficient evidence or cannot fill remaining gaps. Returns validated source line ranges, exact source lines, relevance comments, download results, and gaps. In a delegated research session, this same tool returns database candidates directly for repeated discovery. Metadata-only scheduled tasks remain discovery-only. Saved preferred journals are soft preferences; journals is a hard filter that relaxes on no matches unless allow_unfiltered_fallback is false. Pass journals only when the user restricts results to those journals (\"only\" or \"exclusively\"). Start at most one delegation per turn and answer from its returned evidence. If status is running, call again with only the returned research_id until it completes; these waits resume the same researcher and do not start new research, and a final answer must not be given while research is running. There is no overall research deadline. Inside a research session, use the API sources (pubmed, crossref, europe_pmc) for database discovery and native web search instead of the web source. Verify downloaded_papers.relative_path before claiming a paper was saved to a project.",
         "annotations": {
           "title": "Literature Search",
           "readOnlyHint": false,
@@ -595,6 +595,18 @@
               "type": "string",
               "maxLength": 160,
               "description": "When a prior call returns status running, pass its research_id alone to wait for the same research job. Continue until it completes; do not restart."
+            },
+            "project_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 220,
+              "description": "Existing destination project name. Pass when the user asks to save papers under a named project, even with no project selected in chat. Overrides the selected project."
+            },
+            "project_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Existing destination project ID, as an alternative to project_name or to disambiguate duplicate names."
             }
           },
           "$defs": {
@@ -614,7 +626,7 @@
       },
       {
         "name": "paper_download",
-        "description": "Use this tool when the user wants a paper PDF downloaded into app storage. Pass `paper_title` for the PDF filename and `collection_name` for the non-project destination folder; papers from one literature search should share its original query as `collection_name`. It extracts candidate PDF URLs from the provided fields and streams the PDF with progress tracking in one call. When direct bot fetching is blocked, the tool can use a configured browser-assisted session; if no safe browser session is configured, it returns `browser_required` instead of opening publisher pages inside the agent process. Matching active jobs and verified saved PDFs are reused. If status is `running`, repeat the same DOI/title and collection to check the existing job; a caller timeout does not mean the PDF was not saved. Read any returned `knowledge_markdown_path` while experiment extraction continues in the background. After literature_search returns, do not download its papers again. Never call this tool when the request context sets `deny_paper_download: true`. Report download failures honestly.",
+        "description": "Use this tool when the user wants a paper PDF downloaded into app storage. Pass `paper_title` for the PDF filename. For a named project destination pass `project_name` (or `project_id`), including in All projects chats; `collection_name` does not select a project. Without an explicit project the selected chat project is used. For non-project downloads use `collection_name`, normally the original literature-search query. It extracts candidate PDF URLs from the provided fields and streams the PDF with progress tracking in one call. When direct bot fetching is blocked, the tool can use a configured browser-assisted session; if no safe browser session is configured, it returns `browser_required` instead of opening publisher pages inside the agent process. Matching active jobs and verified saved PDFs are reused. If status is `running`, repeat the same DOI/title, candidate_urls and destination until the job completes or fails; do not finish a requested save while it is still running. A caller timeout does not mean the PDF was not saved. If a publisher is inaccessible, find a legitimate open-access PDF and pass its URL in candidate_urls instead of retrying the blocked publisher. Read any returned `knowledge_markdown_path` while experiment extraction continues in the background. After literature_search returns, do not download its papers again. Never call this tool when the request context sets `deny_paper_download: true`. Report success only from a completed tool result and verify its relative_path matches the requested project before claiming project placement.",
         "annotations": {
           "title": "Paper Download",
           "readOnlyHint": false,
@@ -645,6 +657,18 @@
               "type": "string",
               "maxLength": 220,
               "description": "Destination collection for a non-project download, normally the original literature-search query."
+            },
+            "project_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 220,
+              "description": "Existing destination project name. Overrides the selected chat project; use this instead of collection_name for a project folder."
+            },
+            "project_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Existing destination project ID, as an alternative to project_name or to disambiguate duplicate names."
             },
             "linked_name": {
               "type": "string",

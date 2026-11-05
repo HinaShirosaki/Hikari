@@ -693,6 +693,49 @@ module.exports = function registerCodexCliProviderSuiteSessionResumeAndMcpServer
         await server.close();
       }
     });
+    test('a rejected paper destination does not use the turn\'s literature_search', async () => {
+      const { createAgentMcpStdioServer } = require(path.join(__dirname, 'src', 'main', 'agent', 'mcp-contract', 'stdio-server.js'));
+      const { createAgentMcpHost } = require(path.join(__dirname, 'src', 'main', 'agent', 'mcp-contract', 'host.js'));
+      const { createAgentMcpHostToolRunner } = require(path.join(__dirname, 'src', 'main', 'agent', 'mcp-contract', 'host-client.js'));
+      const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
+      const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
+      const invalid = { ok: false, status: 'invalid_project', error: 'Paper destination project was not found.' };
+      const completed = { ok: true, status: 'completed', summary: 'Found papers.' };
+
+      const gatewayResults = [{ ok: false, output: { result: invalid } }, { ok: true, output: { result: completed } }];
+      const { server, connect } = createAgentMcpStdioServer({
+        env: { HIKARI_AGENT_MCP_REQUEST_CONTEXT: JSON.stringify({ traceRequestId: 'destination-turn' }) },
+        gateway: { callGatewayTool: async () => gatewayResults.shift() }
+      });
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      await connect(serverTransport);
+      const client = new Client({ name: 'hikari-test-client', version: '0.0.1' }, { capabilities: {} });
+      await client.connect(clientTransport);
+      try {
+        const call = async (project) => JSON.parse((await client.callTool({
+          name: 'literature_search', arguments: { query: 'CD19 binders', project_name: project }
+        })).content[0].text);
+        assert.equal((await call('Typo')).status, 'invalid_project');
+        assert.equal((await call('Real')).status, 'completed');
+        assert.equal((await call('Real')).status, 'rejected', 'a search that ran still uses the turn');
+      } finally {
+        await client.close();
+        await server.close();
+      }
+
+      const outputs = [invalid, completed];
+      const host = createAgentMcpHost({ env: {}, runTool: async () => outputs.shift() });
+      const { url, token } = await host.ensureStarted();
+      const runTool = createAgentMcpHostToolRunner({ hostUrl: url, token });
+      const context = { traceRequestId: 'destination-host-turn' };
+      try {
+        assert.equal((await runTool('literature-search', { project_name: 'Typo' }, {}, context)).status, 'invalid_project');
+        assert.equal((await runTool('literature-search', { project_name: 'Real' }, {}, context)).status, 'completed');
+        assert.equal((await runTool('literature-search', { project_name: 'Real' }, {}, context)).status, 'rejected');
+      } finally {
+        await host.close();
+      }
+    });
     test('agent MCP stdio server caps an oversized tool result for the model', async () => {
       const { buildMcpToolResponseContent, createAgentMcpStdioServer } = require(path.join(
         __dirname,
@@ -1054,6 +1097,14 @@ module.exports = function registerCodexCliProviderSuiteSessionResumeAndMcpServer
     test('agent MCP app host executes app tools through the SDK streamable HTTP bridge', async () => {
       const env = {};
       const calls = [];
+      const { subscribePaperEvidence } = require(path.join(__dirname,
+        'src/main/agent/runtime/tool-artifacts/paper-evidence-bridge.js'));
+      const evidence = [{ paper_id: 'paper', source_path: 'KnowledgeBase/papers.md/paper/paper.md',
+        source_lines: [{ line_number: 1, content: 'Verified source text. '.repeat(2000) }],
+        relevance_reason: 'Answers the research question.' }];
+      const received = [], otherRequest = [];
+      const unsubscribe = subscribePaperEvidence('req-sdk-bridge', blocks => received.push(blocks));
+      const unsubscribeOther = subscribePaperEvidence('other-request', blocks => otherRequest.push(blocks));
       const { createAgentMcpHost } = require(path.join(
         __dirname,
         'src',
@@ -1104,7 +1155,8 @@ module.exports = function registerCodexCliProviderSuiteSessionResumeAndMcpServer
           return {
             ok: true,
             status: 'completed',
-            echo: args.query
+            echo: args.query,
+            loaded_context_blocks: evidence
           };
         }
       });
@@ -1133,7 +1185,12 @@ module.exports = function registerCodexCliProviderSuiteSessionResumeAndMcpServer
         assert.equal(calls[0].context.agentMcp, true);
         assert.equal(output.ok, true);
         assert.equal(output.echo, 'MG-PACE');
+        assert.equal(received.length, 1, 'Complete app evidence is delivered independently of the model text preview');
+        assert.equal(received[0][0].source_lines[0].content, evidence[0].source_lines[0].content);
+        assert.equal(otherRequest.length, 0, 'The app sends evidence only to its matching active request');
       } finally {
+        unsubscribe();
+        unsubscribeOther();
         await host.close();
       }
     });

@@ -8,6 +8,9 @@ const { z } = require('zod');
 const { ensureObject } = require('../../lib/normalize.js');
 const { getLiteratureResearchSession } = require('../../papers/workflow/literature-research-session.js');
 const { hasLiteratureResearchJob } = require('../../papers/workflow/literature-research-jobs.js');
+const { isInvalidProjectResult } = require('./result-shaping/paper-results.js');
+const { extractPaperEvidenceFromToolOutput } = require('../runtime/tool-artifacts/paper-evidence.js');
+const { publishPaperEvidence } = require('../runtime/tool-artifacts/paper-evidence-bridge.js');
 const {
   HIKARI_MCP_HEADERS_TIMEOUT_MS,
   HIKARI_MCP_KEEP_ALIVE_TIMEOUT_MS,
@@ -69,15 +72,19 @@ function createAgentMcpHost(deps = {}) {
   let hostUrl = '';
   const literatureSearchRequestIds = new Map();
 
-  function claimLiteratureSearchRequest(context = {}) {
+  function literatureSearchRequestId(context = {}) {
     const source = ensureObject(context);
-    const requestId = cleanText(
+    return cleanText(
       source.traceRequestId
         || source.trace_request_id
         || source.requestId
         || source.request_id,
       160
     );
+  }
+
+  function claimLiteratureSearchRequest(context = {}) {
+    const requestId = literatureSearchRequestId(context);
     if (!requestId) {
       return true;
     }
@@ -155,10 +162,10 @@ function createAgentMcpHost(deps = {}) {
         ? providedSnapshot
         : ensureObject(getSnapshot());
       const normalizedToolId = cleanText(toolId, 160);
-      if (normalizedToolId === 'literature-search'
+      const startsLiteratureSearch = normalizedToolId === 'literature-search'
         && !hasLiteratureResearchJob(args.research_id)
-        && !getLiteratureResearchSession(liveSnapshot)
-        && !claimLiteratureSearchRequest(mergedContext)) {
+        && !getLiteratureResearchSession(liveSnapshot);
+      if (startsLiteratureSearch && !claimLiteratureSearchRequest(mergedContext)) {
         return toolResult({
           ok: false,
           status: 'rejected',
@@ -168,6 +175,11 @@ function createAgentMcpHost(deps = {}) {
       }
       try {
         const output = await runTool(normalizedToolId, ensureObject(args), liveSnapshot, mergedContext);
+        publishPaperEvidence(mergedContext.traceRequestId,
+          extractPaperEvidenceFromToolOutput(normalizedToolId, output));
+        if (startsLiteratureSearch && isInvalidProjectResult({ output })) {
+          literatureSearchRequestIds.delete(literatureSearchRequestId(mergedContext));
+        }
         return toolResult({
           ok: output?.ok !== false,
           status: output?.ok === false ? 'failed' : 'completed',

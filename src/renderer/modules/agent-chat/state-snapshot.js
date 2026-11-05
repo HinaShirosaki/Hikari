@@ -123,6 +123,8 @@ export function buildStateSnapshot(state, projectId) {
   const preferredJournal = preferredJournals.join('; ');
   return {
     projects,
+    // Paper destinations can name any project, even when the rest is scoped or capped.
+    project_directory: asArray(state.projects).map((project) => ({ id: trimText(project.id, 120), name: trimText(project.name, 220) })),
     workflows,
     protocols,
     notebookEntries: [],

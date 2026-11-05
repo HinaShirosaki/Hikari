@@ -1,4 +1,5 @@
 import { normalizeAgentResponse } from './response.js';
+import { mergePaperEvidence } from '../../../shared/paper-evidence.mjs';
 import { buildAttachmentSummary } from './composer-attachments.js';
 import { toConversation, trimText } from './shared.js';
 import {
@@ -113,6 +114,7 @@ export function createAgentRequestController(deps) {
   function collectTraceRows(request) {
     const progress = request?.liveAssistantMessage?.meta?.live_progress || {};
     return {
+      paperEvidence: request?.liveAssistantMessage?.meta?.paper_evidence || [],
       htmlArtifacts: request?.liveAssistantMessage?.meta?.html_artifacts || [],
       imageArtifacts: request?.liveAssistantMessage?.meta?.image_artifacts || [],
       plotlyArtifacts: request?.liveAssistantMessage?.meta?.plotly_graph_artifacts || [],
@@ -124,11 +126,13 @@ export function createAgentRequestController(deps) {
   }
 
   function appendStoppedAssistantMessage(request, requestText, message = 'Agent request stopped.') {
+    const paperEvidence = request?.liveAssistantMessage?.meta?.paper_evidence || [];
     const htmlArtifacts = request?.liveAssistantMessage?.meta?.html_artifacts || [];
     const imageArtifacts = request?.liveAssistantMessage?.meta?.image_artifacts || [];
     const plotlyArtifacts = request?.liveAssistantMessage?.meta?.plotly_graph_artifacts || [];
     clearLiveAssistantState(request);
     const stoppedMessage = buildStoppedAssistantMessage(requestText, message, createId);
+    stoppedMessage.meta.paper_evidence = paperEvidence;
     stoppedMessage.meta.html_artifacts = htmlArtifacts;
     stoppedMessage.meta.image_artifacts = imageArtifacts;
     stoppedMessage.meta.plotly_graph_artifacts = plotlyArtifacts;
@@ -263,6 +267,11 @@ export function createAgentRequestController(deps) {
       });
       if (wasRequestCanceled(clientRequestId)) {
         return;
+      }
+      if (request.liveAssistantMessage && result?.paper_evidence?.length) {
+        request.liveAssistantMessage.meta.paper_evidence = mergePaperEvidence(
+          request.liveAssistantMessage.meta.paper_evidence, result.paper_evidence
+        );
       }
       if (!result?.ok) {
         if (result?.canceled === true) {

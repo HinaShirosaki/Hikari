@@ -1,5 +1,7 @@
 'use strict';
 
+const { extractPaperEvidenceFromToolEvent } = require('../../agent/runtime/tool-artifacts/paper-evidence.js');
+
 const { extractHtmlArtifactFromToolEvent } = require('../../agent/runtime/tool-artifacts/html-output.js');
 const { extractImageArtifactFromToolEvent } = require('../../agent/runtime/tool-artifacts/image-output.js');
 
@@ -43,6 +45,8 @@ function createAgentLifecycleService({
     const toolName = cleanText(source.tool_name, 120);
     const status = cleanText(source.status, 20) || 'ok';
     const meta = source.meta && typeof source.meta === 'object' ? { ...source.meta } : {};
+    const paperEvidence = extractPaperEvidenceFromToolEvent(source);
+    if (paperEvidence.length) meta.paper_evidence = paperEvidence;
     const htmlArtifact = extractHtmlArtifactFromToolEvent(source);
     if (htmlArtifact) meta.html_artifact = htmlArtifact;
     const imageArtifact = extractImageArtifactFromToolEvent(source);

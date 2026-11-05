@@ -15,6 +15,7 @@ export function collectAgentChatDom(rootDocument, options = {}) {
     contextRenameFolderBtn: byId(id('context-rename-folder')),
     contextDeleteFolderBtn: byId(id('context-delete-folder')),
     historyNode,
+    paperEvidence: byId(id('paper-evidence')),
     conversationShell: historyNode?.closest?.('.agent-conversation-shell') || null,
     scrollToBottomBtn: byId(id('scroll-to-bottom-btn')),
     reviewOverlay: byId(id('review-overlay')),

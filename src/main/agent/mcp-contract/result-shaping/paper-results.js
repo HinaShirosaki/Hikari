@@ -60,6 +60,8 @@ function compactDownloadedPaper(paper = {}) {
     paper_title: cleanText(paper.paper_title || paper.paperTitle || paper.title, 320),
     ok: paper.ok === true,
     status: cleanText(paper.status, 80),
+    linked_type: cleanText(paper.linked_type, 80),
+    linked_name: cleanText(paper.linked_name, 220),
     file_name: cleanText(paper.file_name || paper.fileName, 240),
     relative_path: cleanText(paper.relative_path || paper.relativePath, 2000),
     knowledge_markdown_relative_path: cleanText(
@@ -164,6 +166,7 @@ function compactContextBlock(block = {}) {
       ? Number(block.source_line_count || block.sourceLineCount)
       : undefined,
     source_path: cleanText(block.source_path || block.sourcePath, 2000),
+    source_absolute_path: cleanText(block.source_absolute_path || block.sourceAbsolutePath, 4000),
     related_comments: relatedComments.length ? relatedComments : undefined
   });
 }
@@ -220,6 +223,7 @@ function compactPaperAnalysisContextBlock(block = {}) {
       ? Number(block.source_line_count || block.sourceLineCount)
       : undefined,
     source_path: cleanText(block.source_path || block.sourcePath, 0),
+    source_absolute_path: cleanText(block.source_absolute_path || block.sourceAbsolutePath, 0),
     related_comments: relatedComments.length ? relatedComments : undefined
   });
 }
@@ -269,6 +273,11 @@ function getToolResultPayload(result = {}) {
   return source;
 }
 
+// No search ran, so this must not use the turn's single literature_search.
+function isInvalidProjectResult(result = {}) {
+  return getToolResultPayload(result).status === 'invalid_project';
+}
+
 function buildLiteratureSearchModelPayload(toolName = '', result = {}) {
   const source = ensureObject(result);
   const output = getToolResultPayload(source);
@@ -283,7 +292,7 @@ function buildLiteratureSearchModelPayload(toolName = '', result = {}) {
       source_errors: ensureObject(output.source_errors),
       model_note: output.status === 'running'
         ? 'Call literature_search again with only this research_id to wait for the same researcher. Do not return a final answer or start another delegation while it is running.'
-        : 'Answer from verified loaded_context_blocks.source_lines. analysis_comments explain relevance; related_comments are saved user annotations. Report notes, failed downloads, and remaining gaps. Do not download these papers again.'
+        : 'Synthesize verified loaded_context_blocks.source_lines to answer the research question. analysis_comments explain relevance; related_comments are saved user annotations. The evidence card displays excerpts and selection reasons; repeat them in chat when requested. Mention failed downloads, notes and gaps that affect the requested outcome. Do not download these papers again.'
     };
   }
   const selectedPapers = asArray(output.selected_papers);
@@ -373,7 +382,7 @@ function buildPaperAnalysisModelPayload(toolName = '', result = {}) {
     analysis_comments: analysisComments,
     notes: asArray(output.notes).map((note) => cleanText(note, 0)).filter(Boolean),
     model_note: rawContextBlocks.length
-      ? 'Use loaded_context_blocks.source_lines as paper evidence. analysis_comments are the sub-agent relevance comments explaining why those lines were selected. related_comments are saved user annotations. When asked about notes or comments, report these two categories separately and never claim there are no comments when analysis_comments is non-empty.'
+      ? 'Use loaded_context_blocks.source_lines as paper evidence and synthesize them to answer the question. The evidence card displays excerpts and selection reasons; repeat them in chat when requested. analysis_comments are the sub-agent relevance comments explaining why those lines were selected. related_comments are saved user annotations. When asked about notes or comments, report these two categories separately and never claim there are no comments when analysis_comments is non-empty.'
       : 'Use brief_summary, key_findings, method_overview, and protocol_extraction as the paper-analysis result.'
   };
 }
@@ -437,5 +446,6 @@ module.exports = {
   buildMcpToolResponseContent,
   buildLiteratureSearchModelPayload,
   buildPaperAnalysisModelPayload,
+  isInvalidProjectResult,
   isPaperAnalysisResult
 };

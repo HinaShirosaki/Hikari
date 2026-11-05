@@ -151,6 +151,18 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
     if (useCodexPaperContext && !denyDownloads) {
       return startLiteratureResearchJob(query, () => runCodexLiteratureResearch({ ...source, query, project: copiedContext.project }, copiedContext, codexSubAgentRuntime, {
         findLocalPaper: async (args) => {
+          // Existing Markdown elsewhere in the library does not satisfy a save
+          // into this project. Reuse only a verified PDF in its destination.
+          if (copiedContext.project?.name) {
+            const saved = await paperDownloadRuntime?.findSavedPaper?.({
+              ...args,
+              storage_path: copiedContext.storage_path,
+              linked_type: 'project',
+              linked_name: copiedContext.project.name,
+              collection_name: copiedContext.project.name
+            });
+            return saved?.knowledge_markdown_path ? saved : null;
+          }
           const { reused } = await partitionByLocalKnowledge([{ ...args, title: args.paper_title }], copiedContext.storage_path, source);
           return reused[0] || null;
         }

@@ -609,10 +609,22 @@ body.agent-view-fixed-scroll .workspace-main {
   color: var(--theme-text-muted);
 }
 
-.agent-chat-markdown a {
+.agent-chat-markdown a,
+.agent-chat-markdown .agent-chat-paper-source {
   color: var(--theme-accent);
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+.agent-chat-markdown .agent-chat-paper-source {
+  display: inline;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
 }
 
 .agent-chat-markdown hr {

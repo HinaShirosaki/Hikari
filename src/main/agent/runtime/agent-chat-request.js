@@ -1,5 +1,9 @@
 'use strict';
 
+const { mergePaperEvidence } = require('../../../shared/paper-evidence.mjs');
+const { extractPaperEvidenceFromToolEvent } = require('./tool-artifacts/paper-evidence.js');
+const { subscribePaperEvidence } = require('./tool-artifacts/paper-evidence-bridge.js');
+
 const { extractHtmlArtifactFromToolEvent, mergeHtmlArtifacts } = require('./tool-artifacts/html-output.js');
 const { extractImageArtifactFromToolEvent, mergeImageArtifacts } = require('./tool-artifacts/image-output.js');
 const { extractPlotlyGraphArtifactFromToolEvent } = require('./tool-artifacts/plotly-graph.js');
@@ -63,7 +67,10 @@ function createAgentChatRequestHandler({
     let htmlArtifacts = [];
     let imageArtifacts = [];
     let plotlyArtifacts = [];
+    let paperEvidence = [];
     const emitAgentProgress = (lifecycleEvent) => {
+      const evidence = extractPaperEvidenceFromToolEvent(lifecycleEvent);
+      if (evidence.length) paperEvidence = mergePaperEvidence(paperEvidence, evidence);
       const html = extractHtmlArtifactFromToolEvent(lifecycleEvent);
       if (html) htmlArtifacts = mergeHtmlArtifacts(htmlArtifacts, [html]);
       const image = extractImageArtifactFromToolEvent(lifecycleEvent);
@@ -87,6 +94,12 @@ function createAgentChatRequestHandler({
     const lifecycleRecorder = observability.createLifecycleRecorder({
       requestId,
       onEvent: emitAgentProgress
+    });
+    const unsubscribePaperEvidence = subscribePaperEvidence(requestId, (blocks) => {
+      emitAgentProgress({
+        stage: 'tool_call_completed', status: 'completed', tool_name: 'paper-analysis',
+        message: 'Paper context ready.', meta: { paper_evidence: blocks }
+      });
     });
     const controllerRuntime = {
       requestId,
@@ -175,6 +188,7 @@ function createAgentChatRequestHandler({
           abortSignal: abortController.signal,
           llmSource: llmSource && typeof llmSource === 'object' ? llmSource : null
         }, () => runAgentController(normalizedPayload, controllerRuntime));
+        paperEvidence = mergePaperEvidence(paperEvidence, result?.paper_evidence);
         const failureReasons = observability.classifyFailureReasons({
           result,
           lifecycleEvents: lifecycleRecorder.events
@@ -227,9 +241,10 @@ function createAgentChatRequestHandler({
           });
           const activityTraceRows = buildPersistedActivityTraceRows(lifecycleRecorder.events);
           const codexCliDisplayRows = buildPersistedCodexCliDisplayRows(lifecycleRecorder.events);
-          if (htmlArtifacts.length || imageArtifacts.length || plotlyArtifacts.length || activityTraceRows.length || codexCliDisplayRows.length) {
+          if (htmlArtifacts.length || imageArtifacts.length || plotlyArtifacts.length || paperEvidence.length || activityTraceRows.length || codexCliDisplayRows.length) {
             assistantMessage.meta = {
               ...(assistantMessage.meta && typeof assistantMessage.meta === 'object' ? assistantMessage.meta : {}),
+              ...(paperEvidence.length ? { paper_evidence: paperEvidence } : {}),
               ...(htmlArtifacts.length ? { html_artifacts: htmlArtifacts } : {}),
               ...(imageArtifacts.length ? { image_artifacts: imageArtifacts } : {}),
               ...(plotlyArtifacts.length ? { plotly_graph_artifacts: plotlyArtifacts } : {}),
@@ -269,6 +284,7 @@ function createAgentChatRequestHandler({
         return sessionService.getSession()
           ? {
             ...result,
+            paper_evidence: paperEvidence,
             html_artifacts: htmlArtifacts,
             image_artifacts: imageArtifacts,
             plotly_graph_artifacts: plotlyArtifacts,
@@ -278,6 +294,7 @@ function createAgentChatRequestHandler({
           }
           : {
             ...result,
+            paper_evidence: paperEvidence,
             html_artifacts: htmlArtifacts,
             image_artifacts: imageArtifacts,
             plotly_graph_artifacts: plotlyArtifacts,
@@ -324,9 +341,10 @@ function createAgentChatRequestHandler({
             });
           const activityTraceRows = buildPersistedActivityTraceRows(lifecycleRecorder.events);
           const codexCliDisplayRows = buildPersistedCodexCliDisplayRows(lifecycleRecorder.events);
-          if (htmlArtifacts.length || imageArtifacts.length || plotlyArtifacts.length || activityTraceRows.length || codexCliDisplayRows.length) {
+          if (htmlArtifacts.length || imageArtifacts.length || plotlyArtifacts.length || paperEvidence.length || activityTraceRows.length || codexCliDisplayRows.length) {
             assistantMessage.meta = {
               ...(assistantMessage.meta && typeof assistantMessage.meta === 'object' ? assistantMessage.meta : {}),
+              ...(paperEvidence.length ? { paper_evidence: paperEvidence } : {}),
               ...(htmlArtifacts.length ? { html_artifacts: htmlArtifacts } : {}),
               ...(imageArtifacts.length ? { image_artifacts: imageArtifacts } : {}),
               ...(plotlyArtifacts.length ? { plotly_graph_artifacts: plotlyArtifacts } : {}),
@@ -367,6 +385,7 @@ function createAgentChatRequestHandler({
           ? {
             ok: false,
             canceled,
+            paper_evidence: paperEvidence,
             html_artifacts: htmlArtifacts,
             image_artifacts: imageArtifacts,
             plotly_graph_artifacts: plotlyArtifacts,
@@ -378,6 +397,7 @@ function createAgentChatRequestHandler({
           : {
             ok: false,
             canceled,
+            paper_evidence: paperEvidence,
             html_artifacts: htmlArtifacts,
             image_artifacts: imageArtifacts,
             plotly_graph_artifacts: plotlyArtifacts,
@@ -387,6 +407,7 @@ function createAgentChatRequestHandler({
           };
       }
     } finally {
+      unsubscribePaperEvidence();
       if (clientRequestId) {
         activeRequests.delete(clientRequestId);
       }

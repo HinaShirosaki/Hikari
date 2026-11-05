@@ -1,4 +1,8 @@
 export const agentEnglish = Object.freeze({
+  'evidence.title': 'Paper excerpts',
+  'evidence.why': 'Why selected',
+  'evidence.notes': 'Your notes',
+  'evidence.untitled': 'Untitled paper',
   'menu.newFolder': 'New Folder',
   'menu.renameFolder': 'Rename Folder',
   'menu.deleteFolder': 'Delete Folder',
@@ -102,6 +106,7 @@ export const agentEnglish = Object.freeze({
   'status.appendRejected': 'Notebook append rejected.',
   'status.copyFailed': 'Could not copy response.',
   'status.externalUnavailable': 'External link opening is unavailable in this build.',
+  'status.paperSourceUnavailable': 'The saved paper source is unavailable.',
   'status.productOpened': 'Opened product page.',
   'status.productFailed': 'Failed to open product page.',
   'status.pageUnavailable': 'Notebook page is unavailable for opening.',
