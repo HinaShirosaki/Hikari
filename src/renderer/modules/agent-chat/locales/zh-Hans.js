@@ -6,6 +6,7 @@ export const agentSimplifiedChinese = Object.freeze({
   'evidence.why': '选择原因',
   'evidence.notes': '你的批注',
   'evidence.untitled': '未命名论文',
+  'evidence.excerpt': '摘录',
   "menu.newFolder": "新建文件夹",
   "menu.renameFolder": "重命名文件夹",
   "menu.deleteFolder": "删除文件夹",

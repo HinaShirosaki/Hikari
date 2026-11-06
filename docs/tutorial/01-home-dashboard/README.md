@@ -19,7 +19,7 @@ Open [index.html](index.html) in a browser for the illustrated reading view, or 
 
 ## Capture scope
 
-Prepared on **24 October 2026**, against the local **1.1.0-beta.9 source renderer**. This does not assert that an installed or released build has the same interface. Screenshots use a 1600 × 1000 CSS-pixel viewport, day appearance, and a fixed example date in America/Chicago. Smaller windows can change the layout and the modules visible in the dock.
+Last refreshed on **6 November 2026**, against the local **1.1.0 source renderer**. This does not assert that an installed or released build has the same interface. Screenshots use a 1600 × 1000 CSS-pixel viewport, day appearance, and a fixed example date in America/Chicago. Smaller windows can change the layout and the modules visible in the dock.
 
 The preview loads the current Home HTML, CSS, widget controllers, navigation renderer, and notebook review interface from this repository. All projects, observations, cell labels, timers, and citations are fictional. The AI response is a fixed illustrative proposal; the paper is a fictional citation. Neither represents a live model response or a real publication.
 

@@ -13,6 +13,11 @@
   min-height: var(--shared-left-rail-layout-height);
 }
 
+/* The empty state has its own inset; the viewer and editor need the rail gap. */
+#protocol-management-view .protocol-workspace.is-left-rail-folded > .protocol-detail-panel:is([data-mode="view"], [data-mode="edit"]) {
+  padding-left: var(--left-rail-main-gap);
+}
+
 .protocol-list-panel,
 .protocol-detail-panel {
   margin-top: 0;

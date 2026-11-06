@@ -2,7 +2,7 @@
 export const dnaSimplifiedChinese = Object.freeze({
   "full.d3bf0385": "环状 DNA",
   "full.6df3425": "线性 DNA",
-  "full.3aca0191": "当前片段顺序无法兼容组装。请使用匹配的黏性末端或至少 {minimum} bp 的末端重叠。",
+  "full.a83a2116": "未找到兼容的组装方式。请使用匹配的黏性末端或至少 {minimum} bp 的末端重叠。",
   "full.3a39d215": "存储文件夹已更改。请重新开始组装。",
   "full.31ac3501": "组装",
   "full.353e0d45": "选项",
@@ -15,8 +15,6 @@ export const dnaSimplifiedChinese = Object.freeze({
   "full.f9783800": "环状",
   "full.310e66b1": "最小重叠长度 (bp)",
   "full.e50883ba": "正向",
-  "full.640e97e9": "上移片段",
-  "full.653838d0": "下移片段",
   "full.7961e987": "移除片段",
   "full.9dc3aa14": "添加",
   "full.2e7e4ae3": "加载中…",

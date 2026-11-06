@@ -1,7 +1,7 @@
 export const dnaEnglish = Object.freeze({
   "full.d3bf0385": "Circular DNA",
   "full.6df3425": "Linear DNA",
-  "full.3aca0191": "No compatible assembly was found in this fragment order. Use matching sticky ends or terminal overlaps of at least {minimum} bp.",
+  "full.a83a2116": "No compatible assembly was found. Use matching sticky ends or terminal overlaps of at least {minimum} bp.",
   "full.3a39d215": "The storage folder changed. Start assembly again.",
   "full.31ac3501": "Assemble",
   "full.353e0d45": "Options",
@@ -14,8 +14,6 @@ export const dnaEnglish = Object.freeze({
   "full.f9783800": "Circular",
   "full.310e66b1": "Minimum overlap (bp)",
   "full.e50883ba": "Forward",
-  "full.640e97e9": "Move fragment up",
-  "full.653838d0": "Move fragment down",
   "full.7961e987": "Remove fragment",
   "full.9dc3aa14": "Add",
   "full.2e7e4ae3": "Loading…",

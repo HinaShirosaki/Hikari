@@ -327,7 +327,8 @@ async function main() {
     [['[data-gel-navigation-rename]','Edit the selected name']]);
   await input('[data-gel-navigation-rename]','Target signal · renamed');
   await key('[data-gel-navigation-rename]','Enter');
-  await check('[...document.querySelectorAll("[data-figure-row]")].some(row=>row.textContent.includes("renamed"))','Inline rename updates the selected gel entry');
+  await waitFor('[...document.querySelectorAll("[data-figure-row]")].some(row=>row.textContent.includes("renamed"))');
+  manifest.checks.push('Inline rename updates the selected gel entry');
   await tutorialSettle();
   fs.writeFileSync(path.join(folder,'capture-manifest.json'),JSON.stringify(manifest,null,2)+'\n');
   console.log(`Finished: ${manifest.screenshots.length} screenshots; ${manifest.checks.length} checks.`);

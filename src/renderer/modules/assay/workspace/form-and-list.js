@@ -209,7 +209,6 @@ function createAssayFormAndList({
     elements.assayForm?.reset();
     runtime.activeResultsAssayId = '';
     runtime.activeWellEditorId = '';
-    runtime.plateEditField = 'sampleId';
     runtime.manualWellOverrides = {};
     runtime.suppressedWells = new Set();
     runtime.currentLayout = [];
@@ -265,7 +264,6 @@ function createAssayFormAndList({
     renderProjectOptions();
     renderNotebookOptions();
     layoutManager.syncAxisDisplay();
-    layoutManager.renderPlateEditFieldButtons();
     layoutManager.syncAxisTemplateValues();
     layoutManager.renderPlateDefinition();
     layoutManager.renderPlatePreview();
@@ -377,7 +375,6 @@ function createAssayFormAndList({
     renderProjectOptions();
     renderNotebookOptions();
     layoutManager.syncAxisDisplay();
-    layoutManager.renderPlateEditFieldButtons();
     layoutManager.syncAxisTemplateValues();
     layoutManager.renderPlateDefinition();
     renderAssayNumberDisplay();

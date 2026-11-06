@@ -2,7 +2,7 @@
 export const dnaJapanese = Object.freeze({
   "full.d3bf0385": "環状 DNA",
   "full.6df3425": "直鎖状 DNA",
-  "full.3aca0191": "この断片順では組み立てられません。互換性のある粘着末端、または {minimum} bp 以上の末端オーバーラップが必要です。",
+  "full.a83a2116": "互換性のある組み立てが見つかりません。互換性のある粘着末端、または {minimum} bp 以上の末端オーバーラップが必要です。",
   "full.3a39d215": "保存先フォルダーが変更されました。組み立てをやり直してください。",
   "full.31ac3501": "組み立て",
   "full.353e0d45": "オプション",
@@ -15,8 +15,6 @@ export const dnaJapanese = Object.freeze({
   "full.f9783800": "環状",
   "full.310e66b1": "最小オーバーラップ (bp)",
   "full.e50883ba": "順方向",
-  "full.640e97e9": "断片を上へ移動",
-  "full.653838d0": "断片を下へ移動",
   "full.7961e987": "断片を削除",
   "full.9dc3aa14": "追加",
   "full.2e7e4ae3": "読み込み中…",

@@ -1,5 +1,5 @@
 {
-  "sourceVersion": "1.1.0-beta.11",
+  "sourceVersion": "1.1.0",
   "exampleDate": "2026-10-25",
   "timezone": "America/Chicago",
   "viewport": [
@@ -43,9 +43,9 @@
           "label": "Well mappings",
           "rect": {
             "x": 320,
-            "y": 164,
+            "y": 209,
             "width": 1269,
-            "height": 836
+            "height": 791
           }
         }
       ]
@@ -97,9 +97,9 @@
       "title": "Map sample IDs along an axis",
       "crop": {
         "x": 0,
-        "y": 146,
+        "y": 191,
         "width": 1600,
-        "height": 854
+        "height": 809
       },
       "targets": [
         {
@@ -117,7 +117,7 @@
           "label": "Enter the sample labels",
           "rect": {
             "x": 540,
-            "y": 258,
+            "y": 304,
             "width": 182,
             "height": 268
           }
@@ -139,7 +139,7 @@
           "label": "Enter the starting value",
           "rect": {
             "x": 728,
-            "y": 202,
+            "y": 247,
             "width": 143,
             "height": 34
           }
@@ -148,20 +148,20 @@
           "selector": "#assay-fill-mode",
           "label": "Choose the fill method",
           "rect": {
-            "x": 529,
-            "y": 104,
+            "x": 320,
+            "y": 121,
             "width": 102,
-            "height": 32
+            "height": 36
           }
         },
         {
           "selector": "#assay-dilution-fill-btn",
           "label": "Fill the axis",
           "rect": {
-            "x": 726,
-            "y": 104,
+            "x": 517,
+            "y": 121,
             "width": 40,
-            "height": 32
+            "height": 36
           }
         }
       ]
@@ -177,23 +177,23 @@
       },
       "targets": [
         {
-          "selector": "#assay-plate-field-sample-btn",
-          "label": "Choose the field to edit",
+          "selector": "#assay-plate-preview input[data-well=\"D6\"][data-well-inline-field=\"sampleId\"]",
+          "label": "Edit the sample ID",
           "rect": {
-            "x": 323,
-            "y": 104,
-            "width": 83,
-            "height": 32
+            "x": 1450,
+            "y": 538,
+            "width": 133,
+            "height": 20
           }
         },
         {
-          "selector": "#assay-plate-preview input[data-well=\"D6\"]",
-          "label": "Enter the well override",
+          "selector": "#assay-plate-preview input[data-well=\"D6\"][data-well-inline-field=\"concentration\"]",
+          "label": "Edit the concentration",
           "rect": {
             "x": 1450,
-            "y": 512,
+            "y": 562,
             "width": 133,
-            "height": 20
+            "height": 17
           }
         }
       ]
@@ -307,9 +307,9 @@
           "label": "Analysis settings",
           "rect": {
             "x": 1173,
-            "y": 79,
+            "y": 65,
             "width": 383,
-            "height": 921
+            "height": 935
           }
         },
         {
@@ -464,17 +464,17 @@
     },
     {
       "name": "13-custom-groups",
-      "title": "Group selected rows or columns",
+      "title": "Group rows or columns by dragging",
       "crop": {
         "x": 306,
         "y": 196,
         "width": 1243,
-        "height": 230
+        "height": 804
       },
       "targets": [
         {
           "selector": "#assay-analysis-add-row-group-btn",
-          "label": "Add selected rows as a group",
+          "label": "Arm row grouping",
           "rect": {
             "x": 1187,
             "y": 259,
@@ -484,12 +484,22 @@
         },
         {
           "selector": "#assay-analysis-add-column-group-btn",
-          "label": "Or group selected columns",
+          "label": "Or arm column grouping",
           "rect": {
             "x": 1333,
             "y": 259,
             "width": 162,
             "height": 32
+          }
+        },
+        {
+          "selector": "#assay-group-selection-hint",
+          "label": "Drag across the wells, or cancel",
+          "rect": {
+            "x": 492,
+            "y": 937,
+            "width": 476,
+            "height": 47
           }
         },
         {
@@ -768,7 +778,8 @@
     "Result import fills 24 wells and attaches the source CSV",
     "A Table2 formula is stored separately from the raw plate results",
     "The transformed A1 formula computes 6 from the original A1 value of 3",
-    "A selected range can become a custom row group",
+    "The Rows button arms the grouping tool and shows its drag hint",
+    "Dragging across rows A and B commits them as a custom row group and disarms the tool",
     "Close hides the Data Analysis panel",
     "The analysis renders real Plotly traces for the example plate",
     "Format chart opens Chart Format in the right rail",

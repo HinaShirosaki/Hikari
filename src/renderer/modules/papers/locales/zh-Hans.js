@@ -3,7 +3,10 @@ export const papersSimplifiedChinese = Object.freeze({
   "citation.locating": "正在定位引用段落…",
   "citation.notLocated": "已打开论文，但未能在 PDF 中定位引用段落。",
 
-  "library.upload": "上传 PDF",
+  "library.title": "论文",
+  "library.count": "{count} 篇论文",
+  "library.import": "导入",
+  "library.upload": "导入 PDF",
   "library.processing": "处理中",
   "library.processingTitle": "正在读取 PDF 并生成笔记",
   "library.emptyFolder": "“{folder}”中还没有论文。",

@@ -42,8 +42,6 @@ export function createAssayLayoutManager({
     assayImportFile,
     assayNumberDisplay,
     assayPlateDefinition,
-    assayPlateFieldConcentrationBtn,
-    assayPlateFieldSampleBtn,
     assayPlatePreview,
     assaySerialDilutionContent,
     assaySerialDilutionOverlay,
@@ -144,7 +142,7 @@ export function createAssayLayoutManager({
     setActiveWellSelection,
     setLayoutFromAxisAndOverrides,
     syncAxisTemplateValues: (values) => syncAxisTemplateValues(values),
-    renderPlatePreview: (values) => renderPlatePreview(values)
+    renderPlatePreview: (values, options) => renderPlatePreview(values, options)
   });
 
   function renderAxisSwitchButtons() {
@@ -154,13 +152,6 @@ export function createAssayLayoutManager({
     assaySampleAxisColumnBtn?.classList.toggle('calendar-view-active', sampleAxis === 'column');
     assayConcentrationAxisRowBtn?.classList.toggle('calendar-view-active', concentrationAxis === 'row');
     assayConcentrationAxisColumnBtn?.classList.toggle('calendar-view-active', concentrationAxis === 'column');
-  }
-
-  function renderPlateEditFieldButtons() {
-    assayPlateFieldSampleBtn?.classList.toggle('calendar-view-active', runtime.plateEditField === 'sampleId');
-    assayPlateFieldConcentrationBtn?.classList.toggle('calendar-view-active', runtime.plateEditField === 'concentration');
-    assayPlateFieldSampleBtn?.setAttribute('aria-pressed', String(runtime.plateEditField === 'sampleId'));
-    assayPlateFieldConcentrationBtn?.setAttribute('aria-pressed', String(runtime.plateEditField === 'concentration'));
   }
 
   function syncAxisDisplay() {
@@ -189,12 +180,6 @@ export function createAssayLayoutManager({
 
   function setConcentrationAxis(axis) {
     setSampleAxis(axis === 'row' ? 'column' : 'row');
-  }
-
-  function setPlateEditField(field) {
-    runtime.plateEditField = field === 'concentration' ? 'concentration' : 'sampleId';
-    renderPlateEditFieldButtons();
-    renderPlatePreview();
   }
 
   function onSwapAxes() {
@@ -255,7 +240,7 @@ export function createAssayLayoutManager({
     return axisValues;
   }
 
-  function renderPlatePreview(sourceValues = null) {
+  function renderPlatePreview(sourceValues = null, { preserveEditors = false } = {}) {
     if (!assayPlatePreview) {
       return;
     }
@@ -266,17 +251,43 @@ export function createAssayLayoutManager({
       ? normalizeCurrentAxisTemplateValues(sourceValues, def, sampleAxis)
       : getAxisTemplateValues();
 
-    i18nUi.setHtml(assayPlatePreview, buildPlatePreviewHtml({
+    const html = buildPlatePreviewHtml({
       def,
       sampleAxis,
       layout: runtime.currentLayout,
       sampleValues,
       concentrationValues,
       concentrationUnit: getConcentrationUnit(),
-      plateEditField: runtime.plateEditField,
       activeWellEditorId: runtime.activeWellEditorId,
       safeText
-    }));
+    });
+
+    if (preserveEditors && assayPlatePreview.querySelector('.assay-plate-table')) {
+      // Edits change values, units and well colors, not the table structure.
+      // Keep the actual input nodes so blur cannot remove the next click/Tab
+      // target or interrupt a selection or an input-method composition.
+      const updated = document.createElement('div');
+      i18nUi.setHtml(updated, html);
+      const wells = assayPlatePreview.querySelectorAll('td.assay-well');
+      updated.querySelectorAll('td.assay-well').forEach((next, index) => {
+        wells[index].className = next.className;
+        wells[index].style.cssText = next.style.cssText;
+      });
+      const inputs = assayPlatePreview.querySelectorAll('input');
+      updated.querySelectorAll('input').forEach((next, index) => {
+        const input = inputs[index];
+        for (const attribute of next.attributes) {
+          if (attribute.name !== 'value') input.setAttribute(attribute.name, attribute.value);
+        }
+        if (input !== document.activeElement) input.value = next.value;
+      });
+      const headings = assayPlatePreview.querySelectorAll('thead th');
+      updated.querySelectorAll('thead th').forEach((next, index) => {
+        i18nUi.setHtml(headings[index], next.innerHTML);
+      });
+    } else {
+      i18nUi.setHtml(assayPlatePreview, html);
+    }
 
     if (serialDilution.isOpen()) {
       serialDilution.render();
@@ -359,14 +370,12 @@ export function createAssayLayoutManager({
     setLayoutFromAxisAndOverrides,
     restoreAssayLayoutState,
     renderAxisSwitchButtons,
-    renderPlateEditFieldButtons,
     setSampleAxis,
     setConcentrationAxis,
     getConcentrationUnit,
     setConcentrationUnit,
     onFillConcentrations,
     syncFillModeInputs,
-    setPlateEditField,
     syncAxisDisplay,
     onSwapAxes,
     renderPlatePreview,

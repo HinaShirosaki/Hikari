@@ -2,7 +2,6 @@
    Keep these here so the shared app palette can stay intentionally small. */
 
 :root {
-  --assay-plate-highlight-faint: rgba(255, 255, 255, 0.12);
   --assay-plate-highlight: rgba(255, 255, 255, 0.7);
   --assay-plate-shadow: rgba(27, 20, 14, 0.14);
   --assay-plate-pure-white: #ffffff;
@@ -24,8 +23,7 @@
   --assay-plate-labware-shadow: rgba(10, 27, 48, 0.16);
   --assay-plate-labware-glass-border: rgba(108, 121, 137, 0.92);
   --assay-plate-labware-glass-start: rgba(252, 253, 255, 0.96);
-  --assay-plate-labware-glass-end: rgba(236, 241, 247, 0.92);
-  --assay-plate-labware-mark: rgba(102, 115, 130, 0.5);
+  --assay-plate-labware-mark: rgba(38, 50, 64, 0.62);
 }
 
 /*

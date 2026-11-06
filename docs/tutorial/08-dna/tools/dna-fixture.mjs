@@ -98,12 +98,18 @@ const host = () => document.getElementById('sequence-viewer-sequence-host');
 window.tutorial = { state, viewer, entries, folders, calls, record, sequence, bridge, show, get writes() { return writes; },
   readSequence: () => [...host().querySelectorAll('.sequence-viewer-strand-row-top .sequence-viewer-seq-base')].map(el => el.textContent).join(''),
   home: () => { show(homeId); viewer.render({ activeViewId: homeId }); },
-  cursor: boundary => { const el = host().querySelectorAll('.sequence-viewer-strand-row-top .sequence-viewer-seq-base')[boundary]; const r = el.getBoundingClientRect(); el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left, clientY: r.top + 2 })); }
+  // Scroll first: a base outside the viewport gives the menu an off-screen anchor.
+  cursor: boundary => { const el = host().querySelectorAll('.sequence-viewer-strand-row-top .sequence-viewer-seq-base')[boundary]; el.scrollIntoView({ block: 'center', behavior: 'instant' }); const r = el.getBoundingClientRect(); el.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 })); }
 };
-window.tutorial.select = (start, end) => {
+window.tutorial.select = async (start, end) => {
   const base = index => host().querySelectorAll('.sequence-viewer-strand-row-top .sequence-viewer-seq-base')[index];
+  base(start).scrollIntoView({ block: 'center', behavior: 'instant' });
   const fire = (index, type, buttons) => { const el = base(index), r = el.getBoundingClientRect(); el.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, button: 0, buttons, clientX: r.left + 1, clientY: r.top + r.height / 2 })); };
-  fire(start, 'mousedown', 1); fire(end, 'mousemove', 1);
+  fire(start, 'mousedown', 1);
+  // mousedown re-renders the strand rows. The dragged-over base has to be a live
+  // node, or its mousemove never reaches the host and the selection stays empty.
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  fire(end, 'mousemove', 1);
   document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0, buttons: 0 }));
 };
 window.tutorialReady = true;

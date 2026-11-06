@@ -6,7 +6,7 @@ export const DNA_ASSEMBLY_ERRORS = {
   linear: '{name} is circular. Digest it into a linear fragment before assembly.',
   sequence: '{name} has an invalid DNA sequence.',
   ends: '{name} has invalid terminal overhang data.',
-  compatible: 'No compatible assembly was found in this fragment order. Use matching sticky ends or terminal overlaps of at least {minimum} bp.',
+  compatible: 'No compatible assembly was found. Use matching sticky ends or terminal overlaps of at least {minimum} bp.',
   minimum: 'Enter a minimum overlap between 12 and 1000 bp.',
   name: 'Enter an assembled DNA name.'
 };
@@ -123,51 +123,80 @@ function junctionOverlap(left, right, method, minimum) {
   return overlap >= minimum && overlap < Math.min(left.sequence.length, right.sequence.length) ? overlap : null;
 }
 
-// Only two orientations are possible at each position. Keep the best path for
-// each ending orientation rather than exploring all 2^N combinations. Prefer
-// the initial fragment's direction, then stronger homology and fewer flips.
-function resolveOrientations(variants, method, circular, minimum) {
-  const edges = new Map();
-  const edge = (index, from, to) => {
-    const key = `${index}:${from}:${to}`;
-    if (!edges.has(key)) edges.set(key, junctionOverlap(variants[index][from], variants[(index + 1) % variants.length][to], method, minimum));
-    return edges.get(key);
-  };
-  const better = (candidate, previous) => !previous || candidate.first < previous.first
-    || (candidate.first === previous.first && (candidate.overlap > previous.overlap
-      || (candidate.overlap === previous.overlap && (candidate.flips < previous.flips
-        || (candidate.flips === previous.flips && candidate.path.join('') < previous.path.join(''))))));
-  let best = null;
-  for (const first of [0, 1]) {
-    let states = [null, null];
-    states[first] = { first, overlap: 0, flips: first, path: [first] };
-    for (let index = 1; index < variants.length; index++) {
-      const next = [null, null];
-      for (const from of [0, 1]) for (const to of [0, 1]) {
-        const overlap = edge(index - 1, from, to);
-        if (!states[from] || overlap === null) continue;
-        const candidate = { first, overlap: states[from].overlap + overlap,
-          flips: states[from].flips + to, path: [...states[from].path, to] };
-        if (better(candidate, next[to])) next[to] = candidate;
-      }
-      states = next;
+// Edges represent physical compatibility, independent of selection order.
+// Search only compatible neighbors, using each source once. Failed subsets
+// are memoized; reachability pruning keeps long sparse chains inexpensive.
+function createAssemblyResolver(variants, method, minimum) {
+  const nodes = variants.flat();
+  const source = node => Math.floor(node / 2);
+  const bits = variants.map((_, index) => 1n << BigInt(index));
+  const all = (1n << BigInt(variants.length)) - 1n;
+  const keys = variants.map(([fragment, reverse]) => `${fragment.name}\n${[fragment.sequence, reverse.sequence].sort()[0]}`);
+  const compareSource = (a, b) => keys[source(a)] < keys[source(b)] ? -1 : keys[source(a)] > keys[source(b)] ? 1 : source(a) - source(b);
+  const edges = nodes.map((left, from) => nodes.flatMap((right, to) => {
+    const overlap = source(from) === source(to) ? null : junctionOverlap(left, right, method, minimum);
+    return overlap === null ? [] : [{ to, overlap }];
+  }).sort((a, b) => b.overlap - a.overlap || compareSource(a.to, b.to) || a.to % 2 - b.to % 2));
+
+  function reachable(last, visited) {
+    let reached = visited;
+    const seen = new Set([last]);
+    const pending = [last];
+    while (pending.length) for (const { to } of edges[pending.pop()]) {
+      if ((visited & bits[source(to)]) || seen.has(to)) continue;
+      seen.add(to);
+      reached |= bits[source(to)];
+      pending.push(to);
     }
-    for (const last of [0, 1]) {
-      if (!states[last]) continue;
-      let candidate = states[last];
-      if (circular) {
-        const closing = edge(variants.length - 1, last, first);
-        if (closing === null) continue;
-        candidate = { ...candidate, overlap: candidate.overlap + closing };
-        const lengths = candidate.path.map((orientation, index) => variants[index][orientation].sequence.length);
-        // A repeated terminal motif must not collapse a fragment into more
-        // than one traversal of an inferred circle.
-        if (lengths.reduce((sum, length) => sum + length, 0) - candidate.overlap < Math.max(...lengths)) continue;
-      }
-      if (better(candidate, best)) best = candidate;
-    }
+    return reached === all;
   }
-  return best?.path.map((orientation, index) => variants[index][orientation]) || null;
+
+  return circular => {
+    const starts = circular ? [0, 1] : nodes.map((_, index) => index).sort((a, b) => compareSource(a, b) || a % 2 - b % 2);
+    const failedLinear = new Set();
+    const solutions = [];
+    for (const first of starts) {
+      const failed = circular ? new Set() : failedLinear;
+      const path = [first];
+      function visit(last, visited, length, longest) {
+        if (visited === all) {
+          if (!circular) return [...path];
+          const closing = edges[last].find(edge => edge.to === first);
+          // Repeated termini cannot collapse a source into multiple trips
+          // around a circle shorter than that source.
+          return closing && length - closing.overlap >= longest ? [...path] : null;
+        }
+        const key = `${visited}:${last}${circular ? `:${length}:${longest}` : ''}`;
+        if (failed.has(key)) return null;
+        const canClose = !circular || edges.some((outgoing, node) => !(visited & bits[source(node)]) && outgoing.some(edge => edge.to === first));
+        if (canClose && reachable(last, visited)) for (const { to, overlap } of edges[last]) {
+          const bit = bits[source(to)];
+          if (visited & bit) continue;
+          path.push(to);
+          const result = visit(to, visited | bit, length + nodes[to].sequence.length - overlap, Math.max(longest, nodes[to].sequence.length));
+          path.pop();
+          if (result) return result;
+        }
+        failed.add(key);
+        return null;
+      }
+      const result = visit(first, bits[source(first)], nodes[first].sequence.length, nodes[first].sequence.length);
+      if (result) {
+        if (!circular) return result.map(node => nodes[node]);
+        solutions.push(result);
+      }
+    }
+    // Keep the first selected source as a circle's origin. Break direction
+    // ties by source indices, then by the origin's original orientation.
+    solutions.sort((a, b) => {
+      for (let index = 1; index < a.length; index++) {
+        const difference = source(a[index]) - source(b[index]);
+        if (difference) return difference;
+      }
+      return a[0] - b[0];
+    });
+    return solutions[0]?.map(node => nodes[node]) || null;
+  };
 }
 
 function wrapAssemblyFeatures(features, length) {
@@ -193,19 +222,21 @@ export function buildDnaAssemblyRecord(inputs, { name = 'Assembled DNA', minimum
     record: input.record || input, orientation })));
   let method = 'sticky';
   let topology = 'circular';
-  let fragments = resolveOrientations(variants, method, true, minimumOverlap);
+  let resolve = createAssemblyResolver(variants, method, minimumOverlap);
+  let fragments = resolve(true);
   if (!fragments) {
-    fragments = resolveOrientations(variants, method, false, minimumOverlap);
+    fragments = resolve(false);
     topology = 'linear';
   }
   if (!fragments) {
     if (!Number.isInteger(Number(minimumOverlap)) || minimumOverlap < 12 || minimumOverlap > 1000) fail('minimum');
     method = 'overlap-pcr';
-    fragments = resolveOrientations(variants, method, true, Number(minimumOverlap));
+    resolve = createAssemblyResolver(variants, method, Number(minimumOverlap));
+    fragments = resolve(true);
     topology = 'circular';
     if (fragments) method = 'overlap-assembly';
     else {
-      fragments = resolveOrientations(variants, method, false, Number(minimumOverlap));
+      fragments = resolve(false);
       topology = 'linear';
     }
     if (!fragments) fail('compatible', { minimum: minimumOverlap });

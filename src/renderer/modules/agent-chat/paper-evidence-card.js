@@ -20,9 +20,15 @@ export function createPaperEvidenceCard(container) {
     return element;
   }
 
-  function excerpt(block) {
-    const section = node('section', 'agent-evidence-chunk');
-    if (block.section_label) section.append(node('h4', 'agent-evidence-section', block.section_label));
+  function excerpt(block, paperKey, disclosures) {
+    const section = node('details', 'agent-evidence-chunk');
+    const location = block.line_ranges.length ? block.line_ranges : block.source_lines.map(line => line.line_number);
+    const key = JSON.stringify(['excerpt', paperKey, location.length ? location : block.block_id || block.excerpt]);
+    section.dataset.evidenceKey = key;
+    section.open = disclosures.get(key) ?? true;
+    section.append(block.section_label
+      ? node('summary', 'agent-evidence-section', block.section_label)
+      : label('summary', 'agent-evidence-section', 'evidence.excerpt'));
     const quote = node('blockquote', 'agent-evidence-quote');
     quote.append(node('p', 'agent-evidence-line-text', paperEvidenceText(block)));
     section.append(quote);
@@ -82,7 +88,7 @@ export function createPaperEvidenceCard(container) {
         ? node('span', 'agent-evidence-paper-title', entries[0].paper_title)
         : label('span', 'agent-evidence-paper-title', 'evidence.untitled'));
       paper.append(summary);
-      entries.forEach(block => paper.append(excerpt(block)));
+      entries.forEach(block => paper.append(excerpt(block, key, disclosures)));
       list.append(paper);
       index += 1;
     }

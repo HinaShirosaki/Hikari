@@ -43,22 +43,20 @@ Changing a header applies its value along that axis. For a sample arranged acros
 
 ### Change one well
 
-1. Above the plate, choose **Sample ID** or **Concentration**, depending on the value you want to change.
-2. Click inside the individual well's field.
-3. Enter the replacement value. For example, change D6's sample ID to `Blank` when that is the label you intend to use.
-4. Inspect the neighboring wells to confirm the change belongs to the intended position.
+1. Click the sample ID or concentration directly inside the individual well.
+2. Enter the replacement value. For example, change D6's sample ID to `Blank` when that is the label you intend to use.
+3. Inspect the neighboring wells to confirm the change belongs to the intended position.
 
-![Choose the field to edit, then enter an override directly in a well.](images/04-edit-well.png)
+![Click the sample ID or concentration directly in a well to enter an override.](images/04-edit-well.png)
 
 **Clear mappings** removes the current well assignments. Use it when you want to rebuild the layout, then save the revised plate.
 
 ## 4. Fill a concentration series
 
-1. Choose **Concentration** above the plate.
-2. Enter a starting concentration in the first concentration header. This example uses `100 uM`.
-3. Choose **Dilution ÷** in the fill-method menu.
-4. Enter the **Factor**. A factor of `2` divides each successive value by two.
-5. Click **Fill** and inspect the completed headers and wells.
+1. Enter a starting concentration in the first concentration header. This example uses `100 uM`.
+2. Choose **Dilution ÷** in the fill-method menu.
+3. Enter the **Factor**. A factor of `2` divides each successive value by two.
+4. Click **Fill** and inspect the completed headers and wells.
 
 ![Enter a starting concentration, choose a fill method, and click Fill.](images/05-fill-concentrations.png)
 
@@ -144,7 +142,9 @@ Result edits are saved as you finish each edit or paste. Analysis updates from t
 
 ![Choose a detected result matrix, verify its preview, and click Use This Matrix.](images/10-import-results.png)
 
-If the file has only one detected matrix, the import can proceed directly. Importing fills the matched wells and keeps the source file as an attachment to the assay.
+If the file has only one detected matrix, the import can proceed directly. Importing fills the matched wells and keeps the source file as an attachment to the assay, in a `result-files` folder beside it.
+
+Alongside the assay's own record, Hikari keeps `original-plate.csv` and `transformed-plate.csv` in the assay's folder and updates them whenever you import results, edit a value, change a formula, or save. Open those files in any spreadsheet when you want the plate outside Hikari. If the selected assay changes while an import is saving, the import stops instead of writing to the wrong plate.
 
 The supplied [result-matrices.csv](examples/result-matrices.csv) contains two fictional 4 × 6 blocks so you can practice selecting a matrix. Use it with the example 24-well layout. Review existing results before importing another file into the same assay.
 
@@ -181,15 +181,15 @@ Only numeric transformed cells contribute when Table2 is selected. Fill all the 
 
 ## 10. Create custom row or column groups
 
-1. Click **Data** in the right toolbar and open the **Plate results** table.
-2. Drag across the well cells covering the rows or columns you want to group.
-3. Under **Data Analysis > Groups**, click **Rows** to add the selected rows as a group, or **Columns** to group the selected columns.
-4. Repeat with other selections as needed.
+1. Under **Data Analysis > Groups**, click **Rows** to group rows, or **Columns** to group columns. Hikari switches to the **Data** view and shows a hint above the table.
+2. Drag across the well cells covering the rows or columns the group should contain.
+3. Release the drag. The group is created and the tool switches itself off.
+4. Repeat for the other groups you need.
 5. Under **Fit & summary**, choose **Custom groups** in **Group by** to use those groups in the analysis.
 
-![Select wells in the table, then add their rows or columns as groups; the trash icon clears custom groups.](images/13-custom-groups.png)
+![Arm Rows or Columns, then drag across the wells the group should cover.](images/13-custom-groups.png)
 
-For example, selecting A1 through B6 and clicking **Rows** groups rows A and B. Use **Clear groups**, the trash icon beside Rows and Columns, to discard custom group definitions and start again.
+For example, arming **Rows** and dragging from A1 to B6 groups rows A and B. Press **Esc**, or click **Cancel** in the hint, to leave the tool without creating a group. Use **Clear groups**, the trash icon beside Rows and Columns, to discard custom group definitions and start again.
 
 ## 11. Choose an analysis and inspect the summary
 
@@ -215,9 +215,9 @@ The controls update the analysis as you change them. Other grouping choices incl
 
 ![Inspect the plotted measurements and fitted curves, then open the Data view or Format chart.](images/15-curve-fit.png)
 
-The Method menu also contains sigmoidal, hyperbola, polynomial, Padé, and one-phase exponential fits, plus plate QC, Z-scores, comparisons to a control, and normalization. Choose the method that fits your intended analysis.
+The Method menu also contains sigmoidal, hyperbola, polynomial, Padé, and one-phase exponential fits, plus plate QC, Z-scores, comparisons to a control, and normalization. Choose the method that fits your intended analysis. The **i** beside **Method** describes the selected method, including what it reports and what it needs.
 
-When a method shows **High control (100%)** or **Low control (0%)**, enter the corresponding group label or sample ID from your plate. Sigmoidal fits come as **4PL** (symmetric) and **5PL** (asymmetric); polynomial fits show **Polynomial Order**. Recheck the summary whenever you change a method or control assignment.
+When a method shows **High control (100%)** or **Low control (0%)**, enter the corresponding group label or sample ID from your plate. Sigmoidal fits are two separate methods: **Sigmoidal fit (4PL)** for a curve that is symmetric around its midpoint, and **Sigmoidal fit (5PL, asymmetric)** for one that bends more sharply at one end, which needs at least five points. Polynomial fits show **Polynomial Order**. Recheck the summary whenever you change a method or control assignment.
 
 ## 12. Format the chart
 
@@ -228,7 +228,7 @@ When a method shows **High control (100%)** or **Low control (0%)**, enter the c
 
 ![Open Chart Format, choose a format tab, and adjust the chart frame or save a preset.](images/16-format-frame.png)
 
-The format sections are **Frame**, **Axis**, **Data Series**, **Text**, and **Elements**. Expand the relevant section and inspect the chart as you change its controls.
+The format sections are **Frame**, **Axis**, **Data Series**, and **Text**. Expand the relevant section and inspect the chart as you change its controls.
 
 ### Change axes
 

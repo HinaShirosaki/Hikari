@@ -18,6 +18,10 @@
   min-width: 0;
 }
 
+#tool-box-view .tool-layout.is-left-rail-folded > .tool-content {
+  padding-left: var(--left-rail-main-gap);
+}
+
 .tool-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

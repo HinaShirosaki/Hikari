@@ -25,7 +25,7 @@ The rest of the folder is split by responsibility:
 - `rendering.js`: public `renderHistory(...)` entry point for chat history rendering.
 - `html-history.js`: patches the conversation without resetting open disclosures, selection, or live HTML frames.
 - `html-artifacts.js`, `image-artifacts.js`, `plotly-artifacts.js`: inline HTML (sandboxed `hikari-html://` frames), image, and Plotly artifact rendering.
-- `paper-evidence-card.js`: the main Agent chat's right-side Paper excerpts card. Groups `meta.paper_evidence` by paper, showing paper excerpts as plain text and the reader's relevance comments. It follows the current conversation, preserves disclosures during streaming, and stacks below the chat in narrow windows. Saved user notes have their own label.
+- `paper-evidence-card.js`: the main Agent chat's right-side Paper excerpts card. Groups `meta.paper_evidence` by paper, showing paper excerpts as plain text and the reader's relevance comments. Each selected passage folds independently under its section heading, with its excerpt, selection comment and saved notes kept together. It follows the current conversation, preserves paper and passage disclosures during streaming, and stacks below the chat in narrow windows. Saved user notes have their own label.
 - `rendering-drafts.js`, `notebook-draft-list.js`: notebook draft cards and draft lookup.
 - `assistant-message-meta.js`: builds persisted assistant response and error messages.
 - `icons.js`: the chat's SVG icon set.

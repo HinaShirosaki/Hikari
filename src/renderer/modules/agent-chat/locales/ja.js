@@ -6,6 +6,7 @@ export const agentJapanese = Object.freeze({
   'evidence.why': '選定理由',
   'evidence.notes': '自分のメモ',
   'evidence.untitled': '無題の論文',
+  'evidence.excerpt': '抜粋',
   "menu.newFolder": "新しいフォルダー",
   "menu.renameFolder": "フォルダー名を変更",
   "menu.deleteFolder": "フォルダーを削除",

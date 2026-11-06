@@ -1,5 +1,5 @@
 {
-  "sourceVersion": "1.1.0-beta.11",
+  "sourceVersion": "1.1.0",
   "exampleDate": "2026-10-24",
   "timezone": "America/Chicago",
   "viewport": [
@@ -352,10 +352,10 @@
           "selector": ".falcon-preview",
           "label": "Filled tube",
           "rect": {
-            "x": 581,
-            "y": 213,
-            "width": 248,
-            "height": 443
+            "x": 613,
+            "y": 214,
+            "width": 184,
+            "height": 442
           }
         },
         {
@@ -430,9 +430,9 @@
       "name": "09-search",
       "title": "Find a sample",
       "crop": {
-        "x": 1289,
+        "x": 1287,
         "y": 0,
-        "width": 309,
+        "width": 311,
         "height": 253
       },
       "targets": [

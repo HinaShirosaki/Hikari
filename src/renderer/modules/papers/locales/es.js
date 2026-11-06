@@ -3,7 +3,10 @@ export const papersSpanish = Object.freeze({
   "citation.locating": "Buscando el pasaje citado…",
   "citation.notLocated": "Se abrió el artículo, pero no se pudo localizar el pasaje citado en el PDF.",
 
-  "library.upload": "Subir PDF",
+  "library.title": "Artículos",
+  "library.count": { one: "{count} artículo", other: "{count} artículos" },
+  "library.import": "Importar",
+  "library.upload": "Importar PDF",
   "library.processing": "Procesando",
   "library.processingTitle": "Leyendo el PDF y preparando sus notas",
   "library.emptyFolder": "Todavía no hay artículos en {folder}.",

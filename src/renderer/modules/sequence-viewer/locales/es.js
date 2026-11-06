@@ -2,7 +2,7 @@
 export const dnaSpanish = Object.freeze({
   "full.d3bf0385": "ADN circular",
   "full.6df3425": "ADN lineal",
-  "full.3aca0191": "No se encontró un ensamblaje compatible en este orden. Usa extremos cohesivos compatibles o solapamientos terminales de al menos {minimum} pb.",
+  "full.a83a2116": "No se encontró un ensamblaje compatible. Usa extremos cohesivos compatibles o solapamientos terminales de al menos {minimum} pb.",
   "full.3a39d215": "La carpeta de almacenamiento cambió. Inicia el ensamblaje de nuevo.",
   "full.31ac3501": "Ensamblar",
   "full.353e0d45": "Opciones",
@@ -15,8 +15,6 @@ export const dnaSpanish = Object.freeze({
   "full.f9783800": "Circular",
   "full.310e66b1": "Solapamiento mínimo (pb)",
   "full.e50883ba": "Directa",
-  "full.640e97e9": "Subir fragmento",
-  "full.653838d0": "Bajar fragmento",
   "full.7961e987": "Quitar fragmento",
   "full.9dc3aa14": "Añadir",
   "full.2e7e4ae3": "Cargando…",

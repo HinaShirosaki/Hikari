@@ -42,7 +42,7 @@ export function createConcentrationFill({
     });
     syncAxisTemplateValues({ sampleValues, concentrationValues });
     setLayoutFromAxisAndOverrides();
-    renderPlatePreview();
+    renderPlatePreview(null, { preserveEditors: true });
     renderResultTable();
     if (serialDilution.isOpen()) {
       serialDilution.render();

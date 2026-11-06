@@ -229,14 +229,14 @@ async function main() {
   await input('#canvas-properties [name=width]','1200');await settle();
   await evaluate('document.querySelector(".canvas-options").open=false;');
   await click(tool('add-menu'));
-  await shot('06-add-layer-menu','Add an editable layer','Use Add layer for a text label, a vector component, or imported artwork.','#add-menu .popover-panel',
-    [['#add-text','Add a text label'], ['#add-vector','Add a vector component'], ['#import','Import artwork']]);
+  await shot('06-add-layer-menu','Add an editable layer','Use Add layer for a text label or for artwork imported from a file.','#add-menu .popover-panel',
+    [['#add-text','Add a text label'], ['#import','Import artwork']]);
   await click('#add-text');
   await waitFor('!document.getElementById("properties").hidden');
   await input('#label-content','Signal transfer · example');await settle();
   await input('#properties [name=fontSize]','38');await settle();
   await shot('07-edit-text','Edit a label independently','Use text controls for its content, font, size, color, and alignment.','#layer-inspector',
-    [['#label-content','Edit the label text'], ['.font-row','Set font, size, and color'], ['#text-properties .field-grid','Set weight and anchor']]);
+    [['#label-content','Edit the label text'], ['.font-row','Set font, size, and color'], ['#text-properties .text-toolbar','Set weight and alignment']]);
   await check('illustrationWorkspace.getDocument().objects.some(o=>o.type==="text"&&o.text.includes("Signal transfer")&&o.fontSize===38)','Adding and editing a text label saves its content and font size');
   const labelId=await evaluate('return illustrationWorkspace.getDocument().objects.find(o=>o.type==="text").id;');
   await closeLayers();
@@ -247,8 +247,6 @@ async function main() {
     [['#canvas-text-editor','Type the new label text']]);
   await key('#canvas-text-editor','Return');await settle();
   await check(`illustrationWorkspace.getDocument().objects.find(o=>o.id===${JSON.stringify(labelId)}).text==='Signal transfer · edited'`,'Double-clicking a label edits its text on the canvas and Enter saves it');
-  await click(tool('add-menu'));await click('#add-vector');await settle();
-  await check('illustrationWorkspace.getDocument().objects.some(o=>o.type==="vector")','Add layer > Vector component adds an editable vector layer');
   await evaluate('await tutorial.clear();await tutorial.seed();await tutorial.apply([{op:"title",title:"Practice diagram · example"}]);');
   await choose(['sender']);
   const swatch='#vector-color-swatches input[data-color="#438482"]';
@@ -261,9 +259,13 @@ async function main() {
   await evaluate('await illustrationWorkspace.history("undo");');await settle();
   await closeLayers();
   await click(tool('palette-menu'));
-  for(let i=0;i<3;i++){await click('#palette-add');await settle();}
-  await shot('10-figure-palette','Set the figure palette','Add up to eight main colors; Codex and the color pickers use them.','#palette-menu .popover-panel',
-    [['#palette-colors','Click a swatch to change it'], ['#palette-add','Add a color']]);
+  for(const code of ['#2f6f8f','#438482','#8f6f9f']){
+    await input('#palette-code',code);
+    await evaluate('document.getElementById("palette-add").requestSubmit();');
+    await settle();
+  }
+  await shot('10-figure-palette','Set the figure palette','Type a hex code to add a main color, up to eight; Codex and the color pickers use them.','#palette-menu .popover-panel',
+    [['#palette-colors','Click a swatch to change it'], ['#palette-code','Enter a hex code'], ['#palette-add button','Add color']]);
   await check('illustrationWorkspace.getDocument().palette.length===3','Add color saves palette colors with the figure');
   await evaluate('document.getElementById("palette-menu").open=false;');
   await click(tool('add-menu'));await click('#import');
@@ -314,8 +316,8 @@ async function main() {
   await evaluate('await illustrationWorkspace.history("undo");');
   await choose(['caption']);
   await evaluate('document.querySelector("[data-layer-id=caption] .layer-visibility").focus();');
-  await shot('17-layer-actions','Manage layer order and visibility','Use Layers to select, hide, duplicate, reorder, or delete components.','#layer-inspector',
-    [['#layers','Select a layer'], ['[data-layer-id=caption] .layer-visibility','Hide or show the layer'], ['.opacity-control','Adjust opacity'], ['.object-actions','Duplicate, reorder, or delete']]);
+  await shot('17-layer-actions','Manage layer order and visibility','Use Layers to select, hide, and reorder components by dragging their rows.','#layer-inspector',
+    [['#layers','Select a layer'], ['[data-layer-id=caption] .layer-visibility','Hide or show the layer'], ['.opacity-control','Adjust opacity'], ['.object-actions','Duplicate or delete']]);
   await click('[data-layer-id=caption] .layer-visibility');await settle();
   await check('illustrationWorkspace.getDocument().objects.find(o=>o.id==="caption").visible===false','The layer visibility button hides a component without deleting it');
   await evaluate('await illustrationWorkspace.history("undo");');
@@ -329,7 +331,14 @@ async function main() {
   await check('illustrationWorkspace.getDocument().groups.some(g=>g.ids.includes("sender")&&g.ids.includes("sender-label"))','Grouping preserves separate artwork and text within one editable group');
   await menuAt(285,325);
   await shot('19-context-menu','Open component actions with a right-click','The same menu is available on the canvas or a layer row.','#canvas-context-menu',
-    [['[data-context-action=copy]','Copy selected components'], ['[data-context-action=ungroup]','Ungroup the selected group'], ['[data-context-action=save-asset]','Save as a reusable asset']]);
+    [['[data-context-action=copy]','Copy selected components'], ['[data-context-action=ungroup]','Ungroup the selected group'], ['[data-context-action=save-asset]','Save as a reusable asset'], ['[data-context-action=generate-here]','Draw a new component here']]);
+  await click('[data-context-action=generate-here]');
+  await waitFor('document.getElementById("generate-here-dialog").open');
+  await input('#generate-here-description','A receptor cluster on the receiver cell membrane');
+  await shot('26-generate-here','Add one component with Codex at a chosen spot','Describe the component, choose a format, and keep or change the image style.','#generate-here-dialog',
+    [['#generate-here-description','Describe the component'], ['#generate-here-renderer','Choose Automatic, SVG, or image'], ['#generate-here-style','Keep or change the image style'], ['#confirm-generate-here','Generate with Codex']]);
+  await check('document.getElementById("generate-here-style").value === document.getElementById("image-generation-style").value','Generate here starts on the figure\'s saved image style');
+  await click('#cancel-generate-here');
   await key('#main-canvas','Escape');
   await choose(['sender-label','signal-label','receiver-label']);await closeLayers();
   await click(tool('align-menu'));
@@ -350,13 +359,14 @@ async function main() {
   await evaluate('await illustrationWorkspace.history("undo");');
   await choose([groupId]);await closeLayers();await menuAt(285,325);await click('[data-context-action=save-asset]');
   await input('#asset-name','Sender cell component');
-  await shot('22-save-asset','Save a reusable component','Give the selected artwork and label a reusable asset name.','#save-asset-dialog',
-    [['#asset-name','Name the reusable component'], ['#confirm-save-asset','Save asset']]);
+  await input('#asset-description','Rounded sender cell with a nucleus, teal outline, seen from the side. Use as the signalling cell in pathway figures.');
+  await shot('22-save-asset','Save a reusable component','Name the selected artwork and label, and describe it so you and Codex can find it later.','#save-asset-dialog',
+    [['#asset-name','Name the reusable component'], ['#asset-description','Describe it for search and Codex'], ['#confirm-save-asset','Save asset']]);
   await click('#confirm-save-asset');
   await waitFor('document.querySelector("[data-saved-asset]")');await settle();
   await check('document.getElementById("assets-view-tab").getAttribute("aria-pressed")==="true"','Saving an asset switches the left rail to Assets');
-  await shot('23-reusable-assets','Find and insert reusable assets','Search Assets and click a component to add an editable copy.',['#assets-view-tab','#import-asset-folder','#asset-search','.asset-insert'],
-    [['#assets-view-tab','Switch the rail to Assets'], [['#import-asset','#import-asset-folder'],'Import files or a folder'], ['#asset-search','Search saved assets'], ['.asset-insert','Insert an editable copy']], { side: true });
+  await shot('23-reusable-assets','Find and insert reusable assets','Search Assets, read an asset in the pane under the grid, and click its thumbnail to insert a copy.',['#assets-view-tab','#import-asset-folder','#asset-search','.asset-insert','#asset-dock'],
+    [['#assets-view-tab','Switch the rail to Assets'], [['#import-asset','#import-asset-folder'],'Import files or a folder'], ['#asset-search','Search names and descriptions'], ['.asset-insert','Insert an editable copy'], ['.asset-edit','Asset details: edit or remove'], ['#asset-dock','Preview, name, and description']], { side: true });
   await click('.asset-insert');await settle();
   await check(`illustrationWorkspace.getDocument().objects.length===${count+2}`,'An asset inserts independent copies of its saved artwork and text');
   await evaluate('await illustrationWorkspace.history("undo");');await closeLayers();

@@ -191,7 +191,7 @@ async function main() {
   await openVector();
   await shot('04-sequence-viewer', 'Read bases and feature tracks', 'Use the DNA toolbar and scroll through the top and complementary strands.', null,
     [['.sequence-viewer-detail-toolbar', 'Viewing tools'], ['#sequence-viewer-sequence-host .sequence-viewer-dual-line:first-child', 'Bases and feature tracks']]);
-  await evaluate('tutorial.select(6,16); tutorial.cursor(8);');
+  await evaluate('await tutorial.select(6,16); tutorial.cursor(8);');
   await waitFor('!document.getElementById("sequence-viewer-feature-context-menu").hidden');
   await shot('05-selection-menu', 'Add an annotation to a selected range', 'Drag across bases, then right-click the selection to open its actions.', '#sequence-viewer-feature-context-menu',
     [['[data-sequence-feature-action=add]', 'Add Feature'], ['[data-sequence-feature-action=design-primer]', 'Design Primer']]);
@@ -257,8 +257,8 @@ async function main() {
   await evaluate(`const e=${rail('Teaching CDS')},r=e.getBoundingClientRect();e.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:r.left+4,clientY:r.top+4}));`);
   await click('[data-sequence-feature-action="save-fragment"]');
   await waitFor('document.querySelector(".sequence-viewer-fragment-overlay")?.open');
-  await shot('14-save-fragment', 'Save a feature as a DNA fragment', 'Right-click a feature or a selected range, check the name and length, then save.', '.sequence-viewer-fragment-dialog',
-    [['[data-fragment-parent]', 'Template and range'], ['[data-fragment-name]', 'Name the fragment'], ['[data-fragment-preview]', 'Check the length'], ['[data-fragment-save]', 'Save fragment']]);
+  await shot('14-save-fragment', 'Save a feature as a DNA fragment', 'Right-click a feature or a selected range, check the suggested name, then save.', '.sequence-viewer-fragment-dialog',
+    [['[data-fragment-title]', 'Check the action'], ['[data-fragment-name]', 'Name the fragment'], ['[data-fragment-save]', 'Save fragment']]);
   await click('[data-fragment-save]');
   await waitFor(`${children}.includes("Teaching CDS")`);
   manifest.checks.push('Save DNA Fragment on a feature saves its span as a child entry under the template');
@@ -272,7 +272,7 @@ async function main() {
   await shot('15-pcr-partner', 'Pick the PCR partner primer', 'After PCR…, click a highlighted partner primer in the sequence.', [partner, '.sequence-viewer-pcr-picker'],
     [['.sequence-viewer-pcr-picker', 'Read the PCR prompt'], [partner, 'Click a highlighted partner']]);
   await evaluate(`document.querySelector(${JSON.stringify(partner)}).click();`);
-  await waitFor('document.querySelector(".sequence-viewer-fragment-overlay")?.open && /bp/.test(document.querySelector("[data-fragment-preview]").textContent)');
+  await waitFor('document.querySelector(".sequence-viewer-fragment-overlay")?.open && document.querySelector("[data-fragment-partner]").textContent.includes("Teaching R")');
   await click('[data-fragment-save]');
   await waitFor(`JSON.parse(${children}).some(n=>n.endsWith("_PCR"))`);
   manifest.checks.push('A PCR product between Teaching F and Teaching R saves as a child entry');
@@ -282,15 +282,49 @@ async function main() {
   await waitFor('document.querySelector(".sequence-viewer-digest-picker")');
   await evaluate(`${rail('BamHI')}.click();`);
   await waitFor('document.querySelector(".sequence-viewer-digest-overlay")?.open');
-  await check('document.querySelectorAll("[data-digest-keep]").length === 2', 'Double digestion of the circular vector at NdeI and BamHI offers two fragments');
-  await shot('16-digest', 'Review a double digestion', 'Check both sites and the fragments, choose which to keep, then save.', '.sequence-viewer-digest-dialog',
-    [['[data-digest-sites]', 'Check the cut sites'], ['[data-digest-products]', 'Choose and name fragments'], ['[data-digest-save]', 'Confirm digestion and save']]);
-  await click('[data-digest-save]');
-  await waitFor('!document.querySelector(".sequence-viewer-digest-overlay")?.open');
-  await check(`JSON.parse(${children}).length === 4`, 'Confirm digestion saves both fragments under the template');
+  await check('document.querySelectorAll("[data-digest-save]").length === 2', 'Double digestion of the circular vector at NdeI and BamHI offers two fragments');
+  await click('[data-digest-save="0"]');
+  await waitFor(`JSON.parse(${children}).length === 3`);
+  await shot('16-digest', 'Review a double digestion', 'Check the enzymes and lengths, then save each fragment you want to keep.', '.sequence-viewer-digest-dialog',
+    [['[data-digest-sites]', 'Check the enzymes'], ['[data-digest-save="0"]', 'A saved fragment'], ['[data-digest-name="1"]', 'Rename a fragment'], ['[data-digest-save="1"]', 'Save it too']]);
+  await click('[data-digest-save="1"]');
+  await waitFor(`JSON.parse(${children}).length === 4`);
+  await check('document.querySelector(".sequence-viewer-digest-overlay")?.open', 'Each fragment saves on its own and the dialog stays open on the template');
+  await click('[data-digest-cancel]');
   await evaluate('tutorial.home();');
   await click('#sequence-viewer-library-filter-saved');
   await waitFor('document.querySelector("#sequence-viewer-library-list [data-sequence-entry-id=demo-vector]")');
+  // The two digest products keep matching sticky ends, so they reassemble into a circle.
+  const digests = JSON.parse(await evaluate(`return JSON.stringify([...tutorial.entries.values()]
+    .filter(v => v.entry.parentEntryId === "demo-vector").slice(-2).map(v => v.entry.id));`));
+  const libraryRow = id => `#sequence-viewer-library-list [data-sequence-entry-id="${id}"]`;
+  await click('#sequence-viewer-library-list [data-sequence-dna-toggle="demo-vector"]');
+  await waitFor(`document.querySelector(${JSON.stringify(libraryRow(digests[0]))})`);
+  await contextMenu(libraryRow(digests[0]));
+  await click('#sequence-viewer-library-context-menu [data-sequence-library-action=assemble]');
+  await waitFor('document.querySelector(".sequence-viewer-assembly-banner")?.hidden === false');
+  await evaluate(`document.querySelector(${JSON.stringify(libraryRow(digests[1]))}).click();`);
+  await waitFor('document.querySelector("[data-assembly-summary]").textContent.includes("fragments")');
+  await click('[data-assembly-options]');
+  await waitFor('document.querySelectorAll("[data-assembly-row]").length === 2');
+  // Picking a fragment re-renders the library, which collapses the template again.
+  // Its children stay in the DOM while hidden, so check the disclosure, not the row.
+  const dnaToggle = '#sequence-viewer-library-list [data-sequence-dna-toggle="demo-vector"]';
+  await evaluate(`const toggle = document.querySelector(${JSON.stringify(dnaToggle)});
+    if (toggle.getAttribute('aria-expanded') !== 'true') toggle.click();`);
+  await waitFor(`document.querySelector(${JSON.stringify(libraryRow(digests[1]))})?.getClientRects().length
+    && document.querySelector(${JSON.stringify(libraryRow(digests[1]))}).closest(".sequence-viewer-dna-row")?.dataset.assemblySelected === "true"`);
+  await check('document.querySelector("[data-assembly-summary]").textContent.includes("Circular")',
+    'Assembling both digest products infers a circular product from their sticky ends');
+  await shot('26-assemble-dna', 'Assemble fragments into one DNA record', 'Click DNA items to collect fragments, check the junctions, then click Assemble.',
+    ['.sequence-viewer-assembly-banner', '#sequence-viewer-library-list'],
+    [['#sequence-viewer-assembly-prompt', 'Click items to add fragments'], ['[data-assembly-inputs]', 'Review or remove a fragment'],
+      ['[data-assembly-junctions]', 'Check each junction'], ['[data-assembly-summary]', 'Length and topology'],
+      ['[data-assembly-save]', 'Assemble']], { side: true });
+  await click('[data-assembly-save]');
+  await waitFor('document.querySelector(".sequence-viewer-assembly-banner").hidden');
+  await check('[...tutorial.entries.values()].some(v => !v.entry.parentEntryId && v.entry.topology === "circular" && v.entry.name.endsWith("_assembly"))',
+    'Assemble saves the product as its own circular record, not a child of a template');
   await openVector();
   await click('#sequence-viewer-vector-builder-btn');
   await waitFor('document.querySelector("#sequence-viewer-vector-builder-map svg")');
@@ -314,7 +348,7 @@ async function main() {
     await click('[data-sequence-hover-tooltip="feature"] [data-sequence-primer-library-save]');
   }
   await check('tutorial.state.primerLibrary.length === 2', 'Saving two annotated primers from their hover cards populates Primer Library');
-  await evaluate('tutorial.select(604,664); tutorial.cursor(620);');
+  await evaluate('await tutorial.select(604,664); tutorial.cursor(620);');
   await waitFor('!document.getElementById("sequence-viewer-feature-context-menu").hidden');
   await click('[data-sequence-feature-action=design-primer]');
   await waitFor('!document.getElementById("sequence-viewer-primer-design-overlay").hidden && !document.getElementById("sequence-viewer-primer-design-save").disabled');
@@ -344,7 +378,7 @@ async function main() {
     [['.biology-notebook-quick-sample-location.is-selected', 'Storage location'], ['#sequence-viewer-quick-sample-container', 'Container'], ['.biology-notebook-quick-sample-well.is-selected', 'Position'], ['#sequence-viewer-quick-sample-name', 'Sample name'], ['#sequence-viewer-quick-sample-submit-btn', 'Add the sample']], { side: false });
   await evaluate('document.getElementById("sequence-viewer-quick-sample-form").requestSubmit();');
   await waitFor('document.getElementById("sequence-viewer-quick-sample-overlay").hidden');
-  await check('tutorial.state.samples.some(s=>s.name==="Teaching vector · example" && s.type==="dna" && s.inventoryLink?.containerId==="dna-box")', 'Record sample position adds a DNA sample at the chosen box position');
+  await check('tutorial.state.samples.some(s=>s.name==="Teaching vector · example" && s.type==="plasmid" && s.inventoryLink?.containerId==="dna-box" && s.sourceLink?.id==="demo-vector")', 'Record sample position adds the circular vector as a plasmid sample at the chosen box position, linked to the sequence');
   await contextMenu('#sequence-viewer-library-list [data-sequence-entry-id=demo-vector]');
   await shot('24-library-actions', 'Organize the sequence library', 'Right-click an entry to rename it, create a folder, or choose Move to Folder.', '#sequence-viewer-library-context-menu',
     [['#sequence-viewer-library-context-menu [data-sequence-library-action=new-folder]', 'New Folder'], ['#sequence-viewer-library-context-menu [data-sequence-library-action=rename]', 'Rename'], ['#sequence-viewer-library-context-menu [data-sequence-library-action=move-entry]', 'Move to Folder']]);

@@ -3,7 +3,10 @@ export const papersJapanese = Object.freeze({
   "citation.locating": "引用箇所を検索しています…",
   "citation.notLocated": "論文を開きましたが、PDF 内の引用箇所が見つかりませんでした。",
 
-  "library.upload": "PDF をアップロード",
+  "library.title": "論文",
+  "library.count": "{count} 件の論文",
+  "library.import": "インポート",
+  "library.upload": "PDF をインポート",
   "library.processing": "処理中",
   "library.processingTitle": "PDF を読み取り、ノートを作成しています",
   "library.emptyFolder": "「{folder}」にはまだ論文がありません。",

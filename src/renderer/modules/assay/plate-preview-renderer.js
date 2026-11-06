@@ -78,7 +78,6 @@ export function buildPlatePreviewHtml({
   sampleValues,
   concentrationValues,
   concentrationUnit,
-  plateEditField,
   activeWellEditorId,
   safeText
 }) {
@@ -147,14 +146,7 @@ export function buildPlatePreviewHtml({
       const active = activeWellEditorId === well ? ' is-active' : '';
       const sampleValue = String(cellLayout?.sampleId || '').trim();
       const concentrationValue = String(cellLayout?.concentration || '').trim();
-      const sampleLabel = sampleValue || '-';
-      const concentrationLabel = concentrationValue || '-';
-      const editsConcentration = plateEditField === 'concentration';
-      const editableValue = editsConcentration ? concentrationValue : sampleValue;
-      const secondaryMeta = editsConcentration
-        ? plateMessage('grid.sampleShort', { value: sampleLabel })
-        : plateMessage('grid.concentrationShort', { value: concentrationLabel });
-      const wellTitle = plateAttributes({ title: editsConcentration ? 'grid.wellConcentration' : 'grid.wellSample' }, {
+      const fieldAttributes = (key, placeholder) => plateAttributes({ title: key, 'aria-label': key, placeholder }, {
         well, sample: cellLayout?.sampleId || '-', concentration: cellLayout?.concentration || '-'
       });
       const color = sampleValue
@@ -169,17 +161,24 @@ export function buildPlatePreviewHtml({
         ? ` style="background-color: hsl(${color.hue} ${saturation}% ${lightness}%); color: ${wellTextColor(color.hue, saturation, lightness)};"`
         : '';
       cells.push(`
-        <td class="assay-well${filled}${active}" data-well="${well}" ${wellTitle}${cellStyle}>
+        <td class="assay-well${filled}${active}" data-well="${well}"${cellStyle}>
           <div class="assay-well-id">${safeText(well)}</div>
           <input
             type="text"
             class="assay-well-inline-input"
-            data-well-inline-field="${plateEditField}"
+            data-well-inline-field="sampleId"
             data-well="${well}"
-            value="${safeText(editableValue)}"
-            ${axisPlaceholder(editsConcentration ? 'concentration' : 'sample')}
+            value="${safeText(sampleValue)}"
+            ${fieldAttributes('grid.wellSample', 'grid.samplePlaceholder')}
           />
-          <div class="assay-well-meta">${secondaryMeta}</div>
+          <input
+            type="text"
+            class="assay-well-inline-input assay-well-concentration-input"
+            data-well-inline-field="concentration"
+            data-well="${well}"
+            value="${safeText(concentrationValue)}"
+            ${fieldAttributes('grid.wellConcentration', 'grid.concentrationPlaceholder')}
+          />
         </td>
       `);
     }

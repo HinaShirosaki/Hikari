@@ -25,6 +25,11 @@
   min-height: 0;
 }
 
+/* The process ledger already supplies its own horizontal padding. */
+#workflow-management-view .workflow-editor-layout.is-left-rail-folded > .workflow-editor-main:has(> .workflow-main-editor-panel:not([hidden])) {
+  padding-left: var(--left-rail-main-gap);
+}
+
 .workflow-entry-panel {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
