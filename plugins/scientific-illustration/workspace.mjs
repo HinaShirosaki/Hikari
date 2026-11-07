@@ -228,10 +228,12 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
       nextLibrary.activeId = replacement.id;
       await commitLibrary(nextLibrary, { path, scene, active: true, resetHistory: true });
     } else await commitLibrary(nextLibrary);
-    // The index commits first. The host only supports overwriting scene files.
+    // The index commits first. The host can only overwrite files, so tombstone
+    // the scene files that exist; a failed read means there is nothing to clear.
     const paths = [`illustrations/${entry.id}/scene-a.json`, `illustrations/${entry.id}/scene-b.json`];
     if (entry.path === 'workspace.json' && !illustrations.some(item => item.path === entry.path)) paths.push(entry.path);
-    await Promise.all(paths.map(path => writeJson(path, { deleted: true }).catch(() => {})));
+    await Promise.all(paths.map(path => hikari.call('files.read', { path })
+      .then(() => writeJson(path, { deleted: true }), () => {}).catch(() => {})));
     return { ok: true };
   }
   async function apply(args, deadline = Infinity, importedIds = [], { agentRequest = false, inspectionRunId = '', importedSources = {} } = {}) {

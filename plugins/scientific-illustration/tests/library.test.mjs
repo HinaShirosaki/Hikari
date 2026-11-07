@@ -51,7 +51,11 @@ test('local library actions commit the targeted scene without switching away fro
   await reopened.ready;
   assert.equal(reopened.getLibrary().active_illustration_id, active);
   assert.equal((await reopened.getExportDocument(original)).title, 'Renamed');
+  const filesBeforeDelete = new Set(host.files.keys());
   assert.equal((await reopened.manage('delete', original)).ok, true);
+  assert.deepEqual([...host.files.keys()].filter(path => !filesBeforeDelete.has(path)), [], 'Delete creates no tombstone files');
+  assert.ok([...host.files.keys()].some(path => path.startsWith(`illustrations/${original}/`)
+    && host.json(path).deleted === true), 'Existing scene files are tombstoned');
   assert.equal(reopened.getLibrary().active_illustration_id, active);
   await assert.rejects(reopened.getExportDocument(original), /does not exist/);
 
@@ -61,7 +65,10 @@ test('local library actions commit the targeted scene without switching away fro
   assert.equal(host.files.get('library.json'), indexBefore);
   assert.equal(reopened.getDocument().title, 'Active');
   host.failIndex = false;
+  const activeFiles = () => [...host.files.keys()].filter(path => path.startsWith(`illustrations/${active}/`)).sort();
+  const activeFilesBefore = activeFiles();
   assert.equal((await reopened.manage('delete', active)).ok, true);
+  assert.deepEqual(activeFiles(), activeFilesBefore, 'Deleting a once-saved illustration adds no scene-b tombstone');
   const reloaded = host.open();
   await reloaded.ready;
   assert.equal(reloaded.getLibrary().illustrations.length, 1);
