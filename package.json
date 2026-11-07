@@ -36,19 +36,13 @@
     "scripts/maintenance/rebuild-record-markdown.js",
     "forge.config.js",
     "THIRD-PARTY-NOTICES.md",
-    "docs/tutorial",
     "!src/**/README.md",
     "!src/**/Readme.md",
     "!src/plugins/gel/ARCHITECTURE.md",
     "!ui/**/Readme.md",
     "!assets/icons/README.md",
     "!assets/icons/dolphin-dna-icon*.png",
-    "!assets/loadingicon.png",
-    "!docs/tutorial/**/*.md",
-    "!docs/tutorial/**/*.svg",
-    "!docs/tutorial/*/capture-manifest.json",
-    "!docs/tutorial/*/tools/**",
-    "!docs/tutorial/*/images/raw/**"
+    "!assets/loadingicon.png"
   ],
   "scripts": {
     "prepack": "node bin/prepare-package.js",

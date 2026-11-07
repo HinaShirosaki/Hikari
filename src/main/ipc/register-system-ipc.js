@@ -45,7 +45,8 @@ function registerSystemIpc(deps = {}) {
       return text;
     });
   const thirdPartyNoticesPath = cleanText(deps.thirdPartyNoticesPath, 2400);
-  const tutorialPath = cleanText(deps.tutorialPath, 2400);
+  const tutorialDir = cleanText(deps.tutorialDir, 2400);
+  const tutorial = deps.tutorial || require('../lib/tutorial-download.js');
 
   function normalizeJsonPayload(payload, fallback = {}) {
     if (payload && typeof payload === 'object' && !Array.isArray(payload)) {
@@ -325,17 +326,23 @@ function registerSystemIpc(deps = {}) {
     return error ? { ok: false, error: cleanText(error, 2400) } : { ok: true, path: thirdPartyNoticesPath };
   });
 
-  // Settings > Tutorial: the bundled HTML guide, opened by the system's handler
-  // for .html files, which is normally the default browser.
+  // Settings > Tutorial: Download / Check for Updates / Open (see
+  // tutorial-download.js). Open reads only the downloaded copy, with the
+  // system's handler for .html files, which is normally the default browser.
+  const noTutorial = { status: 'error', installed: null, error: 'The tutorial is unavailable.' };
+  ipcMain.handle(SYSTEM.TUTORIAL_STATUS, async () => (tutorialDir ? tutorial.getTutorialStatus(tutorialDir) : noTutorial));
+  ipcMain.handle(SYSTEM.CHECK_TUTORIAL_UPDATE, async () => (tutorialDir ? tutorial.checkTutorialUpdate(tutorialDir) : noTutorial));
+  ipcMain.handle(SYSTEM.INSTALL_TUTORIAL, async () => (tutorialDir ? tutorial.installTutorial(tutorialDir) : noTutorial));
   ipcMain.handle(SYSTEM.OPEN_TUTORIAL, async () => {
-    if (!tutorialPath || !shell || typeof shell.openPath !== 'function') {
+    if (!tutorialDir || !shell || typeof shell.openPath !== 'function') {
       return { ok: false, error: 'The tutorial is unavailable.' };
     }
-    if (!require('node:fs').existsSync(tutorialPath)) {
-      return { ok: false, error: 'The tutorial is not included in this build of Hikari.' };
+    if (!tutorial.getTutorialStatus(tutorialDir).installed) {
+      return { ok: false, error: 'Download the tutorial first.' };
     }
-    const error = await shell.openPath(tutorialPath);
-    return error ? { ok: false, error: cleanText(error, 2400) } : { ok: true, path: tutorialPath };
+    const startPage = require('node:path').join(tutorialDir, 'index.html');
+    const error = await shell.openPath(startPage);
+    return error ? { ok: false, error: cleanText(error, 2400) } : { ok: true, path: startPage };
   });
 
   // Settings > Updates. Install resolves only when the build fails (the app

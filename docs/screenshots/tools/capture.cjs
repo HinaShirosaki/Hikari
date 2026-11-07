@@ -33,7 +33,7 @@ const FROM_TUTORIALS = {
 function copyTutorialShots() {
   for (const [target, source] of Object.entries(FROM_TUTORIALS)) {
     const from = path.join(root, 'docs/tutorial', source);
-    if (!fs.existsSync(from)) throw new Error(`Missing tutorial capture: ${source}. Run that chapter's capture first.`);
+    if (!fs.existsSync(from)) throw new Error(`Missing tutorial capture: ${source}. Clone https://github.com/HinaShirosaki/hikari-tutorial into docs/tutorial and run that chapter's capture first.`);
     fs.copyFileSync(from, path.join(folder, target));
     console.log(`Copied ${target} from docs/tutorial/${source}`);
   }

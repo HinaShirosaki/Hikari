@@ -75,3 +75,7 @@ data/Config/codex-cli-home/auth.json
 hikari-out/
 /bin/build-lock.json
 __pycache__/
+
+# The illustrated tutorials live in their own repo (HinaShirosaki/hikari-tutorial).
+# Clone it here to refresh captures: they load this checkout's renderer by relative path.
+/docs/tutorial/

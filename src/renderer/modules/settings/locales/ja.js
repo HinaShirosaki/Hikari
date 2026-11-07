@@ -176,5 +176,15 @@ export const settingsJapanese = Object.freeze({
   "plugins.bundled": "Hikari に同梱",
   "tutorial.title": "チュートリアル",
   "tutorial.open": "ブラウザーでチュートリアルを開く",
-  "tutorial.description": "注釈付きの画面で Hikari の各機能を順に学べます。ブラウザーで開き、オフラインでも利用できます。"
+  "tutorial.download": "チュートリアルをダウンロード",
+  "tutorial.check": "アップデートを確認",
+  "tutorial.update": "チュートリアルを更新",
+  "tutorial.notDownloaded": "チュートリアルはまだダウンロードされていません。",
+  "tutorial.installed": "チュートリアルのバージョン: {version}",
+  "tutorial.checking": "チュートリアルのアップデートを確認しています…",
+  "tutorial.upToDate": "チュートリアルは最新です（バージョン {version}）。",
+  "tutorial.available": "新しいチュートリアルがあります: バージョン {latest}。現在のバージョンは {version} です。",
+  "tutorial.downloading": "チュートリアルをダウンロードしています（約 35 MB）…",
+  "tutorial.error": "GitHub のチュートリアルにアクセスできませんでした: {error}",
+  "tutorial.description": "注釈付きの画面で Hikari の各機能を順に学べます。GitHub から一度ダウンロードすると（約 35 MB）、ブラウザーで開き、オフラインでも利用できます。"
 });

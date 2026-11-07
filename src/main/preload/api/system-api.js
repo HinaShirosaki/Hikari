@@ -23,6 +23,9 @@ function createSystemApi(ipcRenderer) {
     openLogsFolder: () => ipcRenderer.invoke(SYSTEM.OPEN_LOGS_FOLDER),
     openThirdPartyNotices: () => ipcRenderer.invoke(SYSTEM.OPEN_THIRD_PARTY_NOTICES),
     openTutorial: () => ipcRenderer.invoke(SYSTEM.OPEN_TUTORIAL),
+    getTutorialStatus: () => ipcRenderer.invoke(SYSTEM.TUTORIAL_STATUS),
+    checkTutorialUpdate: () => ipcRenderer.invoke(SYSTEM.CHECK_TUTORIAL_UPDATE),
+    installTutorial: () => ipcRenderer.invoke(SYSTEM.INSTALL_TUTORIAL),
     getUpdateStatus: () => ipcRenderer.invoke(SYSTEM.UPDATE_STATUS),
     checkForUpdates: () => ipcRenderer.invoke(SYSTEM.CHECK_FOR_UPDATES),
     installUpdate: () => ipcRenderer.invoke(SYSTEM.INSTALL_UPDATE)

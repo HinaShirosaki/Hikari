@@ -98,22 +98,10 @@ module.exports = function registerShellAndPackagingContracts(context = {}) {
       assert.match(ignoreAsText, /\\\/data\(\$\|\\\/\)/);
     });
 
-    test('forge ships the tutorial pages unpacked for the browser, without their capture tooling', () => {
+    test('docs stay out of the package: the tutorial is downloaded from its own repo', () => {
       const ignored = (file) => forgeConfig.packagerConfig.ignore.some((pattern) => pattern.test(file));
-      [
-        '/docs', '/docs/tutorial', '/docs/tutorial/index.html', '/docs/tutorial/03-notebook',
-        '/docs/tutorial/03-notebook/index.html', '/docs/tutorial/03-notebook/tutorial.css',
-        '/docs/tutorial/03-notebook/images', '/docs/tutorial/03-notebook/images/01-notebook-workspace.png',
-        '/docs/tutorial/04-papers/examples/buffer-choice-example.pdf', '/docs/tutorial/02-protocols/examples/label-checklist.json'
-      ].forEach((file) => assert.equal(ignored(file), false, `${file} should ship`));
-      [
-        '/docs/other.md', '/docs/tutorials-old/index.html', '/docs/tutorial/README.md',
-        '/docs/tutorial/03-notebook/notebook.md', '/docs/tutorial/03-notebook/capture-manifest.json',
-        '/docs/tutorial/03-notebook/tools', '/docs/tutorial/03-notebook/tools/capture.cjs',
-        '/docs/tutorial/03-notebook/images/raw/01-notebook-workspace.png',
-        '/docs/tutorial/03-notebook/images/01-notebook-workspace.svg'
-      ].forEach((file) => assert.equal(ignored(file), true, `${file} should stay out`));
-      assert.match(forgeConfig.packagerConfig.asar.unpackDir, /[{,]docs\/tutorial[,}]/);
+      ['/docs', '/docs/tutorial/index.html', '/docs/guide/README.md'].forEach((file) => assert.equal(ignored(file), true, `${file} should stay out`));
+      assert.doesNotMatch(forgeConfig.packagerConfig.asar.unpackDir, /docs/);
     });
 
     test('package.json files lists plain paths, which the source build copies one by one', () => {
@@ -121,33 +109,89 @@ module.exports = function registerShellAndPackagingContracts(context = {}) {
       // globs, so narrowing a folder has to use "!" entries instead.
       const { files } = JSON.parse(readLocalSource('package.json'));
       assert.deepEqual(files.filter((entry) => !entry.startsWith('!') && /[*?{}]/.test(entry)), []);
-      assert.ok(files.includes('docs/tutorial'));
+      assert.ok(!files.some((entry) => entry.includes('docs/tutorial')));
     });
 
-    test('Settings > Tutorial opens the bundled start page, or says it is missing', async () => {
+    test('Settings > Tutorial opens only a downloaded copy', async () => {
       const { registerSystemIpc } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-system-ipc.js'));
       const { SYSTEM } = require(path.join(__dirname, 'src', 'shared', 'ipc', 'channels.js'));
-      const openTutorial = async (tutorialPath) => {
+      const openTutorial = async (installed) => {
         const handlers = new Map();
         const opened = [];
         registerSystemIpc({
           ipcMain: { handle: (name, handler) => handlers.set(name, handler), on() {} },
           shell: { openPath: async (target) => { opened.push(target); return ''; } },
-          tutorialPath
+          tutorialDir: '/cache/tutorial',
+          tutorial: { getTutorialStatus: () => ({ installed }) }
         });
         return { result: await handlers.get(SYSTEM.OPEN_TUTORIAL)(), opened };
       };
+      const ready = await openTutorial({ commit: 'a'.repeat(40), date: '2026-11-07T00:00:00Z' });
+      assert.deepEqual(ready.result, { ok: true, path: path.join('/cache/tutorial', 'index.html') });
+      const missing = await openTutorial(null);
+      assert.deepEqual(missing.result, { ok: false, error: 'Download the tutorial first.' });
+      assert.deepEqual(missing.opened, []);
+    });
+
+    test('the tutorial downloads on request, records its version, and updates only when GitHub has a newer one', async () => {
+      const tutorial = require(path.join(__dirname, 'src', 'main', 'lib', 'tutorial-download.js'));
       const folder = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'hikari-tutorial-'));
-      const startPage = path.join(folder, 'index.html');
-      fs.writeFileSync(startPage, '<!doctype html>');
+      const dir = path.join(folder, 'tutorial');
+      let head = { sha: 'a'.repeat(40), date: '2026-11-07T10:00:00Z' };
+      let online = true;
+      const downloads = [];
+      const fetchImpl = async (url) => {
+        if (!online) throw new Error('fetch failed');
+        if (url.includes('api.github.com')) return Response.json([{ sha: head.sha, commit: { committer: { date: head.date } } }]);
+        downloads.push(url);
+        return new Response(`page at ${url.slice(-40)}`);
+      };
+      const deps = { fetchImpl, extract: async (archive, target) => fs.writeFileSync(path.join(target, 'index.html'), archive) };
+      const page = () => fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
       try {
-        const shipped = await openTutorial(startPage);
-        assert.deepEqual(shipped.result, { ok: true, path: startPage });
-        assert.deepEqual(shipped.opened, [startPage]);
-        const missing = await openTutorial(path.join(folder, 'missing', 'index.html'));
-        assert.equal(missing.result.ok, false);
-        assert.match(missing.result.error, /not included/);
-        assert.deepEqual(missing.opened, []);
+        assert.deepEqual(tutorial.getTutorialStatus(dir), { status: 'not-downloaded', installed: null });
+        assert.equal((await tutorial.checkTutorialUpdate(dir, deps)).status, 'not-downloaded');
+        assert.equal(downloads.length, 0, 'checking never downloads');
+
+        const first = await tutorial.installTutorial(dir, deps);
+        assert.deepEqual(first.installed, { commit: head.sha, date: head.date });
+        assert.equal(first.status, 'up-to-date');
+        assert.equal(page(), `page at ${head.sha}`);
+        assert.deepEqual(tutorial.getTutorialStatus(dir), { status: 'installed', installed: { commit: head.sha, date: head.date } });
+        assert.equal((await tutorial.checkTutorialUpdate(dir, deps)).status, 'up-to-date');
+
+        const old = head.sha;
+        head = { sha: 'b'.repeat(40), date: '2026-11-20T10:00:00Z' };
+        const check = await tutorial.checkTutorialUpdate(dir, deps);
+        assert.equal(check.status, 'update-available');
+        assert.equal(check.installed.commit, old);
+        assert.equal(check.latest.commit, head.sha);
+        assert.equal(page(), `page at ${old}`, 'a check leaves the installed copy alone');
+
+        await tutorial.installTutorial(dir, deps);
+        assert.equal(page(), `page at ${head.sha}`);
+        assert.equal(downloads.length, 2);
+        await tutorial.installTutorial(dir, deps);
+        assert.equal(downloads.length, 2, 'installing the version already installed downloads nothing');
+
+        online = false;
+        const offline = await tutorial.checkTutorialUpdate(dir, deps);
+        assert.equal(offline.status, 'error');
+        assert.match(offline.error, /fetch failed/);
+        assert.equal(offline.installed.commit, head.sha, 'offline keeps the downloaded copy');
+        assert.equal((await tutorial.installTutorial(dir, deps)).status, 'error');
+        assert.equal(page(), `page at ${head.sha}`);
+        assert.deepEqual(fs.readdirSync(folder), ['tutorial'], 'no staging folders are left behind');
+
+        // The real extractor strips GitHub's top-level folder from the tarball.
+        const source = path.join(folder, 'src', 'hikari-tutorial-main');
+        fs.mkdirSync(source, { recursive: true });
+        fs.writeFileSync(path.join(source, 'index.html'), '<!doctype html>');
+        const archive = require('node:child_process').execFileSync('tar', ['-czf', '-', '-C', path.dirname(source), 'hikari-tutorial-main']);
+        const target = path.join(folder, 'extracted');
+        fs.mkdirSync(target);
+        await tutorial.extractTarGz(archive, target);
+        assert.equal(fs.readFileSync(path.join(target, 'index.html'), 'utf8'), '<!doctype html>');
       } finally {
         fs.rmSync(folder, { recursive: true, force: true });
       }

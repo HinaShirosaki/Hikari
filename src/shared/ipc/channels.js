@@ -68,6 +68,9 @@ const SYSTEM = Object.freeze({
   OPEN_TUTORIAL: 'system:open-tutorial',
   UPDATE_STATUS: 'system:update-status',
   CHECK_FOR_UPDATES: 'system:check-for-updates',
+  TUTORIAL_STATUS: 'system:tutorial-status',
+  CHECK_TUTORIAL_UPDATE: 'system:check-tutorial-update',
+  INSTALL_TUTORIAL: 'system:install-tutorial',
   INSTALL_UPDATE: 'system:install-update'
 });
 

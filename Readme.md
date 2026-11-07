@@ -20,7 +20,7 @@ The AI-native lab workspace, with an agent that runs experiments with you.<br/>
 <a href="https://hikari-lab-agent.com/"><b>Website</b></a> ·
 <a href="#quick-start"><b>Install</b></a> ·
 <a href="docs/getting-started/first-experiment.md"><b>15-min Tutorial</b></a> ·
-<a href="docs/tutorial/README.md"><b>Illustrated Tutorials</b></a> ·
+<a href="https://github.com/HinaShirosaki/hikari-tutorial"><b>Illustrated Tutorials</b></a> ·
 <a href="docs/guide/README.md"><b>Full Guide</b></a> ·
 <a href="docs/README.md"><b>Contributor Docs</b></a>
 
@@ -150,7 +150,7 @@ AI runs through the Codex CLI, which is **covered by a ChatGPT subscription**. S
 | --- | --- |
 | 📖 **[Full guide](docs/guide/README.md)** | Every workspace, AI setup, data and storage, and development |
 | 🎓 **[First experiment tutorial](docs/getting-started/first-experiment.md)** | Go from an empty folder to a saved result in 15 minutes |
-| 📚 **[Illustrated tutorials](docs/tutorial/README.md)** | Eleven chapters, one per workspace, with annotated screenshots; also in `Settings > Tutorial` |
+| 📚 **[Illustrated tutorials](https://github.com/HinaShirosaki/hikari-tutorial)** | Eleven chapters, one per workspace, with annotated screenshots; `Settings > Tutorial` downloads them for offline reading |
 | 🏗️ **[Architecture](Architecture.md)** | How the app fits together |
 | 🧩 **[Plugins](docs/plugins/README.md)** | Build, share, and install sandboxed workspaces and tools |
 | 🛠️ **[Contributor docs](docs/README.md)** | Internal docs for working on the codebase |

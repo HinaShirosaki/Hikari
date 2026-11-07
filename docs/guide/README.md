@@ -1,6 +1,6 @@
 # Hikari Guide
 
-The complete feature, setup, and development reference for Hikari. For the short overview, see the top-level [Readme.md](../../Readme.md). New to Hikari? Start with the **[15-minute first experiment tutorial](../getting-started/first-experiment.md)**, then work through the **[illustrated tutorials](../tutorial/README.md)** — one chapter per workspace, with annotated screenshots. Hikari opens the same chapters from `Settings > Tutorial`.
+The complete feature, setup, and development reference for Hikari. For the short overview, see the top-level [Readme.md](../../Readme.md). New to Hikari? Start with the **[15-minute first experiment tutorial](../getting-started/first-experiment.md)**, then work through the **[illustrated tutorials](https://github.com/HinaShirosaki/hikari-tutorial)** — one chapter per workspace, with annotated screenshots. `Settings > Tutorial` downloads the same chapters for offline reading.
 
 ## Contents
 

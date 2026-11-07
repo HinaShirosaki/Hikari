@@ -176,5 +176,15 @@ export const settingsTraditionalChinese = Object.freeze({
   "plugins.bundled": "Hikari 內建",
   "tutorial.title": "教學",
   "tutorial.open": "在瀏覽器中開啟教學",
-  "tutorial.description": "透過附有註解的螢幕擷取畫面，逐步了解 Hikari 的各項功能。教學在瀏覽器中開啟，支援離線使用。"
+  "tutorial.download": "下載教學",
+  "tutorial.check": "檢查更新",
+  "tutorial.update": "更新教學",
+  "tutorial.notDownloaded": "尚未下載教學。",
+  "tutorial.installed": "教學版本：{version}。",
+  "tutorial.checking": "正在檢查教學更新…",
+  "tutorial.upToDate": "教學已是最新版本（版本 {version}）。",
+  "tutorial.available": "有較新的教學：版本 {latest}。目前版本為 {version}。",
+  "tutorial.downloading": "正在下載教學（約 35 MB）…",
+  "tutorial.error": "無法從 GitHub 取得教學：{error}",
+  "tutorial.description": "透過附有註解的螢幕擷取畫面，逐步了解 Hikari 的各項功能。從 GitHub 下載一次（約 35 MB）後，教學會在瀏覽器中開啟，支援離線使用。"
 });
