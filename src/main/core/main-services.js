@@ -222,7 +222,7 @@ function createMainServices(context = {}) {
     privateDirectory: appPaths.getCodexCliWorkingDirectory(),
     onChange: () => getMainWindow()?.webContents?.send(FILE_ACCESS.CHANGED)
   });
-  registerAgentFileIpc({ ipcMain, fileAccess, getMainWindow, dialog });
+  const getCodexPermissionsForEvent = registerAgentFileIpc({ ipcMain, fileAccess, getMainWindow, dialog });
   const mcp = createMainMcpService({
     fileAccess,
     agentToolRuntime: agents.agentToolRuntime,
@@ -234,6 +234,7 @@ function createMainServices(context = {}) {
 
   codex = createMainCodexService({
     fileAccess,
+    getStorageRoot: appPaths.getStorageRoot,
     cleanText,
     requestCodexCliText,
     getCodexCliWorkingDirectory: appPaths.getCodexCliWorkingDirectory,
@@ -360,6 +361,7 @@ function createMainServices(context = {}) {
   });
 
   registerAgentIpc({
+    getCodexPermissionsForEvent,
     notebookSuggestionService: createNotebookSuggestionService({
       normalizeSnapshot: agents.agentToolRuntime.normalizeAgentSnapshot,
       codexAgentRuntime: codex.codexAgentRuntime,

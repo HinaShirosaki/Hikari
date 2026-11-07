@@ -2,7 +2,7 @@ import { createNotebookHistoryActions } from './history-notebook-actions.js';
 import { setNotebookAppendInFlight } from './review-overlay/review-status.js';
 import { trimText } from './shared.js';
 import { allowChatImage } from './markdown.js';
-import { getPaperSourceEvidence, resolvePaperSourceLink } from './paper-source-links.js';
+import { getCitationEvidence, resolvePaperSourceLink, resolveRecordSourceLink } from './paper-source-links.js';
 import { agentUi, agentNotice, setAgentAttribute } from './localization.js';
 
 function getNotebookAppendFromMessage(message) {
@@ -47,6 +47,8 @@ export function createHistoryActionController({
   notebookDraftAdapter,
   onOpenNotebookEntry,
   onOpenPaperCitation,
+  onOpenRecordCitation,
+  getLiveAssistantMessage = () => null,
   openReviewForMessage = () => {},
   reviewInline = () => {},
   onAppendNotebookEntry = async () => ({ ok: false, error: 'Notebook append is unavailable.' })
@@ -121,25 +123,34 @@ export function createHistoryActionController({
   }
 
   async function onHistoryClick(event) {
-    const sourceButton = event?.target?.closest?.('[data-agent-paper-source]');
+    const sourceButton = event?.target?.closest?.('[data-agent-paper-source]')
+      || event?.target?.closest?.('[data-agent-record-source]');
     if (sourceButton) {
       event.preventDefault();
-      const message = findMessage(sourceButton.dataset.agentSourceMessage);
-      const source = resolvePaperSourceLink(sourceButton.dataset.agentPaperSource,
-        getPaperSourceEvidence(message, state.agentChat?.messages || []), state.settings?.storagePath);
-      if (!source || typeof onOpenPaperCitation !== 'function') {
-        setStatus(agentUi('status.paperSourceUnavailable'));
+      const { agentSourceMessage, agentRecordSource, agentPaperSource } = sourceButton.dataset;
+      const messages = state.agentChat?.messages || [];
+      const liveMessage = getLiveAssistantMessage();
+      const visibleMessages = liveMessage ? [...messages, liveMessage] : messages;
+      const message = visibleMessages.find(item => item.id === agentSourceMessage);
+      const evidence = getCitationEvidence(message, visibleMessages);
+      const source = agentRecordSource
+        ? resolveRecordSourceLink(agentRecordSource, evidence)
+        : resolvePaperSourceLink(agentPaperSource, evidence, state.settings?.storagePath);
+      const openSource = agentRecordSource ? onOpenRecordCitation : onOpenPaperCitation;
+      const unavailable = agentRecordSource ? 'status.recordSourceUnavailable' : 'status.paperSourceUnavailable';
+      if (!source || typeof openSource !== 'function') {
+        setStatus(agentUi(unavailable));
         return;
       }
       try {
-        const result = await onOpenPaperCitation(source);
+        const result = await openSource(source);
         if (result?.ok !== true) {
-          const message = trimText(result?.error, 320) || agentUi('status.paperSourceUnavailable');
+          const message = trimText(result?.error, 320) || agentUi(unavailable);
           setStatus(message);
           agentNotice(message, { type: 'error' });
         }
       } catch (error) {
-        const message = trimText(error?.message, 320) || agentUi('status.paperSourceUnavailable');
+        const message = trimText(error?.message, 320) || agentUi(unavailable);
         setStatus(message);
         agentNotice(message, { type: 'error' });
       }

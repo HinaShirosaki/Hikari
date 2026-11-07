@@ -158,7 +158,7 @@ function createNotebookEntryActions({
 
     if (hasLiveProject && hasLiveProtocol) {
       onProtocolChange();
-      return;
+      return true;
     }
 
     renderProtocolViewer({
@@ -168,6 +168,7 @@ function createNotebookEntryActions({
       isSavedEntry: true
     });
     entryListRenderer.renderEntries();
+    return true;
   }
 
   return {

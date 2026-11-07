@@ -44,8 +44,8 @@ function renderLiveActivityLine(message) {
   return `<div class="agent-stream-activity agent-progress-flow-text">${i18nUi.renderOwned(text)}</div>`;
 }
 
-function renderAssistantMessageBody(message, safeText, { hasLiveProgress = false, state = {}, messages = [] } = {}) {
-  const markdownOptions = { renderLocalLink: createPaperSourceLinkRenderer(message, state, safeText, messages) };
+function renderAssistantMessageBody(message, safeText, { hasLiveProgress = false, state = {}, messages = [], onRecordCitation } = {}) {
+  const markdownOptions = { renderLocalLink: createPaperSourceLinkRenderer(message, state, safeText, messages, onRecordCitation) };
   const liveStreamText = hasLiveProgress ? getLiveStreamText(message) : '';
   if (liveStreamText) {
     return `
@@ -85,7 +85,8 @@ export function renderHistory({
   notebookDraftAdapter,
   protocolReviewAdapter,
   api = historyNode?.ownerDocument?.defaultView?.hikariApi,
-  showUserQuestions = true
+  showUserQuestions = true,
+  onRecordCitation
 }) {
   const safeMessages = asArray(messages);
   if (!safeMessages.length) {
@@ -114,7 +115,7 @@ export function renderHistory({
       })
       : '';
     const messageBody = role === 'assistant'
-      ? renderAssistantMessageBody(message, safeText, { hasLiveProgress, state, messages: safeMessages })
+      ? renderAssistantMessageBody(message, safeText, { hasLiveProgress, state, messages: safeMessages, onRecordCitation })
       : `<p class="agent-chat-body agent-chat-body-plain">${safeText(message.text || '')}</p>`;
     return `
       <div data-agent-render-key="${safeText(`${state.agentChat?.currentSessionId || ''}:${message.meta?.html_artifacts?.[0]?.id || message.id || index}`)}" class="agent-chat-row ${rowClass}${hasLiveProgress ? ' is-live' : ''}">

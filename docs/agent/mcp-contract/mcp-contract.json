@@ -115,7 +115,7 @@
       },
       {
         "name": "notebook_lookup",
-        "description": "Use to recall saved experiments, read prior results, or find a specific notebook page, even when the user asks conversationally what happened last time. Search Hikari notebook pages by text, project, protocol, or state. Returns agent-safe content, UI targets, source coverage, and explicit storage-access status. access.complete: false means partial evidence: follow access.user_action and never turn it into a definitive no-match claim. Use notebook_list for complete title/date lists.",
+        "description": "Use to recall saved experiments, read prior results, or find a specific notebook page, even when the user asks conversationally what happened last time. Search Hikari notebook pages by text, project, protocol, or state. Cite a saved page using its returned citation_target. Returns agent-safe content, UI targets, source coverage, and explicit storage-access status. access.complete: false means partial evidence: follow access.user_action and never turn it into a definitive no-match claim. Use notebook_list for complete title/date lists.",
         "annotations": {
           "title": "Notebook lookup",
           "readOnlyHint": true,
@@ -248,7 +248,7 @@
       },
       {
         "name": "protocol_lookup",
-        "description": "Use when the user wants an existing lab method or asks how the lab previously performed a procedure. Look up local Hikari protocol records by protocol name, purpose, category, or step text. Retrieve the saved procedure before describing or reusing it; authoring a new procedure uses protocol_generation.",
+        "description": "Use when the user wants an existing lab method or asks how the lab previously performed a procedure. Look up local Hikari protocol records by protocol name, purpose, category, or step text. Cite saved methods using the returned citation_target. Retrieve the saved procedure before describing or reusing it; authoring a new procedure uses protocol_generation.",
         "annotations": {
           "title": "Protocol lookup",
           "readOnlyHint": true,
@@ -1181,7 +1181,7 @@
       },
       {
         "name": "workspace_files",
-        "description": "Read, search, create, edit, move or trash ordinary files in the Hikari workspace or a separately granted location. Call status for access and location IDs. Paths are relative with / separators. Read before write and pass expected_hash. Mutations require a unique request_id; retry uncertain requests with identical arguments. awaiting_approval means no write occurred: direct the user to File changes in Hikari. Managed Hikari records, MEMORY.md and indexes use their dedicated tools. Only Hikari can approve changes and undo them.",
+        "description": "Read or search ordinary files in the Hikari workspace or a separately granted location. Call status for access and location IDs. Paths are relative with / separators. In Agent chat, use native Codex tools for ordinary file edits when permitted by the selected preset. If a caller has an explicit write capability, read before editing, pass expected_hash, and use a unique request_id. Awaiting approval means no file was changed. Managed Hikari records, MEMORY.md and indexes use their dedicated tools.",
         "annotations": {
           "title": "Workspace files",
           "readOnlyHint": false,

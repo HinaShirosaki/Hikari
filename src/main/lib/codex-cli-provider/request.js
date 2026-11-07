@@ -1,6 +1,7 @@
 'use strict';
 
 const fs = require('node:fs/promises');
+const path = require('node:path');
 const { throwIfAgentRequestAborted } = require('../llm/request-context.js');
 const { DEFAULT_TIMEOUT_MS } = require('./constants');
 const {
@@ -16,7 +17,7 @@ const {
 const { removeFileIfExists } = require('./fs-utils');
 const { ensureCodexCliWorkingDirectoryGuidance } = require('./guidance');
 const { getCodexLoginStatus } = require('./login');
-const { resolveWorkingDirectory } = require('./paths');
+const { isFilesystemRoot, resolveWorkingDirectory } = require('./paths');
 const { createCodexJsonEventHandler } = require('./request-stream');
 const { prepareCodexRuntime, resolveCodexRequestSelection } = require('./runtime-gateway');
 const { getCodexCliCatalog, requestCodexCliCatalog } = require('./catalog');
@@ -29,6 +30,8 @@ const {
   replayCodexSessionProgressFromTranscript
 } = require('./transcript');
 const { runCodexCommand } = require('./run-command');
+const { runCodexAppServerTurn } = require('./app-server-turn.js');
+const { getCodexPermissionPreset } = require('./permissions.js');
 const { cleanText } = require('./utils');
 
 async function requestCodexCliText({
@@ -49,6 +52,7 @@ async function requestCodexCliText({
   stream = false,
   onStream = null,
   resumeSessionId = '',
+  codexPermissions = null,
   returnMetadata = false
 }) {
   throwIfAgentRequestAborted('Agent request stopped before starting Codex prompt.');
@@ -58,7 +62,15 @@ async function requestCodexCliText({
   }
   const requestStartedAtMs = Date.now();
 
-  const safeCwd = resolveWorkingDirectory(cwd);
+  const policy = codexPermissions && getCodexPermissionPreset(codexPermissions.preset);
+  if (codexPermissions && !policy) throw new Error('Invalid Codex permission preset.');
+  // The selected workspace is part of the grant. Never fall back to a different
+  // directory when that workspace disappears or is replaced with a symlink.
+  const safeCwd = policy ? await fs.realpath(cwd) : resolveWorkingDirectory(cwd);
+  if (policy && (isFilesystemRoot(safeCwd) || !(await fs.stat(safeCwd)).isDirectory()
+    || (policy.sandbox === 'workspace-write' && path.relative(cwd, safeCwd) !== ''))) {
+    throw new Error('The Codex workspace changed. Select the workspace folder again.');
+  }
   if (cleanText(cwd, 2400)) {
     await ensureCodexCliWorkingDirectoryGuidance(safeCwd, { envOverrides });
   }
@@ -83,7 +95,8 @@ async function requestCodexCliText({
     imageDataUrl,
     imageUrl,
     attachments,
-    outputSchema,
+    outputSchema: policy ? null : outputSchema,
+    useExecOutput: !policy,
     runtime
   });
   const streamingEnabled = stream === true && typeof onStream === 'function';
@@ -94,7 +107,7 @@ async function requestCodexCliText({
     streamingEnabled,
     initialSessionId: cleanResumeSessionId
   });
-  const args = buildRequestArgs({
+  const args = policy ? null : buildRequestArgs({
     outputFile: requestState.outputFile,
     outputSchemaFile: requestState.outputSchemaFile,
     cleanResumeSessionId,
@@ -120,7 +133,23 @@ async function requestCodexCliText({
   try {
     let commandResult;
     try {
-      commandResult = await runCodexCommand({
+      commandResult = policy ? await runCodexAppServerTurn({
+        policy,
+        approve: codexPermissions.approve,
+        cwd: safeCwd,
+        env: requestState.env,
+        invocation: runtime.invocation,
+        model: selection.model,
+        effort: selection.reasoningEffort,
+        prompt: requestState.promptWithAttachments,
+        outputSchema,
+        resumeSessionId: cleanResumeSessionId,
+        enableWebSearch,
+        enableImageGeneration,
+        fileAccessToken: envOverrides.HIKARI_FILE_ACCESS_TOKEN,
+        onEvent: streamHandler.handleJsonEvent,
+        timeoutMs
+      }) : await runCodexCommand({
         args,
         cwd: safeCwd,
         env: requestState.env,
@@ -158,6 +187,7 @@ async function prepareCodexRequest({
   imageUrl,
   attachments,
   outputSchema,
+  useExecOutput,
   runtime
 }) {
   const stagedAttachments = await stageCodexPromptAttachments({
@@ -169,7 +199,7 @@ async function prepareCodexRequest({
     attachments
   });
   const promptWithAttachments = buildCodexPromptWithStagedAttachments(cleanPrompt, stagedAttachments);
-  const outputFile = await createCodexOutputFilePath(cwd);
+  const outputFile = useExecOutput ? await createCodexOutputFilePath(cwd) : '';
   const outputSchemaFile = await stageCodexOutputSchema(cwd, outputSchema);
   return {
     env: runtime.env,
@@ -230,13 +260,11 @@ async function readCodexRequestResult({
   runtime
 }) {
   throwIfAgentRequestAborted('Agent request stopped before reading Codex output.');
-  let outputText = '';
-  try {
-    outputText = await fs.readFile(outputFile, 'utf8');
-  } catch {
-    outputText = '';
+  let outputText = commandResult.finalText || '';
+  if (outputFile) {
+    outputText = await fs.readFile(outputFile, 'utf8').catch(() => '');
+    await removeFileIfExists(outputFile).catch(() => {});
   }
-  await removeFileIfExists(outputFile).catch(() => {});
   let codexSessionId = streamHandler.getCodexSessionId();
   if (!codexSessionId) {
     codexSessionId = extractCodexSessionIdFromText(commandResult.stdout || commandResult.stderr || '');
@@ -264,7 +292,7 @@ async function readCodexRequestResult({
       metadata: {
         session_id: normalizeCodexSessionId(codexSessionId),
         resumed_session_id: cleanResumeSessionId,
-        command: cleanResumeSessionId ? 'exec resume' : 'exec',
+        command: commandResult.command || (cleanResumeSessionId ? 'exec resume' : 'exec'),
         ...runtime.diagnostics
       }
     };

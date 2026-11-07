@@ -1,5 +1,6 @@
 // Simplified Chinese preview. Missing entries use the English catalog.
 export const settingsSimplifiedChinese = Object.freeze({
+  "full.a1e3d575": "授予其他文件夹的读取权限。在 Agent 聊天中设置 Codex 权限。",
   "nav.label": "设置分类",
   "nav.workspace": "工作区",
   "nav.appearance": "外观",
@@ -27,9 +28,10 @@ export const settingsSimplifiedChinese = Object.freeze({
   "appearance.languageTraditionalChinese": "繁體中文（預覽）",
   "appearance.languageJapanese": "日本語（プレビュー）",
   "appearance.theme": "主题",
-  "appearance.themeDescription": "选择浅色或深色工作区。",
+  "appearance.themeDescription": "选择工作区外观。",
   "appearance.day": "浅色",
   "appearance.night": "深色",
+  "appearance.miku": "初音未来",
   "appearance.textSize": "文字大小",
   "appearance.textSizeDescription": "应用于整个 Hikari。",
   "appearance.small": "小",

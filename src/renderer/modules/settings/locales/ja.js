@@ -1,5 +1,6 @@
 // Japanese preview. Missing entries use the English catalog.
 export const settingsJapanese = Object.freeze({
+  "full.a1e3d575": "追加のフォルダーへの読み取りアクセスを許可します。Codex の権限は Agent チャットで設定できます。",
   "nav.label": "設定項目",
   "nav.workspace": "ワークスペース",
   "nav.appearance": "外観",
@@ -27,9 +28,10 @@ export const settingsJapanese = Object.freeze({
   "appearance.languageTraditionalChinese": "繁體中文（預覽）",
   "appearance.languageJapanese": "日本語（プレビュー）",
   "appearance.theme": "テーマ",
-  "appearance.themeDescription": "ワークスペースのライト・ダーク表示を選択します。",
+  "appearance.themeDescription": "ワークスペースの外観を選択します。",
   "appearance.day": "ライト",
   "appearance.night": "ダーク",
+  "appearance.miku": "初音ミク",
   "appearance.textSize": "文字サイズ",
   "appearance.textSizeDescription": "Hikari 全体に適用されます。",
   "appearance.small": "小",

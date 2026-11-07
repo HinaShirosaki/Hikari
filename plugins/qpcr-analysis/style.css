@@ -1,5 +1,6 @@
 :root { color-scheme: light; --ink: #25313c; --muted: #5c6975; --line: #ccd3d9; --field: #fff; --soft: #f1f4f6; --accent: #12669b; --on-accent: #fff; --error: #a23131; }
 :root[data-mode="night"] { color-scheme: dark; --ink: #e6ecf0; --muted: #a4b2be; --line: #445462; --field: #202b35; --soft: #263440; --accent: #78c4f2; --on-accent: #12222e; --error: #ffa5a5; }
+:root[data-mode="miku"] { --ink: #2c3336; --muted: #55686f; --line: #bcd3d5; --soft: #e3f5f3; --accent: #137a7f; --on-accent: #f5fffe; --error: #c81a72; }
 * { box-sizing: border-box; }
 body { margin: 0; padding: 4px; background: transparent; color: var(--ink); font: 16px/1.45 system-ui, sans-serif; }
 main { max-width: 1100px; }

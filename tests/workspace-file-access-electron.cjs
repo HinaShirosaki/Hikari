@@ -29,10 +29,12 @@ app.setPath('sessionData', path.join(scratch, 'session'));
 app.disableHardwareAcceleration();
 let win;
 let client;
+let fullAccessResponse = 0;
 const service = createWorkspaceFileService({ getStorageRoot: () => workspace, privateDirectory: profile,
   onChange: () => win?.webContents.send(FILE_ACCESS.CHANGED) });
 registerAgentFileIpc({ ipcMain, fileAccess: service, getMainWindow: () => win,
-  dialog: { showOpenDialog: async () => ({ canceled: true }) } });
+  dialog: { showOpenDialog: async () => ({ canceled: true }),
+    showMessageBox: async () => ({ response: fullAccessResponse }) } });
 const mcp = createMainMcpService({ fileAccess: service, ipcMain, getMainWindow: () => win,
   getWorkingDirectory: () => profile, processObject: { env: {} } });
 const run = script => win.webContents.executeJavaScript(script);
@@ -77,7 +79,7 @@ async function shot(dir, name) {
   fs.writeFileSync(path.join(dir, name), png);
 }
 async function assertVisibleActions() {
-  const bounds = await run(`Array.from(document.querySelectorAll('#agent-review-track [data-agent-review-card]:not([hidden]) [data-file-decision]')).map(button => {
+  const bounds = await run(`Array.from(document.querySelectorAll('#agent-codex-permission-picker button')).map(button => {
     const r = button.getBoundingClientRect();
     return { left: r.left, right: r.right, bottom: r.bottom, top: r.top, buttonWidth: r.width, buttonHeight: r.height, width: innerWidth, height: innerHeight };
   })`);
@@ -95,20 +97,15 @@ async function main() {
   const agent = generated.slice(start, end);
   // Real source markup/styles and controller modules; no fake DOM or fake IPC.
   fs.writeFileSync(fixture, `<!doctype html><html><head><link rel="stylesheet" href="${url('styles.css')}"></head>
-    <body style="overflow:auto;padding:20px"><section id="settings-fixture" class="panel"><div id="setting-agent-file-access"></div></section>
+    <body data-agent-availability="connected" style="overflow:auto;padding:20px"><section id="settings-fixture" class="panel"><div id="setting-agent-file-access"></div></section>
     ${agent}
     <script type="module">
       import { createFileAccessSettings } from '${url('src/renderer/modules/settings/file-access-controller.js')}';
-      import { createAgentReviewOverlayController } from '${url('src/renderer/modules/agent-chat/review-overlay.js')}';
+      import { bindCodexPermissionPicker } from '${url('src/renderer/modules/agent-chat/codex-permission-picker.js')}';
       const safe = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
       const get = id => document.getElementById(id);
       window.settings = createFileAccessSettings({ api: window.hikariApi, element: get('setting-agent-file-access'), escapeHtml: safe });
-      window.review = createAgentReviewOverlayController({ dom: {
-        reviewOverlay: get('agent-review-overlay'), reviewTitle: get('agent-review-title'), reviewTrack: get('agent-review-track'),
-        reviewPageLabel: get('agent-review-page-label'), reviewPrevBtn: get('agent-review-prev-btn'),
-        reviewNextBtn: get('agent-review-next-btn'), reviewCloseBtn: get('agent-review-close-btn')
-      }, state: {}, safeText: safe, fileAccessApi: window.hikariApi });
-      get('agent-file-changes-btn').addEventListener('click', () => window.review.openFileChanges());
+      bindCodexPermissionPicker({ document, api: window.hikariApi });
       await window.settings.render(); window.ready = true;
     </script></body></html>`);
   win = new BrowserWindow({ width: 1120, height: 850, show: false, webPreferences: {
@@ -118,7 +115,8 @@ async function main() {
   win.webContents.on('console-message', event => { if (event.level === 'error') errors.push(event.message); });
   await win.loadFile(fixture);
   await waitFor('window.ready');
-  assert.equal(await run(`document.querySelector('[data-file-mode]').value`), 'read-only');
+  await waitFor(`!document.getElementById('agent-codex-permission-btn').disabled`);
+  assert.equal(await run(`document.getElementById('agent-codex-permission-current').textContent`), 'Read Only');
   assert.equal((await mcp.initialize()).ok, true);
   await connect();
   const args = { action: 'create', path: 'notes/review.txt', content: 'Reviewed through Electron\n<script>unsafe()</script>', request_id: 'render-1' };
@@ -136,42 +134,42 @@ async function main() {
   await run(`document.body.classList.add('theme-night')`);
   await run(`new Promise(resolve => setTimeout(resolve, 150))`);
   await shot(artifacts, 'settings-night.png');
-  await run(`document.getElementById('settings-fixture').hidden = true; document.getElementById('agent-view').classList.add('is-active'); window.review.openFileChanges()`);
-  await waitFor(`!document.getElementById('agent-review-overlay').hidden`);
-  assert.equal(await run(`document.getElementById('agent-review-title').textContent`), 'Allow file change?');
-  assert.equal(await run(`document.getElementById('agent-review-track').textContent.includes(${JSON.stringify(workspace)})`), false,
-    'Compact approval must not repeat the absolute workspace path');
-  assert.equal(await run(`document.getElementById('agent-review-track').textContent.includes('unsafe()')`), false,
-    'Compact approval must not inline full file content');
+  await run(`document.getElementById('settings-fixture').hidden = true; document.getElementById('agent-view').classList.add('is-active')`);
   win.setContentSize(640, 800);
-  await run(`new Promise(resolve => setTimeout(resolve, 150))`);
+  const openPicker = `document.getElementById('agent-codex-permission-picker').showPopover()`;
+  await run(openPicker);
+  assert.equal(await run(`document.querySelectorAll('[data-codex-preset]').length`), 4);
+  assert.equal(await run(`document.getElementById('agent-file-changes-btn')`), null);
   await assertVisibleActions();
-  await shot(artifacts, 'approval-640.png');
-  await run(`document.querySelector('#agent-review-track [data-file-decision="once"]').click()`);
-  await waitFor(`document.querySelector('[data-hikari-transient-toast]')?.textContent === 'File change applied.'`);
+  await shot(artifacts, 'codex-permissions-640.png');
+  async function selectPreset(preset, active = preset) {
+    await run(`${openPicker}; document.querySelector('[data-codex-preset="${preset}"]').click()`);
+    await waitFor(`!document.getElementById('agent-codex-permission-picker').matches(':popover-open')`);
+    assert.equal((await run(`window.hikariApi.getAgentCodexPermission()`)).preset, active);
+    assert.equal(await run(`document.querySelector('[data-codex-preset][aria-pressed="true"]').dataset.codexPreset`), active);
+  }
+  await selectPreset('default');
+  await selectPreset('approve-for-me');
+  await selectPreset('full-access', 'approve-for-me');
+  fullAccessResponse = 1;
+  await selectPreset('full-access');
+  await selectPreset('read-only');
+
+  const status = await service.status();
+  await run(`window.hikariApi.agentFilesReview(${JSON.stringify({ root_id: status.root_id, id: proposal.proposal_id, decision: 'once' })})`);
   assert.equal(fs.readFileSync(path.join(workspace, args.path), 'utf8'), args.content);
-  assert.equal((await call(args)).status, 'completed', 'stdio retries see the UI approval');
-  await run(`document.getElementById('agent-file-changes-btn').click()`);
-  await waitFor(`document.querySelector('[data-hikari-transient-toast]')?.textContent === 'No file changes are waiting for approval.'`);
-  assert.equal(await run(`document.getElementById('agent-review-overlay').hidden`), true, 'Completed changes must not appear as approval history');
-  await run(`window.review.close(); document.getElementById('settings-fixture').hidden = false;
-    const select = document.querySelector('[data-file-mode]'); select.value = 'workspace-write'; select.dispatchEvent(new Event('change', { bubbles: true }))`);
-  await waitFor(`!document.querySelector('[data-file-mode]').disabled`);
-  assert.equal((await service.status()).mode, 'workspace-write');
+  assert.equal((await call(args)).status, 'completed', 'legacy stdio retries see the IPC approval');
+  await run(`window.hikariApi.agentFilesSettings(${JSON.stringify({ root_id: status.root_id, action: 'mode', mode: 'workspace-write' })})`);
   assert.equal((await call({ action: 'status' })).status, 'session_expired');
   await connect();
   assert.equal((await call({ action: 'create', path: 'notes/automatic.txt', content: 'permitted', request_id: 'auto-1' })).status, 'completed');
   const trash = await call({ action: 'trash', path: 'notes/automatic.txt', request_id: 'trash-1' });
   assert.equal(trash.status, 'awaiting_approval');
-  await run(`document.getElementById('settings-fixture').hidden = true; window.review.openFileChanges()`);
-  await waitFor(`document.querySelector('[data-file-id="${trash.proposal_id}"][data-file-decision="deny"]')`);
-  await run(`document.querySelector('[data-file-id="${trash.proposal_id}"][data-file-decision="deny"]').click()`);
-  await waitFor(`!document.querySelector('[data-file-id="${trash.proposal_id}"]')`);
+  await run(`window.hikariApi.agentFilesReview(${JSON.stringify({ root_id: status.root_id, id: trash.proposal_id, decision: 'deny' })})`);
   assert.equal(fs.readFileSync(path.join(workspace, 'notes/automatic.txt'), 'utf8'), 'permitted');
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ ok: true, root, rendered: ['settings-day', 'settings-night', 'approval-640px'],
-    actualPreloadIpc: true, stdioHttpFileService: true, compactApproveDeny: true, settingsHistoryHidden: true,
-    completedHistoryHidden: true, modeInvalidation: true, artifacts }));
+  console.log(JSON.stringify({ ok: true, actualPreloadIpc: true, stdioHttpFileService: true,
+    fourPermissionPresets: true, fullAccessConfirmation: true, modeInvalidation: true, artifacts }));
   await client.close(); client = null;
   await mcp.stop();
   win.destroy();

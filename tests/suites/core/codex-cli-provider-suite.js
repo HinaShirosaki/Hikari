@@ -11,6 +11,7 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
     require('./codex-cli-provider-suite/tool-routing.js'),
     require('./codex-cli-provider-suite/session-resume-and-mcp-servers.js'),
     require('./codex-cli-provider-suite/exec-streaming.js'),
+    require('./codex-cli-provider-suite/permission-presets.js'),
     require('./codex-cli-provider-suite/auth-and-session-transcripts.js'),
     require('./codex-cli-provider-suite/auth-clearing.js'),
     require('./codex-cli-provider-suite/scheduled-tasks-and-paper-finding.js')

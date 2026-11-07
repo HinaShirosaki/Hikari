@@ -5,8 +5,7 @@ import { trimText } from './shared.js';
 import { collectReviewItemsForMessage } from './review-overlay/review-items.js';
 import { renderNotebookAppendPreview, renderNotebookPreview, renderProtocolPreview } from './review-overlay/review-previews.js';
 import { markNotebookAppendReview, markProtocolReview } from './review-overlay/review-status.js';
-import { renderFileChangePreview, decideFileChange, fileDecisionMessage } from './review-overlay/file-changes.js';
-import { agentNotice, agentUi, setAgentText } from './localization.js';
+import { agentUi } from './localization.js';
 
 export function createAgentReviewOverlayController({
   dom,
@@ -19,20 +18,16 @@ export function createAgentReviewOverlayController({
   notebookActions,
   notebookDraftAdapter,
   protocolReviewAdapter,
-  fileAccessApi = null,
   onAppendNotebookEntry = async () => ({ ok: false, error: 'Notebook append is unavailable.' })
 }) {
   let reviewItems = [];
   let activeIndex = 0;
-  let fileRootId = '';
-  let fileDecisionPending = false;
 
   function close() {
     reviewItems = [];
     activeIndex = 0;
     if (dom.reviewOverlay) {
       dom.reviewOverlay.hidden = true;
-      dom.reviewOverlay.classList?.remove('is-file-review');
     }
     if (dom.reviewTrack) {
       i18nUi.setHtml(dom.reviewTrack, '');
@@ -62,10 +57,7 @@ export function createAgentReviewOverlayController({
     }
     activeIndex = Math.min(Math.max(activeIndex, 0), reviewItems.length - 1);
     dom.reviewOverlay.hidden = false;
-    dom.reviewOverlay.classList?.toggle('is-file-review', reviewItems[activeIndex]?.type === 'file-change');
-    if (dom.reviewTitle) setAgentText(dom.reviewTitle, reviewItems[activeIndex]?.type === 'file-change' ? 'review.fileTitle' : 'review.title');
     i18nUi.setHtml(dom.reviewTrack, reviewItems.map((item) => {
-      if (item.type === 'file-change') return renderFileChangePreview(item, safeText);
       if (item.type === 'protocol') {
         return renderProtocolPreview(item, safeText);
       }
@@ -195,11 +187,6 @@ export function createAgentReviewOverlayController({
 
   function onTrackClick(event) {
     const target = event?.target;
-    const fileButton = target?.closest?.('[data-file-decision]');
-    if (fileButton && fileAccessApi) {
-      void decideFile(fileButton.dataset.fileId, fileButton.dataset.fileDecision);
-      return;
-    }
     const approveButton = target?.closest?.('[data-agent-review-approve]')
       || (target?.dataset?.agentReviewApprove ? target : null);
     if (approveButton) {
@@ -211,38 +198,6 @@ export function createAgentReviewOverlayController({
     if (rejectButton) {
       rejectItem(rejectButton.dataset.agentReviewReject);
     }
-  }
-
-  // The Agent view has no status pill (setStatus is a no-op there), so file
-  // review outcomes and errors go through the app-wide toast instead.
-  function notifyFile(message, ok = true) {
-    agentNotice(message, { type: ok ? 'success' : 'error' });
-  }
-
-  async function openFileChanges({ quietEmpty = false } = {}) {
-    if (!fileAccessApi?.agentFilesStatus) return;
-    try {
-      const result = await fileAccessApi.agentFilesStatus();
-      if (!result?.ok) { notifyFile(result?.error || agentUi('notice.fileUnavailable'), false); return; }
-      fileRootId = result.root_id;
-      reviewItems = reviewItems.filter(item => item.type !== 'file-change');
-      reviewItems.push(...result.pending.map(change => ({ type: 'file-change', id: change.id, change })));
-      if (!result.pending.length && !quietEmpty) notifyFile(agentUi('notice.noFileChanges'));
-      render();
-    } catch (error) { notifyFile(error.message, false); }
-  }
-
-  async function decideFile(id, decision) {
-    if (fileDecisionPending) return;
-    fileDecisionPending = true;
-    dom.reviewTrack?.querySelectorAll?.('[data-file-decision]').forEach(button => { button.disabled = true; });
-    try {
-      const result = await decideFileChange(fileAccessApi, fileRootId, id, decision);
-      notifyFile(result?.ok ? (result.warning || fileDecisionMessage(decision))
-        : result?.error || agentUi('notice.fileFailed'), Boolean(result?.ok && !result.warning));
-      await openFileChanges({ quietEmpty: true });
-    } catch (error) { notifyFile(error.message, false); }
-    finally { fileDecisionPending = false; render(); }
   }
 
   function openForMessage(message) {
@@ -284,7 +239,6 @@ export function createAgentReviewOverlayController({
   });
 
   return {
-    openFileChanges,
     close,
     reviewInline(messageId, itemId, decision) {
       // Resolve from current state on every click, so a stale approval control

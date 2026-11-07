@@ -1,5 +1,5 @@
 import { mergeAgentHtmlArtifacts } from './html-artifacts.js';
-import { mergePaperEvidence } from '../../../shared/paper-evidence.mjs';
+import { mergeSourceEvidence } from '../../../shared/paper-evidence.mjs';
 import { mergeAgentImageArtifacts } from './image-artifacts.js';
 import { extractPlotlyGraphArtifactFromProgressEvent, mergeAgentPlotlyGraphArtifacts } from './plotly-artifacts.js';
 import { mergeSequenceActions } from '../sequence-viewer/mcp/action-rendering.js';
@@ -282,7 +282,7 @@ export function applyLiveProgressEvent(liveAssistantMessage, eventPayload = {}) 
     meta: {
       ...liveAssistantMessage.meta,
       paper_evidence: eventPayload.meta?.paper_evidence?.length
-        ? mergePaperEvidence(liveAssistantMessage.meta?.paper_evidence, eventPayload.meta.paper_evidence)
+        ? mergeSourceEvidence(liveAssistantMessage.meta?.paper_evidence, eventPayload.meta.paper_evidence)
         : liveAssistantMessage.meta?.paper_evidence,
       html_artifacts: mergeAgentHtmlArtifacts(liveAssistantMessage.meta?.html_artifacts, [eventPayload.meta?.html_artifact || eventPayload.html_artifact]),
       image_artifacts: mergeAgentImageArtifacts(liveAssistantMessage.meta?.image_artifacts, [eventPayload.meta?.image_artifact || eventPayload.image_artifact]),

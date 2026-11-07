@@ -1,6 +1,6 @@
 /* Universal context and searchable dropdown menu styling. */
 
-:root {
+body {
   --hikari-context-menu-radius: 12px;
   --hikari-context-item-radius: 6px;
   --hikari-context-menu-shadow: 0 12px 30px var(--theme-shadow-color-subtle), 0 2px 6px var(--theme-shadow-color-subtle);

@@ -156,6 +156,8 @@ body.theme-night .canvas-context-menu {
 }
 body.theme-night .canvas-context-menu > button { color: var(--theme-text); }
 body.theme-night .canvas-context-menu > button:is(:hover, :focus-visible):not(:disabled) { color: var(--theme-text-strong); }
+.canvas-context-menu > .danger-button:is(:hover, :focus-visible):not(:disabled),
+body.theme-night .canvas-context-menu > .danger-button:is(:hover, :focus-visible):not(:disabled) { color: var(--theme-danger); }
 #figure-menu, #export-menu { position: static; }
 #figure-menu .popover-panel { width: 270px; max-width: 100%; max-height: calc(100vh - 80px); overflow-y: auto; }
 .image-generation-control { padding: 8px; }
@@ -403,6 +405,10 @@ dialog { background: var(--theme-surface-elevated); color: var(--theme-text); bo
 dialog::backdrop { background: var(--theme-overlay-strong); }
 dialog h2 { font-size: 0.9375rem; margin: 0 0 12px; }
 dialog .actions { justify-content: flex-end; margin-top: 12px; }
+#illustration-action-dialog { width: min(360px, 92vw); }
+#illustration-action-dialog .actions { flex-wrap: wrap; }
+#illustration-action-name { overflow-wrap: anywhere; }
+#illustration-action-error, #illustration-action-dialog .danger-button { color: var(--theme-danger); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 [hidden] { display: none !important; }
 @container (max-width: 640px) {

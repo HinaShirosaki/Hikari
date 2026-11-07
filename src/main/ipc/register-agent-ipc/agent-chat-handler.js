@@ -10,6 +10,7 @@ const {
 
 function registerAgentChatHandler({
   ipcMain,
+  getCodexPermissionsForEvent,
   cleanText,
   controllerUtils,
   observability,
@@ -22,6 +23,7 @@ function registerAgentChatHandler({
   const activeRequests = new Map();
   const handleAgentChat = createAgentChatRequestHandler({
     activeRequests,
+    getCodexPermissionsForEvent,
     cleanText,
     controllerUtils,
     observability,

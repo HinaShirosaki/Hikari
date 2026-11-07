@@ -1,4 +1,12 @@
 {
+  "ui.4be375e6": "¿Activar el acceso completo para el chat del agente?",
+  "ui.d785bf88": "Codex puede ejecutar comandos, acceder a la red y cambiar archivos fuera del espacio de trabajo sin preguntar.",
+  "ui.a6c6a047": "Activar acceso completo",
+  "ui.7d5fa87": "Denegar",
+  "ui.1de36893": "Permitir una vez",
+  "ui.54dfb571": "¿Permitir este comando de Codex?",
+  "ui.6846e9c0": "¿Permitir este cambio de archivo de Codex?",
+  "ui.e1c12b12": "¿Permitir esta solicitud de permiso de Codex?",
   "ui.5b32de90": "Conceder al agente acceso a otra carpeta",
   "ui.fc8eb73c": "Exportar archivo del complemento",
   "ui.2cbb8af0": "Seleccionar carpeta de almacenamiento",
