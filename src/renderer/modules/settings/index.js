@@ -10,6 +10,7 @@ import { createLlmModelCatalog } from './llm-model-catalog.js';
 import { createMcpToolsController } from './mcp-tools-controller.js';
 import { createFileAccessSettings } from './file-access-controller.js';
 import { createUpdateSettings } from './update-controller.js';
+import { createTutorialSettings } from './tutorial-controller.js';
 import { getSettingsElements } from './dom.js';
 import { escapeHtml } from './html.js';
 import { showTransientNotice } from '../../lib/notify.js';
@@ -51,6 +52,9 @@ export function initSettings({
     openLogsFolderBtn,
     openThirdPartyNoticesBtn,
     openTutorialBtn,
+    settingTutorialStatus,
+    checkTutorialUpdateBtn,
+    installTutorialUpdateBtn,
     settingUpdateStatus,
     checkUpdatesBtn,
     installUpdateBtn,
@@ -136,6 +140,14 @@ export function initSettings({
     statusElement: settingUpdateStatus,
     checkButton: checkUpdatesBtn,
     installButton: installUpdateBtn
+  });
+  const tutorialSettings = createTutorialSettings({
+    api: window?.hikariApi,
+    statusElement: settingTutorialStatus,
+    openButton: openTutorialBtn,
+    checkButton: checkTutorialUpdateBtn,
+    updateButton: installTutorialUpdateBtn,
+    onOpenError: (error) => showTransientNotice(error || i18nUi.message("Could not open the tutorial."), { type: 'error' })
   });
   const externalSkillsController = createExternalSkillsController({
     state,
@@ -265,12 +277,6 @@ export function initSettings({
       showTransientNotice((((((result.error || i18nUi.message("Could not open the third-party notices.")))))), { type: 'error' });
     }
   });
-  openTutorialBtn?.addEventListener('click', async () => {
-    const result = await window.hikariApi?.openTutorial?.();
-    if (result && result.ok === false) {
-      showTransientNotice((((((result.error || i18nUi.message("Could not open the tutorial.")))))), { type: 'error' });
-    }
-  });
   formPresentation.bind(notebookPdfForm, notebookPdfController.save);
   formPresentation.bind(llmForm, onSaveLlmSettings);
   settingModel?.addEventListener('input', onModelChanged);
@@ -345,6 +351,7 @@ export function initSettings({
       void refreshCodexLoginStatus();
     }
     if (activeSettingsPanel === 'updates') void updateSettings.refresh();
+    if (activeSettingsPanel === 'tutorial') void tutorialSettings.refresh();
     if (
       activeSettingsPanel === 'skills'
       && !externalSkillsController.hasDiscoveredSkills()

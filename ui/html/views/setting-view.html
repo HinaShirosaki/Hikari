@@ -746,11 +746,18 @@
           </p>
         </div>
         <div class="form-actions">
-          <button type="button" id="open-tutorial-btn" class="primary-btn" data-i18n="settings.tutorial.open">
-            Open Tutorial in Browser
+          <button type="button" id="check-tutorial-update-btn" class="ghost-btn" hidden data-i18n="settings.tutorial.check">
+            Check for Updates
+          </button>
+          <button type="button" id="install-tutorial-update-btn" class="ghost-btn" hidden data-i18n="settings.tutorial.update">
+            Update Tutorial
+          </button>
+          <button type="button" id="open-tutorial-btn" class="primary-btn" data-i18n="settings.tutorial.download">
+            Download Tutorial
           </button>
         </div>
       </section>
+        <p id="setting-tutorial-status" class="small-note" role="status" aria-live="polite"></p>
     </div>
   </div>
 </section>

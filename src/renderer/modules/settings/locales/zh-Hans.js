@@ -174,5 +174,15 @@ export const settingsSimplifiedChinese = Object.freeze({
   "plugins.bundled": "Hikari 内置",
   "tutorial.title": "教程",
   "tutorial.open": "在浏览器中打开教程",
-  "tutorial.description": "通过带注释的截图逐步了解 Hikari 的各项功能。教程在浏览器中打开，支持离线使用。"
+  "tutorial.download": "下载教程",
+  "tutorial.check": "检查更新",
+  "tutorial.update": "更新教程",
+  "tutorial.notDownloaded": "尚未下载教程。",
+  "tutorial.installed": "教程版本：{version}。",
+  "tutorial.checking": "正在检查教程更新…",
+  "tutorial.upToDate": "教程已是最新（版本 {version}）。",
+  "tutorial.available": "有更新的教程：版本 {latest}。当前版本为 {version}。",
+  "tutorial.downloading": "正在下载教程（约 35 MB）…",
+  "tutorial.error": "无法从 GitHub 获取教程：{error}",
+  "tutorial.description": "通过带注释的截图逐步了解 Hikari 的各项功能。从 GitHub 下载一次（约 35 MB）后，教程在浏览器中打开，支持离线使用。"
 });
