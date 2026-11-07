@@ -16,7 +16,7 @@ import {
   renderFolderTreeLeaf,
   renderFolderTreeNode
 } from '../../lib/folder-tree.js';
-import { paperAttributes, paperFolderDisclosure, paperMessage, relativePaperTimeMessage } from './localization.js';
+import { paperAttributes, paperFolderDisclosure, paperMessage, relativePaperTimeMessage, setPaperAttribute } from './localization.js';
 
 const PAPER_DRAG_MIME = 'application/x-hikari-paper-id';
 
@@ -291,6 +291,11 @@ export function createPapersLibraryController(context) {
 
   function renderLibrarySidebar(preferredFolderKey = '') {
     const selectedFolder = syncSelectedFolder(preferredFolderKey);
+    if (elements.papersLibraryCount) {
+      const count = (state.papers || []).length;
+      elements.papersLibraryCount.textContent = String(count);
+      setPaperAttribute(elements.papersLibraryCount, 'aria-label', 'library.count', { count });
+    }
     folderMenu.hideLibraryContextMenu();
     renderUploadTargetSummary(selectedFolder);
     renderFolderList(selectedFolder);

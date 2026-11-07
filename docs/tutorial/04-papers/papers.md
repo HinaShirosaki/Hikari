@@ -15,16 +15,16 @@ Screenshots use a fictional example paper and an illustrative research brief.
 
 ![Folders and papers are on the left, the PDF is in the middle, and PDF controls and panel buttons are on the right.](images/01-papers-workspace.png)
 
-Each project from Notebook has a paper folder. You can also add your own folders (Section 3). The number beside a folder is its paper count, and the time beside a paper shows when it last changed.
+Each project from Notebook has a paper folder. You can also add your own folders (Section 3). The number beside **Papers** at the top is how many papers the library holds; the number beside a folder is its paper count, and the time beside a paper shows when it last changed.
 
 A paper opens at the page you last read.
 
 ## 2. Add a PDF
 
-![Select the destination folder, click Upload PDF, and wait for Processing to finish.](images/02-add-pdf.png)
+![Select the destination folder, click Import, and wait for Processing to finish.](images/02-add-pdf.png)
 
 1. Click the folder that should hold the paper.
-2. Click **Upload PDF** at the top of the left panel.
+2. Click **Import** at the top of the left panel.
 3. Choose the PDF file.
 4. Find the new paper under the folder. It shows **Processing** while Hikari reads the PDF and prepares its notes.
 
@@ -166,6 +166,16 @@ Asking Hikari requires an AI connection. If the controls are missing, connect Co
 5. To ask about a figure, click **Select area from paper** below the message box, then drag across the part of the page to attach.
 
 Click the chat icon again to close the chat. Check answers against the paper before relying on them.
+
+### Open a cited passage
+
+When Hikari answers from your papers, it puts a small numbered button after the sentence it is supporting. The button names the paper and section it came from.
+
+1. Click the numbered button in the answer.
+2. Papers opens that paper and scrolls to the cited passage, with the passage highlighted.
+3. Read the surrounding text to check that the answer matches the paper.
+
+The highlight stays until you open another citation or another paper, and it is never saved as one of your own highlights. If the passage cannot be found in the PDF, Hikari opens the paper and says so instead of jumping to a guess. A paper that is already open keeps its zoom.
 
 ---
 

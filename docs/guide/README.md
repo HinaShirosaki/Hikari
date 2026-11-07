@@ -1,6 +1,6 @@
 # Hikari Guide
 
-The complete feature, setup, and development reference for Hikari. For the short overview, see the top-level [Readme.md](../../Readme.md). New to Hikari? Start with the **[15-minute first experiment tutorial](../getting-started/first-experiment.md)**.
+The complete feature, setup, and development reference for Hikari. For the short overview, see the top-level [Readme.md](../../Readme.md). New to Hikari? Start with the **[15-minute first experiment tutorial](../getting-started/first-experiment.md)**, then work through the **[illustrated tutorials](../tutorial/README.md)** — one chapter per workspace, with annotated screenshots. Hikari opens the same chapters from `Settings > Tutorial`.
 
 ## Contents
 
@@ -107,7 +107,7 @@ npx @hinashirosaki/hikari
 
 Every workspace below is one dock entry. The dock order is the order shown here; plugin workspaces follow it and move behind the **More** button at the end of the dock when space runs out. Two dock labels are shorter than the workspace names used in these docs: **Plate** is the Assay workspace and **DNA** is the Sequence Viewer.
 
-> **Screenshots:** Each workspace below is shown with neutral demonstration data in an isolated browser preview of the app. The example conversation, teaching handout, sequence, assay values, and gel image are synthetic; they are not research results. [Capture notes](../screenshots/README.md).
+> **Screenshots:** Each workspace below is shown with neutral demonstration data in a disposable preview of the app's own renderer. The example conversation, teaching paper, sequence, assay values, and gel image are synthetic; they are not research results. [Capture notes](../screenshots/README.md).
 
 ### Module index
 
@@ -153,7 +153,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 - **Polish Protocol** — clean up an existing draft while showing your original input side by side.
 - **Notebook placeholders** — leave fields for the experimenter to fill in when the protocol is used in a record.
 
-![Protocols editor with a fictional yeast growth protocol](../screenshots/protocols-editor.png)
+![Protocol viewer with a fictional sample-labeling checklist](../screenshots/protocols-editor.png)
 
 ### Notebook
 
@@ -169,24 +169,24 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 - **PDF export** — export an entry, with its tables and previews, as a PDF.
 - **Agent rail** — a project-scoped assistant panel docked beside the entry.
 
-![Notebook page with an SDS-PAGE protocol and a result table](../screenshots/notebook-entry.png)
+![Notebook page with the protocol that was run and a result table](../screenshots/notebook-entry.png)
 
-![Project dashboard for a fictional yeast growth practical](../screenshots/notebook-project-dashboard.png)
+![Project dashboard for a fictional protein stability project](../screenshots/notebook-project-dashboard.png)
 
 ### Papers
 
 <img src="../../assets/icons/papers.svg" width="20" align="left" /> A local PDF library with a real viewer, not a file list. Search, download, parsing, and analysis run in the main process under [`src/main/papers/`](../../src/main/papers/).
 
 - **Library rail** — nested folders, drag-and-drop filing, rename/delete, and project linkage.
-- **Upload or fetch** — add a local PDF, or search the paper database and download the PDF into the library.
+- **Import or fetch** — add a local PDF, or search the paper database and download the PDF into the library.
 - **PDF viewer** — page rendering, zoom, in-document search, and text selection.
 - **Anchored comments** — pin a comment to a location on the page; edit it from the sidebar.
 - **Summaries and methods** — generate a summary or extract the methods section into structured text.
-- **Project-scoped Q&A** — ask questions across the papers linked to the current project.
+- **Project-scoped Q&A** — ask questions across the papers linked to the current project; each cited sentence carries a numbered button that opens the paper at the passage and highlights it.
 - **Scheduled finding** — recurring searches against the journals configured in `Settings > Preferred Journals`, surfaced on `Home`.
 - **Agent rail** — the assistant panel, scoped to the open paper and project.
 
-![Papers PDF viewer showing a fictional thermal shift teaching handout](../screenshots/papers-viewer.png)
+![Papers PDF viewer showing a fictional buffer-comparison teaching paper](../screenshots/papers-viewer.png)
 
 ### Samples
 
@@ -199,7 +199,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 - **Cell passage tracking** — passage records that feed the `Home` reminder widget.
 - **Notebook capture** — push a sample into the open notebook entry, or create one from an entry.
 
-![Samples container with a fictional GFP fluorescence standard](../screenshots/samples-registry.png)
+![Samples workspace with fictional teaching containers and their samples](../screenshots/samples-registry.png)
 
 ### Chemicals
 
@@ -210,7 +210,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 - **Activity history** — a record of stock changes over time.
 - **Fast lookup** — indexed on disk (`hikari-chemicals.index.sqlite`) so search stays quick on large inventories.
 
-![Chemical inventory with common teaching-lab reagents](../screenshots/chemicals-list.png)
+![Chemical inventory with fictional teaching-lab reagents](../screenshots/chemicals-list.png)
 
 ### Workflows
 
@@ -222,7 +222,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 - **Assignees and next steps** — default-assignee resolution and next-step planning.
 - **Project linkage** — attach a workflow to a project; progress shows on `Home`.
 
-![Branching workflow for a fictional yeast growth practical](../screenshots/workflows-graph.png)
+![Workflow processes with their step progress and the next step to record](../screenshots/workflows-graph.png)
 
 ### Agent
 
@@ -232,6 +232,7 @@ Every workspace below is one dock entry. The dock order is the order shown here;
 - **Project context** — pick the project scope; the assistant reads a compact snapshot of that project's state.
 - **Grounded tools** — it can look up notebook entries, protocols, samples, chemicals, containers, and papers; run literature search and paper download/analysis; read assay tables; build Plotly graphs; and suggest purchases.
 - **Review before write** — generated notebook drafts and protocols land as review cards you approve or reject; the owning module, not the assistant, defines the record schema.
+- **Paper evidence** — paper research answers carry an excerpts card with the passages used and why, and citation buttons that open the passage in `Papers`.
 - **Side rail** — the same chat mounts as a rail inside `Notebook`, `Plate`, and `Papers`, scoped to what is open there. `Home` also opens it as the **Prepare notebook page** dialog.
 
 Backend details are in [`docs/agent/README.md`](../agent/README.md).
@@ -248,10 +249,13 @@ Backend details are in [`docs/agent/README.md`](../agent/README.md).
 - **ORF analysis** — open reading frame detection and translation overlays.
 - **Restriction analysis** — cut-site detection against a commercial enzyme catalog, with an enzyme picker.
 - **Alignment** — align against a pasted sequence or a chosen file.
+- **Fragments, PCR products, digests** — save a selected range or an annotated feature as a child record, amplify between two compatible annotated primers, or cut with one or two restriction enzymes and save each product on its own. Cut ends are kept, and a protruding sticky end is drawn single-stranded.
+- **Assembly** — collect linear fragments from the library and let Hikari infer the join: matching sticky ends first, then an exact terminal overlap, in either orientation, producing a linear or circular record of its own.
+- **Primers** — annealing you can resize from either end with linked primers and a minimum template Tm, primer design from a selection, and a Primer Library with IDT/CSV order blocks.
 - **Protein Builder** — assemble a protein from blocks and build the DNA sequence back out.
 - **Cloning design** — plan a Gibson/HR assembly or a vector insert, design primers, and export IDT bulk-input blocks or CSV.
 
-![Annotated plasmid sequence in the Sequence Viewer](../screenshots/sequence-detail.png)
+![Annotated teaching vector in the Sequence Viewer](../screenshots/sequence-detail.png)
 
 ### Assay
 
@@ -262,12 +266,13 @@ Backend details are in [`docs/agent/README.md`](../agent/README.md).
 - **Inventory picker** — apply a sample ID from `Samples` to a well from its context menu.
 - **Result import** — paste a matrix, or import `.csv` / `.xls` / `.xlsx`; plate-sized matrices are detected and offered for mapping.
 - **Formulas** — spreadsheet-style formulas per cell for background subtraction and normalization, parsed (never `eval`'d) with function names and arity checked as you type.
-- **Analysis** — grouped summaries plus curve fitting (linear, sigmoidal, hyperbola, polynomial, Padé) and normalize-to-baseline dose response.
+- **Analysis** — grouped summaries plus curve fitting (linear, 4PL and 5PL sigmoidal, hyperbola, polynomial, Padé) and normalize-to-baseline dose response, with a hint describing the selected method.
+- **Custom groups** — arm Rows or Columns, drag across the wells, and the range becomes an analysis group saved with the assay.
 - **Charts** — Plotly figures with a Format rail, saved style presets, and figure export.
-- **Artifacts** — analysis JSON, chart SVG, and attached result files stored under the storage root.
+- **Artifacts** — analysis JSON, chart SVG, attached result files, and `original-plate.csv` / `transformed-plate.csv` kept beside the assay record under the storage root.
 - **Agent rail** — the assistant panel, scoped to the open plate.
 
-![Assay plate mapped with a synthetic inhibitor dilution series](../screenshots/assay-layout.png)
+![Assay plate mapped with a synthetic two-sample dilution series](../screenshots/assay-layout.png)
 
 ### Tools
 
@@ -323,7 +328,7 @@ Plugin workspaces run in a sandboxed iframe with a declared permission list, and
 
 It requests only `storage`, `files`, `downloads`, and `layout` — it has no notebook, project, sample, or protocol access. `Notebook` and `Agent` can still *display* saved gel records by reading the plugin's persisted index; that one-way read does not grant the iframe anything.
 
-![Gel workspace with a synthetic SDS-PAGE gel and detected lanes](../screenshots/gel-analysis.png)
+![Gel workspace with a synthetic gel, detected lanes, ladder labels, and a lane table](../screenshots/gel-analysis.png)
 
 ## AI and Agent Setup
 

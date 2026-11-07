@@ -42,18 +42,17 @@
   background: var(--assay-plate-surface);
 }
 
-#assay-view .assay-well-meta {
+#assay-view .assay-well-concentration-input {
   color: var(--assay-plate-meta);
 }
 
 /* Filled wells carry an inline text color picked against their fill. */
-#assay-view .assay-well.is-filled .assay-well-meta,
 #assay-view .assay-well.is-filled .assay-well-inline-input,
 #assay-view .assay-well.is-filled .assay-well-inline-input::placeholder {
   color: inherit;
 }
 
-#assay-view .assay-well.is-filled .assay-well-meta,
+#assay-view .assay-well.is-filled .assay-well-concentration-input,
 #assay-view .assay-well.is-filled .assay-well-inline-input::placeholder {
   opacity: 0.75;
 }

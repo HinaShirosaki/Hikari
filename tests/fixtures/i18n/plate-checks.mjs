@@ -35,7 +35,7 @@ export async function checkLocalizedPlate({ core, i18n, check }) {
   // Save once through the real form so history holds a normalized record.
   byId('assay-form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); await settle();
   const preview = byId('assay-plate-preview');
-  const wellA1 = preview.querySelector('td[data-well="A1"]');
+  const wellA1 = preview.querySelector('[data-well-inline-field="sampleId"][data-well="A1"]');
   check(byId('assay-name').value === 'Viability <&>' && wellA1.title === 'A1 • Sample ID: DMSO | Conc.: 10 • Click to edit Sample ID',
     'English well tooltips keep their original wording and stored values: ' + byId('assay-name').value + ' / ' + wellA1?.title);
   check(preview.querySelector('thead th:nth-child(2)').textContent === 'Sample ID'

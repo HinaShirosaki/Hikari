@@ -49,16 +49,14 @@
 <p>Changing a header applies its value along that axis. For a sample arranged across columns instead, choose <strong>Column</strong> before entering the labels.</p>
 <h3 id="change-one-well">Change one well<a class="heading-link" href="#change-one-well" aria-label="Link to Change one well">#</a></h3>
 <ol>
-<li>Above the plate, choose <strong>Sample ID</strong> or <strong>Concentration</strong>, depending on the value you want to change.</li>
-<li>Click inside the individual well&#39;s field.</li>
+<li>Click the sample ID or concentration directly inside the individual well.</li>
 <li>Enter the replacement value. For example, change D6&#39;s sample ID to <code>Blank</code> when that is the label you intend to use.</li>
 <li>Inspect the neighboring wells to confirm the change belongs to the intended position.</li>
 </ol>
-<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 4"><img loading="lazy" src="images/04-edit-well.png" alt="Choose the field to edit, then enter an override directly in a well."></button><figcaption><span>Figure 4.</span> Choose the field to edit, then enter an override directly in a well. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 4"><img loading="lazy" src="images/04-edit-well.png" alt="Click the sample ID or concentration directly in a well to enter an override."></button><figcaption><span>Figure 4.</span> Click the sample ID or concentration directly in a well to enter an override. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
 <p><strong>Clear mappings</strong> removes the current well assignments. Use it when you want to rebuild the layout, then save the revised plate.</p>
 <h2 id="4-fill-a-concentration-series">4. Fill a concentration series<a class="heading-link" href="#4-fill-a-concentration-series" aria-label="Link to 4. Fill a concentration series">#</a></h2>
 <ol>
-<li>Choose <strong>Concentration</strong> above the plate.</li>
 <li>Enter a starting concentration in the first concentration header. This example uses <code>100 uM</code>.</li>
 <li>Choose <strong>Dilution ÷</strong> in the fill-method menu.</li>
 <li>Enter the <strong>Factor</strong>. A factor of <code>2</code> divides each successive value by two.</li>
@@ -145,7 +143,8 @@ A2,A,2,Sample A,50 uM
 <li>Inspect the imported values in Table1, then click <strong>Chart</strong> to see the updated chart.</li>
 </ol>
 <figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 10"><img loading="lazy" src="images/10-import-results.png" alt="Choose a detected result matrix, verify its preview, and click Use This Matrix."></button><figcaption><span>Figure 10.</span> Choose a detected result matrix, verify its preview, and click Use This Matrix. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
-<p>If the file has only one detected matrix, the import can proceed directly. Importing fills the matched wells and keeps the source file as an attachment to the assay.</p>
+<p>If the file has only one detected matrix, the import can proceed directly. Importing fills the matched wells and keeps the source file as an attachment to the assay, in a <code>result-files</code> folder beside it.</p>
+<p>Alongside the assay&#39;s own record, Hikari keeps <code>original-plate.csv</code> and <code>transformed-plate.csv</code> in the assay&#39;s folder and updates them whenever you import results, edit a value, change a formula, or save. Open those files in any spreadsheet when you want the plate outside Hikari. If the selected assay changes while an import is saving, the import stops instead of writing to the wrong plate.</p>
 <p>The supplied <a href="examples/result-matrices.csv">result-matrices.csv</a> contains two fictional 4 × 6 blocks so you can practice selecting a matrix. Use it with the example 24-well layout. Review existing results before importing another file into the same assay.</p>
 <h2 id="9-calculate-a-transformed-plate">9. Calculate a transformed plate<a class="heading-link" href="#9-calculate-a-transformed-plate" aria-label="Link to 9. Calculate a transformed plate">#</a></h2>
 <ol>
@@ -185,14 +184,14 @@ A2,A,2,Sample A,50 uM
 <p>Only numeric transformed cells contribute when Table2 is selected. Fill all the transformed wells you intend to analyze; blank Table2 cells do not automatically borrow Table1 values. Formula edits save as you finish editing. To remove the transformed plate, use its <strong>Remove transform</strong> trash icon.</p>
 <h2 id="10-create-custom-row-or-column-groups">10. Create custom row or column groups<a class="heading-link" href="#10-create-custom-row-or-column-groups" aria-label="Link to 10. Create custom row or column groups">#</a></h2>
 <ol>
-<li>Click <strong>Data</strong> in the right toolbar and open the <strong>Plate results</strong> table.</li>
-<li>Drag across the well cells covering the rows or columns you want to group.</li>
-<li>Under <strong>Data Analysis &gt; Groups</strong>, click <strong>Rows</strong> to add the selected rows as a group, or <strong>Columns</strong> to group the selected columns.</li>
-<li>Repeat with other selections as needed.</li>
+<li>Under <strong>Data Analysis &gt; Groups</strong>, click <strong>Rows</strong> to group rows, or <strong>Columns</strong> to group columns. Hikari switches to the <strong>Data</strong> view and shows a hint above the table.</li>
+<li>Drag across the well cells covering the rows or columns the group should contain.</li>
+<li>Release the drag. The group is created and the tool switches itself off.</li>
+<li>Repeat for the other groups you need.</li>
 <li>Under <strong>Fit &amp; summary</strong>, choose <strong>Custom groups</strong> in <strong>Group by</strong> to use those groups in the analysis.</li>
 </ol>
-<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 13"><img loading="lazy" src="images/13-custom-groups.png" alt="Select wells in the table, then add their rows or columns as groups; the trash icon clears custom groups."></button><figcaption><span>Figure 13.</span> Select wells in the table, then add their rows or columns as groups; the trash icon clears custom groups. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
-<p>For example, selecting A1 through B6 and clicking <strong>Rows</strong> groups rows A and B. Use <strong>Clear groups</strong>, the trash icon beside Rows and Columns, to discard custom group definitions and start again.</p>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 13"><img loading="lazy" src="images/13-custom-groups.png" alt="Arm Rows or Columns, then drag across the wells the group should cover."></button><figcaption><span>Figure 13.</span> Arm Rows or Columns, then drag across the wells the group should cover. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>For example, arming <strong>Rows</strong> and dragging from A1 to B6 groups rows A and B. Press <strong>Esc</strong>, or click <strong>Cancel</strong> in the hint, to leave the tool without creating a group. Use <strong>Clear groups</strong>, the trash icon beside Rows and Columns, to discard custom group definitions and start again.</p>
 <h2 id="11-choose-an-analysis-and-inspect-the-summary">11. Choose an analysis and inspect the summary<a class="heading-link" href="#11-choose-an-analysis-and-inspect-the-summary" aria-label="Link to 11. Choose an analysis and inspect the summary">#</a></h2>
 <h3 id="summarize-replicates">Summarize replicates<a class="heading-link" href="#summarize-replicates" aria-label="Link to Summarize replicates">#</a></h3>
 <ol>
@@ -213,8 +212,8 @@ A2,A,2,Sample A,50 uM
 <li>Click <strong>Data</strong> and open <strong>Summary</strong> for the fit output. Review any message about missing values or an unsuccessful fit.</li>
 </ol>
 <figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 15"><img loading="lazy" src="images/15-curve-fit.png" alt="Inspect the plotted measurements and fitted curves, then open the Data view or Format chart."></button><figcaption><span>Figure 15.</span> Inspect the plotted measurements and fitted curves, then open the Data view or Format chart. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
-<p>The Method menu also contains sigmoidal, hyperbola, polynomial, Padé, and one-phase exponential fits, plus plate QC, Z-scores, comparisons to a control, and normalization. Choose the method that fits your intended analysis.</p>
-<p>When a method shows <strong>High control (100%)</strong> or <strong>Low control (0%)</strong>, enter the corresponding group label or sample ID from your plate. Sigmoidal fits come as <strong>4PL</strong> (symmetric) and <strong>5PL</strong> (asymmetric); polynomial fits show <strong>Polynomial Order</strong>. Recheck the summary whenever you change a method or control assignment.</p>
+<p>The Method menu also contains sigmoidal, hyperbola, polynomial, Padé, and one-phase exponential fits, plus plate QC, Z-scores, comparisons to a control, and normalization. Choose the method that fits your intended analysis. The <strong>i</strong> beside <strong>Method</strong> describes the selected method, including what it reports and what it needs.</p>
+<p>When a method shows <strong>High control (100%)</strong> or <strong>Low control (0%)</strong>, enter the corresponding group label or sample ID from your plate. Sigmoidal fits are two separate methods: <strong>Sigmoidal fit (4PL)</strong> for a curve that is symmetric around its midpoint, and <strong>Sigmoidal fit (5PL, asymmetric)</strong> for one that bends more sharply at one end, which needs at least five points. Polynomial fits show <strong>Polynomial Order</strong>. Recheck the summary whenever you change a method or control assignment.</p>
 <h2 id="12-format-the-chart">12. Format the chart<a class="heading-link" href="#12-format-the-chart" aria-label="Link to 12. Format the chart">#</a></h2>
 <ol>
 <li>Click <strong>Format chart</strong>, the slider icon beside the chart title, or <strong>Chart Format</strong> in the right toolbar. The panel opens on the right.</li>
@@ -223,7 +222,7 @@ A2,A,2,Sample A,50 uM
 <li>Click <strong>Save preset as…</strong>, the disk icon beside <strong>Preset</strong>, when you want to reuse the current formatting. Give the preset a name in the prompt.</li>
 </ol>
 <figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 16"><img loading="lazy" src="images/16-format-frame.png" alt="Open Chart Format, choose a format tab, and adjust the chart frame or save a preset."></button><figcaption><span>Figure 16.</span> Open Chart Format, choose a format tab, and adjust the chart frame or save a preset. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
-<p>The format sections are <strong>Frame</strong>, <strong>Axis</strong>, <strong>Data Series</strong>, <strong>Text</strong>, and <strong>Elements</strong>. Expand the relevant section and inspect the chart as you change its controls.</p>
+<p>The format sections are <strong>Frame</strong>, <strong>Axis</strong>, <strong>Data Series</strong>, and <strong>Text</strong>. Expand the relevant section and inspect the chart as you change its controls.</p>
 <h3 id="change-axes">Change axes<a class="heading-link" href="#change-axes" aria-label="Link to Change axes">#</a></h3>
 <ol>
 <li>Open the <strong>Axis</strong> tab.</li>

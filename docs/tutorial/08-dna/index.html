@@ -12,10 +12,11 @@
 <a href="#9-align-a-read-to-a-reference">9. Align a read to a reference</a>
 <a href="#10-use-vector-builder">10. Use Vector Builder</a>
 <a href="#11-save-fragments-pcr-products-and-digests">11. Save fragments, PCR products, and digests</a>
-<a href="#12-build-a-protein-construct">12. Build a protein construct</a>
-<a href="#13-review-a-cloning-design">13. Review a cloning design</a>
-<a href="#14-save-and-export-primers">14. Save and export primers</a>
-<a href="#15-organize-the-sequence-library">15. Organize the sequence library</a></nav></aside>
+<a href="#12-assemble-fragments-into-one-sequence">12. Assemble fragments into one sequence</a>
+<a href="#13-build-a-protein-construct">13. Build a protein construct</a>
+<a href="#14-review-a-cloning-design">14. Review a cloning design</a>
+<a href="#15-save-and-export-primers">15. Save and export primers</a>
+<a href="#16-organize-the-sequence-library">16. Organize the sequence library</a></nav></aside>
 <main id="chapter"><div class="eyebrow">HIKARI / ILLUSTRATED TUTORIAL</div><article><h1>DNA</h1>
 <p>How to open, edit, compare, and organize DNA sequences.</p>
 <p><strong>Follow the numbered steps and the highlighted controls in each screenshot.</strong></p>
@@ -167,17 +168,17 @@ ATGGCTGGTGAACTGAAACAGGCTGGTGAACTGAAACAGGCTGGTGAACTGAAACAGTAA
 <ol>
 <li>Select a range of bases, or right-click an annotated feature. This also works on the map and bases in <strong>Vector Builder</strong>.</li>
 <li>Choose <strong>Save DNA Fragment…</strong>.</li>
-<li>Check the template and range, and edit the suggested <strong>Fragment name</strong> if needed.</li>
-<li>Check the length shown under the name, then click <strong>Save fragment</strong>.</li>
+<li>Check the dialog&#39;s title, and edit the suggested <strong>Fragment name</strong> if needed.</li>
+<li>Click <strong>Save fragment</strong>.</li>
 </ol>
-<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 14"><img loading="lazy" src="images/14-save-fragment.png" alt="Check the template, name the fragment, check its length, and click Save fragment."></button><figcaption><span>Figure 14.</span> Check the template, name the fragment, check its length, and click Save fragment. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 14"><img loading="lazy" src="images/14-save-fragment.png" alt="Check the action, name the fragment, and click Save fragment."></button><figcaption><span>Figure 14.</span> Check the action, name the fragment, and click Save fragment. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
 <p>A feature is saved over its full span, including joined parts and spans that cross the origin of a circular sequence. Its strand and annotations are kept.</p>
 <h3 id="save-a-pcr-product">Save a PCR product<a class="heading-link" href="#save-a-pcr-product" aria-label="Link to Save a PCR product">#</a></h3>
 <ol>
 <li>Click a primer-binding feature, or hover over it to open its card.</li>
 <li>Click <strong>PCR…</strong>.</li>
 <li>In the sequence, click one of the highlighted partner primers. Primers that cannot pair with the first one are greyed out.</li>
-<li>Check the product length in the dialog, edit the name if needed, and click <strong>Save fragment</strong>.</li>
+<li>Check the starting and partner primer named in the dialog, edit the name if needed, and click <strong>Save fragment</strong>.</li>
 </ol>
 <figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 15"><img loading="lazy" src="images/15-pcr-partner.png" alt="After PCR…, click a highlighted partner primer in the sequence."></button><figcaption><span>Figure 15.</span> After PCR…, click a highlighted partner primer in the sequence. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
 <p>The product includes both primer sequences, including any 5′ additions. If no compatible partner is annotated on the template, add one first. Use <strong>Choose a different partner in the sequence</strong> in the dialog to pick again, or <strong>Cancel</strong> in the prompt to stop.</p>
@@ -186,12 +187,25 @@ ATGGCTGGTGAACTGAAACAGGCTGGTGAACTGAAACAGGCTGGTGAACTGAAACAGTAA
 <li>Click <strong>Cutters</strong> and turn on the sites you want to see (Section 8).</li>
 <li>Right-click a restriction site, or hover over it, and choose <strong>Single digestion…</strong> or <strong>Double digestion…</strong>.</li>
 <li>For a double digestion, click a second, different restriction site.</li>
-<li>Check both sites and their enzymes, then review the fragments. Clear any fragment you do not want and rename the rest if needed.</li>
-<li>Click <strong>Confirm digestion and save</strong>.</li>
+<li>Check the enzyme chosen for each site, then read the resulting fragments and their lengths.</li>
+<li>Rename a fragment if needed, then click its <strong>Save</strong> button. Save each fragment you want to keep.</li>
+<li>Click <strong>Close</strong> when you are finished.</li>
 </ol>
-<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 16"><img loading="lazy" src="images/16-digest.png" alt="Check the cut sites, choose and name the fragments, then confirm the digestion."></button><figcaption><span>Figure 16.</span> Check the cut sites, choose and name the fragments, then confirm the digestion. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
-<p>Each fragment lists the overhang at both ends, in the 5′ → 3′ direction. Lengths refer to the plus strand. Nothing is written until you confirm.</p>
-<h2 id="12-build-a-protein-construct">12. Build a protein construct<a class="heading-link" href="#12-build-a-protein-construct" aria-label="Link to 12. Build a protein construct">#</a></h2>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 16"><img loading="lazy" src="images/16-digest.png" alt="Check the enzymes and fragment lengths, then save each fragment you want to keep."></button><figcaption><span>Figure 16.</span> Check the enzymes and fragment lengths, then save each fragment you want to keep. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Each fragment is saved on its own, so the dialog and the template stay open. A saved fragment&#39;s button becomes a checkmark and its name can no longer be edited. Lengths refer to the plus strand. Closing the dialog discards only the fragments you did not save.</p>
+<p>A saved fragment keeps its cut ends: in the sequence view a protruding sticky end is drawn single-stranded, with the complementary row left blank under the overhang.</p>
+<h2 id="12-assemble-fragments-into-one-sequence">12. Assemble fragments into one sequence<a class="heading-link" href="#12-assemble-fragments-into-one-sequence" aria-label="Link to 12. Assemble fragments into one sequence">#</a></h2>
+<ol>
+<li>In the library, right-click a linear DNA record and choose <strong>Assemble DNA…</strong>. You can also right-click inside the sequence of the record you have open.</li>
+<li>Click other DNA records in the library to add them as fragments. Clicking an added record again removes it. Hikari determines their order from compatible ends or terminal overlaps.</li>
+<li>Read the summary: the assembled length, the number of fragments, and whether the product is <strong>Circular DNA</strong> or <strong>Linear DNA</strong>.</li>
+<li>Click <strong>Options</strong> to check each junction, remove a fragment, set the <strong>Assembled DNA name</strong>, or change the <strong>Minimum overlap (bp)</strong>.</li>
+<li>Click <strong>Assemble</strong>.</li>
+</ol>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 17"><img loading="lazy" src="images/26-assemble-dna.png" alt="Click DNA items to collect fragments, check the junctions, then click Assemble."></button><figcaption><span>Figure 17.</span> Click DNA items to collect fragments, check the junctions, then click Assemble. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>Hikari works out the fragment order, method, each fragment&#39;s orientation, and the product&#39;s topology for you. It first looks for matching sticky ends at every junction, including the junction that would close a circle. If sticky ends cannot join the fragments, it looks for an exact terminal overlap of at least the minimum overlap, 15 bp by default. Unrelated blunt ends cannot be joined, and a circular record has to be digested into a linear fragment before it can be assembled.</p>
+<p>The result is saved as its own library record, not as a child of any template, with the annotations of its inputs remapped onto it. The method, topology, and each fragment&#39;s resolved orientation are recorded in the record&#39;s description. Check a construct before you order or build it.</p>
+<h2 id="13-build-a-protein-construct">13. Build a protein construct<a class="heading-link" href="#13-build-a-protein-construct" aria-label="Link to 13. Build a protein construct">#</a></h2>
 <h3 id="add-blocks">Add blocks<a class="heading-link" href="#add-blocks" aria-label="Link to Add blocks">#</a></h3>
 <ol>
 <li>Open <strong>Vector Builder</strong>, then click <strong>Protein Builder</strong> in its toolbar.</li>
@@ -200,14 +214,14 @@ ATGGCTGGTGAACTGAAACAGGCTGGTGAACTGAAACAGGCTGGTGAACTGAAACAGTAA
 <li>Under <strong>Enter sequence</strong>, provide a <strong>Protein name</strong> and choose <strong>Amino-acid sequence</strong> or <strong>DNA coding sequence</strong>.</li>
 <li>Paste the sequence and click <strong>Add to Chain</strong>.</li>
 </ol>
-<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 17"><img loading="lazy" src="images/17-add-protein.png" alt="Name a protein block, choose its sequence type, enter the sequence, and add it to the chain."></button><figcaption><span>Figure 17.</span> Name a protein block, choose its sequence type, enter the sequence, and add it to the chain. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 18"><img loading="lazy" src="images/17-add-protein.png" alt="Name a protein block, choose its sequence type, enter the sequence, and add it to the chain."></button><figcaption><span>Figure 18.</span> Name a protein block, choose its sequence type, enter the sequence, and add it to the chain. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
 <p>You can use <strong>Search UniProt</strong> instead: enter a query, run the search, select a result, choose the sequence or region, and add it to the chain.</p>
 <ol start="6">
 <li>Expand a group under <strong>Common Blocks</strong> and click a tag, linker, protease site, or 2A peptide to add it.</li>
 <li>Use each block&#39;s move controls to arrange the chain from N terminus to C terminus. Use its edit or remove control when needed.</li>
 <li>Review the assembled amino-acid sequence. Click the sequence to edit it directly if required.</li>
 </ol>
-<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 18"><img loading="lazy" src="images/18-protein-builder.png" alt="Arrange the assembly chain, review the protein sequence, and choose codon usage for its DNA."></button><figcaption><span>Figure 18.</span> Arrange the assembly chain, review the protein sequence, and choose codon usage for its DNA. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 19"><img loading="lazy" src="images/18-protein-builder.png" alt="Arrange the assembly chain, review the protein sequence, and choose codon usage for its DNA."></button><figcaption><span>Figure 19.</span> Arrange the assembly chain, review the protein sequence, and choose codon usage for its DNA. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
 <h3 id="review-dna-and-continue">Review DNA and continue<a class="heading-link" href="#review-dna-and-continue" aria-label="Link to Review DNA and continue">#</a></h3>
 <ol>
 <li>Choose the <strong>Codon usage table</strong> for the DNA output. Enable <strong>Codon-optimize</strong> when you want to regenerate stored coding DNA using that table.</li>
@@ -217,7 +231,7 @@ ATGGCTGGTGAACTGAAACAGGCTGGTGAACTGAAACAGGCTGGTGAACTGAAACAGTAA
 <li>If you opened Protein Builder from a map insertion or replacement action, use <strong>Insert Into Vector</strong> to apply the construct at that target instead.</li>
 <li>Continue through the cloning review before confirming the design.</li>
 </ol>
-<h2 id="13-review-a-cloning-design">13. Review a cloning design<a class="heading-link" href="#13-review-a-cloning-design" aria-label="Link to 13. Review a cloning design">#</a></h2>
+<h2 id="14-review-a-cloning-design">14. Review a cloning design<a class="heading-link" href="#14-review-a-cloning-design" aria-label="Link to 14. Review a cloning design">#</a></h2>
 <ol>
 <li>Make the intended sequence edit, or build an insertion through Protein Builder.</li>
 <li>Click <strong>Cloning Design</strong> when it is available. It is also accessible from the Vector Builder toolbar.</li>
@@ -225,14 +239,14 @@ ATGGCTGGTGAACTGAAACAGGCTGGTGAACTGAAACAGGCTGGTGAACTGAAACAGTAA
 <li>Click <strong>Design Primers</strong>.</li>
 <li>Read the plan, primer information, and any warnings or review messages. Select another route and run <strong>Design Primers</strong> again if needed.</li>
 </ol>
-<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 19"><img loading="lazy" src="images/19-cloning-design.png" alt="Choose a cloning route, design primers, and review the result before using Confirm Design."></button><figcaption><span>Figure 19.</span> Choose a cloning route, design primers, and review the result before using Confirm Design. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 20"><img loading="lazy" src="images/19-cloning-design.png" alt="Choose a cloning route, design primers, and review the result before using Confirm Design."></button><figcaption><span>Figure 20.</span> Choose a cloning route, design primers, and review the result before using Confirm Design. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
 <ol start="6">
 <li>Use <strong>Save All to Primer Library</strong> to keep the displayed primers when that action is available.</li>
 <li>Click <strong>Confirm Design</strong> when you want to save the working product and generated primer record. Find the resulting records under <strong>Unsaved</strong>, inspect them, and use <strong>Save</strong> for records you want in Saved.</li>
 </ol>
 <p>A plan can retain a review status after confirmation. Read its messages; confirmation does not clear them. <strong>Order Primers</strong> is offered only for a feasible plan.</p>
 <p>Use <strong>Back to Sequence</strong> to return without confirming the design.</p>
-<h2 id="14-save-and-export-primers">14. Save and export primers<a class="heading-link" href="#14-save-and-export-primers" aria-label="Link to 14. Save and export primers">#</a></h2>
+<h2 id="15-save-and-export-primers">15. Save and export primers<a class="heading-link" href="#15-save-and-export-primers" aria-label="Link to 15. Save and export primers">#</a></h2>
 <h3 id="save-a-primer">Save a primer<a class="heading-link" href="#save-a-primer" aria-label="Link to Save a primer">#</a></h3>
 <ol>
 <li>Show the <strong>Primers</strong> track in the sequence viewer or Vector Builder.</li>
@@ -246,7 +260,7 @@ ATGGCTGGTGAACTGAAACAGGCTGGTGAACTGAAACAGGCTGGTGAACTGAAACAGTAA
 <li>Review the designed primers, their length, Tm, and GC content, and read any warning below the table.</li>
 <li>Click <strong>Save to Primer Library</strong> to keep the pair, or <strong>Order Primers</strong> to go straight to an order block.</li>
 </ol>
-<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 20"><img loading="lazy" src="images/20-primer-design.png" alt="Review the designed primers, then save them to Primer Library."></button><figcaption><span>Figure 20.</span> Review the designed primers, then save them to Primer Library. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 21"><img loading="lazy" src="images/20-primer-design.png" alt="Review the designed primers, then save them to Primer Library."></button><figcaption><span>Figure 21.</span> Review the designed primers, then save them to Primer Library. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
 <h3 id="select-primers">Select primers<a class="heading-link" href="#select-primers" aria-label="Link to Select primers">#</a></h3>
 <ol>
 <li>Click <strong>Primers</strong> beside the library&#39;s <strong>Saved</strong> and <strong>Unsaved</strong> buttons.</li>
@@ -255,7 +269,7 @@ ATGGCTGGTGAACTGAAACAGGCTGGTGAACTGAAACAGGCTGGTGAACTGAAACAGTAA
 <li>Tick the primers you want to export, or use the header checkbox to select the visible entries.</li>
 <li>Click <strong>Export Selected to IDT</strong>.</li>
 </ol>
-<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 21"><img loading="lazy" src="images/21-primer-library.png" alt="Search Primer Library, check primer names and sequences, and export the selected entries."></button><figcaption><span>Figure 21.</span> Search Primer Library, check primer names and sequences, and export the selected entries. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 22"><img loading="lazy" src="images/21-primer-library.png" alt="Search Primer Library, check primer names and sequences, and export the selected entries."></button><figcaption><span>Figure 22.</span> Search Primer Library, check primer names and sequences, and export the selected entries. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
 <h3 id="copy-the-order-block">Copy the order block<a class="heading-link" href="#copy-the-order-block" aria-label="Link to Copy the order block">#</a></h3>
 <ol>
 <li>Choose <strong>Scale</strong> and <strong>Purification</strong> in <strong>Order Primers</strong>.</li>
@@ -263,28 +277,28 @@ ATGGCTGGTGAACTGAAACAGGCTGGTGAACTGAAACAGGCTGGTGAACTGAAACAGTAA
 <li>Click <strong>Copy IDT Block</strong> or <strong>Copy CSV</strong>.</li>
 <li>Paste the copied text into the ordering workflow you use and review it there before submitting an order.</li>
 </ol>
-<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 22"><img loading="lazy" src="images/22-primer-order.png" alt="Choose scale and purification, inspect the order block, and copy the selected primer details."></button><figcaption><span>Figure 22.</span> Choose scale and purification, inspect the order block, and copy the selected primer details. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 23"><img loading="lazy" src="images/22-primer-order.png" alt="Choose scale and purification, inspect the order block, and copy the selected primer details."></button><figcaption><span>Figure 23.</span> Choose scale and purification, inspect the order block, and copy the selected primer details. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
 <p>Copying the block does not place an order. To remove library entries, select them in Primer Library and click <strong>Remove Selected</strong>.</p>
-<h2 id="15-organize-the-sequence-library">15. Organize the sequence library<a class="heading-link" href="#15-organize-the-sequence-library" aria-label="Link to 15. Organize the sequence library">#</a></h2>
+<h2 id="16-organize-the-sequence-library">16. Organize the sequence library<a class="heading-link" href="#16-organize-the-sequence-library" aria-label="Link to 16. Organize the sequence library">#</a></h2>
 <h3 id="record-where-a-sequence-is-stored">Record where a sequence is stored<a class="heading-link" href="#record-where-a-sequence-is-stored" aria-label="Link to Record where a sequence is stored">#</a></h3>
 <ol>
 <li>In the library, click the location-pin button on the sequence&#39;s row. In <strong>Primer Library</strong>, each primer row has the same button.</li>
 <li>Choose the storage <strong>Location</strong>, then the <strong>Container</strong>.</li>
 <li>Click the position in the box where the tube is kept.</li>
-<li>Check the <strong>Sample Name</strong> and <strong>Type</strong>, and add a code, lot, or concentration if useful.</li>
+<li>Check the <strong>Sample Name</strong> and <strong>Type</strong>, and add a code, lot, or concentration if useful. A circular record starts as a <strong>plasmid</strong> and a linear one as <strong>DNA</strong>; change the type if you keep it differently.</li>
 <li>Click the pin button at the bottom right to add the sample.</li>
 </ol>
-<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 23"><img loading="lazy" src="images/23-sample-position.png" alt="Choose the location, container, and position, check the sample name, and add the sample."></button><figcaption><span>Figure 23.</span> Choose the location, container, and position, check the sample name, and add the sample. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
-<p>The sample is added to <strong>Samples</strong> at that position, the same way as samples added from Notebook. A location needs a container; add one in Samples first.</p>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 24"><img loading="lazy" src="images/23-sample-position.png" alt="Choose the location, container, and position, check the sample name, and add the sample."></button><figcaption><span>Figure 24.</span> Choose the location, container, and position, check the sample name, and add the sample. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<p>The sample is added to <strong>Samples</strong> at that position, the same way as samples added from Notebook. A location needs a container; add one in Samples first. If the sequence or primer already has a sample, the same button reopens that sample for editing at its stored position instead of adding a second one.</p>
 <h3 id="use-the-library-menu">Use the library menu<a class="heading-link" href="#use-the-library-menu" aria-label="Link to Use the library menu">#</a></h3>
-<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 24"><img loading="lazy" src="images/24-library-actions.png" alt="Right-click a sequence entry to create a folder, rename the record, or move it into a folder."></button><figcaption><span>Figure 24.</span> Right-click a sequence entry to create a folder, rename the record, or move it into a folder. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 25"><img loading="lazy" src="images/24-library-actions.png" alt="Right-click a sequence entry to create a folder, rename the record, or move it into a folder."></button><figcaption><span>Figure 25.</span> Right-click a sequence entry to create a folder, rename the record, or move it into a folder. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
 <h3 id="rename-an-entry">Rename an entry<a class="heading-link" href="#rename-an-entry" aria-label="Link to Rename an entry">#</a></h3>
 <ol>
 <li>Right-click the sequence&#39;s row in the library.</li>
 <li>Choose <strong>Rename Sequence</strong>.</li>
 <li>Type the new name in the row and press <strong>Enter</strong>. Press <strong>Escape</strong> to cancel the rename.</li>
 </ol>
-<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 25"><img loading="lazy" src="images/25-rename-sequence.png" alt="Type a new name in the library row and press Enter to keep it."></button><figcaption><span>Figure 25.</span> Type a new name in the library row and press Enter to keep it. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
+<figure><button class="screenshot" type="button" aria-label="Enlarge screenshot 26"><img loading="lazy" src="images/25-rename-sequence.png" alt="Type a new name in the library row and press Enter to keep it."></button><figcaption><span>Figure 26.</span> Type a new name in the library row and press Enter to keep it. <span class="enlarge-hint">Click to enlarge.</span></figcaption></figure>
 <h3 id="use-folders">Use folders<a class="heading-link" href="#use-folders" aria-label="Link to Use folders">#</a></h3>
 <ol>
 <li>Right-click in the library and choose <strong>New Folder</strong>.</li>

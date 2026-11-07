@@ -17,9 +17,12 @@
   border-radius: 1.25rem;
   background: var(--theme-surface);
   color: var(--theme-text);
-  scrollbar-width: thin;
+  /* Use the shared scrollbar styling so its track clears the rounded corners. */
+  scrollbar-width: auto;
+  scrollbar-color: auto;
 }
 
+.agent-paper-evidence::-webkit-scrollbar-track { margin-block: 1.25rem; }
 .agent-paper-evidence[hidden] { display: none; }
 .agent-evidence-card { padding: var(--space-18); }
 .agent-evidence-heading {
@@ -44,7 +47,8 @@
 .agent-evidence-paper-title { font-weight: 500; }
 .agent-evidence-chunk { margin-top: var(--space-16); }
 .agent-evidence-chunk + .agent-evidence-chunk { padding-top: var(--space-16); border-top: .0625rem solid var(--theme-border); }
-.agent-evidence-section { margin: 0 0 var(--space-6); font-size: var(--text-sm); font-weight: 500; }
+.agent-evidence-section { margin: 0; cursor: pointer; font-size: var(--text-sm); font-weight: 500; line-height: 1.5; overflow-wrap: anywhere; }
+.agent-evidence-chunk[open] > .agent-evidence-section { margin-bottom: var(--space-6); }
 .agent-evidence-quote {
   margin: 0;
   padding: 0;

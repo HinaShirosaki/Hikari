@@ -22,7 +22,7 @@ Continue with **Protocols** to create and edit procedures, add reusable fields, 
 
 Then use **Notebook** to organize projects, run protocols as notebook pages, record values, notes, files, and tables, use the bench calculators, link samples, plan experiments, and export pages.
 
-Use **Papers** to build your paper library, read and mark up PDFs, search selected text, and check each paper's details and research brief.
+Use **Papers** to build your paper library, read and mark up PDFs, search selected text, open the passages Hikari cites, and check each paper's details and research brief.
 
 Use **Samples** to record where each sample is stored: set up locations, boxes, plates, and tubes, add and edit samples, fill wells with copies, import and export containers as CSV, and find a sample from the top bar.
 
@@ -30,12 +30,14 @@ Use **Chemicals** to keep the lab's chemical inventory: add and edit chemicals, 
 
 Use **Workflows** to run multi-step work from templates: start processes, record and complete each step, add optional branches, and build templates in the graph editor.
 
-Use **DNA** to open and save sequences, edit bases and annotations, view ORFs and restriction sites, align reads, use Vector Builder and Protein Builder, review cloning designs, and keep primers in the Primer Library.
+Use **DNA** to open and save sequences, edit bases and annotations, view ORFs and restriction sites, align reads, save fragments, PCR products and digests, assemble fragments into one record, use Vector Builder and Protein Builder, review cloning designs, and keep primers in the Primer Library.
 
 Use **Plate** to map samples and concentrations, review serial dilution plans, enter or import measurements, calculate transformed values, group wells, choose analyses, and format or export charts.
 
 Use **Gel** to prepare images, define lanes and ladder labels, measure bands, edit peak areas, add lane tables, arrange stacks, and export figures or portable projects.
 
-Use **Figura** to create and revise illustrations, edit artwork and labels, select and arrange components, group and reuse assets, manage saved figures, and export SVG, PNG, or PowerPoint.
+Use **Figura** to create and revise illustrations, edit artwork and labels, draw one component at a chosen spot, select and arrange components, group and reuse described assets, manage saved figures, and export SVG, PNG, or PowerPoint.
+
+Most chapters' workspace screenshots are also the README and guide gallery images; re-running one of those captures refreshes the gallery through [docs/screenshots/tools/capture.cjs](../screenshots/README.md), which lists the mapping.
 
 The tutorials use fictional teaching examples. Screenshots show the source renderer; example AI responses and literature results are illustrative. See each chapter's [capture notes](01-home-dashboard/README.md) for its scope and refresh instructions.

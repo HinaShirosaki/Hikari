@@ -1,5 +1,5 @@
 {
-  "sourceVersion": "1.1.0-beta.11",
+  "sourceVersion": "1.1.0",
   "exampleDate": "2026-10-25",
   "timezone": "America/Chicago",
   "viewport": [
@@ -235,7 +235,7 @@
         "x": 1392,
         "y": 46,
         "width": 208,
-        "height": 159
+        "height": 122
       },
       "targets": [
         {
@@ -249,21 +249,11 @@
           }
         },
         {
-          "selector": "#add-vector",
-          "label": "Add a vector component",
-          "rect": {
-            "x": 1416,
-            "y": 106,
-            "width": 170,
-            "height": 37
-          }
-        },
-        {
           "selector": "#import",
           "label": "Import artwork",
           "rect": {
             "x": 1416,
-            "y": 143,
+            "y": 106,
             "width": 170,
             "height": 37
           }
@@ -301,13 +291,13 @@
           }
         },
         {
-          "selector": "#text-properties .field-grid",
-          "label": "Set weight and anchor",
+          "selector": "#text-properties .text-toolbar",
+          "label": "Set weight and alignment",
           "rect": {
             "x": 1305,
-            "y": 288,
+            "y": 250,
             "width": 235,
-            "height": 55
+            "height": 28
           }
         }
       ]
@@ -373,7 +363,7 @@
         "x": 1360,
         "y": 46,
         "width": 240,
-        "height": 199
+        "height": 193
       },
       "targets": [
         {
@@ -387,13 +377,23 @@
           }
         },
         {
-          "selector": "#palette-add",
-          "label": "Add a color",
+          "selector": "#palette-code",
+          "label": "Enter a hex code",
           "rect": {
             "x": 1389,
-            "y": 146,
-            "width": 192,
-            "height": 37
+            "y": 148,
+            "width": 94,
+            "height": 29
+          }
+        },
+        {
+          "selector": "#palette-add button",
+          "label": "Add color",
+          "rect": {
+            "x": 1488,
+            "y": 148,
+            "width": 93,
+            "height": 29
           }
         }
       ]
@@ -645,17 +645,17 @@
           "label": "Adjust opacity",
           "rect": {
             "x": 1305,
-            "y": 587,
+            "y": 532,
             "width": 235,
             "height": 30
           }
         },
         {
           "selector": ".object-actions",
-          "label": "Duplicate, reorder, or delete",
+          "label": "Duplicate or delete",
           "rect": {
             "x": 1305,
-            "y": 626,
+            "y": 571,
             "width": 235,
             "height": 39
           }
@@ -721,7 +721,7 @@
         "x": 577,
         "y": 419,
         "width": 256,
-        "height": 248
+        "height": 305
       },
       "targets": [
         {
@@ -752,6 +752,68 @@
             "y": 606,
             "width": 206,
             "height": 36
+          }
+        },
+        {
+          "selector": "[data-context-action=generate-here]",
+          "label": "Draw a new component here",
+          "rect": {
+            "x": 602,
+            "y": 651,
+            "width": 206,
+            "height": 48
+          }
+        }
+      ]
+    },
+    {
+      "name": "26-generate-here",
+      "title": "Add one component with Codex at a chosen spot",
+      "crop": {
+        "x": 572,
+        "y": 328,
+        "width": 456,
+        "height": 343
+      },
+      "targets": [
+        {
+          "selector": "#generate-here-description",
+          "label": "Describe the component",
+          "rect": {
+            "x": 604,
+            "y": 413,
+            "width": 392,
+            "height": 72
+          }
+        },
+        {
+          "selector": "#generate-here-renderer",
+          "label": "Choose Automatic, SVG, or image",
+          "rect": {
+            "x": 604,
+            "y": 511,
+            "width": 392,
+            "height": 28
+          }
+        },
+        {
+          "selector": "#generate-here-style",
+          "label": "Keep or change the image style",
+          "rect": {
+            "x": 604,
+            "y": 566,
+            "width": 392,
+            "height": 28
+          }
+        },
+        {
+          "selector": "#confirm-generate-here",
+          "label": "Generate with Codex",
+          "rect": {
+            "x": 848,
+            "y": 606,
+            "width": 148,
+            "height": 33
           }
         }
       ]
@@ -813,9 +875,9 @@
       "title": "Copy and paste editable components",
       "crop": {
         "x": 1354,
-        "y": 750,
+        "y": 705,
         "width": 246,
-        "height": 248
+        "height": 295
       },
       "targets": [
         {
@@ -823,7 +885,7 @@
           "label": "Copy the selection",
           "rect": {
             "x": 1379,
-            "y": 775,
+            "y": 730,
             "width": 206,
             "height": 36
           }
@@ -833,7 +895,7 @@
           "label": "Paste editable copies",
           "rect": {
             "x": 1379,
-            "y": 811,
+            "y": 766,
             "width": 206,
             "height": 36
           }
@@ -845,9 +907,9 @@
       "title": "Save a reusable component",
       "crop": {
         "x": 602,
-        "y": 405,
+        "y": 355,
         "width": 396,
-        "height": 190
+        "height": 289
       },
       "targets": [
         {
@@ -855,9 +917,19 @@
           "label": "Name the reusable component",
           "rect": {
             "x": 634,
-            "y": 489,
+            "y": 440,
             "width": 332,
             "height": 29
+          }
+        },
+        {
+          "selector": "#asset-description",
+          "label": "Describe it for search and Codex",
+          "rect": {
+            "x": 634,
+            "y": 495,
+            "width": 332,
+            "height": 72
           }
         },
         {
@@ -865,7 +937,7 @@
           "label": "Save asset",
           "rect": {
             "x": 881,
-            "y": 529,
+            "y": 579,
             "width": 85,
             "height": 33
           }
@@ -878,8 +950,8 @@
       "crop": {
         "x": 0,
         "y": 0,
-        "width": 273,
-        "height": 270
+        "width": 297,
+        "height": 1000
       },
       "targets": [
         {
@@ -907,7 +979,7 @@
         },
         {
           "selector": "#asset-search",
-          "label": "Search saved assets",
+          "label": "Search names and descriptions",
           "rect": {
             "x": 16,
             "y": 133,
@@ -919,10 +991,30 @@
           "selector": ".asset-insert",
           "label": "Insert an editable copy",
           "rect": {
-            "x": 16,
+            "x": 19,
             "y": 190,
-            "width": 207,
-            "height": 62
+            "width": 72,
+            "height": 72
+          }
+        },
+        {
+          "selector": ".asset-edit",
+          "label": "Asset details: edit or remove",
+          "rect": {
+            "x": 65,
+            "y": 193,
+            "width": 22,
+            "height": 22
+          }
+        },
+        {
+          "selector": "#asset-dock",
+          "label": "Preview, name, and description",
+          "rect": {
+            "x": 0,
+            "y": 764,
+            "width": 279,
+            "height": 236
           }
         }
       ]
@@ -1016,7 +1108,6 @@
     "Image generation settings save a zero-percent preference without calling AI",
     "Adding and editing a text label saves its content and font size",
     "Double-clicking a label edits its text on the canvas and Enter saves it",
-    "Add layer > Vector component adds an editable vector layer",
     "A new swatch color recolors every part painted with the old color",
     "Add color saves palette colors with the figure",
     "Applying a raster crop saves new image pixels on the selected layer",
@@ -1026,6 +1117,7 @@
     "The layer visibility button hides a component without deleting it",
     "The opacity field saves the selected layer opacity",
     "Grouping preserves separate artwork and text within one editable group",
+    "Generate here starts on the figure's saved image style",
     "Vertical-center alignment gives the three selected labels the same visible center",
     "Pasting a copied group creates independent editable artwork and text layers",
     "Saving an asset switches the left rail to Assets",

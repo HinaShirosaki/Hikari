@@ -1,5 +1,5 @@
 {
-  "sourceVersion": "1.1.0-beta.11",
+  "sourceVersion": "1.1.0",
   "exampleDate": "2026-10-24",
   "timezone": "America/Chicago",
   "viewport": [
@@ -106,7 +106,7 @@
       },
       "targets": [
         {
-          "selector": "tr[data-workflow-run-open=\"1303b32c-a487-44a9-a391-fd2933ce667d\"] .workflow-stepper",
+          "selector": "tr[data-workflow-run-open=\"3afcb248-d8a9-4e9a-82a6-bfe36267860a\"] .workflow-stepper",
           "label": "Steps",
           "rect": {
             "x": 572,
@@ -116,7 +116,7 @@
           }
         },
         {
-          "selector": "tr[data-workflow-run-open=\"1303b32c-a487-44a9-a391-fd2933ce667d\"] .workflow-ledger-count",
+          "selector": "tr[data-workflow-run-open=\"3afcb248-d8a9-4e9a-82a6-bfe36267860a\"] .workflow-ledger-count",
           "label": "Steps done",
           "rect": {
             "x": 1017,
@@ -127,7 +127,7 @@
           "badge": "right"
         },
         {
-          "selector": "tr[data-workflow-run-open=\"1303b32c-a487-44a9-a391-fd2933ce667d\"] td:nth-child(3)",
+          "selector": "tr[data-workflow-run-open=\"3afcb248-d8a9-4e9a-82a6-bfe36267860a\"] td:nth-child(3)",
           "label": "Next step",
           "rect": {
             "x": 1056,
@@ -137,7 +137,7 @@
           }
         },
         {
-          "selector": "tr[data-workflow-run-open=\"737459aa-d775-44fb-a7db-916a6386acad\"] .workflow-ledger-chip.is-bad",
+          "selector": "tr[data-workflow-run-open=\"bbfc26f6-0050-4c6e-b00a-3c08ceaf7a26\"] .workflow-ledger-chip.is-bad",
           "label": "Failed",
           "rect": {
             "x": 1259,
@@ -148,7 +148,7 @@
           "badge": "right"
         },
         {
-          "selector": "tr[data-workflow-run-open=\"2436cbb5-8e00-4925-a888-5b9b2f3242a9\"] .workflow-ledger-chip.is-ok",
+          "selector": "tr[data-workflow-run-open=\"2e3e3ad8-d2a5-466e-99cc-838024ee3171\"] .workflow-ledger-chip.is-ok",
           "label": "Finished",
           "rect": {
             "x": 1072,
@@ -171,7 +171,7 @@
       },
       "targets": [
         {
-          "selector": "[data-workflow-drawer-toggle=\"c29e8c14-ca0a-4af2-ade7-c97cbb00c92b\"] + .workflow-drawer-step-body .workflow-placeholder-table",
+          "selector": "[data-workflow-drawer-toggle=\"4f9d98ec-c0c8-4168-b1e4-a55eeb6eac7f\"] + .workflow-drawer-step-body .workflow-placeholder-table",
           "label": "Protocol fields",
           "rect": {
             "x": 1204,
@@ -182,7 +182,7 @@
           "badge": "right"
         },
         {
-          "selector": "[data-workflow-drawer-toggle=\"c29e8c14-ca0a-4af2-ade7-c97cbb00c92b\"] + .workflow-drawer-step-body .workflow-drawer-field",
+          "selector": "[data-workflow-drawer-toggle=\"4f9d98ec-c0c8-4168-b1e4-a55eeb6eac7f\"] + .workflow-drawer-step-body .workflow-drawer-field",
           "label": "Result",
           "rect": {
             "x": 1204,
@@ -193,7 +193,7 @@
           "badge": "right"
         },
         {
-          "selector": "[data-workflow-drawer-toggle=\"c29e8c14-ca0a-4af2-ade7-c97cbb00c92b\"] + .workflow-drawer-step-body .workflow-drawer-actions",
+          "selector": "[data-workflow-drawer-toggle=\"4f9d98ec-c0c8-4168-b1e4-a55eeb6eac7f\"] + .workflow-drawer-step-body .workflow-drawer-actions",
           "label": "Complete, Fail, Notebook, Attach",
           "rect": {
             "x": 1201,
@@ -317,7 +317,7 @@
       },
       "targets": [
         {
-          "selector": "[data-workflow-port-in=\"9f3f4c1f-4e00-41ea-9205-6d3ddf0dcba9\"]",
+          "selector": "[data-workflow-port-in=\"10b7a1b5-9b23-4ab6-aea3-35369658a0c4\"]",
           "label": "Input dot",
           "rect": {
             "x": 634,
@@ -327,7 +327,7 @@
           }
         },
         {
-          "selector": "[data-workflow-port-out=\"9f3f4c1f-4e00-41ea-9205-6d3ddf0dcba9\"]",
+          "selector": "[data-workflow-port-out=\"10b7a1b5-9b23-4ab6-aea3-35369658a0c4\"]",
           "label": "Output dot",
           "rect": {
             "x": 876,
@@ -338,7 +338,7 @@
           "badge": "right"
         },
         {
-          "selector": "[data-workflow-node=\"9f3f4c1f-4e00-41ea-9205-6d3ddf0dcba9\"] .workflow-node-remove",
+          "selector": "[data-workflow-node=\"10b7a1b5-9b23-4ab6-aea3-35369658a0c4\"] .workflow-node-remove",
           "label": "Delete block",
           "rect": {
             "x": 632,

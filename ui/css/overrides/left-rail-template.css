@@ -118,7 +118,8 @@ body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail {
 .left-rail-template[data-left-rail-foldable="true"].is-left-rail-folded > .left-rail-template__main {
   grid-column: 1 !important;
   grid-row: 1 !important;
-  padding-left: 0 !important;
+  /* Let module-specific padding win when the pane already owns its inset. */
+  padding-left: 0;
 }
 
 

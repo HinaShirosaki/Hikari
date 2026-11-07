@@ -89,7 +89,16 @@
   padding-left: 0;
 }
 
+#biology-notebook-view .biology-notebook-layout.is-left-rail-folded > .biology-notebook-viewer-column:has(> .biology-notebook-viewer:not([hidden])) {
+  padding-left: var(--left-rail-main-gap);
+}
+
 @media (min-width: 981px) {
+  /* Narrow project dashboards already provide their own inline padding. */
+  #biology-notebook-view .biology-notebook-layout.is-left-rail-folded > .biology-notebook-viewer-column:has(> .project-dashboard:not([hidden])) {
+    padding-left: var(--left-rail-main-gap);
+  }
+
   .left-rail-template.biology-notebook-layout > .biology-notebook-viewer-column.left-rail-template__main:has(> .biology-notebook-viewer:not([hidden])) {
     overflow: hidden;
     scrollbar-gutter: auto;

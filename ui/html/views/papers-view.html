@@ -2,12 +2,16 @@
       <div id="papers-layout" class="papers-layout is-comments-collapsed left-rail-template left-rail-template--preserve-columns-on-narrow" data-left-rail-foldable="true">
         <aside id="papers-library-rail" class="papers-library-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div class="papers-library-pinned left-rail-template__pinned">
-            <div class="papers-library-upload-section">
-              <button type="button" id="paper-upload-trigger" class="ghost-btn papers-library-upload-btn" aria-label="Upload PDF" title="Upload PDF" data-i18n-aria-label="papers.library.upload" data-i18n-title="papers.library.upload">
+            <div class="papers-library-header">
+              <div class="papers-library-heading">
+                <h2 class="papers-library-title" data-i18n="papers.library.title">Papers</h2>
+                <span id="papers-library-count" class="papers-library-count" aria-label="0 papers" data-i18n-aria-label="papers.library.count" data-i18n-params='{"count":0}'>0</span>
+              </div>
+              <button type="button" id="paper-upload-trigger" class="ghost-btn papers-library-upload-btn" aria-label="Import PDF" title="Import PDF" data-i18n-aria-label="papers.library.upload" data-i18n-title="papers.library.upload">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                  <path d="M12 15V4m-4 4 4-4 4 4M5 15v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"></path>
+                  <path d="M12 4v11m-4-4 4 4 4-4M5 15v4a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-4"></path>
                 </svg>
-                <span data-i18n="papers.library.upload">Upload PDF</span>
+                <span data-i18n="papers.library.import">Import</span>
               </button>
             </div>
             <p id="paper-folder-selection" class="papers-library-status" hidden><span data-i18n="papers.full.7ece2f33">No folder selected</span></p>

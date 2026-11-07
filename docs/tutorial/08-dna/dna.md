@@ -187,10 +187,10 @@ Each of these saves a new linear GenBank record beneath its template in the libr
 
 1. Select a range of bases, or right-click an annotated feature. This also works on the map and bases in **Vector Builder**.
 2. Choose **Save DNA Fragment…**.
-3. Check the template and range, and edit the suggested **Fragment name** if needed.
-4. Check the length shown under the name, then click **Save fragment**.
+3. Check the dialog's title, and edit the suggested **Fragment name** if needed.
+4. Click **Save fragment**.
 
-![Check the template, name the fragment, check its length, and click Save fragment.](images/14-save-fragment.png)
+![Check the action, name the fragment, and click Save fragment.](images/14-save-fragment.png)
 
 A feature is saved over its full span, including joined parts and spans that cross the origin of a circular sequence. Its strand and annotations are kept.
 
@@ -199,7 +199,7 @@ A feature is saved over its full span, including joined parts and spans that cro
 1. Click a primer-binding feature, or hover over it to open its card.
 2. Click **PCR…**.
 3. In the sequence, click one of the highlighted partner primers. Primers that cannot pair with the first one are greyed out.
-4. Check the product length in the dialog, edit the name if needed, and click **Save fragment**.
+4. Check the starting and partner primer named in the dialog, edit the name if needed, and click **Save fragment**.
 
 ![After PCR…, click a highlighted partner primer in the sequence.](images/15-pcr-partner.png)
 
@@ -210,14 +210,31 @@ The product includes both primer sequences, including any 5′ additions. If no 
 1. Click **Cutters** and turn on the sites you want to see (Section 8).
 2. Right-click a restriction site, or hover over it, and choose **Single digestion…** or **Double digestion…**.
 3. For a double digestion, click a second, different restriction site.
-4. Check both sites and their enzymes, then review the fragments. Clear any fragment you do not want and rename the rest if needed.
-5. Click **Confirm digestion and save**.
+4. Check the enzyme chosen for each site, then read the resulting fragments and their lengths.
+5. Rename a fragment if needed, then click its **Save** button. Save each fragment you want to keep.
+6. Click **Close** when you are finished.
 
-![Check the cut sites, choose and name the fragments, then confirm the digestion.](images/16-digest.png)
+![Check the enzymes and fragment lengths, then save each fragment you want to keep.](images/16-digest.png)
 
-Each fragment lists the overhang at both ends, in the 5′ → 3′ direction. Lengths refer to the plus strand. Nothing is written until you confirm.
+Each fragment is saved on its own, so the dialog and the template stay open. A saved fragment's button becomes a checkmark and its name can no longer be edited. Lengths refer to the plus strand. Closing the dialog discards only the fragments you did not save.
 
-## 12. Build a protein construct
+A saved fragment keeps its cut ends: in the sequence view a protruding sticky end is drawn single-stranded, with the complementary row left blank under the overhang.
+
+## 12. Assemble fragments into one sequence
+
+1. In the library, right-click a linear DNA record and choose **Assemble DNA…**. You can also right-click inside the sequence of the record you have open.
+2. Click other DNA records in the library to add them as fragments. Clicking an added record again removes it. Hikari determines their order from compatible ends or terminal overlaps.
+3. Read the summary: the assembled length, the number of fragments, and whether the product is **Circular DNA** or **Linear DNA**.
+4. Click **Options** to check each junction, remove a fragment, set the **Assembled DNA name**, or change the **Minimum overlap (bp)**.
+5. Click **Assemble**.
+
+![Click DNA items to collect fragments, check the junctions, then click Assemble.](images/26-assemble-dna.png)
+
+Hikari works out the fragment order, method, each fragment's orientation, and the product's topology for you. It first looks for matching sticky ends at every junction, including the junction that would close a circle. If sticky ends cannot join the fragments, it looks for an exact terminal overlap of at least the minimum overlap, 15 bp by default. Unrelated blunt ends cannot be joined, and a circular record has to be digested into a linear fragment before it can be assembled.
+
+The result is saved as its own library record, not as a child of any template, with the annotations of its inputs remapped onto it. The method, topology, and each fragment's resolved orientation are recorded in the record's description. Check a construct before you order or build it.
+
+## 13. Build a protein construct
 
 ### Add blocks
 
@@ -246,7 +263,7 @@ You can use **Search UniProt** instead: enter a query, run the search, select a 
 5. If you opened Protein Builder from a map insertion or replacement action, use **Insert Into Vector** to apply the construct at that target instead.
 6. Continue through the cloning review before confirming the design.
 
-## 13. Review a cloning design
+## 14. Review a cloning design
 
 1. Make the intended sequence edit, or build an insertion through Protein Builder.
 2. Click **Cloning Design** when it is available. It is also accessible from the Vector Builder toolbar.
@@ -263,7 +280,7 @@ A plan can retain a review status after confirmation. Read its messages; confirm
 
 Use **Back to Sequence** to return without confirming the design.
 
-## 14. Save and export primers
+## 15. Save and export primers
 
 ### Save a primer
 
@@ -301,19 +318,19 @@ Use **Back to Sequence** to return without confirming the design.
 
 Copying the block does not place an order. To remove library entries, select them in Primer Library and click **Remove Selected**.
 
-## 15. Organize the sequence library
+## 16. Organize the sequence library
 
 ### Record where a sequence is stored
 
 1. In the library, click the location-pin button on the sequence's row. In **Primer Library**, each primer row has the same button.
 2. Choose the storage **Location**, then the **Container**.
 3. Click the position in the box where the tube is kept.
-4. Check the **Sample Name** and **Type**, and add a code, lot, or concentration if useful.
+4. Check the **Sample Name** and **Type**, and add a code, lot, or concentration if useful. A circular record starts as a **plasmid** and a linear one as **DNA**; change the type if you keep it differently.
 5. Click the pin button at the bottom right to add the sample.
 
 ![Choose the location, container, and position, check the sample name, and add the sample.](images/23-sample-position.png)
 
-The sample is added to **Samples** at that position, the same way as samples added from Notebook. A location needs a container; add one in Samples first.
+The sample is added to **Samples** at that position, the same way as samples added from Notebook. A location needs a container; add one in Samples first. If the sequence or primer already has a sample, the same button reopens that sample for editing at its stored position instead of adding a second one.
 
 ### Use the library menu
 

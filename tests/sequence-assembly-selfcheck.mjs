@@ -14,6 +14,7 @@ const record = (name, sequence, features = []) => ({ name, sequence, features, t
 const input = (record, orientation = 'forward') => ({ record, orientation, entryId: record.name });
 const roundtrip = record => parseInputRecords(buildRecordGenbankText(record)).records[0];
 const fails = (code, fn) => assert.throws(fn, error => error.assemblyCode === code);
+const permutations = items => items.length ? items.flatMap((item, index) => permutations(items.filter((_, other) => index !== other)).map(rest => [item, ...rest])) : [[]];
 const overlap = 'ACGTCAGTACGATGC';
 const a = record('A', 'TTGCCATGCGATACG' + overlap);
 const b = record('B', overlap + 'GACTACGTTAGCCAT', [{ id: 'gene', name: 'gene B', type: 'CDS', strand: -1,
@@ -49,6 +50,11 @@ for (let mask = 0; mask < 8; mask++) {
   const sources = [oa, ob, oc].map((fragment, index) => mask & (1 << index)
     ? orientDnaAssemblyFragment(input(fragment, 'reverse')) : fragment);
   assert.equal(buildDnaAssemblyRecord(sources.map(input)).sequence, pcr.sequence, `all mixed input orientations resolve (${mask})`);
+  for (const order of permutations(sources)) {
+    const joined = buildDnaAssemblyRecord(order.map(input));
+    assert.equal(joined.sequence, pcr.sequence, `linear order is inferred for every selection order and orientation (${mask})`);
+    assert.deepEqual(joined.junctions.map(junction => [junction.left, junction.right]), [['Overlap A', 'Overlap B'], ['Overlap B', 'Overlap C']]);
+  }
 }
 
 const closing = 'GCTAACGTCAGTCCA';
@@ -84,6 +90,16 @@ for (let mask = 0; mask < 8; mask++) {
   const result = buildDnaAssemblyRecord(sources.map(input));
   assert.equal(result.topology, 'circular');
   assert.equal(result.sequence, circularSequence, `circular topology and orientation resolve together (${mask})`);
+  for (const order of permutations(sources)) {
+    const joined = buildDnaAssemblyRecord(order.map(input));
+    assert.equal(joined.topology, 'circular');
+    assert.equal(joined.sequence.length, circularSequence.length);
+    assert.ok((circularSequence.repeat(2)).includes(joined.sequence) || rc(circularSequence).repeat(2).includes(joined.sequence),
+      `circular selection order only changes origin or viewing direction (${mask})`);
+    for (const feature of circularC.features) {
+      assert.equal(featureSequence(joined, joined.features.find(mapped => mapped.name === feature.name)), featureSequence(circularC, feature));
+    }
+  }
 }
 const shortClosing = { ...circularC, sequence: circularC.sequence.slice(0, -1), features: [] };
 assert.equal(buildDnaAssemblyRecord([circularA, ob, shortClosing].map(input)).topology, 'linear', 'subthreshold closing homology does not imply a circle');
@@ -117,6 +133,15 @@ const many = Array.from({ length: 32 }, (_, index) => record(`Fragment ${index +
 const manyInputs = many.map((fragment, index) => input(index % 2 ? orientDnaAssemblyFragment(input(fragment, 'reverse')) : fragment));
 assert.equal(buildDnaAssemblyRecord(manyInputs).sequence, many[0].sequence + many.slice(1).map(fragment => fragment.sequence.slice(15)).join(''),
   'long mixed-orientation assemblies resolve without enumerating every orientation combination');
+assert.equal(buildDnaAssemblyRecord([...manyInputs.filter((_, index) => index % 2), ...manyInputs.filter((_, index) => !(index % 2))]).sequence,
+  many[0].sequence + many.slice(1).map(fragment => fragment.sequence.slice(15)).join(''), '32 shuffled fragments are ordered from their overlaps');
+fails('compatible', () => buildDnaAssemblyRecord([...manyInputs, input(record('Disconnected', bases(45)))]));
+
+const branching = [record('Anchor', bases(18) + shared[0]), record('C bridge', shared[0] + bases(18) + shared[1]),
+  record('D return', shared[1] + bases(18) + shared[0]), record('B dead end', shared[0] + bases(18))];
+assert.equal(buildDnaAssemblyRecord([branching[0], branching[3], branching[2], branching[1]].map(input)).sequence,
+  branching[0].sequence + branching.slice(1).map(fragment => fragment.sequence.slice(15)).join(''),
+  'search backtracks when a compatible neighbor cannot include all fragments');
 
 let seed = 970;
 const sequence = Array.from({ length: 200 }, () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return 'ACGT'[seed >>> 30]; }).join('');
@@ -158,6 +183,25 @@ for (const cutter of [
   const linear = buildDnaAssemblyRecord([input(open), input(reloaded[1])]);
   assert.equal(linear.topology, 'linear', 'a failed closing sticky junction leaves the valid chain linear');
   assert.ok(linear.digestEnds);
+  const three = [[10, 70], [70, 130], [10, 130]].map((cuts, index) => {
+    const products = buildRestrictionDigestProducts(template, cuts.map(start => ({ site: site(cutter.name, cutter.cut, start) })));
+    return roundtrip({ ...products[index === 2 ? 1 : 0], name: `${cutter.name} fragment ${index + 1}` });
+  });
+  for (let mask = 0; mask < 8; mask++) {
+    const sources = three.map((fragment, index) => {
+      if (!(mask & (1 << index))) return fragment;
+      const reversed = orientDnaAssemblyFragment(input(fragment, 'reverse'));
+      return { ...reversed, digestEnds: reversed.ends };
+    });
+    for (const order of permutations(sources)) {
+      const joined = buildDnaAssemblyRecord(order.map(input));
+      assert.equal(joined.assemblyMethod, 'sticky');
+      assert.equal(joined.topology, 'circular');
+      assert.equal(joined.sequence.length, sequence.length);
+      assert.ok(sequence.repeat(2).includes(joined.sequence) || rc(sequence).repeat(2).includes(joined.sequence),
+        `${cutter.name} sticky ends determine order for every selection order and orientation (${mask})`);
+    }
+  }
 }
 
 const require = createRequire(import.meta.url);

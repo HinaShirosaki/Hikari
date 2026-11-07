@@ -6,6 +6,7 @@ export const agentSpanish = Object.freeze({
   'evidence.why': 'Motivo de selección',
   'evidence.notes': 'Tus notas',
   'evidence.untitled': 'Artículo sin título',
+  'evidence.excerpt': 'Fragmento',
   "menu.newFolder": "Nueva carpeta",
   "menu.renameFolder": "Cambiar nombre",
   "menu.deleteFolder": "Eliminar carpeta",

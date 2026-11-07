@@ -1,5 +1,5 @@
 {
-  "sourceVersion": "1.1.0-beta.11",
+  "sourceVersion": "1.1.0",
   "exampleDate": "2026-10-24",
   "timezone": "America/Chicago",
   "viewport": [
@@ -15,17 +15,27 @@
         "x": 0,
         "y": 59,
         "width": 281,
-        "height": 319
+        "height": 315
       },
       "targets": [
         {
           "selector": "#paper-upload-trigger",
-          "label": "Upload PDF",
+          "label": "Import a PDF",
           "rect": {
-            "x": 16,
+            "x": 178,
             "y": 77,
-            "width": 247,
-            "height": 36
+            "width": 85,
+            "height": 32
+          }
+        },
+        {
+          "selector": "#papers-library-count",
+          "label": "Papers in the library",
+          "rect": {
+            "x": 67,
+            "y": 83,
+            "width": 9,
+            "height": 19
           }
         },
         {
@@ -33,7 +43,7 @@
           "label": "Destination folder",
           "rect": {
             "x": 46,
-            "y": 213,
+            "y": 209,
             "width": 174,
             "height": 30
           }
@@ -43,7 +53,7 @@
           "label": "Processing",
           "rect": {
             "x": 163,
-            "y": 257,
+            "y": 253,
             "width": 80,
             "height": 18
           },
@@ -98,7 +108,7 @@
       "title": "Organize folders",
       "crop": {
         "x": 0,
-        "y": 116,
+        "y": 112,
         "width": 450,
         "height": 366
       },
@@ -108,7 +118,7 @@
           "label": "Right-click a folder",
           "rect": {
             "x": 46,
-            "y": 327,
+            "y": 323,
             "width": 174,
             "height": 30
           }
@@ -118,7 +128,7 @@
           "label": "New, Rename, or Delete Folder",
           "rect": {
             "x": 212,
-            "y": 342,
+            "y": 338,
             "width": 220,
             "height": 122
           }
@@ -491,7 +501,7 @@
   ],
   "checks": [
     "Selecting a folder makes it the upload destination",
-    "Upload PDF copies the file into the selected folder",
+    "Import copies the PDF into the selected folder",
     "Processing clears when intake finishes",
     "Opening a PDF shows it and takes the title from the PDF",
     "A folder you created offers Rename and Delete",

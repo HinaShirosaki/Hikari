@@ -5,6 +5,7 @@ export const agentEnglish = Object.freeze({
   'evidence.why': 'Why selected',
   'evidence.notes': 'Your notes',
   'evidence.untitled': 'Untitled paper',
+  'evidence.excerpt': 'Excerpt',
   'menu.newFolder': 'New Folder',
   'menu.renameFolder': 'Rename Folder',
   'menu.deleteFolder': 'Delete Folder',

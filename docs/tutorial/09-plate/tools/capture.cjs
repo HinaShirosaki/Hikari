@@ -190,18 +190,16 @@ async function main() {
   for (let row = 0; row < 4; row++) await input(`#assay-plate-preview [data-axis-dimension=row][data-axis-index="${row}"]`, row < 2 ? 'Sample A' : 'Sample B');
   await shot('03-axis-mapping', 'Map sample IDs along an axis', 'Choose Row or Column for sample IDs, then enter labels in the plate headers.', ['.assay-axis-config-grid', '#assay-plate-preview'],
     [['#assay-sample-axis-row-btn', 'Sample IDs along rows'], ['#assay-plate-preview [data-axis-dimension=row]', 'Enter the sample labels']]);
-  await click('#assay-plate-field-concentration-btn');
   await input('#assay-plate-preview [data-axis-dimension=column][data-axis-index="0"]', '100 uM');
   await input('#assay-dilution-factor', '2');
   await shot('05-fill-concentrations', 'Fill the concentration series', 'Enter the starting concentration, choose a fill method, and click Fill.', ['.assay-plate-toolbar', '#assay-plate-preview'],
     [['#assay-plate-preview [data-axis-dimension=column][data-axis-index="0"]', 'Enter the starting value'], ['#assay-fill-mode', 'Choose the fill method'], ['#assay-dilution-fill-btn', 'Fill the axis']]);
   await click('#assay-dilution-fill-btn');
   await check('document.querySelectorAll("#assay-plate-preview [data-axis-dimension=column]")[1].value.startsWith("50")', 'Dilution fill divides the starting concentration by the factor');
-  await click('#assay-plate-field-sample-btn');
-  await input('#assay-plate-preview input[data-well="D6"]', 'Blank');
-  await shot('04-edit-well', 'Override a single well', 'Choose Sample ID or Concentration and edit the well directly.', ['.assay-plate-toolbar', '#assay-plate-preview'],
-    [['#assay-plate-field-sample-btn', 'Choose the field to edit'], ['#assay-plate-preview input[data-well="D6"]', 'Enter the well override']]);
-  await input('#assay-plate-preview input[data-well="D6"]', 'Sample B');
+  await input('#assay-plate-preview input[data-well="D6"][data-well-inline-field="sampleId"]', 'Blank');
+  await shot('04-edit-well', 'Override a single well', 'Click the sample ID or concentration directly inside the well to edit it.', ['.assay-plate-toolbar', '#assay-plate-preview'],
+    [['#assay-plate-preview input[data-well="D6"][data-well-inline-field="sampleId"]', 'Edit the sample ID'], ['#assay-plate-preview input[data-well="D6"][data-well-inline-field="concentration"]', 'Edit the concentration']]);
+  await input('#assay-plate-preview input[data-well="D6"][data-well-inline-field="sampleId"]', 'Sample B');
   await click('#assay-serial-dilution-btn');
   await input('#assay-serial-dilution-volume', '100');
   for (const sample of ['Sample A', 'Sample B']) await input(`[data-assay-serial-stock-sample="${sample}"]`, '1000 uM');
@@ -254,12 +252,27 @@ async function main() {
     [['#assay-analysis-data-source', 'Choose Table1 or Table2']]);
   await input('#assay-analysis-data-source', 'raw');
   await click('#assay-data-tab-raw');
-  await evaluate('const g=tutorial.grid();g.addRange(g.getRows()[0].getCell("c1"),g.getRows()[1].getCell("c6"));');
+  // Grouping is a drag tool: arm it, then drag across the wells to group.
   await click('#assay-analysis-add-row-group-btn');
+  await check('document.getElementById("assay-analysis-add-row-group-btn").getAttribute("aria-pressed") === "true" && !document.getElementById("assay-group-selection-hint").hidden',
+    'The Rows button arms the grouping tool and shows its drag hint');
   await scrollTo('#assay-groups-panel');
-  await shot('13-custom-groups', 'Group selected rows or columns', 'Select the table area, then add its rows or columns as a named group.', ['#assay-groups-panel', '#assay-result-table'],
-    [['#assay-analysis-add-row-group-btn', 'Add selected rows as a group'], ['#assay-analysis-add-column-group-btn', 'Or group selected columns'], ['#assay-analysis-clear-groups-btn', 'Clear custom groups']]);
-  await check('document.getElementById("assay-analysis-row-groups").value.includes("A,B")', 'A selected range can become a custom row group');
+  await shot('13-custom-groups', 'Group rows or columns by dragging', 'Arm Rows or Columns, then drag across the wells the group should cover.', ['#assay-groups-panel', '#assay-result-table', '#assay-group-selection-hint'],
+    [['#assay-analysis-add-row-group-btn', 'Arm row grouping'], ['#assay-analysis-add-column-group-btn', 'Or arm column grouping'], ['#assay-group-selection-hint', 'Drag across the wells, or cancel'], ['#assay-analysis-clear-groups-btn', 'Clear custom groups']]);
+  // Tabulator owns the dragged range and a synthetic gesture cannot drive it, so
+  // the range is added through its API and the tool reads it on pointerup, as in
+  // a real drag. addRange resolves a frame later, hence the wait.
+  await evaluate('const g = tutorial.grid(); g.addRange(g.getRows()[0].getCell("c1"), g.getRows()[1].getCell("c6"));');
+  await waitFor('tutorial.grid().getRanges().at(-1).getRows().length === 2');
+  await evaluate(`const g = tutorial.grid();
+    const from = g.getRows()[0].getCell("c1").getElement(), to = g.getRows()[1].getCell("c6").getElement();
+    const at = el => { const r = el.getBoundingClientRect(); return { clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, pointerId: 7, isPrimary: true, button: 0, bubbles: true, cancelable: true }; };
+    from.dispatchEvent(new PointerEvent('pointerdown', at(from)));
+    document.dispatchEvent(new PointerEvent('pointermove', at(to)));
+    to.dispatchEvent(new PointerEvent('pointerup', at(to)));`);
+  await waitFor('document.getElementById("assay-analysis-row-groups").value.includes("A,B")');
+  await check('document.getElementById("assay-analysis-add-row-group-btn").getAttribute("aria-pressed") === "false" && document.getElementById("assay-group-selection-hint").hidden',
+    'Dragging across rows A and B commits them as a custom row group and disarms the tool');
   await input('#assay-analysis-group-by', 'sample_concentration');
   await input('#assay-analysis-kind', 'summary');
   await click('#assay-workspace-view-chart');

@@ -80,12 +80,12 @@ Changing canvas size changes the figure's bounds while preserving object positio
 1. Click **Add layer**, the plus icon in the right toolbar.
 2. Choose **Text label**.
 3. Enter the label's content in **Layers**.
-4. Adjust its font, size, color, weight, alignment, and anchor as needed.
+4. Adjust its font, size, and color, then use the toolbar below for bold, italic, underline, and alignment.
 5. Click outside the edited field to keep the change.
 
-![Add layer offers Text label, Vector component, and Import artwork.](images/06-add-layer-menu.png)
+![Add layer offers Text label and Import artwork.](images/06-add-layer-menu.png)
 
-![Edit a label's content, font, size, color, weight, and anchor in Layers.](images/07-edit-text.png)
+![Edit a label's content, font, size, and color, and its weight and alignment, in Layers.](images/07-edit-text.png)
 
 ### Edit a label on the canvas
 
@@ -95,13 +95,13 @@ Changing canvas size changes the figure's bounds while preserving object positio
 
 ![Double-click a label and type its new text directly on the canvas.](images/08-inline-text.png)
 
-Each text change can be undone in one step. Text remains independent of the underlying artwork, and its row in Layers shows the label text. Resizing a text layer scales its box and font together; changing the font-size field gives you a separate size control.
+Each text change can be undone in one step. Text remains independent of the underlying artwork, and its row in Layers shows the label text. The font field suggests the fonts installed on your computer. Dragging a text layer's handles changes the size of its box and keeps the font size; the font-size field changes the type size on its own. The alignment buttons place the text inside its own box without moving the box.
 
 ## 6. Recolor vector artwork and set a palette
 
 ### Change one color
 
-1. Select a vector component, such as a cell drawing, on the canvas or in Layers. To add a plain shape, use **Add layer > Vector component**.
+1. Select a vector component, such as a cell drawing, on the canvas or in Layers.
 2. Open **Layers**. Under **Colors**, the component's colors appear as swatches.
 3. Click the swatch for the color you want to change. While it is active, the canvas outlines the parts that use that color with a moving dashed line and fades the rest of the component.
 4. Pick the new color. Every part painted with the old color changes together, as one undoable edit.
@@ -113,10 +113,10 @@ Only colors written as hex values get a swatch. For a prepared SVG component, us
 ### Set the figure palette
 
 1. Click **Figure palette**, the palette icon in the right toolbar.
-2. Click **Add color** to add a main color. A figure can hold up to eight.
+2. Type a hex code, such as `#4169d8`, and click **Add color**. A figure can hold up to eight.
 3. Click a swatch to change its color, or its **×** to remove it.
 
-![Add up to eight main colors, click a swatch to change it, or remove it with ×.](images/10-figure-palette.png)
+![Type a hex code to add a main color, up to eight; click a swatch to change it, or remove it with ×.](images/10-figure-palette.png)
 
 The palette is saved with the figure, and each change can be undone. Codex uses these colors for new artwork, plots, and generated images, and leaves existing artwork alone unless you ask it to recolor. The text color and Colors pickers offer the palette colors. With an empty palette, Codex chooses the colors.
 
@@ -201,11 +201,12 @@ You can focus the rotation handle and use arrow keys for one-degree steps, or **
 2. Click a layer row to select its component.
 3. Hover over or focus the row to reveal its visibility button. Click it to hide or show the component.
 4. Drag the **Opacity** slider, or enter a percentage from 0 to 100.
-5. With a component selected, use the bottom action icons to **Duplicate layer**, **Bring forward**, **Send backward**, or **Delete layer**.
+5. Drag a layer row to change the stacking order, or focus a row and press **Alt + ↑ / Alt + ↓**.
+6. With a component selected, use the bottom action icons to **Duplicate layer** or **Delete layer**.
 
-![Select layers, toggle their visibility, adjust opacity, and use the duplicate, order, and delete actions.](images/17-layer-actions.png)
+![Select layers, toggle their visibility, adjust opacity, reorder by dragging, and use the duplicate and delete actions.](images/17-layer-actions.png)
 
-Hidden layers remain in the illustration but are omitted from exports. Releasing the opacity slider saves one undoable change; **Escape** cancels an unfinished slider preview. Artwork layers have a name you can change at the top of their properties; text layers are listed by their text.
+The top row of the list is the front of the figure. Hidden layers remain in the illustration but are omitted from exports. Releasing the opacity slider saves one undoable change; **Escape** cancels an unfinished slider preview. Artwork layers have a name you can change at the top of their properties; text layers are listed by their text.
 
 ## 11. Group related artwork and labels
 
@@ -220,11 +221,24 @@ Grouping keeps artwork and text independently editable. A selected group outline
 
 ### Use the context menu
 
-Right-click a component on the canvas or its layer row for **Copy**, **Paste**, **Group**, **Ungroup**, and **Save as an asset…**. Unavailable actions are disabled. On macOS, Control-click also opens the menu.
+Right-click a component on the canvas or its layer row for **Copy**, **Paste**, **Group**, **Ungroup**, **Save as an asset…**, and **Generate here with Codex…**. Unavailable actions are disabled. On macOS, Control-click also opens the menu.
 
-![Right-click a component or group to access copy, grouping, and reusable-asset actions.](images/19-context-menu.png)
+![Right-click a component or group to access copy, grouping, reusable-asset, and generation actions.](images/19-context-menu.png)
 
 Right-clicking an already selected component keeps the current multiple selection. Press **Escape** to dismiss the menu.
+
+### Draw one component at a chosen spot
+
+1. Right-click the place on the canvas where the component belongs.
+2. Choose **Generate here with Codex…**.
+3. Describe the component.
+4. Choose a **Format**: **Automatic**, **Editable SVG**, or **Image generation**.
+5. Leave **Image style** on the figure's saved style, or pick another for this component only. It does not apply to **Editable SVG**.
+6. Click **Generate with Codex** and follow the work in the chat rail.
+
+![Describe the component, choose a format, and keep or change the image style.](images/26-generate-here.png)
+
+Codex centers the new component on the spot you right-clicked and leaves the rest of the figure alone. Zoom and pan do not move that spot; near an edge the component shifts just enough to stay on the canvas. A style chosen here is used once and the figure's saved style is unchanged.
 
 ## 12. Align components and distribute spacing
 
@@ -260,23 +274,28 @@ Copy a structure in **ChemDraw**, then paste it onto the Figura canvas with **�
 
 1. Select the artwork and labels you want to reuse.
 2. Right-click and choose **Save as an asset…**.
-3. Enter a descriptive **Name**.
+3. Enter a descriptive **Name**, and a **Description (optional)** of the subject, visible parts, colors, style, and intended use.
 4. Click **Save asset**. The left rail switches to **Assets**.
 
-![Give the selected component a reusable name and click Save asset.](images/22-save-asset.png)
+![Give the selected component a reusable name and description, then click Save asset.](images/22-save-asset.png)
+
+A description helps you and Codex find the right artwork later; search matches names and descriptions. It can be up to 2,000 characters.
 
 ### Insert an asset
 
-1. Click **Assets** in the switch at the top of the left rail.
-2. Search for the component by name.
-3. Click its preview or name to insert an editable copy into the active illustration.
-4. Move or resize the inserted selection as needed.
+1. Click **Assets** in the switch at the top of the left rail. Saved components appear as a grid of thumbnails.
+2. Search for the component by name or by words from its description.
+3. Hover over a thumbnail, or focus it with the keyboard, to see a larger preview with its full name and description in the pane under the grid.
+4. Click the thumbnail to insert an editable copy into the active illustration.
+5. Move or resize the inserted selection as needed.
 
-![Switch the rail to Assets, search, and click a component to insert it; the buttons above add assets from files.](images/23-reusable-assets.png)
+![Switch the rail to Assets, search, and click a thumbnail to insert a copy; the pane under the grid previews the asset.](images/23-reusable-assets.png)
 
-To add assets from files, click **Import asset…** and choose one or more SVG, PNG, JPEG, or WebP files, or click **Import folder…** to add every supported file in a folder and its subfolders, named after the files. Files that fail validation are listed in the review dialog and skipped, and artwork already in the library is reused rather than duplicated. **Generate asset…** asks Codex to make a new reusable component without changing the canvas.
+A large asset is fitted inside 70% of the canvas; a smaller one keeps its saved size. The preview pane never covers the canvas.
 
-To remove a saved asset, use its trash icon in Assets. Copies already placed in illustrations remain independent.
+To add assets from files, click **Import asset…** and choose one or more SVG, PNG, JPEG, or WebP files, or click **Import folder…** to add every supported file in a folder and its subfolders, named after the files. Files that fail validation are listed in the review dialog and skipped, and artwork already in the library is reused rather than duplicated. **Generate asset…** asks Codex to make a new reusable component without changing the canvas, in the figure's image style or another you choose for that asset.
+
+To edit an asset's name or description, or to remove it, click the **i** button on its thumbnail and use **Asset details**. Copies already placed in illustrations remain independent of the saved asset.
 
 ## 15. Find saved illustrations
 

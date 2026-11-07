@@ -59,7 +59,6 @@ export function initAssay({
     activeResultsAssayId: '',
     activeWellEditorId: '',
     axisTemplateValues: { sampleValues: [], concentrationValues: [] },
-    plateEditField: 'sampleId',
     concentrationUnit: '',
     manualWellOverrides: {},
     suppressedWells: new Set(),

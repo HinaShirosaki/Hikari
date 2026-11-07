@@ -25,22 +25,21 @@ export function createContainerDetailRenderer({
     const fillKey = primarySample ? 'container.sampleFill' : 'container.emptyTube';
     return `
       <div class="falcon-preview-shell">
-        <div class="falcon-preview" role="img" ${sampleAttributes({ 'aria-label': fillKey }, primarySample ? { type: getSampleTypeLabel(primarySample.type) } : {})}>
-          <div class="falcon-cap" aria-hidden="true">
-            <span class="falcon-cap-ridges"></span>
-          </div>
-          <div class="falcon-body">
-            <div class="falcon-liquid${primarySample ? ' has-sample' : ''}"${fillColor ? ` style="--falcon-fill:${fillColor};"` : ''}></div>
-            <div class="falcon-mark falcon-mark-1"></div>
-            <div class="falcon-mark falcon-mark-2"></div>
-            <div class="falcon-mark falcon-mark-3"></div>
-            <div class="falcon-mark falcon-mark-4"></div>
-            <span class="falcon-volume falcon-volume-50">50</span>
-            <span class="falcon-volume falcon-volume-25">25</span>
-            <span class="falcon-volume falcon-volume-10">10</span>
-            <div class="falcon-highlight"></div>
-          </div>
-        </div>
+        <svg class="falcon-preview" viewBox="0 0 100 240" role="img" ${sampleAttributes({ 'aria-label': fillKey }, primarySample ? { type: getSampleTypeLabel(primarySample.type) } : {})}>
+          <path class="falcon-glass" d="M20 28V188Q20 192 22 195.5L43 233Q50 241 57 233L78 195.5Q80 192 80 188V28Z"/>
+          ${primarySample ? `<path class="falcon-liquid" style="--falcon-fill:${fillColor};" d="M23 150V187.5Q23 191 25 194.5L45 230.5Q50 236.5 55 230.5L75 194.5Q77 191 77 187.5V150Q50 156 23 150Z"/>` : ''}
+          <path class="falcon-marks" d="M58 46h14M64 62h8M58 79h14M64 95h8M58 111h14M64 127h8M58 144h14M64 160h8M58 176h14M64 192h8"/>
+          <g class="falcon-volumes">
+            <text x="55" y="46">50</text>
+            <text x="55" y="79">40</text>
+            <text x="55" y="111">30</text>
+            <text x="55" y="144">20</text>
+            <text x="55" y="176">10</text>
+          </g>
+          <path class="falcon-highlight" d="M29 38V188"/>
+          <rect class="falcon-cap" x="15" y="2" width="70" height="28" rx="4"/>
+          <path class="falcon-cap-ridges" d="M19 13.5H81"/>
+        </svg>
       </div>
     `;
   }

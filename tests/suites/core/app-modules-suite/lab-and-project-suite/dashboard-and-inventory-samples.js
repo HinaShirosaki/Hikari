@@ -467,8 +467,8 @@ test('personal-inventory single container uses the same labeled set-samples form
   assert.match(inventorySections.innerHTML, /Sample Code[\s\S]*data-single-sample-new-code/);
   assert.match(inventorySections.innerHTML, /Sample Name[\s\S]*data-single-sample-new-name/);
   assert.match(inventorySections.innerHTML, /Lot \/ Batch[\s\S]*data-single-sample-new-lot/);
-  assert.match(inventorySections.innerHTML, /falcon-cap-ridges/);
-  assert.match(inventorySections.innerHTML, /falcon-volume-50/);
+  assert.match(inventorySections.innerHTML, /<svg class="falcon-preview"/);
+  assert.doesNotMatch(inventorySections.innerHTML, /falcon-liquid/);
   assert.doesNotMatch(inventorySections.innerHTML, /No sample linked to this tube yet\./);
 
   inventorySections.querySelector('[data-single-sample-new-code]').value = 'TUBE-001';

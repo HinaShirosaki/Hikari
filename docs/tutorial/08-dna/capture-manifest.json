@@ -1,5 +1,5 @@
 {
-  "sourceVersion": "1.1.0-beta.11",
+  "sourceVersion": "1.1.0",
   "exampleDate": "2026-10-25",
   "timezone": "America/Chicago",
   "viewport": [
@@ -170,18 +170,18 @@
       "name": "05-selection-menu",
       "title": "Add an annotation to a selected range",
       "crop": {
-        "x": 478,
-        "y": 179,
+        "x": 483,
+        "y": 185,
         "width": 232,
-        "height": 265
+        "height": 301
       },
       "targets": [
         {
           "selector": "[data-sequence-feature-action=add]",
           "label": "Add Feature",
           "rect": {
-            "x": 503,
-            "y": 274,
+            "x": 508,
+            "y": 316,
             "width": 182,
             "height": 36
           }
@@ -190,8 +190,8 @@
           "selector": "[data-sequence-feature-action=design-primer]",
           "label": "Design Primer",
           "rect": {
-            "x": 503,
-            "y": 310,
+            "x": 508,
+            "y": 352,
             "width": 182,
             "height": 36
           }
@@ -541,19 +541,19 @@
       "title": "Save a feature as a DNA fragment",
       "crop": {
         "x": 502,
-        "y": 362,
+        "y": 397,
         "width": 596,
-        "height": 333
+        "height": 263
       },
       "targets": [
         {
-          "selector": "[data-fragment-parent]",
-          "label": "Template and range",
+          "selector": "[data-fragment-title]",
+          "label": "Check the action",
           "rect": {
             "x": 539,
-            "y": 455,
-            "width": 522,
-            "height": 19
+            "y": 434,
+            "width": 144,
+            "height": 22
           }
         },
         {
@@ -567,21 +567,11 @@
           }
         },
         {
-          "selector": "[data-fragment-preview]",
-          "label": "Check the length",
-          "rect": {
-            "x": 539,
-            "y": 570,
-            "width": 522,
-            "height": 19
-          }
-        },
-        {
           "selector": "[data-fragment-save]",
           "label": "Save fragment",
           "rect": {
             "x": 945,
-            "y": 621,
+            "y": 586,
             "width": 116,
             "height": 37
           }
@@ -592,20 +582,20 @@
       "name": "15-pcr-partner",
       "title": "Pick the PCR partner primer",
       "crop": {
-        "x": 1038,
-        "y": 548,
-        "width": 562,
-        "height": 452
+        "x": 954,
+        "y": 64,
+        "width": 646,
+        "height": 536
       },
       "targets": [
         {
           "selector": ".sequence-viewer-pcr-picker",
           "label": "Read the PCR prompt",
           "rect": {
-            "x": 1056,
-            "y": 912,
-            "width": 526,
-            "height": 70
+            "x": 972,
+            "y": 82,
+            "width": 620,
+            "height": 63
           }
         },
         {
@@ -624,40 +614,112 @@
       "name": "16-digest",
       "title": "Review a double digestion",
       "crop": {
-        "x": 462,
-        "y": 116,
-        "width": 676,
-        "height": 825
+        "x": 482,
+        "y": 293,
+        "width": 636,
+        "height": 472
       },
       "targets": [
         {
           "selector": "[data-digest-sites]",
-          "label": "Check the cut sites",
+          "label": "Check the enzymes",
           "rect": {
-            "x": 499,
-            "y": 244,
-            "width": 598,
-            "height": 137
+            "x": 519,
+            "y": 420,
+            "width": 558,
+            "height": 57
           }
         },
         {
-          "selector": "[data-digest-products]",
-          "label": "Choose and name fragments",
+          "selector": "[data-digest-save=\"0\"]",
+          "label": "A saved fragment",
           "rect": {
-            "x": 499,
-            "y": 442,
-            "width": 598,
-            "height": 377
-          }
-        },
-        {
-          "selector": "[data-digest-save]",
-          "label": "Confirm digestion and save",
-          "rect": {
-            "x": 906,
-            "y": 859,
-            "width": 195,
+            "x": 1009,
+            "y": 524,
+            "width": 68,
             "height": 37
+          }
+        },
+        {
+          "selector": "[data-digest-name=\"1\"]",
+          "label": "Rename a fragment",
+          "rect": {
+            "x": 519,
+            "y": 604,
+            "width": 478,
+            "height": 39
+          }
+        },
+        {
+          "selector": "[data-digest-save=\"1\"]",
+          "label": "Save it too",
+          "rect": {
+            "x": 1009,
+            "y": 606,
+            "width": 68,
+            "height": 37
+          }
+        }
+      ]
+    },
+    {
+      "name": "26-assemble-dna",
+      "title": "Assemble fragments into one DNA record",
+      "crop": {
+        "x": 0,
+        "y": 275,
+        "width": 1600,
+        "height": 725
+      },
+      "targets": [
+        {
+          "selector": "#sequence-viewer-assembly-prompt",
+          "label": "Click items to add fragments",
+          "rect": {
+            "x": 975,
+            "y": 606,
+            "width": 594,
+            "height": 19
+          }
+        },
+        {
+          "selector": "[data-assembly-inputs]",
+          "label": "Review or remove a fragment",
+          "rect": {
+            "x": 975,
+            "y": 689,
+            "width": 590,
+            "height": 88
+          }
+        },
+        {
+          "selector": "[data-assembly-junctions]",
+          "label": "Check each junction",
+          "rect": {
+            "x": 975,
+            "y": 858,
+            "width": 590,
+            "height": 76
+          }
+        },
+        {
+          "selector": "[data-assembly-summary]",
+          "label": "Length and topology",
+          "rect": {
+            "x": 975,
+            "y": 942,
+            "width": 594,
+            "height": 19
+          }
+        },
+        {
+          "selector": "[data-assembly-save]",
+          "label": "Assemble",
+          "rect": {
+            "x": 1490,
+            "y": 632,
+            "width": 79,
+            "height": 33
           }
         }
       ]
@@ -929,9 +991,9 @@
       "title": "Organize the sequence library",
       "crop": {
         "x": 92,
-        "y": 387,
+        "y": 427,
         "width": 277,
-        "height": 194
+        "height": 230
       },
       "targets": [
         {
@@ -939,7 +1001,7 @@
           "label": "New Folder",
           "rect": {
             "x": 117,
-            "y": 412,
+            "y": 452,
             "width": 227,
             "height": 36
           }
@@ -949,7 +1011,7 @@
           "label": "Rename",
           "rect": {
             "x": 117,
-            "y": 448,
+            "y": 488,
             "width": 227,
             "height": 36
           }
@@ -959,7 +1021,7 @@
           "label": "Move to Folder",
           "rect": {
             "x": 117,
-            "y": 484,
+            "y": 524,
             "width": 227,
             "height": 36
           }
@@ -971,7 +1033,7 @@
       "title": "Rename a sequence",
       "crop": {
         "x": 52,
-        "y": 357,
+        "y": 397,
         "width": 187,
         "height": 64
       },
@@ -981,7 +1043,7 @@
           "label": "Edit the name, then Enter",
           "rect": {
             "x": 70,
-            "y": 375,
+            "y": 415,
             "width": 151,
             "height": 28
           }
@@ -998,12 +1060,14 @@
     "PCR highlights the opposite-strand primer as a compatible partner",
     "A PCR product between Teaching F and Teaching R saves as a child entry",
     "Double digestion of the circular vector at NdeI and BamHI offers two fragments",
-    "Confirm digestion saves both fragments under the template",
+    "Each fragment saves on its own and the dialog stays open on the template",
+    "Assembling both digest products infers a circular product from their sticky ends",
+    "Assemble saves the product as its own circular record, not a child of a template",
     "A manual protein and a common tag form an assembled chain",
     "Saving two annotated primers from their hover cards populates Primer Library",
     "Save to Primer Library keeps the designed primers",
     "Copy IDT Block copies the selected primer names and sequences",
-    "Record sample position adds a DNA sample at the chosen box position",
+    "Record sample position adds the circular vector as a plasmid sample at the chosen box position, linked to the sequence",
     "Inline Rename updates the selected library record"
   ]
 }

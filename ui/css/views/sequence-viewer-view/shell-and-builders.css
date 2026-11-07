@@ -41,6 +41,11 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   min-height: 0;
 }
 
+#sequence-viewer-view :is(.sequence-viewer-home-layout, .sequence-viewer-protein-builder-grid).is-left-rail-folded > .left-rail-template__main,
+#sequence-viewer-detail-view .sequence-viewer-cloning-design-grid.is-left-rail-folded > .sequence-viewer-cloning-design-main {
+  padding-left: var(--left-rail-main-gap);
+}
+
 #sequence-viewer-view .left-rail-template.sequence-viewer-home-layout > .sequence-viewer-home-sidebar.left-rail-template__rail--pinned,
 #sequence-viewer-view .left-rail-template.sequence-viewer-protein-builder-grid > .sequence-viewer-protein-builder-sidebar.left-rail-template__rail--pinned,
 #sequence-viewer-detail-view .left-rail-template.sequence-viewer-detail-layout > .sequence-viewer-detail-sidebar.left-rail-template__rail--pinned {

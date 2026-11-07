@@ -13,6 +13,10 @@
   min-width: 0;
 }
 
+#lab-common-inventory-view .chemical-layout.is-left-rail-folded > .chemical-main {
+  padding-left: var(--left-rail-main-gap);
+}
+
 #lab-common-inventory-view .chemical-sidebar,
 #lab-common-inventory-view .chemical-main,
 #lab-common-inventory-view .chemical-list-panel,

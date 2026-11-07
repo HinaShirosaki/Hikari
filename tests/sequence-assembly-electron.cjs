@@ -141,7 +141,7 @@ async function main() {
     assert.equal(await run(`${field('save')}.disabled`), true);
     assert.equal(await run(`!!document.querySelector('dialog[open]')`), false, 'starting assembly opens a banner without a modal');
     assert.equal(await run(`${field('details')}.hidden`), true, 'advanced options start collapsed');
-    assert.equal(await run(`document.querySelectorAll('[data-assembly-method], [data-assembly-orientation], [data-assembly-topology]').length`), 0, 'method, orientation and topology are inferred without selectors');
+    assert.equal(await run(`document.querySelectorAll('[data-assembly-method], [data-assembly-orientation], [data-assembly-topology], [data-assembly-move]').length`), 0, 'order, method, orientation and topology are inferred without selectors');
     const initialLoads = await run('detailLoads');
     await add('b');
     await add('c');
@@ -163,21 +163,18 @@ async function main() {
     await click('[data-assembly-options]');
     await click('#sequence-viewer-detail-library-list [data-sequence-entry-id="b"]');
     await add('b-reversed');
-    await click('[data-assembly-row]:nth-child(3) [data-assembly-move="up"]');
-    assert.equal(await run(`${field('save')}.disabled`), false, 'a reverse-complemented input is oriented automatically');
-    await click('[data-assembly-row]:nth-child(2) [data-assembly-move="up"]');
-    assert.equal(await run(`${field('save')}.disabled`), true, 'fragment order controls the junctions');
-    await click('[data-assembly-row]:nth-child(1) [data-assembly-move="down"]');
+    assert.equal(await run(`${field('save')}.disabled`), false, 'out-of-order, reverse-complemented inputs are ordered and oriented automatically');
+    assert.match(await run(`${field('junctions')}.textContent`), /Overlap A → Reverse B input.*Reverse B input → Overlap C/);
     await click('[data-assembly-row]:nth-child(3) [data-assembly-remove]');
     assert.equal(await run(count), 2);
-    await add('c');
+    await add('b-reversed');
     await run(`${field('name')}.value='Overlap product'`);
     for (const [locale, label, topology] of [['es', 'Ensamblar', 'ADN lineal'], ['zh-Hans', '组装', '线性 DNA'], ['zh-Hant', '組裝', '線性 DNA'], ['ja', '組み立て', '直鎖状 DNA']]) {
       await run(`${field('name')}.focus();${field('name')}.setSelectionRange(1,5);switchLocale('${locale}')`);
       assert.equal(await run(`${field('save')}.textContent`), label);
       assert.equal(await run(`${field('summary')}.textContent.includes(${JSON.stringify(topology)})`), true, 'detected topology follows language changes');
       assert.deepEqual(await run(`[${field('name')}.value,document.activeElement===${field('name')},${field('name')}.selectionStart,${field('name')}.selectionEnd]`), ['Overlap product', true, 1, 5]);
-      assert.deepEqual(await run(`[...document.querySelectorAll('.sequence-viewer-assembly-source strong')].map(e=>e.textContent)`), ['Overlap A', 'Reverse B input', 'Overlap C']);
+      assert.deepEqual(await run(`[...document.querySelectorAll('.sequence-viewer-assembly-source strong')].map(e=>e.textContent)`), ['Overlap A', 'Overlap C', 'Reverse B input']);
       assert.equal(await run(`document.querySelectorAll('[data-assembly-method], [data-assembly-orientation]').length`), 0);
     }
     await run(`switchLocale('en')`);
@@ -289,7 +286,7 @@ async function main() {
     await waitFor(`detailLoads>${previousLoads}`);
     assert.equal((await entries()).length, beforeCancel, 'Escape cancels assembly and restores ordinary DNA navigation');
     assert.deepEqual(errors, []);
-    console.log('Sequence assembly Electron QA passed: automatic method/orientation/topology, sticky and homology circles, reactive linear/circular previews, closing-overlap trimming and origin annotations, independent GBK outputs, retries, localization, responsive/native interaction, and cancellation.');
+    console.log('Sequence assembly Electron QA passed: automatic order/method/orientation/topology, sticky and homology circles, reactive linear/circular previews, closing-overlap trimming and origin annotations, independent GBK outputs, retries, localization, responsive/native interaction, and cancellation.');
   } finally {
     win.destroy();
     await fs.promises.rm(scratch, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });

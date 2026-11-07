@@ -1,9 +1,22 @@
 # README screenshots
 
-These images show the current Hikari renderer with fictional teaching-lab data in an isolated browser session at 1600 × 1000. The bundled Gel workspace is captured from its actual plugin renderer at the same size.
+These images show the current Hikari renderer with fictional teaching-lab data at 1600 × 1000. The bundled Gel workspace is captured from its actual plugin renderer at the same size.
 
-The seven images used in the main README (home, notebook-entry, agent-chat, sequence-detail, assay-layout, gel-analysis, papers-viewer) were refreshed on 2026-09-30 with a fictional lysozyme stability project: variant names, plate values, the synthetic gel, the teaching PDF, and the Agent conversation were constructed for documentation. The remaining images, used only in the guide, still show the earlier yeast growth and GFP teaching data. None of them represent a real experiment, a functional plasmid, a published paper, or a live model response.
+Twelve of the fourteen images were refreshed on 2026-11-06 against the 1.1.0 source renderer: the seven used in the main README (home, notebook-entry, papers-viewer, sequence-detail, assay-layout, gel-analysis, agent-chat) and five used only in the guide (protocols-editor, notebook-project-dashboard, samples-registry, chemicals-list, workflows-graph). Ten of them are the full-window captures the [illustrated tutorials](../tutorial/README.md) already take and verify, so the gallery cannot drift from the chapters. The notebook page and the agent rail have no tutorial figure that shows what the gallery needs, so both are captured here from the Notebook chapter's fixture: the page builds a result table through the real table controls, and the rail mounts the real chat rail and history renderer. The conversation, the paper it cites, and the evidence behind the citation buttons are written for documentation. The two images that are not refreshed, tools-molarity and settings-appearance, are older manual captures from workspaces that have no tutorial chapter. None of them represent a real experiment, a functional plasmid, a published paper, or a live model response.
 
-The preview uses in-memory adapters for desktop-only storage, chat-history, sequence-library, and plugin-host calls. Screenshots demonstrate the rendered interfaces, not native persistence or AI execution. No personal storage root, research files, manuscripts, credentials, or private project records were used.
+Previews use in-memory adapters for desktop-only storage, chat-history, sequence-library, and plugin-host calls. Screenshots demonstrate the rendered interfaces, not native persistence or AI execution. No personal storage root, research files, manuscripts, credentials, or private project records were used.
 
-To refresh the images, build the UI with `npm run build:ui`, start a clean browser profile or disposable app profile with fictional records, and capture each workspace after opening a representative record. Wait for navigation animations and transient notices to finish, inspect each image, and verify the README image links before publishing. Never connect the screenshot session to a real research storage folder.
+## Refresh
+
+Re-run the chapter captures that feed the gallery, then this script, from the repository root:
+
+```sh
+for chapter in 01-home-dashboard 02-protocols 03-notebook 04-papers 05-samples 06-chemicals 07-workflows 08-dna 09-plate 10-gel; do
+  node docs/tutorial/$chapter/tools/capture.cjs
+done
+node docs/screenshots/tools/capture.cjs
+```
+
+`tools/capture.cjs` copies each chapter's workspace capture into this folder, then captures `notebook-entry.png` and `agent-chat.png` in a disposable Electron profile with remote requests blocked. It fails rather than writing a misleading image if the result table does not keep its values, the rail does not expand, the scripted conversation does not render, or the citation buttons do not resolve. Which chapter capture feeds which image is the `FROM_TUTORIALS` map at the top of the script.
+
+Inspect every refreshed image, and check that the alt text in [Readme.md](../../Readme.md) and the [guide](../guide/README.md) still describes what the picture shows. `tools-molarity.png` and `settings-appearance.png` have no capture script: take them in a disposable profile with fictional records, and never connect a screenshot session to a real research storage folder.

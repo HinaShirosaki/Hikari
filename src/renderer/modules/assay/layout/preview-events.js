@@ -55,7 +55,7 @@ export function createPlatePreviewEvents({
       if (isConcentrationAxis && mode !== 'factor') {
         autoFillConcentrationRange(mode, { silent: true });
       }
-      renderPlatePreview();
+      renderPlatePreview(null, { preserveEditors: true });
       renderResultTable();
       setLayoutStatus('');
       setCsvStatus(plateUi('status.mappedWells', { count: runtime.currentLayout.length }));
@@ -75,7 +75,7 @@ export function createPlatePreviewEvents({
       inlineInput.dataset.wellInlineField,
       inlineInput.value
     );
-    renderPlatePreview();
+    renderPlatePreview(null, { preserveEditors: true });
     renderResultTable();
     setLayoutStatus(plateUi('status.updatedWell', { well: String(inlineInput.dataset.well || '').trim().toUpperCase() }));
     setCsvStatus(plateUi('status.mappedWells', { count: runtime.currentLayout.length }));
@@ -189,7 +189,7 @@ export function createPlatePreviewEvents({
     if (!normalizedWell || !assayPlatePreview) {
       return;
     }
-    const selector = `[data-well="${normalizedWell}"] [data-well-inline-field="${runtime.plateEditField}"]`;
+    const selector = `[data-well="${normalizedWell}"] [data-well-inline-field="sampleId"]`;
     assayPlatePreview.querySelector(selector)?.focus();
   }
 

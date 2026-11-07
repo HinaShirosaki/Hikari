@@ -97,13 +97,10 @@ export function createDnaAssemblyController({ rootDocument, getBridge, getStorag
   }
 
   function renderInputs() {
-    i18nUi.setText(field('selected-names'), context.inputs.map(input => input.record.name).join(' → '));
-    i18nUi.setHtml(field('inputs'), context.inputs.map((input, index) => `<div class="sequence-viewer-assembly-input" data-assembly-row="${input.key}" data-assembly-loading="${input.loading ? 'true' : 'false'}">
+    i18nUi.setHtml(field('inputs'), context.inputs.map(input => `<div class="sequence-viewer-assembly-input" data-assembly-row="${input.key}" data-assembly-loading="${input.loading ? 'true' : 'false'}">
       <div class="sequence-viewer-assembly-source"><strong>${escapeHtml(input.record.name)}</strong>
         <span class="small-note">${input.loading ? i18nUi.html('Loading…') : i18nUi.html('{length} bp', { length: input.record.sequence.length.toLocaleString() })}</span></div>
       <div class="sequence-viewer-assembly-row-actions">
-        <button type="button" class="ghost-btn" data-assembly-move="up" ${index === 0 ? 'disabled' : ''} ${i18nUi.attribute('aria-label', 'Move fragment up')}>↑</button>
-        <button type="button" class="ghost-btn" data-assembly-move="down" ${index === context.inputs.length - 1 ? 'disabled' : ''} ${i18nUi.attribute('aria-label', 'Move fragment down')}>↓</button>
         <button type="button" class="ghost-btn" data-assembly-remove ${i18nUi.attribute('aria-label', 'Remove fragment')}>×</button>
       </div>
     </div>`).join(''));
@@ -157,7 +154,6 @@ export function createDnaAssemblyController({ rootDocument, getBridge, getStorag
     i18nUi.setHtml(banner, `<div class="sequence-viewer-assembly-head"><h4 id="sequence-viewer-assembly-title">${i18nUi.html('Assemble DNA')}</h4>
       <button type="button" class="ghost-btn" data-assembly-close data-assembly-cancel ${i18nUi.attribute('aria-label', 'Cancel')}>×</button></div>
       <p class="small-note" id="sequence-viewer-assembly-prompt">${i18nUi.html('Click DNA items to add or remove fragments, then click Assemble.')}</p>
-      <p class="small-note sequence-viewer-assembly-selected" data-assembly-selected-names aria-live="polite"></p>
       <div class="sequence-viewer-assembly-controls">
         <button type="button" class="ghost-btn" data-assembly-options aria-expanded="false">${i18nUi.html('Options')}</button>
         <button type="submit" class="primary-btn" data-assembly-save>${i18nUi.html('Assemble')}</button>
@@ -182,15 +178,10 @@ export function createDnaAssemblyController({ rootDocument, getBridge, getStorag
       }
       const row = event.target.closest('[data-assembly-row]');
       if (!row || !context || saving) return;
-      const index = context.inputs.findIndex(input => input.key === row.dataset.assemblyRow);
-      if (event.target.closest('[data-assembly-remove]')) { context.inputs.splice(index, 1); renderInputs(); return; }
-      const move = event.target.closest('[data-assembly-move]');
-      if (!move) return;
-      const next = index + (move.dataset.assemblyMove === 'up' ? -1 : 1);
-      if (next < 0 || next >= context.inputs.length) return;
-      [context.inputs[index], context.inputs[next]] = [context.inputs[next], context.inputs[index]];
-      renderInputs();
-      banner.querySelector(`[data-assembly-row="${row.dataset.assemblyRow}"] [data-assembly-move="${move.dataset.assemblyMove}"]`)?.focus();
+      if (event.target.closest('[data-assembly-remove]')) {
+        context.inputs = context.inputs.filter(input => input.key !== row.dataset.assemblyRow);
+        renderInputs();
+      }
     });
     banner.addEventListener('input', preview);
     banner.addEventListener('change', preview);

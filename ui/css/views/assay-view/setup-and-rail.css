@@ -169,6 +169,11 @@
   min-width: 0;
 }
 
+/* Analyze owns its padding; only Setup needs an inset when its rail folds. */
+#assay-view .assay-create-layout.is-left-rail-folded > .assay-create-preview-panel {
+  padding-left: var(--left-rail-main-gap);
+}
+
 .left-rail-template.assay-results-layout {
   --left-rail-main-gap: var(--space-20);
   display: grid;
@@ -336,6 +341,7 @@
 .left-rail-template.assay-results-layout > .assay-results-controls-panel.app-left-rail {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+  gap: 0;
   align-content: stretch;
   height: 100%;
   min-height: 0;
@@ -554,36 +560,34 @@
 }
 
 .assay-create-preview-panel > .assay-plate-toolbar {
+  --assay-toolbar-control-height: 2.25rem;
   display: flex;
+  flex: 0 0 auto;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-8) var(--space-12);
-  margin: 0 0 var(--space-12);
-  padding-bottom: var(--space-12);
+  gap: var(--space-12);
+  margin: 0 0 var(--space-16);
+  padding: var(--space-20) 0 var(--space-16);
   border-bottom: 1px solid var(--theme-border);
-}
-
-.assay-plate-toolbar .assay-mode-switch {
-  gap: var(--space-2);
-  padding: 3px;
-  border: 0;
-  border-radius: 8px;
-  background: var(--theme-surface-subtle);
 }
 
 .assay-plate-toolbar .ghost-btn,
 .assay-plate-toolbar .assay-fill-mode-select,
 .assay-plate-toolbar .assay-conc-unit-input {
   box-sizing: border-box;
-  min-height: 32px;
+  height: var(--assay-toolbar-control-height);
+  min-height: var(--assay-toolbar-control-height);
   margin: 0;
-  padding: 5px var(--space-10);
+  padding: 0 var(--space-10);
   border-radius: 6px;
   font-size: var(--text-sm);
-  line-height: 20px;
+  line-height: 1.25;
 }
 
 .assay-plate-toolbar .ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   white-space: nowrap;
 }
 
@@ -612,10 +616,4 @@
 .assay-plate-toolbar .assay-plate-clear-btn:hover {
   color: var(--theme-text-strong);
   background: var(--theme-highlight);
-}
-
-.assay-plate-toolbar .assay-mode-switch > .calendar-view-active {
-  background: var(--theme-surface-elevated);
-  color: var(--theme-text-strong);
-  box-shadow: 0 1px 2px var(--theme-border);
 }

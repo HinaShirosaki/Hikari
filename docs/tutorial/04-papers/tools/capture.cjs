@@ -209,9 +209,9 @@ async function main() {
     const el = document.getElementById('paper-pdf'); el.files = t.files; el.dispatchEvent(new Event('change', { bubbles: true }));`);
   await waitFor('tutorial.state.papers.length === 4 && document.querySelector(".papers-paper-processing")');
   const paperId = await evaluate('return tutorial.state.papers.at(-1).id;');
-  await check(`tutorial.state.papers.at(-1).linkedId === 'demo-stability' && tutorial.calls.some(c => c.kind === 'store')`, 'Upload PDF copies the file into the selected folder');
-  await shot('02-add-pdf', 'Add a PDF to a folder', 'Select a folder, then upload. The new paper shows Processing while Hikari reads it.', ['#paper-upload-trigger', '#journal-club-list'],
-    [['#paper-upload-trigger', 'Upload PDF'], [folderRow('project:demo-stability'), 'Destination folder'], ['#journal-club-list .papers-paper-processing', 'Processing', 'right']], { side: true });
+  await check(`tutorial.state.papers.at(-1).linkedId === 'demo-stability' && tutorial.calls.some(c => c.kind === 'store')`, 'Import copies the PDF into the selected folder');
+  await shot('02-add-pdf', 'Add a PDF to a folder', 'Select a folder, then import. The new paper shows Processing while Hikari reads it.', ['#paper-upload-trigger', '#journal-club-list'],
+    [['#paper-upload-trigger', 'Import a PDF'], ['#papers-library-count', 'Papers in the library'], [folderRow('project:demo-stability'), 'Destination folder'], ['#journal-club-list .papers-paper-processing', 'Processing', 'right']], { side: true });
   await evaluate('tutorial.finishIntake();');
   await waitFor(`tutorial.state.papers.at(-1).ingestionStatus === 'uploaded' && !document.querySelector('.papers-paper-processing')`);
   manifest.checks.push('Processing clears when intake finishes');

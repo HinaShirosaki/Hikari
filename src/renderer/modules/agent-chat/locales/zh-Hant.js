@@ -6,6 +6,7 @@ export const agentTraditionalChinese = Object.freeze({
   'evidence.why': '選擇原因',
   'evidence.notes': '你的註記',
   'evidence.untitled': '未命名論文',
+  'evidence.excerpt': '摘錄',
   "menu.newFolder": "新增資料夾",
   "menu.renameFolder": "重新命名資料夾",
   "menu.deleteFolder": "刪除資料夾",

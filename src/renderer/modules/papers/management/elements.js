@@ -11,6 +11,7 @@ function getPapersElements(doc = null) {
     paperList: getById('paper-list'),
     papersView: getById('papers-view'),
     papersLibraryRail: getById('papers-library-rail'),
+    papersLibraryCount: getById('papers-library-count'),
     paperUploadTrigger: getById('paper-upload-trigger'),
     paperFolderSelection: getById('paper-folder-selection'),
     papersLibraryContextMenu: getById('papers-library-context-menu'),

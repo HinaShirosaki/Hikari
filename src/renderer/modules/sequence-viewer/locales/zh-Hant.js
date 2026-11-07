@@ -2,7 +2,7 @@
 export const dnaTraditionalChinese = Object.freeze({
   "full.d3bf0385": "環狀 DNA",
   "full.6df3425": "線性 DNA",
-  "full.3aca0191": "目前片段順序無法相容組裝。請使用匹配的黏性末端或至少 {minimum} bp 的末端重疊。",
+  "full.a83a2116": "未找到相容的組裝方式。請使用匹配的黏性末端或至少 {minimum} bp 的末端重疊。",
   "full.3a39d215": "儲存資料夾已變更。請重新開始組裝。",
   "full.31ac3501": "組裝",
   "full.353e0d45": "選項",
@@ -15,8 +15,6 @@ export const dnaTraditionalChinese = Object.freeze({
   "full.f9783800": "環狀",
   "full.310e66b1": "最小重疊長度 (bp)",
   "full.e50883ba": "正向",
-  "full.640e97e9": "上移片段",
-  "full.653838d0": "下移片段",
   "full.7961e987": "移除片段",
   "full.9dc3aa14": "新增",
   "full.2e7e4ae3": "載入中…",

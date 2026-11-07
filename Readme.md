@@ -20,6 +20,7 @@ The AI-native lab workspace, with an agent that runs experiments with you.<br/>
 <a href="https://hikari-lab-agent.com/"><b>Website</b></a> ·
 <a href="#quick-start"><b>Install</b></a> ·
 <a href="docs/getting-started/first-experiment.md"><b>15-min Tutorial</b></a> ·
+<a href="docs/tutorial/README.md"><b>Illustrated Tutorials</b></a> ·
 <a href="docs/guide/README.md"><b>Full Guide</b></a> ·
 <a href="docs/README.md"><b>Contributor Docs</b></a>
 
@@ -78,7 +79,7 @@ A notebook entry pulls in **the protocol you ran, the samples you used, the assa
 
 ### 🤖 AI that knows your lab
 
-The assistant answers from **your actual notebook, protocols, samples, and papers**. Anything it drafts lands as a review card that you approve before it is saved.
+The assistant answers from **your actual notebook, protocols, samples, and papers**, and every claim from a paper links to the passage it came from. Anything it drafts lands as a review card that you approve before it is saved.
 
 </td>
 <td width="33%" valign="top">
@@ -92,7 +93,7 @@ AI runs through the Codex CLI, which is **covered by a ChatGPT subscription**. S
 
 ### 📊 Analysis built in
 
-**Cloning and primer design**, plate assays with **curve fitting**, gel **band quantification**, a colony counter, and eight bench calculators.
+**Cloning, primer design, and DNA assembly**, plate assays with **curve fitting**, gel **band quantification**, a colony counter, and eight bench calculators.
 
 </td>
 </tr>
@@ -103,17 +104,17 @@ AI runs through the Codex CLI, which is **covered by a ChatGPT subscription**. S
 <table>
 <tr>
 <td width="50%" valign="top">
-<img src="docs/screenshots/notebook-entry.png" alt="Notebook page with an SDS-PAGE protocol and a result table" /><br/>
+<img src="docs/screenshots/notebook-entry.png" alt="Notebook page with the protocol that was run and a result table" /><br/>
 <b>Notebook</b>: experiment records that snapshot the protocol you ran
 </td>
 <td width="50%" valign="top">
 <img src="docs/screenshots/sequence-detail.png" alt="Annotated sequence in the Sequence Viewer" /><br/>
-<b>DNA</b>: annotation, restriction sites, alignment, and cloning design
+<b>DNA</b>: annotation, restriction sites, alignment, assembly, and cloning design
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
-<img src="docs/screenshots/assay-layout.png" alt="96-well plate layout with an inhibitor dilution series" /><br/>
+<img src="docs/screenshots/assay-layout.png" alt="24-well plate layout with a two-sample dilution series" /><br/>
 <b>Plate</b>: plate layouts, spreadsheet formulas, and curve fitting
 </td>
 <td width="50%" valign="top">
@@ -123,7 +124,7 @@ AI runs through the Codex CLI, which is **covered by a ChatGPT subscription**. S
 </tr>
 <tr>
 <td width="50%" valign="top">
-<img src="docs/screenshots/papers-viewer.png" alt="Papers PDF viewer" /><br/>
+<img src="docs/screenshots/papers-viewer.png" alt="Papers PDF viewer with a teaching paper open" /><br/>
 <b>Papers</b>: a local PDF library with comments, summaries, and method extraction
 </td>
 <td width="50%" valign="top">
@@ -149,6 +150,7 @@ AI runs through the Codex CLI, which is **covered by a ChatGPT subscription**. S
 | --- | --- |
 | 📖 **[Full guide](docs/guide/README.md)** | Every workspace, AI setup, data and storage, and development |
 | 🎓 **[First experiment tutorial](docs/getting-started/first-experiment.md)** | Go from an empty folder to a saved result in 15 minutes |
+| 📚 **[Illustrated tutorials](docs/tutorial/README.md)** | Eleven chapters, one per workspace, with annotated screenshots; also in `Settings > Tutorial` |
 | 🏗️ **[Architecture](Architecture.md)** | How the app fits together |
 | 🧩 **[Plugins](docs/plugins/README.md)** | Build, share, and install sandboxed workspaces and tools |
 | 🛠️ **[Contributor docs](docs/README.md)** | Internal docs for working on the codebase |

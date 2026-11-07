@@ -47,10 +47,14 @@ async function main() {
         {line_number:61,content:'The control signal was subtracted before curve fitting.'}],
       relevance_reason: 'These lines identify the controls and incubation time needed to compare the two runs. They also explain how the background signal was removed.',
       related_comments: [{text:'Check whether both runs used the same vehicle concentration.'}] },
-      {paper_id:'p2', paper_title:'Assessing reproducibility in plate-based binding measurements', section_label:'Replicates',
+      {paper_id:'p2', paper_title:'Assessing reproducibility in plate-based binding measurements', section_label:'',
         source_path:'KnowledgeBase/papers.md/p2/paper.md', line_ranges:[{start_line:108,end_line:109}],
         source_lines:[{line_number:108,content:'Independent measurements were collected in triplicate.'},{line_number:109,content:'Variability was reported for each concentration.'}],
         relevance_reason:'Provides a reference for reporting uncertainty in the comparison.'}];
+    evidence.splice(1,0,{paper_id:'p1',paper_title:evidence[0].paper_title,section_label:'Methods',
+      source_path:evidence[0].source_path,line_ranges:[{start_line:80,end_line:80}],
+      source_lines:[{line_number:80,content:'The plate reader recorded fluorescence after the incubation.'}],
+      relevance_reason:'Identifies the measurement method.',related_comments:[]});
     window.state = {settings:{agent:{}},projects:[],agentChat:{currentSessionId:'paper-chat',messages:[
       {id:'u',role:'user',text:'Find the controls I should check before comparing these binding assay runs.'},
       {id:'a',role:'assistant',text:'The reader found two useful passages. Check the vehicle control, incubation time, and background subtraction before comparing the curves.',meta:{paper_evidence:evidence}}
@@ -96,6 +100,29 @@ async function main() {
       if ([1500, 390].includes(width)) fs.writeFileSync(path.join(out, `${theme}-${width}.png`), (await win.webContents.capturePage()).toPNG());
     }
   }
+  // Each passage folds independently, including its comments and saved notes.
+  assert.equal(await run('document.querySelectorAll(".agent-evidence-paper")[0].querySelectorAll("details.agent-evidence-chunk").length'), 2);
+  await run(`document.querySelector('.agent-evidence-section').click();`);
+  const folded = await run(`(() => {
+    const [first,second]=document.querySelectorAll('.agent-evidence-chunk');
+    return {firstOpen:first.open,secondOpen:second.open,paperOpen:first.parentElement.open,
+      quoteVisible:first.querySelector('blockquote').checkVisibility(),
+      commentsVisible:[...first.querySelectorAll('.agent-evidence-comment')].some(node=>node.checkVisibility())};
+  })()`);
+  assert.deepEqual(folded, {firstOpen:false,secondOpen:true,paperOpen:true,quoteVisible:false,commentsVisible:false});
+  // A reader update rebuilds the card but keeps the user's passage fold state.
+  await run(`state.agentChat.messages[1].meta.paper_evidence=state.agentChat.messages[1].meta.paper_evidence.map((block,i)=>i ? block : {...block,relevance_reason:block.relevance_reason+' Updated relevance.'});redraw();`);
+  assert.equal(await run('document.querySelector(".agent-evidence-chunk").open'), false);
+  assert.equal(await run('document.querySelectorAll(".agent-evidence-chunk")[1].open'), true);
+  await run(`document.querySelector('.agent-evidence-section').focus();`);
+  win.webContents.sendInputEvent({type:'keyDown',keyCode:'Space'});
+  win.webContents.sendInputEvent({type:'keyUp',keyCode:'Space'});
+  await run('new Promise(resolve=>requestAnimationFrame(resolve))');
+  assert.equal(await run('document.querySelector(".agent-evidence-chunk").open'), true, 'A section can be reopened from the keyboard');
+  assert.equal(await run('document.activeElement === document.querySelector(".agent-evidence-section")'), true);
+  await run(`document.querySelectorAll('.agent-evidence-section')[1].click();`);
+  assert.equal(await run('document.querySelectorAll(".agent-evidence-chunk")[1].open'), false);
+  assert.equal(await run('document.querySelector(".agent-evidence-chunk").open'), true, 'Folding a second section keeps the first open');
   // Native disclosures work by mouse and keyboard, and retain their state.
   await run(`document.querySelectorAll('.agent-evidence-paper')[1].querySelector('summary').click(); redraw();`);
   assert.equal(await run('document.querySelectorAll(".agent-evidence-paper")[1].open'), true);
@@ -111,6 +138,7 @@ async function main() {
   assert.equal(await run('dom.paperEvidence.hidden && !document.querySelector(".agent-chat-stage").classList.contains("has-paper-evidence")'), true);
   await run(`state.agentChat.currentSessionId='paper-chat'; state.agentChat.messages=saved; redraw();`);
   assert.equal(await run('document.querySelector(".agent-evidence-card").open'), true);
+  assert.equal(await run('[...document.querySelectorAll(".agent-evidence-chunk")].every(section=>section.open)'), true, 'A new session starts with readable passages');
   // Paper strings remain text, including strings that resemble markup.
   await run(`state.agentChat.messages[1].meta.paper_evidence=state.agentChat.messages[1].meta.paper_evidence.map((block,i)=>i ? block : {...block,relevance_reason:'<img src=x onerror="window.injected=true">'}); redraw();`);
   assert.equal(await run('dom.paperEvidence.querySelectorAll("img,script").length'), 0);
@@ -120,8 +148,9 @@ async function main() {
     const {translateTree}=await import(${JSON.stringify(url('src/renderer/lib/i18n/dom.js'))}); i18n.setLocale('zh-Hans'); translateTree(dom.paperEvidence); })()`);
   assert.equal(await run('document.querySelector(".agent-evidence-title").textContent'), '论文摘录');
   assert.equal(await run('document.querySelector(".agent-evidence-comment-label").textContent'), '选择原因');
+  assert.equal(await run('document.querySelectorAll(".agent-evidence-section")[2].textContent'), '摘录', 'Unlabelled passages have a localized fold control');
   fs.writeFileSync(path.join(out, 'verification.json'), JSON.stringify({ measurements }, null, 2));
-  console.log('Paper evidence Electron passed: 10 day/night layouts, exact lines and comments, session isolation, stable selection, disclosures, escaping and live localization.');
+  console.log('Paper evidence Electron passed: 10 day/night layouts, exact excerpts, independent passage folds, keyboard access, retained fold state, session isolation and localization.');
   win.destroy(); app.quit();
 }
 
