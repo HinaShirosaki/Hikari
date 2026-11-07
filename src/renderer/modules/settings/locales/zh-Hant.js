@@ -1,5 +1,6 @@
 // Traditional Chinese preview. Missing entries use the English catalog.
 export const settingsTraditionalChinese = Object.freeze({
+  "full.a1e3d575": "授予其他資料夾的讀取權限。在 Agent 聊天中設定 Codex 權限。",
   "nav.label": "設定分類",
   "nav.workspace": "工作區",
   "nav.appearance": "外觀",
@@ -27,9 +28,10 @@ export const settingsTraditionalChinese = Object.freeze({
   "appearance.languageTraditionalChinese": "繁體中文（預覽）",
   "appearance.languageJapanese": "日本語（プレビュー）",
   "appearance.theme": "主題",
-  "appearance.themeDescription": "選擇淺色或深色工作區。",
+  "appearance.themeDescription": "選擇工作區外觀。",
   "appearance.day": "淺色",
   "appearance.night": "深色",
+  "appearance.miku": "初音未來",
   "appearance.textSize": "文字大小",
   "appearance.textSizeDescription": "套用至整個 Hikari。",
   "appearance.small": "小",

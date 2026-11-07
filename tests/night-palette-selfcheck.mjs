@@ -182,8 +182,9 @@ assert.ok(
 // Status chips: the shared -ink step must hold 4.5:1 on its own -soft tint in
 // both modes, so a 13px label is readable on any chip the tint steps can make.
 const tints = readBlock(palette, 'body');
-for (const [mode, vars] of [['day', day], ['night', night]]) {
-  const scope = new Map([...vars, ...tints]);
+const miku = new Map([...day, ...tints, ...readBlock(palette, 'body.theme-miku')]);
+for (const [mode, vars] of [['day', day], ['night', night], ['miku', miku]]) {
+  const scope = new Map([...tints, ...vars]);
   const page = resolve('var(--theme-surface)', scope);
   for (const status of ['accent', 'success', 'warning', 'danger']) {
     const ink = resolve(`var(--theme-${status}-ink)`, scope);
@@ -191,6 +192,20 @@ for (const [mode, vars] of [['day', day], ['night', night]]) {
     atLeast(`${mode} ${status} chip`, ink, fill, 4.5);
   }
 }
+
+/* ---------- the Miku contract ---------- */
+
+// Accent doubles as text (48 rules), so bright #39c5bb must stay out of that role.
+const mikuToken = (name) => resolve(`var(${name})`, miku);
+for (const name of ['surface', 'surface-subtle', 'surface-elevated']) {
+  const panel = mikuToken(`--theme-${name}`);
+  for (const role of ['text', 'text-muted', 'accent', 'success', 'warning', 'danger']) {
+    atLeast(`miku ${role} on ${name}`, mikuToken(`--theme-${role}`), panel, 4.5);
+  }
+  atLeast(`miku focus ring on ${name}`, mikuToken('--theme-focus'), panel, 3);
+}
+atLeast('miku ink on accent', mikuToken('--theme-text-on-accent'), mikuToken('--theme-accent'), 4.5);
+atLeast('miku ink on accent hover', mikuToken('--theme-text-on-accent'), mikuToken('--theme-accent-hover'), 4.5);
 
 /* ---------- night must not fork the theme vocabulary ---------- */
 
@@ -243,11 +258,12 @@ for (const relativePath of themedStylesheets.flat()) {
   const css = await read(relativePath);
   const root = declarationsUnder(css, ':root');
   const night = declarationsUnder(css, 'body\\.theme-night');
+  const mikuOverrides = declarationsUnder(css, 'body\\.theme-miku');
   for (const [property, value] of root) {
     if (!value.includes('var(--theme-')) continue;
     assert.ok(
-      night.has(property),
-      `${relativePath}: ${property} reads a theme token from :root, where it freezes the day palette and leaks into night mode; declare it on \`body\` (or re-declare it per theme)`
+      night.has(property) && mikuOverrides.has(property),
+      `${relativePath}: ${property} reads a theme token from :root, where it freezes the day palette and leaks into other themes; declare it on \`body\` (or re-declare it per theme)`
     );
   }
 }

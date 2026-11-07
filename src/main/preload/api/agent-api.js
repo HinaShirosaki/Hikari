@@ -4,6 +4,8 @@ const { AGENT, AGENT_PROGRESS_EVENT, FILE_ACCESS } = require('../../../shared/ip
 
 function createAgentApi(ipcRenderer) {
   return {
+    getAgentCodexPermission: () => ipcRenderer.invoke(AGENT.CODEX_PERMISSION_GET),
+    setAgentCodexPermission: preset => ipcRenderer.invoke(AGENT.CODEX_PERMISSION_SET, { preset }),
     agentFilesStatus: () => ipcRenderer.invoke(FILE_ACCESS.STATUS),
     agentFilesSettings: payload => ipcRenderer.invoke(FILE_ACCESS.SETTINGS, payload),
     agentFilesReview: payload => ipcRenderer.invoke(FILE_ACCESS.REVIEW, payload),

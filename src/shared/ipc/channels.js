@@ -13,6 +13,8 @@
 
 const AGENT = Object.freeze({
   CHAT: 'agent:chat',
+  CODEX_PERMISSION_GET: 'agent:codex-permission:get',
+  CODEX_PERMISSION_SET: 'agent:codex-permission:set',
   HTML_PREVIEW: 'agent:html-preview',
   CHAT_CANCEL: 'agent:chat:cancel',
   LIST_SKILLS: 'agent:list-skills',

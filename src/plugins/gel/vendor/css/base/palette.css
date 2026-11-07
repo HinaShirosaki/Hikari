@@ -127,6 +127,65 @@ body.theme-night,
   --theme-scrollbar-thumb-hover: rgba(226, 228, 234, 0.42);
 }
 
+body.theme-miku,
+#setting-appearance-preview[data-mode="miku"] {
+  color-scheme: light;
+
+  /*
+   * Hatsune Miku's own colors: #39c5bb and #86cecb teal, #137a7f deep teal,
+   * #e12885 pink, #bec8d1 silver and #373b3e charcoal. #39c5bb is only 2.1:1
+   * on a light page, so it carries the washes, hovers and heatmap, while
+   * #137a7f takes the accent role because accent is also used as text.
+   */
+  --theme-background: #f2fafa;
+  --theme-surface: #f8fcfc;
+  --theme-surface-subtle: #e3f5f3;
+  --theme-surface-elevated: #ffffff;
+  --theme-surface-muted: color-mix(in srgb, var(--theme-surface-subtle) 78%, var(--theme-surface-elevated) 22%);
+  --theme-surface-hover: color-mix(in srgb, #39c5bb 8%, var(--theme-surface));
+  --theme-surface-active: color-mix(in srgb, #39c5bb 16%, var(--theme-surface));
+  --theme-highlight: color-mix(in srgb, var(--theme-surface-subtle) 55%, var(--theme-surface-elevated));
+
+  --theme-border: #bcd3d5;
+  --theme-border-soft: #d7e8e8;
+
+  --theme-text: #2c3336;
+  --theme-text-muted: #55686f;
+  --theme-text-strong: #181e21;
+  --theme-primary: var(--theme-text-strong);
+  --theme-text-on-accent: #f5fffe;
+
+  --theme-accent: #137a7f;
+  --theme-accent-soft: color-mix(in srgb, #39c5bb 24%, transparent);
+  --theme-accent-wash: color-mix(in srgb, #39c5bb 14%, transparent);
+  --theme-focus: #1a9891;
+  --theme-success: #1b7a43;
+  --theme-warning: #9f5a00;
+  /* #e12885 darkened to hold 4.5:1 on the subtle surface. */
+  --theme-danger: #c81a72;
+
+  --theme-panel: var(--theme-surface-elevated);
+  --theme-control-background: var(--theme-surface-elevated);
+  --theme-control-background-hover: color-mix(in srgb, #39c5bb 8%, var(--theme-surface-elevated));
+
+  --theme-loading-background: #102b2e;
+  --theme-overlay: rgba(20, 67, 70, 0.2);
+  --theme-overlay-strong: rgba(10, 47, 50, 0.48);
+  --theme-shadow-color-subtle: rgba(22, 87, 87, 0.08);
+  --theme-shadow-color: rgba(22, 87, 87, 0.14);
+  --theme-shadow-color-strong: rgba(22, 87, 87, 0.2);
+  --theme-shadow-small: 0 2px 8px rgba(22, 87, 87, 0.12);
+  --theme-shadow-medium: 0 6px 14px rgba(22, 87, 87, 0.16);
+
+  --theme-scrollbar-thumb: rgba(19, 122, 127, 0.24);
+  --theme-scrollbar-thumb-hover: rgba(19, 122, 127, 0.38);
+
+  --theme-heat-1: #c9ece9;
+  --theme-heat-2: #86cecb;
+  --theme-heat-3: #39c5bb;
+  --theme-heat-4: #137a7f;
+}
+
 /*
  * Tints: the only steps a view may derive from the colors above. Reach for one
  * of these before writing a new color-mix() percentage; a wash that is 2%

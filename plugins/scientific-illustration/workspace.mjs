@@ -1,5 +1,5 @@
 import { createDocument, normalizeDocument, applyOperations, readDocument, validateRequest, CANVASES, MAX_DOCUMENT_CHARS, validId } from './model.mjs';
-import { validateSvg, renderPreview, svgSource } from './artwork.mjs';
+import { validateSvg, renderPreview } from './artwork.mjs';
 import { CANVAS_TOOL_CONTRACT } from './agent/canvas-contract.mjs';
 import { agentInstructions } from './agent/workflow.mjs';
 import { normalizeSourceContext } from './source-context.mjs';
@@ -166,17 +166,73 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
         ...(trim ? { raster_import: trim } : {}), ...readAssetLibrary(assetLibrary) };
     } finally { await hikari.call('app.setUnsaved', { unsaved: false }); }
   }
-  async function save(next) {
+  async function commitLibrary(nextLibrary, { path, scene, active = false, resetHistory = false } = {}) {
     await hikari.call('app.setUnsaved', { unsaved: true });
     try {
-      const entry = library.illustrations.find(item => item.id === library.activeId);
-      const path = nextScenePath(entry);
-      const nextLibrary = { ...library, revision: crypto.randomUUID(), illustrations: library.illustrations.map(item => item.id === entry.id
-        ? { ...item, path, title: next.title, updatedAt: new Date().toISOString() } : item) };
-      await writeJson(path, next);
+      if (path) await writeJson(path, scene);
       await writeJson(LIBRARY_PATH, nextLibrary);
-      documentState = next; library = nextLibrary; publish(); onStatus('');
+      library = nextLibrary;
+      if (active) {
+        documentState = scene;
+        if (resetHistory) { undoStack.length = 0; redoStack.length = 0; }
+        publish();
+      } else onLibraryChange(readLibrary(library));
+      onStatus('');
     } finally { await hikari.call('app.setUnsaved', { unsaved: false }); }
+  }
+  async function save(next, entry = library.illustrations.find(item => item.id === library.activeId)) {
+    const path = nextScenePath(entry);
+    const nextLibrary = { ...library, revision: crypto.randomUUID(), illustrations: library.illustrations.map(item => item.id === entry.id
+      ? { ...item, path, title: next.title, updatedAt: new Date().toISOString() } : item) };
+    await commitLibrary(nextLibrary, { path, scene: next, active: entry.id === library.activeId });
+  }
+  function recordUndo(previous) {
+    undoStack.push(previous);
+    if (undoStack.length > 25) undoStack.shift();
+    redoStack.length = 0;
+    reportHistory();
+  }
+  async function sceneFor(entry) {
+    return entry.id === library.activeId ? documentState : (await loadScene(entry.path)).document;
+  }
+  async function renameIllustration(entry, title) {
+    if (typeof title !== 'string' || !title.trim() || title.length > 200) throw new Error('Enter an illustration name.');
+    title = title.trim();
+    const previous = await sceneFor(entry);
+    if (previous.title === title) return { ok: true };
+    await save(applyOperations(previous, [{ op: 'title', title }], validateSvg), entry);
+    if (entry.id === library.activeId) recordUndo(previous);
+    return { ok: true };
+  }
+  async function deleteIllustration(entry) {
+    const index = library.illustrations.indexOf(entry);
+    const illustrations = library.illustrations.filter(item => item.id !== entry.id);
+    const nextLibrary = { ...library, revision: crypto.randomUUID(), illustrations };
+    if (entry.id === library.activeId) {
+      let replacement = illustrations[Math.min(index, illustrations.length - 1)];
+      let path, scene;
+      if (replacement) {
+        const loaded = await loadScene(replacement.path);
+        scene = loaded.document;
+        if (loaded.migrated) {
+          path = nextScenePath(replacement);
+          illustrations[illustrations.indexOf(replacement)] = { ...replacement, path };
+        }
+      } else {
+        const id = crypto.randomUUID();
+        path = `illustrations/${id}/scene-a.json`;
+        scene = createDocument();
+        replacement = { id, path, title: scene.title, updatedAt: new Date().toISOString() };
+        illustrations.push(replacement);
+      }
+      nextLibrary.activeId = replacement.id;
+      await commitLibrary(nextLibrary, { path, scene, active: true, resetHistory: true });
+    } else await commitLibrary(nextLibrary);
+    // The index commits first. The host only supports overwriting scene files.
+    const paths = [`illustrations/${entry.id}/scene-a.json`, `illustrations/${entry.id}/scene-b.json`];
+    if (entry.path === 'workspace.json' && !illustrations.some(item => item.path === entry.path)) paths.push(entry.path);
+    await Promise.all(paths.map(path => writeJson(path, { deleted: true }).catch(() => {})));
+    return { ok: true };
   }
   async function apply(args, deadline = Infinity, importedIds = [], { agentRequest = false, inspectionRunId = '', importedSources = {} } = {}) {
     const hash = await signature(args);
@@ -236,7 +292,7 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
     if (JSON.stringify(next).length > MAX_DOCUMENT_CHARS) throw new Error('The illustration is too large. Use smaller assets.');
     await save(next);
     if (agentRequest && inspectionRunId) inspections.edited(inspectionRunId);
-    undoStack.push(previous); if (undoStack.length > 25) undoStack.shift(); redoStack.length = 0; reportHistory();
+    recordUndo(previous);
     return { ok: true, status: 'applied', persisted: true, illustration_id: library.activeId, inserted_assets: insertedAssets,
       raster_imports: rasterImports, auto_saved_assets: autoSavedAssets, ...readDocument(documentState), ...readLibrary(library), ...readAssetLibrary(assetLibrary) };
   }
@@ -264,14 +320,9 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
       illustrations: args.action === 'open' ? library.illustrations.map(item => item.id === id && migrating ? entry : item) : [...library.illustrations, entry],
       receipts: [...library.receipts, { id: args.request_id, hash, illustrationId: id }].slice(-64) };
     if (Date.now() >= deadline) return failure('expired', 'The request expired before selection.');
-    await hikari.call('app.setUnsaved', { unsaved: true });
-    try {
-      if (args.action !== 'open' || migrating) await writeJson(entry.path, next);
-      await writeJson(LIBRARY_PATH, nextLibrary);
-      library = nextLibrary; documentState = next; undoStack.length = 0; redoStack.length = 0;
-      publish(); onStatus('');
-      return { ok: true, status: args.action === 'open' ? 'opened' : 'created', illustration_id: id, ...readLibrary(library), ...readDocument(documentState) };
-    } finally { await hikari.call('app.setUnsaved', { unsaved: false }); }
+    await commitLibrary(nextLibrary, { path: args.action !== 'open' || migrating ? entry.path : undefined,
+      scene: next, active: true, resetHistory: true });
+    return { ok: true, status: args.action === 'open' ? 'opened' : 'created', illustration_id: id, ...readLibrary(library), ...readDocument(documentState) };
   }
   async function request(input, deadline = Infinity, assets = {}, { inspectionRunId = '', agentRequest = false } = {}) {
     let args; const importedIds = [], importedSources = Object.create(null);
@@ -431,6 +482,11 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
     }); },
     async manage(action, id, title, source) { return enqueue(async () => {
       try {
+        if (action === 'rename' || action === 'delete') {
+          const entry = library.illustrations.find(item => item.id === id);
+          if (!entry) return failure('not_found', 'This illustration does not exist.');
+          return action === 'rename' ? await renameIllustration(entry, title) : await deleteIllustration(entry);
+        }
         const args = { action, ...(id ? { illustration_id: id } : {}), ...(title ? { title } : {}),
           ...(source !== undefined ? { source } : {}),
           expected_library_revision: library.revision, request_id: crypto.randomUUID() };
@@ -440,5 +496,9 @@ export function createWorkspace({ hikari, onChange = () => {}, onLibraryChange =
       catch (error) { onStatus(error.message); return failure('failed', error.message); }
     }); },
     async flush() { await tail; await ready; },
-    async exportSvg(canvas) { await tail; await ready; return svgSource(documentState, canvas); } };
+    getExportDocument(id) { return enqueue(() => {
+      const entry = library.illustrations.find(item => item.id === (id || library.activeId));
+      if (!entry) throw new Error('This illustration does not exist.');
+      return sceneFor(entry);
+    }); } };
 }

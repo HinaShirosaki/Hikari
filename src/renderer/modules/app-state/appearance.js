@@ -1,6 +1,7 @@
 export const APPEARANCE_MODES = Object.freeze({
   DAY: 'day',
-  NIGHT: 'night'
+  NIGHT: 'night',
+  MIKU: 'miku'
 });
 
 const SUPPORTED_APPEARANCE_MODES = new Set(Object.values(APPEARANCE_MODES));

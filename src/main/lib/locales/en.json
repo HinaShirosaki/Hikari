@@ -1,4 +1,12 @@
 {
+  "ui.4be375e6": "Enable Full Access for Agent chat?",
+  "ui.d785bf88": "Codex can run commands, access the network, and change files outside your workspace without asking.",
+  "ui.a6c6a047": "Enable Full Access",
+  "ui.7d5fa87": "Deny",
+  "ui.1de36893": "Allow once",
+  "ui.54dfb571": "Allow this Codex command?",
+  "ui.6846e9c0": "Allow this Codex file change?",
+  "ui.e1c12b12": "Allow this Codex permission request?",
   "ui.5b32de90": "Grant agent access to another folder",
   "ui.fc8eb73c": "Export Plugin File",
   "ui.2cbb8af0": "Select Storage Folder",

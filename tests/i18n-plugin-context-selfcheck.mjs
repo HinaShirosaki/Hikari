@@ -21,4 +21,10 @@ assert.deepEqual(state, original, 'Locale propagation never mutates workspace da
 bridge.disconnectLocale();
 i18n.setLocale('en');
 assert.equal(messages.length, 1, 'A disposed locale subscription stops broadcasting');
+state.settings.appearance.mode = 'miku';
+bridge.broadcastAppContext('appearance');
+assert.equal(messages.at(-1).message.payload.appearance.mode, 'miku', 'Plugins receive the Miku theme');
+state.settings.appearance.mode = 'unknown';
+bridge.broadcastAppContext('appearance');
+assert.equal(messages.at(-1).message.payload.appearance.mode, 'day', 'Unknown themes fall back to day');
 console.log('Plugin locale context: origin grants, display locale, appearance, unchanged state, and cleanup passed.');

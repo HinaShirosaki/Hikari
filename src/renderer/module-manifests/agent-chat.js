@@ -1,5 +1,6 @@
 import { createSavedNotebookAppend } from '../modules/biology-notebook/agent/saved-append.js';
 import { initAgentChat } from '../modules/agent-chat/index.js';
+import { createOpenRecordCitation } from './agent-record-citations.js';
 
 function createAgentChatOptions({
   state,
@@ -31,6 +32,7 @@ function createAgentChatOptions({
       showView(views.PAPERS);
       return modules.papers?.openPaperCitation?.(source);
     },
+    onOpenRecordCitation: createOpenRecordCitation({ state, modules, showView, views }),
     onOpenNotebookEntry: (entryId = '') => {
       showView(views.BIOLOGY_NOTEBOOK);
       modules.biologyNotebook?.openEntry?.(entryId);

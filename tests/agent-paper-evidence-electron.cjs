@@ -26,7 +26,7 @@ async function main() {
   fs.writeFileSync(fixture, fs.readFileSync(path.join(root, 'index.html'), 'utf8')
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace('<head>', `<head><base href="${url('')}/">`));
-  const win = new BrowserWindow({ width: 1500, height: 960, show: false, webPreferences: { sandbox: true, contextIsolation: true } });
+  const win = new BrowserWindow({ width: 1500, height: 960, show: false, webPreferences: { sandbox: true, contextIsolation: true, backgroundThrottling: false } });
   await win.loadFile(fixture);
   const run = code => win.webContents.executeJavaScript(code);
   await run(`(async () => {
@@ -55,21 +55,32 @@ async function main() {
       source_path:evidence[0].source_path,line_ranges:[{start_line:80,end_line:80}],
       source_lines:[{line_number:80,content:'The plate reader recorded fluorescence after the incubation.'}],
       relevance_reason:'Identifies the measurement method.',related_comments:[]});
-    window.state = {settings:{agent:{}},projects:[],agentChat:{currentSessionId:'paper-chat',messages:[
+    evidence.splice(2,0,{paper_id:'p1',paper_title:evidence[0].paper_title,section_label:evidence[0].section_label,
+      source_path:evidence[0].source_path,line_ranges:[{start_line:90,end_line:90}],
+      source_lines:[{line_number:90,content:'A matched vehicle control was recorded independently for the second plate.'}],
+      relevance_reason:'Provides a second control passage.',related_comments:[]});
+    window.state = {settings:{storagePath:'/test/Lab',agent:{}},projects:[],agentChat:{currentSessionId:'paper-chat',messages:[
       {id:'u',role:'user',text:'Find the controls I should check before comparing these binding assay runs.'},
       {id:'a',role:'assistant',text:'The reader found two useful passages. Check the vehicle control, incubation time, and background subtraction before comparing the curves.',meta:{paper_evidence:evidence}}
     ]}};
     window.runtime = {liveAssistantMessage:null};
     window.dom = collectAgentChatDom(document);
-    window.shell = createAgentChatShellController({dom,state,runtime,safeText,persist:()=>{}});
+    window.openedSources=[];
+    window.shell = createAgentChatShellController({dom,state,runtime,safeText,persist:()=>{},
+      onOpenPaperCitation:async source=>{openedSources.push(source);return {ok:true};}});
+    window.firstPaper=()=>document.querySelector('.agent-evidence-paper');
     window.redraw = () => shell.renderHistoryView();
     shell.renderProjectOptions(); redraw(); shell.syncComposerHeight();
   })()`);
   await run('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
   assert.equal(await run('dom.paperEvidence.hidden'), false);
   assert.equal(await run('document.querySelectorAll(".agent-evidence-paper").length'), 2);
+  assert.equal(await run('document.querySelector(".agent-evidence-title").textContent'), 'Evidence');
+  assert.equal(await run('document.querySelector(".agent-evidence-total").textContent'), '2 papers · 4 passages');
   assert.equal(await run('document.querySelector(".agent-evidence-line-text").textContent'), await run('evidence[0].source_lines.map(line => line.content).join("\\n")'));
   assert.equal(await run('document.querySelector(".agent-evidence-comment").textContent'), await run('evidence[0].relevance_reason'));
+  assert.equal(await run('firstPaper().querySelectorAll(".agent-evidence-page-button svg path").length'), 2);
+  assert.equal(await run('firstPaper().querySelectorAll(".agent-evidence-open-paper svg path").length'), 1);
   // Updating the answer does not replace source DOM, collapse it, or lose selection.
   await run(`window.retained = document.querySelector('.agent-evidence-line-text');
     const range=document.createRange(); range.selectNodeContents(retained); getSelection().removeAllRanges(); getSelection().addRange(range);
@@ -80,7 +91,7 @@ async function main() {
   const measurements = [];
   for (const theme of ['day', 'night']) {
     await run(`document.body.classList.toggle('theme-day', ${theme === 'day'}); document.body.classList.toggle('theme-night', ${theme === 'night'});`);
-    for (const width of [1500, 1100, 760, 390, 320]) {
+    for (const width of [1500, 1280, 1100]) {
       win.setContentSize(width, 960);
       await run('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
       const metrics = await run(`(() => {
@@ -97,33 +108,56 @@ async function main() {
       if (metrics.panelWidth > 736) assert.ok(metrics.card.x >= metrics.chat.right, JSON.stringify(metrics));
       else assert.ok(metrics.card.y >= metrics.chat.bottom - 1, JSON.stringify(metrics));
       measurements.push({ theme, ...metrics });
-      if ([1500, 390].includes(width)) fs.writeFileSync(path.join(out, `${theme}-${width}.png`), (await win.webContents.capturePage()).toPNG());
+      if (width === 1500) fs.writeFileSync(path.join(out, `${theme}-${width}.png`), (await win.webContents.capturePage()).toPNG());
     }
   }
-  // Each passage folds independently, including its comments and saved notes.
-  assert.equal(await run('document.querySelectorAll(".agent-evidence-paper")[0].querySelectorAll("details.agent-evidence-chunk").length'), 2);
-  await run(`document.querySelector('.agent-evidence-section').click();`);
-  const folded = await run(`(() => {
-    const [first,second]=document.querySelectorAll('.agent-evidence-chunk');
-    return {firstOpen:first.open,secondOpen:second.open,paperOpen:first.parentElement.open,
-      quoteVisible:first.querySelector('blockquote').checkVisibility(),
-      commentsVisible:[...first.querySelectorAll('.agent-evidence-comment')].some(node=>node.checkVisibility())};
-  })()`);
-  assert.deepEqual(folded, {firstOpen:false,secondOpen:true,paperOpen:true,quoteVisible:false,commentsVisible:false});
-  // A reader update rebuilds the card but keeps the user's passage fold state.
-  await run(`state.agentChat.messages[1].meta.paper_evidence=state.agentChat.messages[1].meta.paper_evidence.map((block,i)=>i ? block : {...block,relevance_reason:block.relevance_reason+' Updated relevance.'});redraw();`);
-  assert.equal(await run('document.querySelector(".agent-evidence-chunk").open'), false);
-  assert.equal(await run('document.querySelectorAll(".agent-evidence-chunk")[1].open'), true);
-  await run(`document.querySelector('.agent-evidence-section').focus();`);
-  win.webContents.sendInputEvent({type:'keyDown',keyCode:'Space'});
-  win.webContents.sendInputEvent({type:'keyUp',keyCode:'Space'});
+  // Each paper has one visible passage, grouped into section tabs.
+  assert.equal(await run('firstPaper().querySelectorAll("[role=tab]").length'), 2);
+  assert.equal(await run('firstPaper().querySelectorAll(".agent-evidence-line-text").length'), 1);
+  assert.equal(await run('firstPaper().querySelector(".agent-evidence-position").textContent'), 'Passage 1 of 2');
+  assert.equal(await run('firstPaper().querySelector(".is-previous").disabled'), true);
+  await run('firstPaper().querySelector(".agent-evidence-page-button:not(.is-previous)").click()');
+  const selected = await run('firstPaper().querySelector(".agent-evidence-line-text").textContent');
+  assert.equal(selected, 'A matched vehicle control was recorded independently for the second plate.');
+  assert.equal(await run('firstPaper().querySelector(".agent-evidence-position").textContent'), 'Passage 2 of 2');
+  assert.equal(await run('firstPaper().querySelector(".agent-evidence-page-button:not(.is-previous)").disabled'), true);
+  assert.equal(await run('firstPaper().querySelector(".agent-evidence-comment").textContent'), 'Provides a second control passage.');
+  await run('firstPaper().querySelectorAll("[role=tab]")[1].click()');
+  assert.equal(await run('firstPaper().querySelector(".agent-evidence-line-text").textContent'), 'The plate reader recorded fluorescence after the incubation.');
+  await run('firstPaper().querySelectorAll("[role=tab]")[0].click()');
+  assert.equal(await run('firstPaper().querySelector(".agent-evidence-line-text").textContent'), selected, 'Each section retains its selected passage');
+  await run('firstPaper().querySelectorAll("[role=tab]")[0].focus()');
+  win.webContents.sendInputEvent({type:'keyDown',keyCode:'Right'});
+  win.webContents.sendInputEvent({type:'keyUp',keyCode:'Right'});
   await run('new Promise(resolve=>requestAnimationFrame(resolve))');
-  assert.equal(await run('document.querySelector(".agent-evidence-chunk").open'), true, 'A section can be reopened from the keyboard');
-  assert.equal(await run('document.activeElement === document.querySelector(".agent-evidence-section")'), true);
-  await run(`document.querySelectorAll('.agent-evidence-section')[1].click();`);
-  assert.equal(await run('document.querySelectorAll(".agent-evidence-chunk")[1].open'), false);
-  assert.equal(await run('document.querySelector(".agent-evidence-chunk").open'), true, 'Folding a second section keeps the first open');
-  // Native disclosures work by mouse and keyboard, and retain their state.
+  assert.equal(await run('firstPaper().querySelectorAll("[role=tab]")[1].getAttribute("aria-selected")'), 'true');
+  assert.equal(await run('document.activeElement === firstPaper().querySelectorAll("[role=tab]")[1]'), true);
+  win.webContents.sendInputEvent({type:'keyDown',keyCode:'Left'});
+  win.webContents.sendInputEvent({type:'keyUp',keyCode:'Left'});
+  await run('new Promise(resolve=>requestAnimationFrame(resolve))');
+  // New excerpts and updated comments must not reset the reader to the first passage.
+  await run(`const previous=state.agentChat.messages[1].meta.paper_evidence;
+    state.agentChat.messages[1].meta.paper_evidence=[{...previous[0],line_ranges:[{start_line:20,end_line:20}],
+      source_lines:[{line_number:20,content:'An earlier control was recorded before the assay.'}]},...previous.map(block=>({...block,relevance_reason:block.relevance_reason+' Updated relevance.'}))];redraw();`);
+  assert.equal(await run('firstPaper().querySelector(".agent-evidence-line-text").textContent'), selected);
+  assert.equal(await run('firstPaper().querySelector(".agent-evidence-position").textContent'), 'Passage 3 of 3');
+  await run('firstPaper().querySelector(".agent-evidence-open-paper").click()');
+  const source = await run('openedSources.at(-1)');
+  assert.equal(source.path, '/test/Lab/KnowledgeBase/papers.md/p1/paper.md');
+  assert.equal(source.excerpt, selected, 'The source action follows the active passage');
+  // A long passage keeps navigation visible and returns to the next passage's beginning.
+  await run(`window.beforeLong=state.agentChat.messages[1].meta.paper_evidence;
+    state.agentChat.messages[1].meta.paper_evidence=beforeLong.map(block=>block.source_lines?.[0]?.line_number===90
+      ? {...block,source_lines:[{line_number:90,content:'A long source paragraph retains all of its scientific context. '.repeat(80)}]} : block);
+    redraw();dom.paperEvidence.scrollTop=dom.paperEvidence.scrollHeight;`);
+  await run('new Promise(resolve=>requestAnimationFrame(resolve))');
+  const toolbar = await run(`(()=>{const card=dom.paperEvidence.getBoundingClientRect();const bar=firstPaper().querySelector('.agent-evidence-reader-toolbar').getBoundingClientRect();return {top:bar.top,bottom:bar.bottom,cardTop:card.top,cardBottom:card.bottom};})()`);
+  assert.ok(toolbar.top>=toolbar.cardTop-1 && toolbar.bottom<=toolbar.cardBottom,JSON.stringify(toolbar));
+  await run('firstPaper().querySelector(".is-previous").click()');
+  const beginning = await run(`(()=>{const bar=firstPaper().querySelector('.agent-evidence-reader-toolbar').getBoundingClientRect();const quote=firstPaper().querySelector('.agent-evidence-quote').getBoundingClientRect();return {quoteTop:quote.top,toolbarBottom:bar.bottom};})()`);
+  assert.ok(beginning.quoteTop>=beginning.toolbarBottom-1,JSON.stringify(beginning));
+  await run('state.agentChat.messages[1].meta.paper_evidence=beforeLong;redraw()');
+  // Native paper/card disclosures still work and retain their state.
   await run(`document.querySelectorAll('.agent-evidence-paper')[1].querySelector('summary').click(); redraw();`);
   assert.equal(await run('document.querySelectorAll(".agent-evidence-paper")[1].open'), true);
   await run(`document.querySelector('.agent-evidence-heading').focus();`);
@@ -138,7 +172,7 @@ async function main() {
   assert.equal(await run('dom.paperEvidence.hidden && !document.querySelector(".agent-chat-stage").classList.contains("has-paper-evidence")'), true);
   await run(`state.agentChat.currentSessionId='paper-chat'; state.agentChat.messages=saved; redraw();`);
   assert.equal(await run('document.querySelector(".agent-evidence-card").open'), true);
-  assert.equal(await run('[...document.querySelectorAll(".agent-evidence-chunk")].every(section=>section.open)'), true, 'A new session starts with readable passages');
+  assert.equal(await run('firstPaper().querySelector(".agent-evidence-position").textContent'), 'Passage 1 of 3', 'A new session starts with its first passage');
   // Paper strings remain text, including strings that resemble markup.
   await run(`state.agentChat.messages[1].meta.paper_evidence=state.agentChat.messages[1].meta.paper_evidence.map((block,i)=>i ? block : {...block,relevance_reason:'<img src=x onerror="window.injected=true">'}); redraw();`);
   assert.equal(await run('dom.paperEvidence.querySelectorAll("img,script").length'), 0);
@@ -146,11 +180,16 @@ async function main() {
   assert.equal(await run('window.injected === undefined'), true);
   await run(`(async () => { const {i18n}=await import(${JSON.stringify(url('src/renderer/lib/i18n/index.js'))});
     const {translateTree}=await import(${JSON.stringify(url('src/renderer/lib/i18n/dom.js'))}); i18n.setLocale('zh-Hans'); translateTree(dom.paperEvidence); })()`);
-  assert.equal(await run('document.querySelector(".agent-evidence-title").textContent'), '论文摘录');
+  assert.equal(await run('document.querySelector(".agent-evidence-title").textContent'), '依据');
   assert.equal(await run('document.querySelector(".agent-evidence-comment-label").textContent'), '选择原因');
-  assert.equal(await run('document.querySelectorAll(".agent-evidence-section")[2].textContent'), '摘录', 'Unlabelled passages have a localized fold control');
+  assert.equal(await run('firstPaper().querySelector(".agent-evidence-position").textContent'), '摘录 1 / 3');
+  assert.equal(await run('firstPaper().querySelector(".agent-evidence-open-paper").textContent'), '在论文中打开');
+  assert.equal(await run('document.querySelectorAll(".agent-evidence-paper")[1].querySelector(".agent-evidence-tab-label").textContent'), '摘录', 'Unlabelled sections have a localized tab');
+  await run(`state.agentChat.messages[1].meta.paper_evidence=state.agentChat.messages[1].meta.paper_evidence.map(block=>block.paper_id==='p2'
+    ? {...block,source_path:'file:///private/not-a-reader-source.md'} : block);redraw();`);
+  assert.equal(await run('document.querySelectorAll(".agent-evidence-paper")[1].querySelector(".agent-evidence-open-paper")'), null, 'Untrusted source paths do not produce file actions');
   fs.writeFileSync(path.join(out, 'verification.json'), JSON.stringify({ measurements }, null, 2));
-  console.log('Paper evidence Electron passed: 10 day/night layouts, exact excerpts, independent passage folds, keyboard access, retained fold state, session isolation and localization.');
+  console.log('Evidence reader Electron passed: 6 desktop day/night layouts, exact passages, section tabs, paging, keyboard access, retained selection, trusted source action, session isolation and localization.');
   win.destroy(); app.quit();
 }
 

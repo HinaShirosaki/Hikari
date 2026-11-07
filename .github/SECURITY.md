@@ -9,6 +9,8 @@ Only the latest release (including the latest beta) receives security fixes. Ple
 **Do not open a public issue.** Report privately through GitHub:
 [Report a vulnerability](https://github.com/HinaShirosaki/Hikari/security/advisories/new)
 
+If you can't use GitHub, email [support@hikari-lab-agent.com](mailto:support@hikari-lab-agent.com) instead.
+
 Please include:
 
 - what is affected (app, installer, updater, MCP server, plugin system, …) and the version

@@ -1,5 +1,6 @@
 // Spanish preview. Missing entries use the English catalog.
 export const settingsSpanish = Object.freeze({
+  "full.a1e3d575": "Concede acceso de lectura a otras carpetas. Configura los permisos de Codex en el chat del agente.",
   "nav.label": "Secciones de ajustes",
   "nav.workspace": "Espacio de trabajo",
   "nav.appearance": "Apariencia",
@@ -18,9 +19,10 @@ export const settingsSpanish = Object.freeze({
   "appearance.title": "Apariencia",
   "appearance.description": "Adapta Hikari para trabajar con comodidad.",
   "appearance.theme": "Tema",
-  "appearance.themeDescription": "Elige un espacio de trabajo claro u oscuro.",
+  "appearance.themeDescription": "Elige el aspecto de tu espacio de trabajo.",
   "appearance.day": "Día",
   "appearance.night": "Noche",
+  "appearance.miku": "Hatsune Miku",
   "appearance.textSize": "Tamaño del texto",
   "appearance.textSizeDescription": "Se aplica en todo Hikari.",
   "appearance.small": "Pequeño",

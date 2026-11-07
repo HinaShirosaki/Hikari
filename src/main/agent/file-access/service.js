@@ -340,7 +340,7 @@ function createWorkspaceFileService({ getStorageRoot, getStorageRootRevision = (
     const targetRoot = await location(root, input.location_id);
     if (READS.has(input.action)) return read(targetRoot, input);
     const args = normalizeWrite(input);
-    if (!session.write) fail('read_only_run', 'This background or helper run has read-only file access.');
+    if (!session.write) fail('read_only_run', 'This run can only read files through workspace_files. Use native Codex tools for ordinary edits when permitted.');
     if (!/^[\w-]{1,120}$/u.test(input.request_id || '')) fail('invalid_arguments', 'Provide a unique request_id. Retry uncertain calls with the same arguments and request_id.');
     const key = `${token}:${input.request_id}`;
     const hash = digest(JSON.stringify(args));
@@ -363,7 +363,7 @@ function createWorkspaceFileService({ getStorageRoot, getStorageRootRevision = (
       try { await save(); }
       catch (error) { state.pending = state.pending.filter(item => item !== proposal); throw error; }
       result = { ok: true, status: 'awaiting_approval', proposal_id: proposal.id, path: args.path,
-        message: 'Review this change in Hikari’s File changes panel. Nothing has been changed yet.' };
+        message: 'The request is awaiting approval. No file was changed.' };
     }
     requests.set(key, { hash, result });
     return result;

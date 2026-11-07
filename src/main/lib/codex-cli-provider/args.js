@@ -130,6 +130,7 @@ function buildCodexCliExecResumeArgs({
 module.exports = {
   appendCodexCliModelArgs,
   appendCodexProjectMemoryConfigArgs,
+  appendFileAccessToken,
   buildCodexCliExecArgs,
   buildCodexCliExecResumeArgs
 };

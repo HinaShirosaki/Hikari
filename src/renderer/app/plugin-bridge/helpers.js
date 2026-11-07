@@ -3,6 +3,7 @@ import { getPluginLeftRailLayout } from '../plugin-left-rail.js';
 import { asArray } from '../../lib/normalize.js';
 import { isAgentAvailable } from '../../lib/agent-availability.js';
 import { workspaceToolIcons } from '../plugin-workspace-tool-icons.js';
+import { normalizeAppearanceMode } from '../../modules/app-state/appearance.js';
 
 const PROTOCOL_MARKER = 1;
 const MAX_LIST_SIZE = 500;
@@ -82,8 +83,7 @@ function text(value, maxLength = 4000) {
 function buildPluginAppContext(state, changed = '', windowObject = globalThis.window, pluginId = '') {
   const settings = asObject(state?.settings);
   const appearance = asObject(settings.appearance);
-  const requestedMode = text(appearance.mode, 20).toLowerCase();
-  const mode = requestedMode === 'night' ? 'night' : 'day';
+  const mode = normalizeAppearanceMode(appearance.mode);
   const context = {
     locale: i18n.getLocale(),
     appearance: {

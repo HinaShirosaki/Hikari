@@ -1,5 +1,17 @@
 // Spanish preview; other messages fall back to English.
 (function(root){root.HikariUiSpanish={...(root.HikariUiSpanish||{}),figura:{
+  "illustrationMenu.actions": "Acciones de ilustración",
+  "illustrationMenu.export": "Exportar…",
+  "illustrationMenu.duplicate": "Duplicar",
+  "illustrationMenu.rename": "Cambiar nombre…",
+  "illustrationMenu.delete": "Eliminar…",
+  "illustrationMenu.exportTitle": "Exportar ilustración",
+  "illustrationMenu.renameTitle": "Cambiar nombre de la ilustración",
+  "illustrationMenu.deleteTitle": "¿Eliminar ilustración?",
+  "illustrationMenu.saveName": "Cambiar nombre",
+  "illustrationMenu.confirmDelete": "Eliminar",
+  "illustrationMenu.nameRequired": "Escribe un nombre para la ilustración.",
+  "illustrationMenu.missing": "Esta ilustración no existe.",
   "assets.description": "Descripción (opcional)",
   "assets.details": "Detalles del recurso",
   "assets.editDetails": "Editar detalles de {name}",

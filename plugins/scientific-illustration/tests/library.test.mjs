@@ -32,6 +32,44 @@ async function title(workspace, name, extra = {}) {
     expected_revision: current.revision, request_id: crypto.randomUUID(), operations: [{ op: 'title', title: name }], ...extra });
 }
 
+test('local library actions commit the targeted scene without switching away from the active illustration', async () => {
+  const host = fixture(), workspace = host.open();
+  await workspace.ready;
+  await title(workspace, 'Original');
+  const original = workspace.getLibrary().active_illustration_id;
+  const { illustration_id: active } = await workspace.manage('create', undefined, 'Active');
+  const before = workspace.getDocument();
+  host.failIndex = true;
+  assert.equal((await workspace.manage('rename', original, 'Lost change')).ok, false);
+  assert.equal((await workspace.manage('delete', original)).ok, false);
+  assert.equal((await workspace.getExportDocument(original)).title, 'Original');
+  host.failIndex = false;
+  assert.equal((await workspace.manage('rename', original, ' Renamed ')).ok, true);
+  assert.equal((await workspace.getExportDocument(original)).title, 'Renamed');
+  assert.equal(workspace.getDocument(), before);
+  const reopened = host.open();
+  await reopened.ready;
+  assert.equal(reopened.getLibrary().active_illustration_id, active);
+  assert.equal((await reopened.getExportDocument(original)).title, 'Renamed');
+  assert.equal((await reopened.manage('delete', original)).ok, true);
+  assert.equal(reopened.getLibrary().active_illustration_id, active);
+  await assert.rejects(reopened.getExportDocument(original), /does not exist/);
+
+  const indexBefore = host.files.get('library.json');
+  host.failIndex = true;
+  assert.equal((await reopened.manage('delete', active)).ok, false);
+  assert.equal(host.files.get('library.json'), indexBefore);
+  assert.equal(reopened.getDocument().title, 'Active');
+  host.failIndex = false;
+  assert.equal((await reopened.manage('delete', active)).ok, true);
+  const reloaded = host.open();
+  await reloaded.ready;
+  assert.equal(reloaded.getLibrary().illustrations.length, 1);
+  assert.notEqual(reloaded.getLibrary().active_illustration_id, active);
+  assert.equal(reloaded.getDocument().title, 'Untitled figure');
+  assert.equal(reloaded.getDocument().objects.length, 0);
+});
+
 test('image generation preference follows the figure through history, duplication and reload', async () => {
   const host = fixture(), workspace = host.open(); await workspace.ready;
   const empty = await workspace.request({ action: 'read' });

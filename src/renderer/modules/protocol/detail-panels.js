@@ -145,6 +145,7 @@ function createProtocolDetailPanels({
     getListController()?.renderList?.();
     renderProtocolView(protocol);
     showViewPanel();
+    return true;
   }
 
   function onExportProtocol(protocolId) {

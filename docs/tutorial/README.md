@@ -41,3 +41,9 @@ Use **Figura** to create and revise illustrations, edit artwork and labels, draw
 Most chapters' workspace screenshots are also the README and guide gallery images; re-running one of those captures refreshes the gallery through [docs/screenshots/tools/capture.cjs](../screenshots/README.md), which lists the mapping.
 
 The tutorials use fictional teaching examples. Screenshots show the source renderer; example AI responses and literature results are illustrative. See each chapter's [capture notes](01-home-dashboard/README.md) for its scope and refresh instructions.
+
+The start page's chapter cards use small WebP crops in `thumbs/` instead of the full screenshots. After re-capturing a chapter's first figure, refresh its card with (for example, Home):
+
+```bash
+cwebp -crop 0 0 1648 1030 -resize 400 250 -q 85 01-home-dashboard/images/01-home-map.png -o thumbs/01-home-dashboard.webp
+```
