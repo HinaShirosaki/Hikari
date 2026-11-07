@@ -5,7 +5,7 @@ import * as renderingModule from './rendering.js';
 import { createPaperEvidenceCard } from './paper-evidence-card.js';
 import { asArray, trimText } from './shared.js';
 import { ensureAgentChatFolderState } from './session-folders.js';
-import { agentEnglishText, agentOption, bindAgentMessage, setAgentAttribute, setAgentText } from './localization.js';
+import { agentEnglishText, agentFailure, agentNotice, agentOption, agentUi, bindAgentMessage, setAgentAttribute, setAgentText } from './localization.js';
 
 // Labels/placeholders are catalog keys; prompts are sent to the agent and stay English.
 const QUICK_PROMPT_PRESETS = {
@@ -57,10 +57,30 @@ export function createAgentChatShellController({
   runtime,
   notebookDraftAdapter,
   protocolReviewAdapter,
+  onOpenPaperCitation,
+  onOpenRecordCitation,
   hasImageCapture = false
 }) {
   let sessionManager = null;
-  const paperEvidenceCard = createPaperEvidenceCard(dom.paperEvidence);
+  function withCitationFeedback(openSource, unavailable) {
+    if (typeof openSource !== 'function') return undefined;
+    return async source => {
+      try {
+        const result = await openSource(source);
+        if (result?.ok === true) return;
+        throw result?.error || agentUi(unavailable);
+      } catch (error) {
+        const message = agentFailure(error, unavailable);
+        setStatus(message);
+        agentNotice(message, { type: 'error' });
+      }
+    };
+  }
+  const paperEvidenceCard = createPaperEvidenceCard(dom.paperEvidence, {
+    getStoragePath: () => state.settings?.storagePath || '',
+    onOpenPaperCitation: withCitationFeedback(onOpenPaperCitation, 'status.paperSourceUnavailable'),
+    onOpenRecordCitation: withCitationFeedback(onOpenRecordCitation, 'status.recordSourceUnavailable')
+  });
 
   function setSessionManager(nextSessionManager) {
     sessionManager = nextSessionManager;
@@ -172,7 +192,6 @@ export function createAgentChatShellController({
     const visibleMessages = runtime.liveAssistantMessage
       ? [...state.agentChat.messages, runtime.liveAssistantMessage]
       : state.agentChat.messages;
-    paperEvidenceCard.render(visibleMessages, state.agentChat.currentSessionId);
     const hasMessages = asArray(visibleMessages).length > 0;
     dom.conversationShell?.classList?.toggle('is-empty-chat', !hasMessages);
     if (!hasMessages && dom.scrollToBottomBtn) {
@@ -188,6 +207,7 @@ export function createAgentChatShellController({
       renderingModule.updateHistoryKeepingHtmlFrames(dom.questionDock, questionHtml);
       dom.questionDock.hidden = !questionHtml;
     }
+    const citedRecords = new Map();
     renderingModule.renderHistory({
       historyNode: dom.historyNode,
       messages: visibleMessages,
@@ -195,8 +215,10 @@ export function createAgentChatShellController({
       safeText,
       notebookDraftAdapter,
       protocolReviewAdapter,
-      showUserQuestions: !dom.questionDock
+      showUserQuestions: !dom.questionDock,
+      onRecordCitation: record => citedRecords.set(record.target, record)
     });
+    paperEvidenceCard.render(visibleMessages, state.agentChat.currentSessionId, [...citedRecords.values()]);
     if (shouldStickToBottom) {
       scrollHistoryToBottom(options.smoothScroll === true);
       if (options.forceScroll === true || isInitialHistoryRender) {

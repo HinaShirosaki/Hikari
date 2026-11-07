@@ -2,6 +2,7 @@
 
 const { toIntegerInRange } = require('../../../lib/value-utils.js');
 const { asArray, ensureObject } = require('../../../lib/normalize.js');
+const { recordCitationTarget } = require('../../../../shared/record-citations.mjs');
 const {
   resolveToolParserPayload,
   buildToolCitations,
@@ -10,6 +11,14 @@ const {
   resolveProjectSelector,
   hydrateToolSnapshot
 } = require('./shared.js');
+
+function withCitationTarget(item, type) {
+  const target = recordCitationTarget(type, item?.id);
+  if (!target) return item;
+  // Keep the target visible even when a large record's body is truncated.
+  const { citation_target: previousTarget, ...record } = item;
+  return { citation_target: target, ...record };
+}
 
 function registerLabToolExecutors(genericAgentToolRuntime, context = {}) {
   const {
@@ -82,6 +91,7 @@ function registerLabToolExecutors(genericAgentToolRuntime, context = {}) {
 
     return {
       ...result,
+      items: asArray(result?.items).map(item => withCitationTarget(item, 'notebook')),
       citations: buildToolCitations(
         cleanText,
         result?.items,
@@ -152,6 +162,9 @@ function registerLabToolExecutors(genericAgentToolRuntime, context = {}) {
           status: 'error',
           error: 'Protocol matching runtime is not configured.'
         });
+    const savedIds = new Set(asArray(snapshot?.protocols).map(protocol => protocol?.id));
+    const citeSavedProtocol = protocol => !asArray(args?.protocols).length && savedIds.has(protocol?.id)
+      ? withCitationTarget(protocol, 'protocol') : protocol;
     const selectedProtocol = result?.selected_protocol && typeof result.selected_protocol === 'object'
       ? result.selected_protocol
       : null;
@@ -167,7 +180,9 @@ function registerLabToolExecutors(genericAgentToolRuntime, context = {}) {
       ...result,
       ok: result?.ok === false ? false : true,
       status: cleanText(result?.status, 80) || (selectedProtocol ? 'selected' : 'no_match'),
-      items,
+      selected_protocol: citeSavedProtocol(selectedProtocol),
+      ranked_matches: rankedMatches.map(citeSavedProtocol),
+      items: items.map(citeSavedProtocol),
       citations: buildToolCitations(
         cleanText,
         items,

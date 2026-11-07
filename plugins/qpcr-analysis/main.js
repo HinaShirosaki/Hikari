@@ -113,7 +113,7 @@ const i18nUi = window.HikariUi.createPresentation("qpcr");
     if (context?.locale) root.HikariUi.setLocale(context.locale);
     if (!context?.appearance) return;
     const { mode: hostMode, fontSize } = context.appearance;
-    document.documentElement.dataset.mode = hostMode === 'night' ? 'night' : 'day';
+    document.documentElement.dataset.mode = hostMode === 'night' || hostMode === 'miku' ? hostMode : 'day';
     if (Number.isFinite(fontSize)) document.body.style.fontSize = `${Math.min(32, Math.max(12, fontSize))}px`;
   }
 

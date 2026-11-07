@@ -172,7 +172,6 @@ async function main() {
     await fs.rename(`${statePath}.test-backup`, statePath);
 
     let capturedToken;
-    let expectedWrite = true;
     let expectedEnabled = true;
     let initializerFails = false;
     const codex = createMainCodexService({
@@ -194,7 +193,7 @@ async function main() {
           assert.ok(build().includes('mcp_servers.hikari.env.HIKARI_FILE_ACCESS_TOKEN=""'));
         }
         const status = await service.execute({ action: 'status' }, capturedToken);
-        if (expectedEnabled) assert.equal(status.can_write, expectedWrite);
+        if (expectedEnabled) assert.equal(status.can_write, false);
         else assert.equal(status.status, 'disabled');
         return { text: 'runtime fixture' };
       }
@@ -204,7 +203,6 @@ async function main() {
       { traceRequestId: 'background' }, { chatSessionId: 'scheduled', snapshot: { scheduled_task: {} } },
       { chatSessionId: 'disabled', snapshot: { settings: { agent: { disabled_mcp_tool_names: ['workspace_files'] } } } }
     ]) {
-      expectedWrite = Boolean(context.chatSessionId) && !context.snapshot?.scheduled_task;
       expectedEnabled = context.chatSessionId !== 'disabled';
       await codex.requestCodexAgentText({ envOverrides: { HIKARI_AGENT_MCP_REQUEST_CONTEXT: JSON.stringify(context) } });
       assert.equal((await service.execute({ action: 'status' }, capturedToken)).status, 'session_expired');

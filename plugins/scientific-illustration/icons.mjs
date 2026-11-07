@@ -22,6 +22,7 @@ const paths = {
   down: ['m7 10 5 5 5-5'],
   close: ['m6 6 12 12M6 18 18 6'],
   copy: ['M8 8h12v12H8z', 'M16 8V4H4v12h4'],
+  edit: ['M4 16v4h4L20 8l-4-4Z', 'm14 6 4 4'],
   paste: ['M9 4H5v17h14V4h-4', 'M9 3h6v4H9z'],
   up: ['m7 13 5-5 5 5', 'M12 8v12M5 4h14'],
   lower: ['m7 11 5 5 5-5', 'M12 4v12M5 20h14'],

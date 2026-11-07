@@ -1026,3 +1026,67 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 .agent-meta-grid summary {
   color: var(--theme-text-strong);
 }
+.agent-codex-permission-btn {
+  anchor-name: --agent-codex-permission;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-8);
+  text-align: left;
+}
+
+.agent-codex-permission-label {
+  color: var(--theme-text-muted);
+  font-size: var(--text-xs);
+}
+
+.agent-codex-permission-chevron {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+
+.agent-codex-permission-btn:has(+ :popover-open) .agent-codex-permission-chevron {
+  rotate: 180deg;
+}
+
+.agent-codex-permission-picker {
+  --permission-picker-width: min(22rem, calc(100vw - 24px));
+  position: fixed;
+  position-anchor: --agent-codex-permission;
+  inset: auto;
+  left: min(anchor(left), calc(100vw - var(--permission-picker-width) - 12px));
+  bottom: calc(anchor(top) + 8px);
+  width: var(--permission-picker-width);
+  max-height: min(24rem, 60vh);
+  overflow: auto;
+  margin: 0;
+  padding: var(--space-8);
+  border: 1px solid var(--theme-border);
+  border-radius: var(--space-10);
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text);
+  box-shadow: var(--theme-shadow-medium);
+}
+
+.agent-codex-permission-picker h3 {
+  margin: var(--space-4) var(--space-8) var(--space-8);
+  font-size: var(--text-sm);
+}
+
+.agent-codex-permission-picker > button.ghost-btn {
+  display: grid;
+  width: 100%;
+  gap: var(--space-4);
+  padding: var(--space-8);
+  text-align: left;
+  white-space: normal;
+}
+
+.agent-codex-permission-picker > button[aria-pressed="true"] {
+  background: var(--theme-surface-active);
+}
+
+.agent-codex-permission-picker small {
+  color: var(--theme-text-muted);
+  font-size: var(--text-xs);
+}

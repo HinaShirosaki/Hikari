@@ -55,6 +55,10 @@ async function main() {
     assert.equal(extractPaperEvidenceFromToolOutput('paper_analysis', { ...wire, isError: true }).length, 0);
     assert.equal(extractPaperEvidenceFromToolOutput('literature_search', { output: { result: output } }).length, 12);
     assert.equal(extractPaperEvidenceFromToolOutput('paper_analysis', { content: [{ type: 'text', text: '{broken' }] }).length, 0);
+    const notebook = extractPaperEvidenceFromToolOutput('notebook-lookup', { items: [{
+      id: 'run-1', citation_target: 'hikari://notebook/run-1', title: 'First run', result: 'No signal in the blank.'
+    }] });
+    assert.equal(notebook.length, 1);
 
     const events = [];
     let mode = 'stream';
@@ -73,6 +77,7 @@ async function main() {
           assert.equal(publishPaperEvidence('another-request', blocks), false);
           assert.equal(publishPaperEvidence(runtime.requestId, blocks), true,
             'App evidence arrives independently of truncated exec/wait text');
+          assert.equal(publishPaperEvidence(runtime.requestId, notebook), true);
         } else if (mode === 'direct') {
           observability.recordLifecycleEvent(runtime.lifecycleRecorder, {
             stage: 'tool_call_completed', status: 'ok', tool_name: 'paper-analysis', tool_output: { output: { result: output } }
@@ -92,21 +97,26 @@ async function main() {
       const result = await handle({ sender: { send: (_channel, payload) => events.push(payload) } }, {
         message: 'Find supporting paper evidence.', clientRequestId: 'client'
       });
-      assert.equal(result.paper_evidence.length, 12, mode);
+      const expected = mode.startsWith('bridge') ? 13 : 12;
+      assert.equal(result.paper_evidence.length, expected, mode);
       assert.equal(publishPaperEvidence(`paper-request-${requestNumber}`, blocks), false,
         'Completed, failed and cancelled requests unsubscribe from app evidence');
       const saved = await log.getSession({ storagePath, sessionId: result.chat_session.id });
-      assert.equal(saved.messages.at(-1).meta.paper_evidence.length, 12, `Saved ${mode}`);
+      assert.equal(saved.messages.at(-1).meta.paper_evidence.length, expected, `Saved ${mode}`);
       assert.equal(saved.messages.at(-1).meta.paper_evidence[11].source_lines[119].content, blocks[11].source_lines[119].content);
       const live = renderer('live-progress-state.js');
       let message = live.buildLiveAssistantPlaceholder('client', 'Read', () => 'id');
       for (const progress of events) message = live.applyLiveProgressEvent(message, progress);
-      assert.equal(message.meta.paper_evidence.length, 12, `Live ${mode}`);
+      assert.equal(message.meta.paper_evidence.length, expected, `Live ${mode}`);
       const final = renderer('assistant-message-meta.js').buildAssistantResponseMessage({
         createId: () => 'a', response: renderer('response.js').normalizeAgentResponse(result),
         traceRows: { paperEvidence: message.meta.paper_evidence }, messageText: 'Read'
       });
-      assert.equal(final.meta.paper_evidence.length, 12);
+      assert.equal(final.meta.paper_evidence.length, expected);
+      if (mode.startsWith('bridge')) {
+        assert.deepEqual(saved.messages.at(-1).meta.paper_evidence.at(-1), notebook[0]);
+        assert.equal(final.meta.paper_evidence.at(-1).target, 'hikari://notebook/run-1');
+      }
       assert.equal(final.meta.paper_evidence[0].related_comments[0].text, 'Check the negative control.');
     }
     console.log('Paper evidence selfcheck passed: complete MCP output, live events, direct tools, deduplication, saved history, errors and stops.');

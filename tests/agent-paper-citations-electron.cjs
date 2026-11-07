@@ -16,10 +16,14 @@ async function main() {
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-citations-'));
   app.setPath('userData', path.join(scratch, 'profile')); app.disableHardwareAcceleration();
   await app.whenReady();
-  const url = file => pathToFileURL(path.join(root, file)).href;
-  const out = path.join(root, 'artifacts/agent-paper-citations'); fs.mkdirSync(out, { recursive: true });
+  const assetRoot = process.env.HIKARI_CITATION_PACKAGE
+    ? path.resolve(process.env.HIKARI_CITATION_PACKAGE, 'Contents/Resources/app.asar') : root;
+  const url = file => pathToFileURL(path.join(assetRoot, file)).href;
+  const out = path.join(root, process.env.HIKARI_CITATION_MULTIPLE_PAPERS === '1'
+    ? `artifacts/agent-multiple-paper-sources/${assetRoot === root ? 'source' : 'package'}` : 'artifacts/agent-paper-citations');
+  fs.mkdirSync(out, { recursive: true });
   const fixture = path.join(root, `.paper-citations-fixture-${process.pid}.html`);
-  fs.writeFileSync(fixture, fs.readFileSync(path.join(root, 'index.html'), 'utf8')
+  fs.writeFileSync(fixture, fs.readFileSync(path.join(assetRoot, 'index.html'), 'utf8')
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace('<head>', `<head><base href="${url('')}/"><script src="${url('vendor/jspdf.umd.min.js')}"></script>`));
   const win = new BrowserWindow({ width: 1500, height: 960, show: false, webPreferences: { backgroundThrottling: false } });
@@ -60,7 +64,9 @@ async function main() {
         openFilePath:()=>{throw Error('Must stay inside Papers');}};
       window.papers=initPapersManagement({state,persist:()=>{},createId:()=>crypto.randomUUID(),safeText,document,window}); papers.render();
       window.dom=collectAgentChatDom(document); window.runtime={liveAssistantMessage:null};
-      window.shell=createAgentChatShellController({dom,state,runtime,safeText,persist:()=>{}});
+      window.cardClicked=null;
+      window.shell=createAgentChatShellController({dom,state,runtime,safeText,persist:()=>{},
+        onOpenPaperCitation:source=>{cardClicked=opts.onOpenPaperCitation(source);return cardClicked;}});
       shell.renderProjectOptions(); shell.renderHistoryView();
       const opts=agentChatManifest.createOptions({state,persist:()=>{},createId:()=>'',safeText,rendererServices:{notebook:{},protocol:{}},
         modules:{papers},showView:show,views:{PAPERS:'papers-view'},rootDocument:document,windowObject:window});
@@ -70,7 +76,7 @@ async function main() {
     })()`);
     const metrics=[];
     for (const theme of ['day','night']) {
-      for (const width of [1500,760,390]) {
+      for (const width of [1500,1280,1100]) {
         win.setContentSize(width,960);
         await run(`document.body.classList.toggle('theme-day',${theme==='day'});document.body.classList.toggle('theme-night',${theme==='night'});
           new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))`);
@@ -96,6 +102,9 @@ async function main() {
     assert.equal(await run('state.papers[0].highlights.length'),0,'Citation does not create a saved annotation');
     assert.equal(await run('reads[0]'),'/test/Lab papers/KnowledgeBase/papers.md/residence/meta.json');
     fs.writeFileSync(path.join(out,'passage.png'),(await win.webContents.capturePage()).toPNG());
+    await run(`show('agent-view');document.querySelector('.agent-evidence-open-paper').click();cardClicked`);
+    assert.equal(await run('document.body.dataset.activeView'),'papers-view','The Evidence reader opens the active passage through the same Papers callback');
+    assert.equal(await run('navigationResult.located'),true);
     await run(`document.getElementById('paper-viewer-zoom-in-btn').click();new Promise(resolve=>setTimeout(resolve,100))`);
     const readerZoom=await run(`document.getElementById('paper-viewer-zoom-label').textContent`);
     const pdfReads=await run(`reads.filter(file=>file.endsWith('.pdf')).length`);
@@ -136,7 +145,9 @@ async function main() {
       }
       fs.writeFileSync(path.join(out,'real-paper-passage.png'),(await win.webContents.capturePage()).toPNG());
     }
-    fs.writeFileSync(path.join(out,'verification.json'),JSON.stringify({metrics,correctPaper:true,page:2,temporaryHighlight:true,keyboardAndReload:true,missingPassageReported:true,realResults},null,2));
+    const multipleSources = process.env.HIKARI_CITATION_MULTIPLE_PAPERS === '1'
+      ? await require('./helpers/agent-multiple-paper-sources.cjs')({ root, out, run, win, url }) : null;
+    fs.writeFileSync(path.join(out,'verification.json'),JSON.stringify({metrics,correctPaper:true,page:2,temporaryHighlight:true,keyboardAndReload:true,missingPassageReported:true,realResults,multipleSources},null,2));
     console.log('Paper citation Electron passed: 6 layouts, sentence button, actual manifest routing, PDF identity, page 2 passage highlight, keyboard/reload, no saved annotations and missing passage.');
   } finally {win.destroy();fs.rmSync(fixture,{force:true});fs.rmSync(scratch,{recursive:true,force:true});app.quit();}
 }

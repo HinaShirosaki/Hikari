@@ -3,9 +3,17 @@
   "productName": "Hikari",
   "version": "1.2.0",
   "description": "Electron shell for Hikari sub-app launcher",
-  "author": "HinaShirosaki",
+  "author": {
+    "name": "HinaShirosaki",
+    "email": "support@hikari-lab-agent.com",
+    "url": "https://hikari-lab-agent.com/"
+  },
   "license": "Apache-2.0",
   "homepage": "https://hikari-lab-agent.com/",
+  "bugs": {
+    "url": "https://github.com/HinaShirosaki/Hikari/issues",
+    "email": "support@hikari-lab-agent.com"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/HinaShirosaki/Hikari.git"

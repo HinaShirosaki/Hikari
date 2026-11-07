@@ -539,8 +539,9 @@
   background: var(--theme-surface-muted);
 }
 #setting-view .settings-theme-options button {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
+  white-space: nowrap;
   padding: var(--space-6) var(--space-10);
   border: 0;
   border-radius: 4px;

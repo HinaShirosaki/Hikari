@@ -44,6 +44,7 @@ function registerAgentIpc(deps = {}) {
 
   registerAgentChatHandler({
     ipcMain: deps.ipcMain,
+    getCodexPermissionsForEvent: deps.getCodexPermissionsForEvent,
     cleanText,
     controllerUtils: deps.controllerUtils || {},
     observability: deps.observability || {},

@@ -1,18 +1,7 @@
 'use strict';
 
-const fsPromises = require('node:fs/promises');
-const { readPaperMetadata } = require('../store/knowledge-index-schema.js');
-
 const { createAgentLlmRuntimeHelpers } = require('../../lib/llm/runtime-helpers.js');
-const {
-  buildKnowledgeDatabasePaths,
-  buildLegacyKnowledgeDatabasePaths,
-  resolveRelativeStoragePath
-} = require('../store/paper-knowledge-paths.js');
-const {
-  openKnowledgeDatabase,
-  queryRows
-} = require('../store/paper-knowledge-store.js');
+const { loadLocalPaperReference } = require('./local-paper-reference.js');
 const {
   runCodexPaperContextSubAgent
 } = require('../workflow/codex-paper-context-workflow.js');
@@ -24,79 +13,9 @@ function createPaperAnalysisRuntime(deps = {}) {
     requestStructuredJsonPayload
   } = createAgentLlmRuntimeHelpers(deps);
 
-  // Load a previously-ingested paper's LLM-facing markdown from the local KnowledgeBase
-  // by id, doi, or title, so the agent can reference a paper instead of pasting its text.
-  async function defaultLoadPaperFromKnowledge({ storagePath = '', paperId = '', doi = '', title = '' } = {}) {
-    const resolved = cleanText(storagePath, 4000);
-    const id = cleanText(paperId, 200);
-    const normDoi = cleanText(doi, 200);
-    const normTitle = cleanText(title, 400);
-    const clauses = [];
-    const params = [];
-    if (id) { clauses.push('id = ?'); params.push(id); }
-    if (normDoi) { clauses.push('lower(doi) = lower(?)'); params.push(normDoi); }
-    if (normTitle) { clauses.push('lower(title) = lower(?)'); params.push(normTitle); }
-    if (!resolved || !clauses.length) {
-      return null;
-    }
-
-    let sqlitePath = '';
-    try {
-      const primary = buildKnowledgeDatabasePaths({ storagePath: resolved });
-      await fsPromises.access(primary.sqlite_path);
-      sqlitePath = primary.sqlite_path;
-    } catch {
-      try {
-        const legacy = buildLegacyKnowledgeDatabasePaths({ storagePath: resolved });
-        await fsPromises.access(legacy.sqlite_path);
-        sqlitePath = legacy.sqlite_path;
-      } catch {
-        return null;
-      }
-    }
-
-    let db = null;
-    try {
-      db = await openKnowledgeDatabase(sqlitePath);
-      const rows = queryRows(
-        db,
-        `SELECT * FROM papers WHERE ${clauses.join(' OR ')} LIMIT 1`,
-        params
-      );
-      const row = rows && rows[0];
-      const wikiPath = cleanText(row?.wiki_path, 4000);
-      if (!wikiPath) {
-        return null;
-      }
-      const markdownPath = resolveRelativeStoragePath(resolved, wikiPath);
-      const markdown = await fsPromises.readFile(markdownPath, 'utf8').catch(() => '');
-      if (!cleanText(markdown, 10)) {
-        return null;
-      }
-      const metadata = await readPaperMetadata(resolved, row).catch(() => ({}));
-      return {
-        id: cleanText(row.id, 200),
-        title: cleanText(row.title, 220),
-        abstract: cleanText(metadata.abstract || row.abstract, 3000),
-        doi: cleanText(row.doi, 200),
-        markdown_path: markdownPath,
-        markdown_relative_path: wikiPath,
-        content: markdown
-      };
-    } catch {
-      return null;
-    } finally {
-      try {
-        if (db && typeof db.close === 'function') {
-          db.close();
-        }
-      } catch { /* ignore close failures */ }
-    }
-  }
-
   const loadPaperFromKnowledge = typeof deps.loadPaperFromKnowledge === 'function'
     ? deps.loadPaperFromKnowledge
-    : defaultLoadPaperFromKnowledge;
+    : loadLocalPaperReference;
 
   const PAPER_ANALYSIS_RESPONSE_SCHEMA = {
     type: 'object',
@@ -131,9 +50,10 @@ function createPaperAnalysisRuntime(deps = {}) {
                     { type: 'string' },
                     {
                       type: 'object',
-                      additionalProperties: true,
+                      additionalProperties: false,
+                      required: ['id', 'text'],
                       properties: {
-                        id: { type: 'string' },
+                        id: { anyOf: [{ type: 'string' }, { type: 'null' }] },
                         text: { type: 'string' }
                       }
                     }
@@ -224,7 +144,7 @@ function createPaperAnalysisRuntime(deps = {}) {
       content: cleanText(source.paper_text || source.paper_content || paper.content || paper.full_text, 12000),
       methods: methodsText,
       key_findings: asArray(paper.key_findings || paper.keyResults).map((item) => cleanText(item, 600)).filter(Boolean).join('\n- '),
-      message: cleanText(source.message, 2400),
+      message: cleanText(source.query || source.message, 2400),
       extract_protocol: source.extract_protocol === true,
       generate_protocol: source.generate_protocol === true,
       protocol_title_hint: cleanText(source.protocol_title_hint, 220)
@@ -346,7 +266,7 @@ function createPaperAnalysisRuntime(deps = {}) {
       const paper = source.paper && typeof source.paper === 'object' ? source.paper : {};
       loadedPaper = await loadPaperFromKnowledge({
         storagePath: source.storage_path || source.storagePath,
-        paperId: paper.id || source.paper_id || source.id,
+        paperId: paper.id || paper.paper_id || source.paper_id || source.id,
         doi: paper.doi || source.doi,
         title: context.title || paper.title
       });

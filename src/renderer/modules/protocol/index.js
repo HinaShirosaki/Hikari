@@ -424,6 +424,7 @@ export function initProtocolManagement({
   return {
     addDraftFromExtractedMethod,
     editProtocol,
+    viewProtocol,
     hasUnsavedChanges: () => Boolean(
       localState.protocolDetailMode === 'edit'
       && savedDraftSnapshot

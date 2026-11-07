@@ -176,6 +176,31 @@
     <hr role="separator" data-context-separator="generate-here">
     <button type="button" role="menuitem" data-context-action="generate-here" data-icon="plus" tabindex="-1"><span data-i18n="figura.generateHere.menu">Generate here with Codex…</span></button>
   </div>
+  <div id="illustration-context-menu" class="canvas-context-menu" role="menu" aria-label="Illustration actions" hidden data-i18n-aria-label="figura.illustrationMenu.actions">
+    <button type="button" role="menuitem" data-context-action="export" data-icon="download" tabindex="-1"><span data-i18n="figura.illustrationMenu.export">Export…</span></button>
+    <button type="button" role="menuitem" data-context-action="duplicate" data-icon="copy" tabindex="-1"><span data-i18n="figura.illustrationMenu.duplicate">Duplicate</span></button>
+    <button type="button" role="menuitem" data-context-action="rename" data-icon="edit" tabindex="-1"><span data-i18n="figura.illustrationMenu.rename">Rename…</span></button>
+    <hr role="separator">
+    <button type="button" role="menuitem" data-context-action="delete" data-icon="trash" class="danger-button" tabindex="-1"><span data-i18n="figura.illustrationMenu.delete">Delete…</span></button>
+  </div>
+  <dialog id="illustration-action-dialog" aria-labelledby="illustration-action-title"><form id="illustration-action-form">
+    <h2 id="illustration-action-title">
+      <span data-illustration-task="export" data-i18n="figura.illustrationMenu.exportTitle">Export illustration</span>
+      <span data-illustration-task="rename" data-i18n="figura.illustrationMenu.renameTitle">Rename illustration</span>
+      <span data-illustration-task="delete" data-i18n="figura.illustrationMenu.deleteTitle">Delete illustration?</span>
+    </h2>
+    <p id="illustration-action-name" data-illustration-task="export delete"></p>
+    <label data-illustration-task="rename"><span data-i18n="figura.full.fe07306">Name</span><input id="illustration-new-name" maxlength="200" required></label>
+    <p id="illustration-action-error" role="alert" hidden></p>
+    <div class="actions">
+      <button type="button" id="cancel-illustration-action"><span data-i18n="figura.full.35afca3b">Cancel</span></button>
+      <button type="submit" data-illustration-task="rename"><span data-i18n="figura.illustrationMenu.saveName">Rename</span></button>
+      <button type="submit" data-illustration-task="export" value="svg">SVG</button>
+      <button type="submit" data-illustration-task="export" value="png">PNG</button>
+      <button type="submit" data-illustration-task="export" value="pptx"><span data-i18n="figura.full.10bab578">PowerPoint</span></button>
+      <button type="submit" data-illustration-task="delete" class="danger-button"><span data-i18n="figura.illustrationMenu.confirmDelete">Delete</span></button>
+    </div>
+  </form></dialog>
   <input id="asset-input" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp" multiple hidden>
   <input id="asset-folder-input" type="file" webkitdirectory hidden>
   <dialog id="raster-dialog" aria-labelledby="raster-title"><form id="raster-form">

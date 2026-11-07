@@ -2,6 +2,7 @@ import { createPresentation } from "../../lib/i18n/presentation.js";
 import "./localization.js";
 const i18nUi = createPresentation("agent");
 const ICON_PATHS = Object.freeze({
+  'book-open': '<path d="M12 5c-3-1.5-6.5-1.5-9 0v14c2.5-1.5 6-1.5 9 0m0-14c3-1.5 6.5-1.5 9 0v14c-2.5-1.5-6-1.5-9 0m0-14v14" />',
   attach: '<path d="m20.5 10.5-8.8 8.8a5 5 0 0 1-7.1-7.1l9.2-9.2a3.5 3.5 0 0 1 5 5L9.6 17a2 2 0 0 1-2.8-2.8l8.4-8.4" />',
   chat: '<path d="M6.5 4.5h11a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3h-7l-3.5 3.25V15.5h-.5a3 3 0 0 1-3-3v-5a3 3 0 0 1 3-3Z" /><path d="M8.5 10h.01M12 10h.01M15.5 10h.01" />',
   close: '<path d="m6 6 12 12M18 6 6 18" />',
@@ -30,7 +31,8 @@ export function renderAgentChatIcon(name, { className = '' } = {}) {
 }
 
 export function hydrateAgentChatIcons(rootDocument = globalThis.document) {
-  if (typeof rootDocument?.querySelectorAll !== 'function' || typeof rootDocument?.createElementNS !== 'function') {
+  const ownerDocument = rootDocument?.ownerDocument || rootDocument;
+  if (typeof rootDocument?.querySelectorAll !== 'function' || typeof ownerDocument?.createElementNS !== 'function') {
     return;
   }
   for (const placeholder of rootDocument.querySelectorAll('[data-agent-chat-icon]')) {
@@ -38,7 +40,7 @@ export function hydrateAgentChatIcons(rootDocument = globalThis.document) {
     const iconName = placeholder.getAttribute('data-agent-chat-icon');
     const paths = ICON_PATHS[iconName];
     if (!paths) continue;
-    const icon = rootDocument.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const icon = ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'svg');
     icon.setAttribute('class', normalizeClassName(placeholder.getAttribute('class')));
     icon.setAttribute('viewBox', '0 0 24 24');
     icon.setAttribute('role', 'presentation');

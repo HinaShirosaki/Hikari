@@ -180,7 +180,7 @@ await hikari.call('app.info');
 //   host: 'hikari',
 //   pluginId: 'notebook-results',
 //   permissions: ['notebook:read', 'notebook:write'],
-//   appearance: { mode: 'day', fontSize: 16 },
+//   appearance: { mode: 'day', fontSize: 16 }, // mode: 'day' | 'night' | 'miku'
 //   storage: { configured: true },
 //   layout: {
 //     leftRail: { width: 280, min: 240, max: 400, mobileBreakpoint: 980, foldable: true, folded: false, headerToggleAvailable: true },
