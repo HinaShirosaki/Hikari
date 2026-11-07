@@ -1,5 +1,6 @@
 import { initAgentChat } from '../modules/agent-chat/index.js';
 import { createScopedAgentChatState } from '../modules/agent-chat/scoped-state.js';
+import { createOpenRecordCitation } from './agent-record-citations.js';
 
 export function createAgentRailScopeContextGetter(modules, rootDocument, views = {}) {
   return () => {
@@ -69,6 +70,7 @@ export const agentChatRailManifest = {
       showView(views.PAPERS);
       return modules.papers?.openPaperCitation?.(source);
     },
+    onOpenRecordCitation: createOpenRecordCitation({ state, modules, showView, views }),
     onOpenNotebookEntry: (entryId = '') => {
       showView(views.BIOLOGY_NOTEBOOK);
       modules.biologyNotebook?.openEntry?.(entryId);

@@ -1,3 +1,5 @@
+import { normalizeRecordEvidence } from './record-citations.mjs';
+
 const rows = value => Array.isArray(value) ? value : [];
 const text = value => typeof value === 'string' ? value.trim() : '';
 const positiveInteger = value => Number.isSafeInteger(Number(value)) && Number(value) > 0 ? Number(value) : 0;
@@ -46,10 +48,24 @@ export function paperEvidenceKey(block) {
 }
 
 export function mergePaperEvidence(...collections) {
+  return mergeEvidence(false, collections);
+}
+
+// The existing paper_evidence wire field also carries typed record evidence.
+export function mergeSourceEvidence(...collections) {
+  return mergeEvidence(true, collections);
+}
+
+function mergeEvidence(includeRecords, collections) {
   const unique = new Map();
   for (const source of collections.flatMap(rows)) {
-    const block = normalizePaperEvidence(source);
-    if (block) unique.set(paperEvidenceKey(block), block);
+    if (source?.source_type) {
+      const record = includeRecords && normalizeRecordEvidence(source);
+      if (record) unique.set(record.target, record);
+    } else {
+      const block = normalizePaperEvidence(source);
+      if (block) unique.set(paperEvidenceKey(block), block);
+    }
   }
   return [...unique.values()];
 }

@@ -46,6 +46,19 @@ body {
   --assay-plate-analysis-group-4: var(--theme-danger);
 }
 
+body.theme-miku {
+  /* Plate chrome only; the labware drawing and sample colors stay as in day. */
+  --assay-plate-danger: var(--theme-danger);
+  --assay-plate-line: var(--theme-border-soft);
+  --assay-plate-line-soft: color-mix(in srgb, var(--theme-border-soft) 60%, transparent);
+  --assay-plate-header-soft: var(--theme-surface-muted);
+  --assay-plate-header: var(--theme-surface-subtle);
+  --assay-plate-header-solid: var(--theme-surface-subtle);
+  --assay-plate-disabled-bg: var(--theme-surface-muted);
+  --assay-plate-overlay: var(--theme-overlay);
+  --assay-plate-shadow: var(--theme-shadow-color);
+}
+
 body.theme-night {
   /*
    * Plate/table CHROME follows the theme. The labware illustration below it

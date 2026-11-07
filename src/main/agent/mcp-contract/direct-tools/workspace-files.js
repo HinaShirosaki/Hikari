@@ -2,7 +2,7 @@
 
 const WORKSPACE_FILES_MCP_TOOL = Object.freeze({
   name: 'workspace_files',
-  description: 'Read, search, create, edit, move or trash ordinary files in the Hikari workspace or a separately granted location. Call status for access and location IDs. Paths are relative with / separators. Read before write and pass expected_hash. Mutations require a unique request_id; retry uncertain requests with identical arguments. awaiting_approval means no write occurred: direct the user to File changes in Hikari. Managed Hikari records, MEMORY.md and indexes use their dedicated tools. Only Hikari can approve changes and undo them.',
+  description: 'Read or search ordinary files in the Hikari workspace or a separately granted location. Call status for access and location IDs. Paths are relative with / separators. In Agent chat, use native Codex tools for ordinary file edits when permitted by the selected preset. If a caller has an explicit write capability, read before editing, pass expected_hash, and use a unique request_id. Awaiting approval means no file was changed. Managed Hikari records, MEMORY.md and indexes use their dedicated tools.',
   annotations: { title: 'Workspace files', readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
   inputSchema: {
     type: 'object', additionalProperties: false, required: ['action'], properties: {

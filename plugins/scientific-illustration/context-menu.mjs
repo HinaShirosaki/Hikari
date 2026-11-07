@@ -1,31 +1,22 @@
-// This plugin is self-contained; the menu uses the same editor actions as the
-// toolbar and shortcuts, without requiring a host menu or clipboard permission.
-export function installCanvasContextMenu({ document, canOpen, selectTarget, getActions, getContext = () => null, status, hitTest }) {
-  const menu = document.getElementById('canvas-context-menu');
-  const stage = document.getElementById('main-canvas');
-  const layers = document.getElementById('layers');
+function installContextMenu({ document, menu, surfaces, resolveMenu, status }) {
   const window = document.defaultView;
   const buttons = [...menu.querySelectorAll('[role="menuitem"]')];
   let actions = {};
+  let focusTrigger;
   function close(restoreFocus = false) {
     if (menu.hidden) return;
     menu.hidden = true; actions = {};
-    if (restoreFocus) stage.focus({ preventScroll: true });
+    if (restoreFocus) focusTrigger?.();
+    focusTrigger = null;
   }
   function open(event, surface, keyboard = false) {
-    if (!canOpen() || event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])') || event.target.isContentEditable) return;
+    const resolved = resolveMenu(event, surface, keyboard);
+    if (!resolved) return;
     event.preventDefault();
-    const hit = surface === stage && !keyboard && hitTest ? hitTest(event)
-      : event.target.closest('[data-object-id], [data-resize-id], [data-rotate-id], [data-layer-id]');
-    const id = hit?.dataset.objectId || hit?.dataset.resizeId || hit?.dataset.rotateId || hit?.dataset.layerId;
-    // Read the anchor before selection redraws and replaces its SVG/layer row.
-    const anchor = (hit || stage.querySelector('[data-object-id][aria-pressed="true"]') || surface).getBoundingClientRect();
-    const x = keyboard || !event.clientX && !event.clientY ? anchor.left + Math.min(anchor.width, 24) : event.clientX;
-    const y = keyboard || !event.clientX && !event.clientY ? anchor.top + Math.min(anchor.height, 24) : event.clientY;
-    const context = getContext({ surface, keyboard, clientX: x, clientY: y });
-    if (id) selectTarget(id, { individual: event.altKey || surface === layers, forceIndividual: event.altKey });
+    const { x, y } = resolved;
     document.querySelectorAll('.popover[open]').forEach(popover => { popover.open = false; });
-    actions = getActions(context);
+    actions = resolved.actions;
+    focusTrigger = resolved.focusTrigger;
     for (const button of buttons) {
       button.hidden = actions[button.dataset.contextAction]?.visible === false;
       button.disabled = !actions[button.dataset.contextAction]?.enabled;
@@ -41,7 +32,7 @@ export function installCanvasContextMenu({ document, canOpen, selectTarget, getA
     const first = buttons.find(button => !button.hidden && !button.disabled);
     if (first) { first.tabIndex = 0; first.focus({ preventScroll: true }); }
   }
-  for (const surface of [stage, layers]) {
+  for (const surface of surfaces) {
     surface.addEventListener('contextmenu', event => open(event, surface));
     surface.addEventListener('keydown', event => {
       if (event.key === 'ContextMenu' || event.shiftKey && event.key === 'F10') {
@@ -83,4 +74,40 @@ export function installCanvasContextMenu({ document, canOpen, selectTarget, getA
   window.addEventListener('resize', () => close(true));
   window.addEventListener('blur', () => close());
   return { close };
+}
+
+function menuPoint(event, anchor, keyboard) {
+  if (!keyboard && (event.clientX || event.clientY)) return { x: event.clientX, y: event.clientY };
+  const bounds = anchor.getBoundingClientRect();
+  return { x: bounds.left + Math.min(bounds.width, 24), y: bounds.top + Math.min(bounds.height, 24) };
+}
+
+export function installCanvasContextMenu({ document, canOpen, selectTarget, getActions, getContext = () => null, status, hitTest }) {
+  const stage = document.getElementById('main-canvas');
+  const layers = document.getElementById('layers');
+  return installContextMenu({ document, menu: document.getElementById('canvas-context-menu'), surfaces: [stage, layers], status,
+    resolveMenu(event, surface, keyboard) {
+      if (!canOpen() || event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])') || event.target.isContentEditable) return;
+      const hit = surface === stage && !keyboard && hitTest ? hitTest(event)
+        : event.target.closest('[data-object-id], [data-resize-id], [data-rotate-id], [data-layer-id]');
+      const id = hit?.dataset.objectId || hit?.dataset.resizeId || hit?.dataset.rotateId || hit?.dataset.layerId;
+      // Read the anchor before selection redraws and replaces its SVG/layer row.
+      const { x, y } = menuPoint(event, hit || stage.querySelector('[data-object-id][aria-pressed="true"]') || surface, keyboard);
+      const context = getContext({ surface, keyboard, clientX: x, clientY: y });
+      if (id) selectTarget(id, { individual: event.altKey || surface === layers, forceIndividual: event.altKey });
+      return { x, y, actions: getActions(context), focusTrigger: () => stage.focus({ preventScroll: true }) };
+    }
+  });
+}
+
+export function installIllustrationContextMenu({ document, getActions, focusRow, status }) {
+  const list = document.getElementById('illustrations');
+  return installContextMenu({ document, menu: document.getElementById('illustration-context-menu'), surfaces: [list], status,
+    resolveMenu(event, _surface, keyboard) {
+      const row = event.target.closest('[data-illustration-id]');
+      if (!row || document.querySelector('dialog[open]')) return;
+      const id = row.dataset.illustrationId;
+      return { ...menuPoint(event, row, keyboard), actions: getActions(id), focusTrigger: () => focusRow(id) };
+    }
+  });
 }

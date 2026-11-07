@@ -252,7 +252,8 @@ function buildLookupCitations(items = [], source = '') {
       ].filter(Boolean).join(' | ');
       return {
         source: sourceText,
-        pointer: pointer || `${sourceText || 'lookup'}:${index + 1}`
+        pointer: pointer || `${sourceText || 'lookup'}:${index + 1}`,
+        ...(item?.citation_target ? { target: item.citation_target } : {})
       };
     })
     .filter((citation) => citation.source && citation.pointer);

@@ -1,6 +1,9 @@
 'use strict';
 
 const path = require('node:path');
+const fs = require('node:fs/promises');
+const { rootIdentity, inside } = require('../../agent/file-access/paths.js');
+const { getAgentRequestContext } = require('../../lib/llm/request-context.js');
 const {
   createCodexAgentRuntime
 } = require('../../agent/codex-agent/runtime.js');
@@ -39,6 +42,7 @@ function createMainCodexService({
   mcpService,
   agentFoundation,
   fileAccess,
+  getStorageRoot = () => '',
   processObject = process,
   createWorkspaceInitializer = createCodexWorkspaceInitializer
 } = {}) {
@@ -171,9 +175,17 @@ function createMainCodexService({
     try { context = ensurePlainObject(JSON.parse(envOverrides.HIKARI_AGENT_MCP_REQUEST_CONTEXT || envOverrides.HIKARI_CODEX_REQUEST_CONTEXT || '{}')); } catch { /* no file grant */ }
     const agentSettings = context.snapshot?.settings?.agent || {};
     const disabled = agentSettings.disabledMcpToolNames || agentSettings.disabled_mcp_tool_names || [];
+    const codexPermissions = context.snapshot?.scheduled_task || context.snapshot?.scheduledTask
+      ? null : getAgentRequestContext()?.codexPermissions;
+    let cwd = input.cwd;
+    if (codexPermissions && ['default', 'approve-for-me'].includes(codexPermissions.preset)) {
+      const { root } = await rootIdentity(getStorageRoot(), getCodexCliWorkingDirectory());
+      const project = cwd ? await fs.realpath(cwd).catch(() => '') : '';
+      cwd = project && inside(root, project) ? project : root;
+    }
     const session = await fileAccess?.beginSession({
       id: context.chatSessionId || context.traceRequestId,
-      write: Boolean(context.chatSessionId) && !context.snapshot?.scheduled_task && !context.snapshot?.scheduledTask,
+      write: false,
       enabled: !disabled.includes('workspace_files')
     });
     // Never persist a live capability in shared Codex config/request context.
@@ -183,8 +195,8 @@ function createMainCodexService({
     envOverrides.HIKARI_AGENT_MCP_REQUEST_CONTEXT = JSON.stringify(context);
     envOverrides.HIKARI_CODEX_REQUEST_CONTEXT = JSON.stringify(context);
     try {
-      await workspaceInitializer.initialize({ cwd: input.cwd, envOverrides });
-      return await requestCodexCliText({ ...input, envOverrides });
+      await workspaceInitializer.initialize({ cwd, envOverrides });
+      return await requestCodexCliText({ ...input, cwd, envOverrides, codexPermissions });
     } finally { if (session?.token) fileAccess.endSession(session.token); }
   }
 

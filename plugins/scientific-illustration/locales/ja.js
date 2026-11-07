@@ -1,5 +1,17 @@
 // Japanese preview; other messages fall back to English.
 (function(root){const all=root.HikariUiTranslations=root.HikariUiTranslations||{};all["ja"]={...(all["ja"]||{}),figura:{
+  "illustrationMenu.actions": "イラストの操作",
+  "illustrationMenu.export": "エクスポート…",
+  "illustrationMenu.duplicate": "複製",
+  "illustrationMenu.rename": "名前を変更…",
+  "illustrationMenu.delete": "削除…",
+  "illustrationMenu.exportTitle": "イラストをエクスポート",
+  "illustrationMenu.renameTitle": "イラスト名を変更",
+  "illustrationMenu.deleteTitle": "イラストを削除しますか？",
+  "illustrationMenu.saveName": "名前を変更",
+  "illustrationMenu.confirmDelete": "削除",
+  "illustrationMenu.nameRequired": "イラスト名を入力してください。",
+  "illustrationMenu.missing": "このイラストは存在しません。",
   "assets.description": "説明（任意）",
   "assets.details": "アセットの詳細",
   "assets.editDetails": "{name} の詳細を編集",

@@ -1,5 +1,17 @@
 // Traditional Chinese preview; other messages fall back to English.
 (function(root){const all=root.HikariUiTranslations=root.HikariUiTranslations||{};all["zh-Hant"]={...(all["zh-Hant"]||{}),figura:{
+  "illustrationMenu.actions": "插圖操作",
+  "illustrationMenu.export": "匯出…",
+  "illustrationMenu.duplicate": "複製",
+  "illustrationMenu.rename": "重新命名…",
+  "illustrationMenu.delete": "刪除…",
+  "illustrationMenu.exportTitle": "匯出插圖",
+  "illustrationMenu.renameTitle": "重新命名插圖",
+  "illustrationMenu.deleteTitle": "刪除插圖？",
+  "illustrationMenu.saveName": "重新命名",
+  "illustrationMenu.confirmDelete": "刪除",
+  "illustrationMenu.nameRequired": "請輸入插圖名稱。",
+  "illustrationMenu.missing": "此插圖不存在。",
   "assets.description": "描述（選填）",
   "assets.details": "素材詳情",
   "assets.editDetails": "編輯 {name} 的詳情",

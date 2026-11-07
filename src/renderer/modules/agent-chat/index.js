@@ -20,8 +20,9 @@ import { mapExperimentDataToLlmJson } from './state-snapshot.js';
 import { createNotebookDraftAgentAdapter } from '../biology-notebook/agent/index.js';
 import { createProtocolAgentAdapter } from '../protocol/agent/index.js';
 import { normalizeScopeKey } from '../app-state/agent-chat-normalizer.js';
-import { agentAttributes, agentMessage, setAgentText } from './localization.js';
+import { agentAttributes, agentMessage } from './localization.js';
 import { createAgentPlotReplay } from './plot-replay.js';
+import { bindCodexPermissionPicker } from './codex-permission-picker.js';
 
 export { mapExperimentDataToLlmJson };
 
@@ -42,6 +43,7 @@ export function initAgentChat({
   onNotebookEntriesChanged,
   onOpenNotebookEntry = () => {},
   onOpenPaperCitation,
+  onOpenRecordCitation,
   onAppendNotebookEntry = async () => ({ ok: false, error: 'Notebook append is unavailable.' }),
   onProtocolsChanged = () => {},
   notebookDraftAdapter: providedNotebookDraftAdapter = null,
@@ -78,6 +80,8 @@ export function initAgentChat({
     runtime,
     notebookDraftAdapter,
     protocolReviewAdapter,
+    onOpenPaperCitation,
+    onOpenRecordCitation,
     hasImageCapture: typeof captureImageAttachment === 'function'
   });
   let requestController = null;
@@ -183,6 +187,8 @@ export function initAgentChat({
     notebookDraftAdapter,
     onOpenNotebookEntry,
     onOpenPaperCitation,
+    onOpenRecordCitation,
+    getLiveAssistantMessage: () => runtime.liveAssistantMessage,
     openReviewForMessage: (message) => reviewController?.openForMessage?.(message),
     reviewInline: (messageId, itemId, decision) => reviewController?.reviewInline?.(messageId, itemId, decision),
     onAppendNotebookEntry
@@ -199,25 +205,14 @@ export function initAgentChat({
     notebookActions: historyController.notebookActions,
     notebookDraftAdapter,
     protocolReviewAdapter,
-    onAppendNotebookEntry,
-    fileAccessApi: api
+    onAppendNotebookEntry
   });
 
-  const fileChangesButton = rootDocument?.getElementById?.(`${idPrefix}-file-changes-btn`);
-  fileChangesButton?.addEventListener('click', () => { void reviewController.openFileChanges(); });
-  const refreshFileChanges = async () => {
-    if (!fileChangesButton || !api?.agentFilesStatus) return;
-    try {
-      const result = await api.agentFilesStatus();
-      if (result?.pending?.length) setAgentText(fileChangesButton, 'composer.fileChangesCount', { count: result.pending.length });
-      else setAgentText(fileChangesButton, 'composer.fileChanges');
-    } catch { /* Settings shows detailed access errors. */ }
-  };
-  api?.onAgentFilesChanged?.(() => { void refreshFileChanges(); });
-  void refreshFileChanges();
+  if (idPrefix === 'agent') bindCodexPermissionPicker({ document: rootDocument, api });
 
   requestController = createAgentRequestController({
     api,
+    useCodexPermissions: idPrefix === 'agent',
     state,
     runtime,
     dom,

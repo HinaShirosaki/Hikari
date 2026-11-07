@@ -1,6 +1,6 @@
 'use strict';
 
-const { mergePaperEvidence } = require('../../../shared/paper-evidence.mjs');
+const { mergeSourceEvidence } = require('../../../shared/paper-evidence.mjs');
 const { extractPaperEvidenceFromToolEvent } = require('./tool-artifacts/paper-evidence.js');
 const { subscribePaperEvidence } = require('./tool-artifacts/paper-evidence-bridge.js');
 
@@ -14,6 +14,7 @@ const { AGENT_PROGRESS_EVENT } = require('../../../shared/ipc/channels.js');
 
 function createAgentChatRequestHandler({
   activeRequests,
+  getCodexPermissionsForEvent,
   cleanText,
   controllerUtils,
   observability,
@@ -47,6 +48,8 @@ function createAgentChatRequestHandler({
 
   return async function handleAgentChat(event, payload) {
     const normalizedPayload = normalizeJsonPayload(payload, {});
+    const codexPermissions = normalizedPayload?.useCodexPermissions === true
+      ? getCodexPermissionsForEvent?.(event) : null;
     const requestId = controllerUtils.buildAgentLogRequestId();
     const clientRequestId = cleanText(
       normalizedPayload?.clientRequestId || normalizedPayload?.client_request_id,
@@ -70,7 +73,7 @@ function createAgentChatRequestHandler({
     let paperEvidence = [];
     const emitAgentProgress = (lifecycleEvent) => {
       const evidence = extractPaperEvidenceFromToolEvent(lifecycleEvent);
-      if (evidence.length) paperEvidence = mergePaperEvidence(paperEvidence, evidence);
+      if (evidence.length) paperEvidence = mergeSourceEvidence(paperEvidence, evidence);
       const html = extractHtmlArtifactFromToolEvent(lifecycleEvent);
       if (html) htmlArtifacts = mergeHtmlArtifacts(htmlArtifacts, [html]);
       const image = extractImageArtifactFromToolEvent(lifecycleEvent);
@@ -96,9 +99,12 @@ function createAgentChatRequestHandler({
       onEvent: emitAgentProgress
     });
     const unsubscribePaperEvidence = subscribePaperEvidence(requestId, (blocks) => {
+      const type = blocks[0]?.source_type;
       emitAgentProgress({
-        stage: 'tool_call_completed', status: 'completed', tool_name: 'paper-analysis',
-        message: 'Paper context ready.', meta: { paper_evidence: blocks }
+        stage: 'tool_call_completed', status: 'completed',
+        tool_name: type === 'protocol' ? 'protocol-matching' : (type === 'notebook' ? 'notebook-lookup' : 'paper-analysis'),
+        message: type ? 'Saved source ready.' : 'Paper context ready.',
+        meta: { paper_evidence: blocks }
       });
     });
     const controllerRuntime = {
@@ -185,10 +191,11 @@ function createAgentChatRequestHandler({
         const result = await runWithAgentRequestContext({
           requestId,
           clientRequestId,
+          codexPermissions,
           abortSignal: abortController.signal,
           llmSource: llmSource && typeof llmSource === 'object' ? llmSource : null
         }, () => runAgentController(normalizedPayload, controllerRuntime));
-        paperEvidence = mergePaperEvidence(paperEvidence, result?.paper_evidence);
+        paperEvidence = mergeSourceEvidence(paperEvidence, result?.paper_evidence);
         const failureReasons = observability.classifyFailureReasons({
           result,
           lifecycleEvents: lifecycleRecorder.events

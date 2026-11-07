@@ -1,5 +1,5 @@
 import { asArray, normalizeAgentUserQuestion, trimText } from './shared.js';
-import { mergePaperEvidence } from '../../../shared/paper-evidence.mjs';
+import { mergeSourceEvidence } from '../../../shared/paper-evidence.mjs';
 import { extractStructuredThinkingTrace, summarizeCodexAgent, summarizeInventoryLookup, summarizeNotebookAppend, summarizeNotebookDraft, summarizeNotebookLookup, summarizeProtocolGeneration, summarizePurchaseRecommendation, summarizeScienceResult } from './response/result-summaries.js';
 
 // Flattens the main-process agent result into one renderer shape. Tool results
@@ -99,7 +99,7 @@ export function normalizeAgentResponse(result) {
           || 'Intent parsing completed.')));
 
   return {
-    paperEvidence: mergePaperEvidence(result?.paper_evidence),
+    paperEvidence: mergeSourceEvidence(result?.paper_evidence),
     htmlArtifacts: asArray(result?.html_artifacts),
     imageArtifacts: asArray(result?.image_artifacts),
     plotlyArtifacts: asArray(result?.plotly_graph_artifacts),

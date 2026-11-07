@@ -262,7 +262,7 @@ async function run() {
     console.log(`Figura transparent pixel selection: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
   }
   if (process.env.HIKARI_LIBRARY_NAVIGATION_QA_ONLY === '1') {
-    await verifyLibraryNavigation({ tool, evaluate, check, win, pause, waitFor });
+    await verifyLibraryNavigation({ tool, evaluate, check, win, pause, waitFor, temp });
     check(errors.length === 0, errors.join('\n'));
     console.log(`Figura library navigation: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
   }

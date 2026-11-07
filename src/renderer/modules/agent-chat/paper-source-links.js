@@ -1,4 +1,4 @@
-import { mergePaperEvidence } from '../../../shared/paper-evidence.mjs';
+import { mergePaperEvidence, mergeSourceEvidence } from '../../../shared/paper-evidence.mjs';
 import { agentAttributes } from './localization.js';
 
 function cleanPath(value) {
@@ -43,26 +43,35 @@ export function resolvePaperSourceLink(target, blocks, storagePath = '') {
 
 // A follow-up can cite evidence read earlier in this chat without another read.
 // Never authorize a source from a later message or a different conversation.
-export function getPaperSourceEvidence(message, messages = []) {
-  if (!message) return [];
+export function getCitationEvidence(message, messages = []) {
+  if (message?.role !== 'assistant') return [];
   const index = messages.findIndex(item => item === message || (message.id && item.id === message.id));
   const prior = index < 0 ? [] : messages.slice(0, index)
     .filter(item => item.role === 'assistant')
     .flatMap(item => item.meta?.paper_evidence || []);
-  return mergePaperEvidence(prior, message.meta?.paper_evidence);
+  return mergeSourceEvidence(prior, message.meta?.paper_evidence);
 }
 
-export function createPaperSourceLinkRenderer(message, state, safeText, messages = state.agentChat?.messages || []) {
+export function resolveRecordSourceLink(target, evidence) {
+  return evidence.find(block => block.source_type && block.target === target) || null;
+}
+
+export function createPaperSourceLinkRenderer(message, state, safeText, messages = state.agentChat?.messages || [], onRecordCitation) {
   let evidence;
   const numbers = new Map();
   return (target) => {
-    evidence ||= getPaperSourceEvidence(message, messages);
-    const source = resolvePaperSourceLink(target, evidence, state.settings?.storagePath);
-    if (!source || !message.id) return '';
-    const key = JSON.stringify([source.path, source.line, source.endLine]);
+    if (!message.id) return '';
+    evidence ||= getCitationEvidence(message, messages);
+    const record = resolveRecordSourceLink(target, evidence);
+    const paper = record ? null : resolvePaperSourceLink(target, evidence, state.settings?.storagePath);
+    if (!record && !paper) return '';
+    if (record) onRecordCitation?.(record);
+    const key = record?.target || JSON.stringify([paper.path, paper.line, paper.endLine]);
     if (!numbers.has(key)) numbers.set(key, numbers.size + 1);
-    return `<button type="button" class="agent-chat-paper-source" data-agent-paper-source="${safeText(target)}" data-agent-source-message="${safeText(message.id)}" ${agentAttributes({ title: 'citation.open', 'aria-label': 'citation.open' }, {
-      source: [source.paperTitle, source.sectionLabel].filter(Boolean).join(' — ')
+    const attribute = record ? 'data-agent-record-source' : 'data-agent-paper-source';
+    const label = record ? (record.source_type === 'protocol' ? 'citation.openProtocol' : 'citation.openNotebook') : 'citation.open';
+    return `<button type="button" class="agent-chat-paper-source" ${attribute}="${safeText(target)}" data-agent-source-message="${safeText(message.id)}" ${agentAttributes({ title: label, 'aria-label': label }, {
+      source: record ? (record.title || record.record_id) : [paper.paperTitle, paper.sectionLabel].filter(Boolean).join(' — ')
     })}><svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 3.5C6 2.5 3.5 2.5 1.5 3.5v9c2-1 4.5-1 6.5 0m0-9c2-1 4.5-1 6.5 0v9c-2-1-4.5-1-6.5 0m0-9v9"/></svg><span>${numbers.get(key)}</span></button>`;
   };
 }

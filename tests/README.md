@@ -44,6 +44,27 @@ npm run build:ui
 node node_modules/electron/cli.js tests/storage-setup-electron.cjs
 ```
 
+`node tests/paper-browser-auto-download-selfcheck.js` checks automatic-download
+attempt tracking, disposal, cancellation, timeouts, and rejection of non-PDF or
+wrong-paper browser results. `node node_modules/electron/cli.js
+tests/paper-browser-auto-download-electron.cjs` runs local publisher fixtures
+through the real browser session: metadata, authenticated links, delayed/blob
+downloads, nested popups, viewer frames, shadow roots, access challenges,
+manual mode, and concurrent downloads. It uses temporary profile/storage and
+does not contact external publishers.
+
+`node node_modules/electron/cli.js tests/paper-browser-publishers-live.cjs --live`
+tests public ACS, Springer, Elsevier and Wiley article pages over the current
+network. Add `--suite=subscription` for subscription candidates,
+`--publisher=Elsevier` or `--case=<id>` for a subset, and `--show` for manual
+verification. A disposable browser profile is used; institutional IP access is
+available, existing personal browser cookies are not imported. Live test
+results, screenshots, and downloaded PDFs are written under
+`artifacts/paper-browser-publishers-live*`. Run
+`node tests/paper-browser-publishers-verify.cjs` afterwards to parse saved PDFs
+and verify the expected article identity. These opt-in scripts are separate
+from the fixture suite and do not use model inference.
+
 `HIKARI_PLOTLY_QA_ONLY=1 node node_modules/electron/cli.js tests/scientific-illustration-electron.cjs`
 checks Figura's data-backed Plot layers through the real public canvas bridge:
 vendored Plotly rendering, supplied error bars, raw histogram bin counts,
@@ -244,3 +265,7 @@ states without touching user images, user files or a model/network service. Colo
 and crop-menu layout captures run at 1300px and 800px.
 
 `node tests/agent-paper-source-links-selfcheck.cjs` and `node tests/paper-citation-navigation-selfcheck.cjs` check trusted citation targets, exact reader passages, workspace-relative PDF metadata, text matching and superseded PDF renders. `node tests/agent-paper-citations-electron.cjs` exercises sentence buttons through the actual Agent manifest into the PDF viewer, temporary highlights, keyboard/reload behavior and day/night layouts. Set `HIKARI_CITATION_REAL_PAPER=1` to also check the saved FACT paper in the local TestData3 fixture. `node tests/paper-citation-discovery-selfcheck.cjs` verifies that navigation scans file metadata without waiting for background Markdown extraction or model intake, and that overlapping scans preserve added, edited and deleted annotations in memory and persistence.
+
+Set `HIKARI_CITATION_MULTIPLE_PAPERS=1` for three real TestData3 PDFs (Anders, Jinek, and FACT), six physical Markdown passages, and twelve jumps through Evidence, sentence citations, and saved follow-ups. The test checks PDF identity, independently identified page numbers, temporary highlights, per-paper passage state, and metadata-only discovery of a downloaded paper absent from renderer state. Set `HIKARI_CITATION_PACKAGE=out/Hikari-darwin-arm64/Hikari.app` as well to load the installed archive's renderer. These are desktop checks with isolated in-memory state; the saved library is read only.
+
+`node tests/paper-analysis-reference-selfcheck.cjs` checks the search-to-analysis identity handoff: intake folder IDs, canonical database IDs, DOI and title variants, renamed Markdown, unindexed downloads, legacy storage, and conflicting/ambiguous references. It also checks three-paper evidence delegation and all nested strict response-schema objects. Set `HIKARI_ANALYSIS_PACKAGE=out/Hikari-darwin-arm64/Hikari.app` to run the same checks against the installed runtime in Electron.

@@ -1,5 +1,5 @@
 import { normalizeAgentResponse } from './response.js';
-import { mergePaperEvidence } from '../../../shared/paper-evidence.mjs';
+import { mergeSourceEvidence } from '../../../shared/paper-evidence.mjs';
 import { buildAttachmentSummary } from './composer-attachments.js';
 import { toConversation, trimText } from './shared.js';
 import {
@@ -30,6 +30,7 @@ import { agentFailure, agentNotice, agentUi, setAgentText } from './localization
 export function createAgentRequestController(deps) {
   const {
     api,
+    useCodexPermissions = false,
     state,
     runtime,
     input,
@@ -255,6 +256,7 @@ export function createAgentRequestController(deps) {
       }
       const result = await api.agentChat({
         clientRequestId,
+        ...(useCodexPermissions ? { useCodexPermissions: true } : {}),
         message: messageText,
         attachments,
         chatSessionId: currentSessionId,
@@ -269,7 +271,7 @@ export function createAgentRequestController(deps) {
         return;
       }
       if (request.liveAssistantMessage && result?.paper_evidence?.length) {
-        request.liveAssistantMessage.meta.paper_evidence = mergePaperEvidence(
+        request.liveAssistantMessage.meta.paper_evidence = mergeSourceEvidence(
           request.liveAssistantMessage.meta.paper_evidence, result.paper_evidence
         );
       }

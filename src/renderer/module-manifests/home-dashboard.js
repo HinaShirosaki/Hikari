@@ -2,6 +2,7 @@ import { initHomeDashboard } from '../modules/home-dashboard/index.js';
 import { createHomeNotebookAgent } from '../modules/home-dashboard/notebook-agent.js';
 import { createSavedNotebookAppend } from '../modules/biology-notebook/agent/index.js';
 import { initAgentChat, createScopedAgentChatState } from '../modules/agent-chat/public-api.js';
+import { createOpenRecordCitation } from './agent-record-citations.js';
 
 export const homeDashboardManifest = {
   key: 'homeDashboard',
@@ -44,6 +45,7 @@ export const homeDashboardManifest = {
           showView(views.PAPERS);
           return modules.papers?.openPaperCitation?.(source);
         },
+        onOpenRecordCitation: createOpenRecordCitation({ state, modules, showView, views }),
         onNotebookEntriesChanged: rendererServices.notebook.handleAgentNotebookEntriesChanged,
         onProtocolsChanged: () => {
           rendererServices.protocol.handleProtocolsChanged();

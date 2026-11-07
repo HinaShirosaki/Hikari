@@ -32,7 +32,30 @@
                   <div id="agent-attachment-list" class="agent-attachment-list" hidden></div>
                   <div class="agent-composer-toolbar">
                     <div class="agent-composer-toolbar-start">
-                      <button type="button" id="agent-file-changes-btn" class="ghost-btn" data-i18n="agent.composer.fileChanges">File changes</button>
+                      <button type="button" id="agent-codex-permission-btn" class="ghost-btn agent-codex-permission-btn" popovertarget="agent-codex-permission-picker" disabled>
+                        <span class="agent-codex-permission-label" data-i18n="agent.permission.title">Codex permissions</span>
+                        <span id="agent-codex-permission-current" data-i18n="agent.permission.readOnly">Read Only</span>
+                        <svg class="btn-icon agent-codex-permission-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>
+                      </button>
+                      <div id="agent-codex-permission-picker" class="agent-codex-permission-picker" popover="auto" role="group" aria-labelledby="agent-codex-permission-title">
+                        <h3 id="agent-codex-permission-title" data-i18n="agent.permission.title">Codex permissions</h3>
+                        <button type="button" class="ghost-btn" data-codex-preset="read-only" aria-pressed="true">
+                          <span data-i18n="agent.permission.readOnly">Read Only</span>
+                          <small data-i18n="agent.permission.readOnlyHelp">Read files. Ask before editing or using the network.</small>
+                        </button>
+                        <button type="button" class="ghost-btn" data-codex-preset="default" aria-pressed="false">
+                          <span data-i18n="agent.permission.default">Default</span>
+                          <small data-i18n="agent.permission.defaultHelp">Edit in the workspace. Ask before going beyond it.</small>
+                        </button>
+                        <button type="button" class="ghost-btn" data-codex-preset="approve-for-me" aria-pressed="false">
+                          <span data-i18n="agent.permission.approveForMe">Approve for me</span>
+                          <small data-i18n="agent.permission.approveForMeHelp">Edit in the workspace. Send eligible approvals to an automatic reviewer.</small>
+                        </button>
+                        <button type="button" class="ghost-btn" data-codex-preset="full-access" aria-pressed="false">
+                          <span data-i18n="agent.permission.fullAccess">Full Access</span>
+                          <small data-i18n="agent.permission.fullAccessHelp">Run without the sandbox or approval prompts.</small>
+                        </button>
+                      </div>
                       <button type="button" id="agent-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files" data-i18n-aria-label="agent.composer.attach" data-i18n-title="agent.composer.attach"><span class="agent-chat-icon agent-attach-icon" data-agent-chat-icon="attach" aria-hidden="true"></span></button>
                       <label class="agent-composer-project agent-composer-project-inline">
                         <span class="sr-only" data-i18n="agent.composer.projectScope">Project Scope</span>
@@ -52,7 +75,7 @@
                 </div>
               </div>
             </div>
-            <aside id="agent-paper-evidence" class="agent-paper-evidence" aria-label="Paper excerpts" data-i18n-aria-label="agent.evidence.title" hidden></aside>
+            <aside id="agent-paper-evidence" class="agent-paper-evidence" aria-label="Evidence" data-i18n-aria-label="agent.evidence.title" hidden></aside>
             <div id="agent-review-overlay" class="agent-review-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
               <section class="agent-review-dialog app-dialog-surface draft-review-dialog" role="dialog" aria-modal="true" aria-labelledby="agent-review-title">
                 <header class="agent-review-dialog-header app-dialog-head">
