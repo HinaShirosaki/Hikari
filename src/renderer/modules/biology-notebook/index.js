@@ -26,6 +26,7 @@ import { createNotebookDraftState } from './notebook/draft-state.js';
 import { createNotebookAgentAppend } from './notebook/agent-append.js';
 import { createExperimentSuggestions } from './project/experiment-suggestions.js';
 import { bindNotebookEvents } from './notebook/event-bindings.js';
+import { createNotebookNotesPreview } from './notebook/notes-preview.js';
 
 // Initialize the biology notebook module and wire it to app state plus DOM controls.
 export function initLabNotebook({
@@ -47,6 +48,7 @@ export function initLabNotebook({
   const SAMPLE_PLACEHOLDER_TYPE_ALIASES = buildSamplePlaceholderTypeAliases(state.settings);
 
   const elements = queryNotebookElements();
+  const notesPreview = createNotebookNotesPreview(elements, safeText);
 
   const drafts = createNotebookDraftState();
   const appliedAgentAppendProposalIds = new Set();
@@ -190,6 +192,7 @@ export function initLabNotebook({
     resultFileAttachmentController,
     ...drafts,
     elements,
+    refreshNotesPreview: notesPreview.refresh,
     getActiveEntry: () => getActiveEntry(),
     runAgentNotebookAppend: (proposal) => runAgentNotebookAppend(proposal)
   });
@@ -202,7 +205,10 @@ export function initLabNotebook({
     resolveViewerProtocol: (...args) => resolveViewerProtocol(...args),
     normalizeNotebookTargetText: (...args) => normalizeNotebookTargetText(...args),
     buildAgentAppendText: (...args) => buildAgentAppendText(...args),
-    notifyActiveNotebookPageChanged: (...args) => notifyActiveNotebookPageChanged(...args),
+    notifyActiveNotebookPageChanged: () => {
+      notesPreview.refresh();
+      notifyActiveNotebookPageChanged();
+    },
     saveEntry: (...args) => saveEntry(...args)
   });
 
@@ -356,6 +362,7 @@ export function initLabNotebook({
   } = createNotebookViewerRender({
     onProjectDashboardRendered: () => experimentSuggestions.render(),
     elements,
+    notesPreview,
     state,
     safeText,
     selectionInsightsController,
@@ -426,6 +433,7 @@ export function initLabNotebook({
 
   const { cancelEdit } = bindNotebookEvents({
     elements,
+    showNotesEditor: notesPreview.showEditor,
     state,
     sampleLinkMenu,
     protocolEditor,
@@ -499,6 +507,7 @@ export function initLabNotebook({
 
   return {
     hasUnsavedChanges,
+    getOpenEntryId: drafts.getEditingEntryId,
     openEntry: editEntry,
     renderLinkedPreviews,
     appendAgentNotebookContent,

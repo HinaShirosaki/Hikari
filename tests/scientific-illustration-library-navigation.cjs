@@ -1,11 +1,31 @@
 const { randomUUID } = require('node:crypto');
+const { crc32 } = require('node:zlib');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+
+function checkPngResolution(check, data, ppi, width, height) {
+  check(data.readUInt32BE(16) === width && data.readUInt32BE(20) === height, 'PNG keeps the canvas pixel dimensions');
+  let densities = 0, seenImageData = false;
+  for (let offset = 8; offset + 12 <= data.length;) {
+    const length = data.readUInt32BE(offset), type = data.toString('ascii', offset + 4, offset + 8);
+    if (type === 'IDAT') seenImageData = true;
+    if (type === 'pHYs') {
+      densities++;
+      const ppm = Math.round(ppi / 0.0254);
+      check(!seenImageData && length === 9 && data.readUInt32BE(offset + 8) === ppm && data.readUInt32BE(offset + 12) === ppm
+        && data[offset + 16] === 1 && data.readUInt32BE(offset + 17) === crc32(data.subarray(offset + 4, offset + 17)),
+      `PNG records ${ppi} PPI on both axes with a valid resolution chunk`);
+    }
+    offset += length + 12;
+  }
+  check(densities === 1 && seenImageData, 'PNG contains one resolution chunk and its raster data');
+}
 
 async function verifyIllustrationMenu({ tool, evaluate, check, win, pause, waitFor, temp }) {
   const before = await tool({ action: 'read' }), original = before.illustration_id;
   const applied = await tool({ action: 'apply', illustration_id: original, expected_revision: before.revision, request_id: randomUUID(),
-    operations: [{ op: 'upsert', object: { id: 'menu-label', type: 'text', text: 'Artwork from clicked row', x: 90, y: 90 } }] });
+    operations: [{ op: 'canvas', canvas: 'main', patch: { width: 960, height: 720 } },
+      { op: 'upsert', object: { id: 'menu-label', type: 'text', text: 'Artwork from clicked row', x: 90, y: 90 } }] });
   check(applied.ok, applied.error || 'Save artwork in the original figure');
   const created = await tool({ action: 'create', expected_library_revision: applied.library_revision, request_id: randomUUID(), title: 'Current figure' });
   check(created.ok, created.error || 'Open a separate figure');
@@ -34,6 +54,19 @@ async function verifyIllustrationMenu({ tool, evaluate, check, win, pause, waitF
   };
   win.webContents.debugger.attach('1.3');
   try {
+    const pngDialog = () => waitFor(() => evaluate('document.getElementById("png-export-dialog").open'), 'PNG export did not show its resolution setting');
+    await click('#export-menu summary');
+    await click('#export-png'); await pngDialog();
+    check(await evaluate('document.activeElement.id === "png-export-ppi" && document.activeElement.value === "96"'), 'Toolbar PNG export focuses the resolution with the existing 96 PPI default');
+    await click('#cancel-png-export');
+    await waitFor(() => evaluate('document.getElementById("status").textContent === "Export canceled"'), 'Cancel did not exit the PNG export');
+    check(!(await fs.readdir(temp)).includes('Current_figure.png')
+      && await evaluate('document.activeElement === document.querySelector("#export-menu summary")'), 'Canceling PNG export writes no file and restores focus to Export');
+    await click('#export-menu summary');
+    await click('#export-png'); await pngDialog();
+    await click('#confirm-png-export');
+    await waitFor(() => evaluate('document.getElementById("status").textContent === "Exported PNG"'), 'The toolbar did not export PNG');
+    checkPngResolution(check, await fs.readFile(path.join(temp, 'Current_figure.png')), 96, created.canvases.main.width, created.canvases.main.height);
     await open(original);
     check(await evaluate(`[...${find(menu)}.querySelectorAll('[role="menuitem"]')].map(button => button.dataset.contextAction).join(',') === 'export,duplicate,rename,delete'`), 'The row menu shows the four illustration actions');
     check((await tool({ action: 'list' })).active_illustration_id === active, 'Right-clicking an inactive row leaves the current figure open');
@@ -55,9 +88,18 @@ async function verifyIllustrationMenu({ tool, evaluate, check, win, pause, waitF
       await open(original); await action('export');
       await waitFor(() => evaluate(`${find(dialog)}.open && document.getElementById('illustration-action-name').textContent === 'Renamed menu figure'`), 'Export did not display the clicked figure');
       await click(`${dialog} button[value="${format}"]`);
+      if (format === 'png') {
+        await pngDialog();
+        await evaluate('document.getElementById("png-export-ppi").value = 0');
+        await click('#confirm-png-export');
+        check(await evaluate('document.getElementById("png-export-dialog").open'), 'Zero PPI is rejected before export');
+        await evaluate('document.getElementById("png-export-ppi").value = 300');
+        await click('#confirm-png-export');
+      }
       await waitFor(() => evaluate(`document.getElementById('status').textContent === 'Exported ${format.toUpperCase()}'`), `The row did not export ${format}`);
       const data = await fs.readFile(path.join(temp, `Renamed_menu_figure.${format}`));
       check(signature.test(data.toString('latin1')), `The real save flow exports the clicked illustration as ${format}`);
+      if (format === 'png') checkPngResolution(check, data, 300, 960, 720);
     }
     check((await tool({ action: 'list' })).active_illustration_id === active, 'Exporting from the row leaves the current figure open');
     await open(original); await action('duplicate');
@@ -68,6 +110,7 @@ async function verifyIllustrationMenu({ tool, evaluate, check, win, pause, waitF
     await open(original); await action('delete');
     await waitFor(() => evaluate(`${find(dialog)}.open && document.activeElement.id === 'cancel-illustration-action'`), 'Delete did not focus Cancel');
     await click('#cancel-illustration-action');
+    await evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
     check((await tool({ action: 'list' })).illustrations.some(item => item.id === original), 'Cancel leaves the illustration in the library');
     await open(original); await action('delete'); await pause(30);
     await click(`${dialog} button[data-illustration-task="delete"]`);

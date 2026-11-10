@@ -1,4 +1,7 @@
 (function (root) { root.HikariUiEnglish = { ...(root.HikariUiEnglish || {}), figura: {
+  "pngExport.title": "Export PNG",
+  "pngExport.resolution": "Resolution (PPI)",
+  "pngExport.hint": "Sets print resolution at the current pixel dimensions.",
   "illustrationMenu.actions": "Illustration actions",
   "illustrationMenu.export": "Export…",
   "illustrationMenu.duplicate": "Duplicate",

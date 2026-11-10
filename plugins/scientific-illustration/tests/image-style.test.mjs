@@ -96,5 +96,6 @@ test('a one-off image style overrides the figure only when it differs from the s
   const note = oneOffImageStyle('watercolor', 'flat');
   assert.match(note, /for this request only: Watercolor/);
   assert.ok(note.includes(IMAGE_STYLE_PRESETS.watercolor.guidance));
-  assert.match(note, /save neither/);
+  assert.match(note, /in place of the saved style and style line for this addition/);
+  assert.match(note, /Keep the saved settings/);
 });

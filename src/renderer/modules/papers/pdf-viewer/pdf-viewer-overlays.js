@@ -8,7 +8,7 @@ import {
   normalizePageDimension,
   pdfQuadPointsToBoxes
 } from './pdf-viewer-geometry.js';
-import { normalizePdfHighlightText } from './pdf-viewer-search.js';
+import { getCommentDisplayAuthor, normalizePdfHighlightText } from './pdf-viewer-search.js';
 import { setPaperAttribute } from '../localization.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -220,7 +220,12 @@ export function renderPins({
       const position = getPdfCommentPinPosition(comment.anchorX, comment.anchorY);
       pin.style.left = position.left;
       pin.style.top = position.top;
-      setPaperAttribute(pin, 'aria-label', 'viewer.commentBy', { author: comment.author || 'Local user' });
+      const author = getCommentDisplayAuthor(comment);
+      if (author) {
+        setPaperAttribute(pin, 'aria-label', 'viewer.commentBy', { author });
+      } else {
+        setPaperAttribute(pin, 'aria-label', 'comment.label');
+      }
       pin.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();

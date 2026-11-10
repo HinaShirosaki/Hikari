@@ -185,12 +185,7 @@ export function buildPlatePreviewHtml({
     rows.push(`<tr>${cells.join('')}</tr>`);
   }
 
-  const note = totalWells > 384
-    ? `<p class="small-note">${plateMessage('grid.previewNote', { rows: maxRows, columns: maxColumns, count: def.value })}</p>`
-    : '';
-
   return `
-    ${note}
     <div class="assay-plate-table-wrap">
       <table class="assay-plate-table">
         <thead>

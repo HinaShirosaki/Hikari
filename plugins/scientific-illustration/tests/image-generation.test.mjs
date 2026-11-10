@@ -35,20 +35,35 @@ test('every level and percentage keeps schematic geometry SVG and labels separat
   for (const level of ['simple', 'standard', 'detailed']) {
     for (const percent of [null, 0, 25, 50, 75, 100]) {
       const instructions = agentInstructions(level, percent);
-      assert.match(instructions, /boxes, arrows, connectors, panel frames, charts, scale bars and exact scientific geometry/);
-      assert.match(instructions, /always remain separate SVG or text objects, even at 100%/);
-      assert.match(instructions, /not a quota of assets or tool calls/);
-      assert.match(instructions, /Never rasterize schematic symbols/);
-      assert.match(instructions, /preserve existing artwork/);
+      assert.match(instructions, /boxes, arrows, connectors, panel frames, scale bars, schematic symbols and exact scientific geometry as separate SVG layers/);
+      assert.match(instructions, /Keep labels as separate editable text and data plots as Plotly layers/);
+      assert.match(instructions, /Preserve existing artwork/);
       assert.match(instructions, /Keep the current canvas dimensions, complexity, image-generation target and image style unless the user asks to change them/);
       assert.match(instructions, /render the canvas/);
       if (percent === 0) assert.match(instructions, /Do not call image_gen/);
-      else if (percent !== null) assert.ok(instructions.includes(`target: ${percent}%`));
+      else if (percent !== null) {
+        assert.ok(instructions.includes(`target: ${percent}%`));
+        assert.match(instructions, /not a quota of assets or tool calls/);
+        assert.match(instructions, /specific reason if the requested artwork contains zero generated components/);
+      }
     }
   }
   const operations = CANVAS_TOOL_CONTRACT.inputSchema.properties.operations.items.properties;
   assert.ok(operations.op.enum.includes('image_generation'));
   assert.deepEqual(operations.imageGenerationPercent.type, ['integer', 'null']);
+});
+
+test('positive targets plan whole components by area without the Automatic SVG draft rule', () => {
+  assert.match(agentInstructions('standard'), /try one simple SVG draft/);
+  for (const target of [1, 25, 50, 75, 99, 100]) {
+    const instructions = agentInstructions('standard', target, { preset: 'flat' });
+    assert.match(instructions, /flat and stylized subjects within schematics/);
+    assert.match(instructions, /Estimate the share from visible placed area, using whole components/);
+    assert.doesNotMatch(instructions, /try one simple SVG draft|image_gen only for a component/);
+  }
+  const instructions = agentInstructions('detailed', 100, { preset: 'ink' });
+  assert.match(instructions, /Assign every eligible component to image generation, including flat or simple subjects/);
+  assert.match(instructions, /Generate directly when no compatible generated asset is available/);
 });
 
 test('quarter-step presets supply explicit renderer guidance to the agent', () => {

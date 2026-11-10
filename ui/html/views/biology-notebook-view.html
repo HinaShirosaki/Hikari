@@ -145,8 +145,12 @@
                     <div id="biology-notebook-result-table" class="biology-notebook-result-table-list" aria-label="Notebook result tables" data-i18n-aria-label="notebook.viewer.tables"></div>
                   </div>
                   <div class="biology-notebook-notes-field">
-                    <label for="biology-notebook-result" data-i18n="notebook.viewer.notes">Notes</label>
-                    <div class="biology-notebook-notes-composer">
+                    <div class="biology-notebook-notes-head">
+                      <label id="biology-notebook-notes-label" for="biology-notebook-result" data-i18n="notebook.viewer.notes">Notes</label>
+                      <button id="biology-notebook-notes-mode" class="ghost-btn biology-notebook-notes-mode" type="button" aria-controls="biology-notebook-notes-composer biology-notebook-notes-preview" data-i18n="notebook.action.editNotesMarkdown" hidden>Edit Markdown</button>
+                    </div>
+                    <div id="biology-notebook-notes-preview" class="biology-notebook-notes-preview" role="region" aria-labelledby="biology-notebook-notes-label" hidden></div>
+                    <div id="biology-notebook-notes-composer" class="biology-notebook-notes-composer">
                       <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes" data-i18n-placeholder="notebook.viewer.notesPlaceholder"></textarea>
                       <button id="clarify-save-biology-notebook-btn" class="ghost-btn biology-notebook-notes-clarify-btn hikari-agent-action" type="button" data-i18n="notebook.action.clarify">Clarify and Save</button>
                     </div>
@@ -158,6 +162,9 @@
                   <div id="biology-notebook-result-attachments" class="biology-notebook-result-attachments" aria-live="polite" hidden></div>
                 </div>
               </section>
+            </div>
+            <div id="biology-notebook-page-context-menu" class="biology-notebook-context-menu" role="menu" aria-label="Notebook page actions" data-i18n-aria-label="notebook.viewer.actions" hidden>
+              <button class="biology-notebook-context-item" type="button" role="menuitem" data-i18n="notebook.action.addNote">Add Note</button>
             </div>
           </div>
         </div>

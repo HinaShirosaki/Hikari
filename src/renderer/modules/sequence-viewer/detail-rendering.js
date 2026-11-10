@@ -182,9 +182,7 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
       ? features[state.selectedFeatureIndex] || null
       : null;
     const orfTranslationContext = state.orfViewEnabled
-      ? buildSelectedOrfTranslationContext(record.sequence, selectedFeature, {
-        stopCodons: state.orfStopCodons
-      })
+      ? buildSelectedOrfTranslationContext(record.sequence, selectedFeature)
       : null;
 
     const { lineLength, charAdvancePx, lineHeightPx, lineFeatureOffsetPx } = computeSequenceLayoutMetrics(

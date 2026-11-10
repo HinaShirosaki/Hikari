@@ -62,7 +62,6 @@ export const plateSimplifiedChinese = Object.freeze({
   "grid.wellConcentration": "{well} • 样本 ID：{sample} | 浓度：{concentration} • 点击编辑浓度",
   "grid.sampleShort": "样本：{value}",
   "grid.concentrationShort": "浓度：{value}",
-  "grid.previewNote": "正在预览 {count} 孔板的前 {rows} 行 × {columns} 列。",
   "grid.results": "实验结果电子表格",
   "grid.transformed": "转换后的实验板电子表格",
   "grid.failed": "电子表格组件（Tabulator）加载失败。",
@@ -418,6 +417,7 @@ export const plateSimplifiedChinese = Object.freeze({
   "full.6992c07b": "{p0}TickLen",
   "full.ab6e4d18": "长度 (pt)",
   "full.44b980a8": "{p0}MinorTicks",
+  "full.61235220": "主刻度",
   "full.6365d674": "次刻度",
   "full.23c6cde7": "{p0}TickFormat",
   "full.a8503d43": "数字格式",
@@ -628,4 +628,7 @@ export const plateSimplifiedChinese = Object.freeze({
   "full.1cd4a3ab": "标签 {p0}",
   "full.9808f547": "线条",
   "full.9774b466": "色带",
+  "full.b1dd9521": "疏",
+  "full.9be5f96": "中",
+  "full.be0a061d": "密"
 });

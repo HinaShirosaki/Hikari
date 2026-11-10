@@ -13,6 +13,7 @@ const {
 const {
   extractNotebookAppendArtifactFromToolEvent,
   extractNotebookDraftArtifactFromToolEvent,
+  extractProtocolEditArtifactFromToolEvent,
   extractProtocolGenerationArtifactFromToolEvent
 } = require('./artifacts.js');
 const {
@@ -35,6 +36,7 @@ function createCodexStreamProgressHandler({
   let streamedNotebookDraftPayload = null;
   let streamedNotebookAppendPayload = null;
   const streamedProtocolGenerationPayloads = [];
+  const protocolEdits = new Map();
 
   function publishCodexProgress(progressEvent = {}) {
     const recorded = recordLifecycleEvent(lifecycleRecorder, progressEvent);
@@ -58,6 +60,8 @@ function createCodexStreamProgressHandler({
       if (notebookAppendArtifact?.proposal?.content_markdown) {
         streamedNotebookAppendPayload = notebookAppendArtifact;
       }
+      const protocolEdit = extractProtocolEditArtifactFromToolEvent(streamEvent);
+      if (protocolEdit) protocolEdits.set(`${protocolEdit.target_type}:${protocolEdit.target_id}`, protocolEdit);
       const protocolGenerationArtifact = extractProtocolGenerationArtifactFromToolEvent(streamEvent);
       if (protocolGenerationArtifact?.protocol) {
         streamedProtocolGenerationPayloads.push(protocolGenerationArtifact);
@@ -202,6 +206,7 @@ function createCodexStreamProgressHandler({
       streamedAskUserPayload,
       streamedNotebookDraftPayload,
       streamedNotebookAppendPayload,
+      protocolEdits: [...protocolEdits.values()],
       streamedProtocolGenerationPayloads
     };
   }

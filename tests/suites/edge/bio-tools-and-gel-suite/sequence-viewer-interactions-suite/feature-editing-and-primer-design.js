@@ -48,8 +48,6 @@ test('[EDGE] sequence-viewer drag selection context menu can edit and delete an 
     'sequence-viewer-feature-editor-name',
     'sequence-viewer-feature-editor-type',
     'sequence-viewer-feature-editor-strand',
-    'sequence-viewer-feature-editor-start',
-    'sequence-viewer-feature-editor-end',
     'sequence-viewer-feature-editor-description',
     'sequence-viewer-feature-editor-close',
     'sequence-viewer-feature-editor-cancel'
@@ -69,9 +67,9 @@ test('[EDGE] sequence-viewer drag selection context menu can edit and delete an 
         id: 'feature_manual_1',
         name: 'Feature_A',
         type: 'promoter',
-        strand: 1,
+        strand: -1,
         source: 'manual',
-        segments: [{ start: 1, end: 5 }]
+        segments: [{ start: 1, end: 5 }, { start: 8, end: 11 }]
       }
     ]
   });
@@ -122,6 +120,8 @@ test('[EDGE] sequence-viewer drag selection context menu can edit and delete an 
     }
   });
 
+  assert.equal(document.getElementById('sequence-viewer-feature-editor-note').hidden, true);
+  assert.equal(document.getElementById('sequence-viewer-feature-editor-strand').value, '-1');
   featureEditorName.value = 'Feature_B';
   trigger(featureEditorForm, 'submit');
   await flushAsync();
@@ -129,6 +129,7 @@ test('[EDGE] sequence-viewer drag selection context menu can edit and delete an 
   assert.equal(Number(statFeatures.textContent || 0), initialFeatureCount);
   assert.match(stripI18nMarkup(featureRailHost.innerHTML), /Feature_B/);
   assert.match(stripI18nMarkup(featureDetail.innerHTML), /Feature_B/);
+  assert.match(stripI18nMarkup(featureDetail.innerHTML), /2\.\.5, 9\.\.11/);
 
   trigger(sequenceHost, 'mousedown', { button: 0, clientX: 28, target: lineTarget });
   trigger(sequenceHost, 'mousemove', { clientX: 60, target: lineTarget });

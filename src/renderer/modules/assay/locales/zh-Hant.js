@@ -62,7 +62,6 @@ export const plateTraditionalChinese = Object.freeze({
   "grid.wellConcentration": "{well} • 樣本 ID：{sample} | 濃度：{concentration} • 點選以編輯濃度",
   "grid.sampleShort": "樣本：{value}",
   "grid.concentrationShort": "濃度：{value}",
-  "grid.previewNote": "正在預覽 {count} 孔盤的前 {rows} 列 × {columns} 欄。",
   "grid.results": "實驗結果試算表",
   "grid.transformed": "轉換後的實驗盤試算表",
   "grid.failed": "試算表元件（Tabulator）載入失敗。",
@@ -418,6 +417,7 @@ export const plateTraditionalChinese = Object.freeze({
   "full.6992c07b": "{p0}TickLen",
   "full.ab6e4d18": "長度 (pt)",
   "full.44b980a8": "{p0}MinorTicks",
+  "full.61235220": "主刻度",
   "full.6365d674": "次刻度",
   "full.23c6cde7": "{p0}TickFormat",
   "full.a8503d43": "數字格式",
@@ -628,4 +628,7 @@ export const plateTraditionalChinese = Object.freeze({
   "full.1cd4a3ab": "標籤 {p0}",
   "full.9808f547": "線條",
   "full.9774b466": "色帶",
+  "full.b1dd9521": "疏",
+  "full.9be5f96": "中",
+  "full.be0a061d": "密"
 });

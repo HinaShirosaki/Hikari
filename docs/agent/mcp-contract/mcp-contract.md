@@ -461,6 +461,8 @@ Input schema:
 
 Prepares a proposal to append evidence-backed Markdown to an existing notebook page (normally the page open beside the agent rail). Required: `notebook_entry_id`, `page_title`, `project_name`, `protocol_name`, `content_markdown`; optional `section_title`, `rationale`, `sources`, and `expected_updated_at` (so a proposal made against an older version of the page is not applied over newer edits). The tool never writes the page: Hikari shows the proposal as a review card and applies it only after the user approves. It does not create pages; use `notebook_draft` for that.
 
+Put a Markdown pipe table directly in `content_markdown` to propose a table in Notes. The review card renders the table before approval, and the notebook renders it from the saved Markdown after approval.
+
 ### `assay_plot`
 
 Reads and styles the live native chart in the open **Plate** (Assay) view: titles, axes, series appearance, legend, grid, error bars, and added labels, reference lines, and shaded bands. `action: "read"` returns the supported style fields, series labels, and a `revision`; `action: "update"` merges a `style` patch (arrays such as `plotElements` replace in full) and should pass `expected_revision`. It never changes plate values, data mapping, or analysis. Main forwards the request to the renderer over `ASSAY.PLOT_REQUEST` and waits for its acknowledgement (`src/main/core/services/assay-plot-bridge.js`). For a custom figure built by the agent, use `plotly_graph` instead. The `hikari-assay-plotly` skill documents the workflow.

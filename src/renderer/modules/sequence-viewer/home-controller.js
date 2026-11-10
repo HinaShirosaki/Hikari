@@ -8,6 +8,8 @@ import { createLibraryRendering } from './home/library-rendering.js';
 import { createHomeFileOpen } from './home/file-open.js';
 import { createHomeNavigation } from './home/navigation.js';
 import { dnaFailure, dnaNotice, dnaUi } from './localization.js';
+import { parseInputRecords } from './parsing.js';
+import { buildRecordFastaText, buildRecordFastqText } from './storage.js';
 
 export function createSequenceViewerHomeController(config = {}) {
   const rootDocument = config?.rootDocument || globalThis?.document || null;
@@ -217,6 +219,39 @@ export function createSequenceViewerHomeController(config = {}) {
       }
     }
     await onRecognizeBackbone();
+  }
+
+  // GenBank writes the stored file as-is (lossless); FASTA/FASTQ are rebuilt
+  // from its first record.
+  async function exportLibraryEntry(entryId, format) {
+    const bridge = getBridge();
+    const storagePath = getStoragePath();
+    if (!bridge?.sequenceLibraryGet || !storagePath) {
+      setHomeStatus(dnaUi('library.storageUnavailable'), true);
+      return;
+    }
+    try {
+      const response = await bridge.sequenceLibraryGet({ storagePath, id: cleanText(entryId, 200), includeGbk: true });
+      if (!response?.ok || !response?.entry) {
+        throw new Error(response?.error || 'Failed to load sequence entry.');
+      }
+      const gbkText = String(response.gbkText || '');
+      const record = parseInputRecords(gbkText).records?.[0];
+      if (!record?.sequence?.length) {
+        throw new Error('Stored sequence entry contains no valid record.');
+      }
+      record.name = cleanText(response.entry.name, 200) || record.name;
+      const text = format === 'gbk' ? gbkText
+        : format === 'fastq' ? buildRecordFastqText(record)
+          : buildRecordFastaText(record);
+      const link = rootDocument.createElement('a');
+      link.href = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
+      link.download = `${String(record.name || 'sequence').replace(/[\\/:*?"<>|]+/g, '_')}.${format}`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } catch (error) {
+      setHomeStatus(dnaFailure(error, 'library.exportFailed'), true);
+    }
   }
 
   const {
@@ -489,6 +524,10 @@ export function createSequenceViewerHomeController(config = {}) {
           hideLibraryContextMenus();
           clearLibraryPreviewTimer();
           void config.onAssembleDna?.(entryId);
+        } else if (action.startsWith('export-')) {
+          const entryId = getLibraryContextId();
+          hideLibraryContextMenus();
+          void exportLibraryEntry(entryId, action.slice('export-'.length));
         }
       });
     });

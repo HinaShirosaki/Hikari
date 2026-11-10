@@ -12,6 +12,69 @@ module.exports = function registerAppAgentChatCoreSuiteNotebookProposalApproval(
     test,
     shared
   } = scope;
+test('agent protocol step approval keeps targets isolated and rejects stale or unsaved edits', async () => {
+  const { callProtocolEdit } = require(path.join(__dirname, 'src/main/agent/mcp-contract/direct-tools/protocol-edit.js'));
+  const { createAgentProtocolEdit } = loadEsmStyleModule(path.join(__dirname, 'src/renderer/module-manifests/agent-protocol-edit.js'));
+  const placeholder = { id: 'duration', name: 'Duration' };
+  const step = { text: 'Hold for {{ph:duration}}.', placeholders: [placeholder] };
+  const protocol = { id: 'p1', name: 'Read the plate', steps: [step, { text: 'Measure the blank.' }] };
+  const page = { id: 'n1', experimentName: 'Run 1', protocolId: 'p1', protocolSnapshot: protocol,
+    result: 'Original notes', values: { duration: '5 min' } };
+  const state = { settings: { storagePath: '/workspace' }, protocols: [protocol], notebookEntries: [page] };
+  const input = { target_type: 'notebook_page', target_id: page.id, target_title: page.experimentName,
+    step_edits: [{ step_number: 1, expected_text: step.text, replacement_text: 'Incubate for {{ph:duration}}.' }] };
+  const propose = data => callProtocolEdit(data, { snapshot: state });
+  assert.equal(propose({ ...input, step_edits: [{ ...input.step_edits[0], replacement_text: 'Incubate briefly.' }] }).ok, false);
+  const pending = propose(input);
+  assert.equal(pending.save.applied, false);
+  assert.equal(state.notebookEntries[0], page);
+  let dirty = true;
+  let skippedRecord = null;
+  let saves = 0;
+  const apply = createAgentProtocolEdit({
+    state,
+    modules: { biologyNotebook: { getOpenEntryId: () => page.id, hasUnsavedChanges: () => dirty, openEntry() {} } },
+    rendererServices: { notebook: { handleAgentNotebookEntriesChanged() {} }, protocol: { handleProtocolsChanged() {} } },
+    persist: async options => {
+      saves++;
+      state.notebookEntries = state.notebookEntries.map(entry => ({ ...entry }));
+      return skippedRecord && !options?.external
+        ? { ok: true, sidecarPaths: { skippedRecords: [{ ...skippedRecord, message: 'Markdown conflict' }] } }
+        : { ok: true };
+    }
+  });
+  assert.equal((await apply(pending.proposal)).ok, false);
+  assert.equal(saves, 0);
+  dirty = false;
+  const [accepted, replayed] = await Promise.all([apply(pending.proposal), apply(pending.proposal)]);
+  assert.equal(accepted.ok, true);
+  assert.equal(replayed.ok, false);
+  assert.equal(saves, 1);
+  const savedPage = state.notebookEntries[0];
+  assert.equal(savedPage.protocolSnapshot.steps[0].text, input.step_edits[0].replacement_text);
+  assert.equal(savedPage.protocolSnapshot.steps[0].placeholders[0], placeholder);
+  assert.equal(savedPage.protocolSnapshot.steps[1], protocol.steps[1]);
+  assert.equal(savedPage.result, page.result);
+  assert.equal(savedPage.values, page.values);
+  assert.equal(state.protocols[0], protocol);
+
+  const failedPageEdit = propose({ ...input, step_edits: [{
+    step_number: 2, expected_text: 'Measure the blank.', replacement_text: 'Measure three blanks.'
+  }] }).proposal;
+  skippedRecord = { kind: 'notebook', id: page.id };
+  assert.equal((await apply(failedPageEdit)).error, 'Markdown conflict');
+  assert.equal(state.notebookEntries[0].protocolSnapshot, savedPage.protocolSnapshot);
+
+  const source = propose({ ...input, target_type: 'protocol', target_id: protocol.id, target_title: protocol.name }).proposal;
+  skippedRecord = { kind: 'protocol', id: protocol.id };
+  assert.equal((await apply(source)).error, 'Markdown conflict');
+  assert.equal(state.protocols[0].steps, protocol.steps);
+  skippedRecord = null;
+  assert.equal((await apply(source)).ok, true);
+  assert.equal(state.protocols[0].steps[0].text, input.step_edits[0].replacement_text);
+  assert.equal(state.notebookEntries[0].protocolSnapshot, savedPage.protocolSnapshot);
+});
+
 test('agent-chat keeps the notebook draft card and opens its approval overlay automatically', async () => {
   const document = createMockDocument([
     'agent-project-select',

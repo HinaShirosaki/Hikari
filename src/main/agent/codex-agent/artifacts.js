@@ -213,8 +213,18 @@ function extractNotebookAppendArtifactFromToolEvent(streamEvent = {}) {
   return null;
 }
 
+function extractProtocolEditArtifactFromToolEvent(streamEvent = {}) {
+  const toolName = normalizeCodexToolName(streamEvent.tool_name || streamEvent.toolName, { cleanText: defaultCleanText });
+  if (toolName !== 'protocol_edit') return null;
+  const result = collectToolEventObjects(streamEvent).find(candidate =>
+    candidate.ok === true && candidate.status === 'proposal_ready'
+    && candidate.save?.mode === 'confirm_before_edit' && candidate.proposal?.proposal_id);
+  return result ? cloneJson(result.proposal, null) : null;
+}
+
 module.exports = {
   extractNotebookAppendArtifactFromToolEvent,
   extractNotebookDraftArtifactFromToolEvent,
+  extractProtocolEditArtifactFromToolEvent,
   extractProtocolGenerationArtifactFromToolEvent
 };

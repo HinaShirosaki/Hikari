@@ -5,6 +5,7 @@ import { buildPlotElements, plotElementEditPatch } from './plot-elements.js';
 import {
   FIGURE_BAR_GAP,
   FIGURE_BAR_GROUP_GAP,
+  FIGURE_CORNER_GAP,
   figureAxisDefaults,
   figureFonts,
   figureTextFont,
@@ -20,6 +21,32 @@ function scaleAxis(scale) {
   if (scale === 'log2') return { type: 'log', dtick: LOG10_2 };
   if (scale === 'ln') return { type: 'log', dtick: LOG10_E };
   return { type: 'linear', dtick: null };
+}
+
+function majorTickOptions(scale, interval, count) {
+  // Explicit intervals use data units on linear axes and powers of the selected base on log axes.
+  if (scale.type !== 'category' && Number.isFinite(interval) && interval > 0) {
+    return { dtick: interval * (scale.dtick ?? 1) };
+  }
+  if (Number.isInteger(count)) return { nticks: count };
+  return scale.dtick === null ? {} : { dtick: scale.dtick };
+}
+
+function applyAxisRange(axis, scale, range, traces, coordinate) {
+  const bounds = plotlyAxisRange(scale, range);
+  if (!bounds) return;
+  axis.range = bounds;
+  if (range.min !== null && range.max !== null) return;
+
+  // A blank limit uses Plotly's autorange. If every point is outside the
+  // selected window, give the automatic end room to keep the axis ascending.
+  const bound = range.min ?? range.max;
+  const direction = range.min === null ? -1 : 1;
+  const hasDataInRange = traces.some((trace) => trace[coordinate].some((value) =>
+    value != null && (scale === 'linear' || value > 0) && direction * (value - bound) > 0));
+  if (!hasDataInRange) {
+    axis.autorangeoptions = { include: bound + direction * (Math.abs(bound) || 1) * 0.01 };
+  }
 }
 
 function legendLayout(position, font) {
@@ -71,9 +98,14 @@ function axisTitleAnnotation(text, font, pos, offset, isY, plotWidth, plotHeight
     : { ...base, x: along, y: -(shift / Math.max(1, plotHeight)) };
 }
 
-// Turns a Plotly relayout payload from a dragged/renamed title back into a style patch.
-// annotations[0] is the X title and annotations[1] the Y title -- the order render()
-// builds them in.
+// The chart title is an annotation too (Plotly cannot drag layout.title), sitting
+// `offset` px above the plot area; TITLE_ANNOTATION is its index, after the axis titles.
+const TITLE_ANNOTATION = 2;
+const DEFAULT_TITLE_GAP = 10;
+
+// Turns a Plotly relayout payload from a dragged/renamed title or a dragged legend back
+// into a style patch. annotations[0] is the X title, annotations[1] the Y title and
+// annotations[2] the chart title -- the order render() builds them in.
 export function titleEditPatch(event, geometry) {
   const patch = {};
   if (!event || !geometry) {
@@ -98,6 +130,22 @@ export function titleEditPatch(event, geometry) {
   const yAway = read('annotations[1].x');
   if (yAway !== null) patch.yTitleOffset = distance(yAway, plotWidth);
   if (typeof event['annotations[1].text'] === 'string') patch.yTitle = event['annotations[1].text'];
+
+  if (geometry.hasTitle) {
+    const t = `annotations[${TITLE_ANNOTATION}]`;
+    const along = read(`${t}.x`);
+    if (along !== null) patch.titlePos = clamp01(along);
+    const above = read(`${t}.y`);
+    if (above !== null) patch.titleOffset = Math.min(200, Math.max(0, Math.round((above - 1) * plotHeight)));
+    if (typeof event[`${t}.text`] === 'string') patch.title = event[`${t}.text`];
+  }
+
+  const legendX = read('legend.x');
+  const legendY = read('legend.y');
+  if (legendX !== null && legendY !== null) {
+    patch.legendX = Math.round(legendX * 1000) / 1000;
+    patch.legendY = Math.round(legendY * 1000) / 1000;
+  }
 
   return patch;
 }
@@ -212,8 +260,12 @@ export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
     // Rotated labels at the right endpoint also need room in exported SVGs.
     const rightLabelGutter = Math.max(24, Math.ceil(lastXWidth + 10));
     const marginRight = rightLabelGutter + (showLegend && st.legendPosition === 'right' ? Math.ceil(legendWidth + 12) : 0);
-    const marginTop = (st.title ? Math.max(44, titleFont.size * 1.5 + 12) + (st.titleOffset || 0) : 24)
-      + (showLegend && st.legendPosition === 'top' ? legendFont.size * 2 + 38 : 0);
+    const legendTopSpace = showLegend && st.legendPosition === 'top' ? legendFont.size * 2 + 38 : 0;
+    // Title distance is measured from the plot area, like the axis titles'.
+    const titleGap = st.titleOffset ?? DEFAULT_TITLE_GAP + legendTopSpace;
+    const marginTop = st.title
+      ? Math.max(24 + legendTopSpace, Math.ceil(titleGap + titleFont.size * 1.3 + 12))
+      : 24 + legendTopSpace;
     const categoryCount = chartModel.series.reduce((max, s) => Math.max(max, (s.data || []).length), 0) || 1;
     // Grouped bars share a category slot, so the slot grows with the series count -- but
     // only up to a point, past which the bars thin out instead of the plot getting wider.
@@ -242,7 +294,10 @@ export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
         ticks: axisStyle.tickDir === 'none' ? '' : axisStyle.tickDir || 'outside',
         ticklen: Math.max(2, (axisStyle.tickLen ?? 5) * 0.6),
         tickcolor: axisColor, showgrid: false,
-        ...(cfg.type === 'linear' ? { nticks: 5 } : {})
+        // Linear minor nticks counts subdivisions of one major step; Plotly snaps it to
+        // halves, fifths or tenths. Log axes only offer 2-and-5 or every digit.
+        ...(cfg.type === 'linear' ? { nticks: { low: 3, medium: 5, high: 10 }[axisStyle.minorTicks] || 5 }
+          : { dtick: axisStyle.minorTicks === 'low' ? 'D2' : 'D1' })
       };
     };
 
@@ -274,41 +329,49 @@ export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
       axisTitleAnnotation(st.yTitle || chartModel.yLabel || '', figureTextFont(st, 'yTitle'),
         st.yTitlePos, yShift, true, plotAreaWidth, plotAreaHeight)
     ];
+    // Draw the frame in paper coordinates so boundary ticks meet its corners.
     const xaxis = {
-      ...figureAxisDefaults(xStyle, figureTextFont(st, 'xTicks')),
+      ...figureAxisDefaults({ ...xStyle, frameStyle: 'none' }, figureTextFont(st, 'xTicks')),
       // automargin grows the margin into the plot area, which would shrink the exact
       // size that was asked for. In auto mode it still guards against clipped labels.
       automargin: !exactSize,
       title: { text: '', font },
       type: xScaleCfg.type,
       showgrid: st.showVerticalGrid === true,
-      tickangle: categoryTickAngle
+      tickangle: categoryTickAngle,
+      ...majorTickOptions(xScaleCfg, st.xTick, xStyle.majorTicks)
     };
     const yaxis = {
-      ...figureAxisDefaults(yStyle, figureTextFont(st, 'yTicks')),
+      ...figureAxisDefaults({ ...yStyle, frameStyle: 'none' }, figureTextFont(st, 'yTicks')),
       automargin: !exactSize,
       title: { text: '', font: figureTextFont(st, 'yTitle') },
       tickangle: yStyle.tickAngle ?? 0,
       type: yScaleCfg.type,
-      showgrid: st.showHorizontalGrid === true
+      showgrid: st.showHorizontalGrid === true,
+      ...majorTickOptions(yScaleCfg, st.yTick, yStyle.majorTicks)
     };
-    // Log intervals count powers of the selected base, while linear intervals use data units.
-    const xDtick = xScaleCfg.type !== 'category' && Number.isFinite(st.xTick) && st.xTick > 0
-      ? st.xTick * (xScaleCfg.type === 'log' ? xScaleCfg.dtick : 1) : xScaleCfg.dtick;
-    if (xDtick != null) xaxis.dtick = xDtick;
-    const yDtick = Number.isFinite(st.yTick) && st.yTick > 0
-      ? st.yTick * (yScaleCfg.type === 'log' ? yScaleCfg.dtick : 1) : yScaleCfg.dtick;
-    if (yDtick != null) yaxis.dtick = yDtick;
     if (xScaleCfg.type !== 'category') {
-      const range = plotlyAxisRange(st.xScale, st.xRange);
-      if (range) xaxis.range = range;
+      applyAxisRange(xaxis, st.xScale, st.xRange, traces, 'x');
     }
-    const yr = plotlyAxisRange(st.yScale, st.yRange);
-    if (yr) yaxis.range = yr;
+    applyAxisRange(yaxis, st.yScale, st.yRange, traces, 'y');
+    // An auto-ranged linear axis over data that never goes negative starts at 0, flush
+    // with the axis end. Negative data keeps Plotly's own autorange.
+    const nonNegative = (coordinate) => {
+      const values = traces.flatMap((trace) => trace[coordinate] || []).map(Number).filter(Number.isFinite);
+      return values.length > 0 && values.every((value) => value >= 0);
+    };
+    if (xScaleCfg.type === 'linear' && nonNegative('x')) xaxis.rangemode = 'tozero';
+    if (yScaleCfg.type === 'linear' && nonNegative('y')) yaxis.rangemode = 'tozero';
     const xMinor = minorFor(xScaleCfg, xStyle);
     if (xMinor) xaxis.minor = xMinor;
     const yMinor = minorFor(yScaleCfg, yStyle);
     if (yMinor) yaxis.minor = yMinor;
+    // Offset frame: the two lines stop short of the corner, so each axis's data area
+    // starts where its line starts and 0 sits at the beginning of the drawn axis.
+    if ((st.frameStyle || 'offset') === 'offset') {
+      Object.assign(xaxis, { domain: [FIGURE_CORNER_GAP, 1], anchor: 'free', position: 0 });
+      Object.assign(yaxis, { domain: [FIGURE_CORNER_GAP, 1], anchor: 'free', position: 0 });
+    }
 
     const showlegend = st.legendPosition !== 'none' && chartModel.series.length > 1;
     const margin = {
@@ -334,7 +397,9 @@ export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
       yaxis,
       showlegend,
       legend: { ...legendLayout(st.legendPosition, legendFont),
-        ...(st.legendPosition === 'bottom' ? { y: -(xShift + xTitleFont.size + 12) / plotAreaHeight } : {}) },
+        ...(st.legendPosition === 'bottom' ? { y: -(xShift + xTitleFont.size + 12) / plotAreaHeight } : {}),
+        // A dragged legend keeps its spot; the margins still follow legendPosition.
+        ...(Number.isFinite(st.legendX) && Number.isFinite(st.legendY) ? { x: st.legendX, y: st.legendY } : {}) },
       barmode: st.barMode || 'group',
       // Bars sit apart with tight groups.
       bargap: FIGURE_BAR_GAP,
@@ -343,8 +408,8 @@ export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
     layout.annotations = axisTitles;
     const shapes = figureFrameShapes(st);
     if (st.title) {
-      layout.title = { text: st.title, font: figureTextFont(st, 'title'), x: st.titlePos ?? 0.5, xanchor: 'center',
-        yref: 'container', y: 1, yanchor: 'top', pad: { t: (st.titleOffset ?? 0) + Math.ceil(titleFont.size * 0.4) + 6 } };
+      layout.annotations.push({ text: st.title, font: titleFont, xref: 'paper', yref: 'paper',
+        x: st.titlePos ?? 0.5, y: 1 + titleGap / plotAreaHeight, xanchor: 'center', yanchor: 'bottom', showarrow: false });
     }
     // Shape endpoints use data units, including on log axes (unlike axis ranges).
     if (Number.isFinite(st.refLineValue)) {
@@ -370,12 +435,12 @@ export function createAssayPlotlyRenderer({ onTitleEdit } = {}) {
     renderReady = Promise.resolve(Plotly.react(target, traces, layout, {
       displayModeBar: false,
       responsive: false,
-      // Axis titles and added labels share the same direct editing surface.
-      edits: { annotationPosition: true, annotationText: true }
+      // Titles, added labels and the legend share the same direct editing surface.
+      edits: { annotationPosition: true, annotationText: true, legendPosition: true }
     })).then(() => ({ ok: true }), (error) => ({ ok: false, error: String(error?.message || error) }));
     chartHost = target;
     chartSize = { width, height };
-    titleGeometry = { plotWidth: plotAreaWidth, plotHeight: plotAreaHeight };
+    titleGeometry = { plotWidth: plotAreaWidth, plotHeight: plotAreaHeight, hasTitle: Boolean(st.title) };
     // Plotly re-emits on every redraw, so bind once per host or a drag stacks handlers.
     if (typeof onTitleEdit === 'function' && editBoundHost !== target && typeof target.on === 'function') {
       editBoundHost = target;

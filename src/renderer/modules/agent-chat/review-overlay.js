@@ -3,9 +3,9 @@ import "./localization.js";
 const i18nUi = createPresentation("agent");
 import { trimText } from './shared.js';
 import { collectReviewItemsForMessage } from './review-overlay/review-items.js';
-import { renderNotebookAppendPreview, renderNotebookPreview, renderProtocolPreview } from './review-overlay/review-previews.js';
+import { renderNotebookAppendPreview, renderNotebookPreview, renderProtocolEditPreview, renderProtocolPreview } from './review-overlay/review-previews.js';
 import { markNotebookAppendReview, markProtocolReview } from './review-overlay/review-status.js';
-import { agentUi } from './localization.js';
+import { agentNotice, agentUi } from './localization.js';
 
 export function createAgentReviewOverlayController({
   dom,
@@ -18,10 +18,12 @@ export function createAgentReviewOverlayController({
   notebookActions,
   notebookDraftAdapter,
   protocolReviewAdapter,
+  onEditProtocolSteps,
   onAppendNotebookEntry = async () => ({ ok: false, error: 'Notebook append is unavailable.' })
 }) {
   let reviewItems = [];
   let activeIndex = 0;
+  const applyingEdits = new Set();
 
   function close() {
     reviewItems = [];
@@ -60,6 +62,9 @@ export function createAgentReviewOverlayController({
     i18nUi.setHtml(dom.reviewTrack, reviewItems.map((item) => {
       if (item.type === 'protocol') {
         return renderProtocolPreview(item, safeText);
+      }
+      if (item.type === 'protocol-edit') {
+        return renderProtocolEditPreview(item, safeText, { applying: applyingEdits.has(item.id) });
       }
       if (item.type === 'notebook-append') {
         return renderNotebookAppendPreview(item, safeText);
@@ -105,6 +110,38 @@ export function createAgentReviewOverlayController({
     persist();
     renderHistoryView?.({ forceScroll: true });
     setStatus?.(agentUi('status.protocolRejected'));
+    removeItem(item.id);
+  }
+
+  async function reviewProtocolEdit(item, decision) {
+    if (applyingEdits.has(item.id)) return;
+    const messages = state.agentChat?.messages;
+    if (decision === 'approved') {
+      applyingEdits.add(item.id);
+      render();
+      let result;
+      try {
+        result = await onEditProtocolSteps?.(item.proposal);
+      } catch (error) {
+        result = { ok: false, error: String(error?.message || error) };
+      } finally {
+        applyingEdits.delete(item.id);
+      }
+      if (!result?.ok) {
+        const message = trimText(result?.error, 500) || agentUi('status.protocolEditFailed');
+        setStatus?.(message);
+        agentNotice(message, { type: 'error' });
+        render();
+        return;
+      }
+    }
+    if (!markProtocolReview(state.agentChat?.messages, item.messageId, item.id, decision)) {
+      markProtocolReview(messages, item.messageId, item.id, decision);
+    }
+    persist();
+    renderContextSummary?.();
+    renderHistoryView?.({ forceScroll: true });
+    setStatus?.(agentUi(decision === 'approved' ? 'status.protocolEdited' : 'status.protocolEditRejected'));
     removeItem(item.id);
   }
 
@@ -162,6 +199,10 @@ export function createAgentReviewOverlayController({
       approveProtocol(item);
       return;
     }
+    if (item.type === 'protocol-edit') {
+      void reviewProtocolEdit(item, 'approved');
+      return;
+    }
     if (item.type === 'notebook-append') {
       void approveNotebookAppend(item);
       return;
@@ -176,6 +217,10 @@ export function createAgentReviewOverlayController({
     }
     if (item.type === 'protocol') {
       rejectProtocol(item);
+      return;
+    }
+    if (item.type === 'protocol-edit') {
+      void reviewProtocolEdit(item, 'rejected');
       return;
     }
     if (item.type === 'notebook-append') {

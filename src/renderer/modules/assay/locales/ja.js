@@ -62,7 +62,6 @@ export const plateJapanese = Object.freeze({
   "grid.wellConcentration": "{well} • サンプル ID：{sample} | 濃度：{concentration} • クリックして濃度を編集",
   "grid.sampleShort": "S：{value}",
   "grid.concentrationShort": "C：{value}",
-  "grid.previewNote": "{count} ウェルプレートの先頭 {rows} 行 × {columns} 列をプレビュー中。",
   "grid.results": "アッセイ結果の表計算シート",
   "grid.transformed": "変換済みアッセイプレートの表計算シート",
   "grid.failed": "表計算コンポーネント（Tabulator）の読み込みに失敗しました。",
@@ -418,6 +417,7 @@ export const plateJapanese = Object.freeze({
   "full.6992c07b": "{p0}TickLen",
   "full.ab6e4d18": "長さ (pt)",
   "full.44b980a8": "{p0}MinorTicks",
+  "full.61235220": "主目盛",
   "full.6365d674": "補助目盛",
   "full.23c6cde7": "{p0}TickFormat",
   "full.a8503d43": "数値形式",
@@ -628,4 +628,7 @@ export const plateJapanese = Object.freeze({
   "full.1cd4a3ab": "ラベル {p0}",
   "full.9808f547": "線",
   "full.9774b466": "帯",
+  "full.b1dd9521": "少",
+  "full.9be5f96": "中",
+  "full.be0a061d": "多"
 });

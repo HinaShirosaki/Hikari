@@ -219,12 +219,18 @@ body.theme-night .canvas-context-menu > .danger-button:is(:hover, :focus-visible
 #zoom-level { min-width: 38px; text-align: center; font-size: 0.6875rem; font-variant-numeric: tabular-nums; }
 #zoom-fit[aria-pressed="true"] { color: var(--theme-text); }
 .canvases { display: flex; flex-direction: column; gap: 8px; min-height: 0; min-width: 0; flex: 1; overflow: auto; }
-.main-stage-wrap { display: flex; position: relative; flex: 1; min-height: 160px; overflow: hidden; }
+.main-stage-wrap { --canvas-ruler-size: 22px; display: grid; grid-template: var(--canvas-ruler-size) minmax(0, 1fr) / var(--canvas-ruler-size) minmax(0, 1fr); position: relative; flex: 1; min-height: 160px; overflow: hidden; }
+.canvas-ruler, .canvas-ruler-corner { background: var(--theme-surface-elevated); color: var(--theme-text-muted); pointer-events: none; font: 10px Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+.canvas-ruler { display: block; width: 100%; height: 100%; overflow: hidden; fill: currentColor; }
+.canvas-ruler-corner { display: grid; place-items: center; font-size: 9px; }
+.canvas-ruler-corner, .canvas-ruler[data-ruler-axis="x"] { border-bottom: 1px solid var(--theme-border-soft); }
+.canvas-ruler-corner, .canvas-ruler[data-ruler-axis="y"] { border-right: 1px solid var(--theme-border-soft); }
+.canvas-ruler-marks path { stroke: color-mix(in srgb, var(--theme-text-muted) 60%, var(--theme-border-soft)); shape-rendering: crispEdges; }
+.canvas-ruler-cursor { stroke: var(--theme-accent); stroke-width: 1.5; }
 .canvas-stage { display: flex; align-items: safe center; justify-content: safe center; min-width: 0; min-height: 0; width: 100%; padding: 12px; background: transparent; overflow: auto; outline: none; }
 .canvas-stage > svg { display: block; flex: 0 0 auto; touch-action: none; box-shadow: 0 1px 6px var(--theme-shadow-color-subtle); }
 .canvas-stage.is-file-drop > svg { outline: 2px dashed var(--theme-accent); outline-offset: 4px; }
 .canvas-stage:focus-visible:not(.pointer-focus) > svg { outline: 2px solid var(--theme-focus); outline-offset: -2px; }
-#main-canvas { flex: 1; }
 .main-stage-wrap:has(.canvas-crop-overlay) { min-height: 240px; }
 [data-object-id], .selection-move { cursor: move; outline: none; }
 [data-object-id]:focus-visible .object-hit { stroke: var(--theme-focus); stroke-width: 1.5px; vector-effect: non-scaling-stroke; }
@@ -405,7 +411,8 @@ dialog { background: var(--theme-surface-elevated); color: var(--theme-text); bo
 dialog::backdrop { background: var(--theme-overlay-strong); }
 dialog h2 { font-size: 0.9375rem; margin: 0 0 12px; }
 dialog .actions { justify-content: flex-end; margin-top: 12px; }
-#illustration-action-dialog { width: min(360px, 92vw); }
+#illustration-action-dialog, #png-export-dialog { width: min(360px, 92vw); }
+#png-export-hint { color: var(--theme-text-muted); font-size: 0.75rem; }
 #illustration-action-dialog .actions { flex-wrap: wrap; }
 #illustration-action-name { overflow-wrap: anywhere; }
 #illustration-action-error, #illustration-action-dialog .danger-button { color: var(--theme-danger); }

@@ -1,11 +1,47 @@
 import { reverseComplementIupac } from './shared.js';
 import { buildAlignmentResultFromColumns, compareAlignmentResults } from './alignment/alignment-result.js';
 import { buildCandidateWindows, normalizeAlignmentRecord } from './alignment/candidate-windows.js';
+import { DEFAULT_MATCH_SCORE } from './alignment/constants.js';
 import { runSemiGlobalAffineAlignment } from './alignment/path-scoring.js';
 
-function alignOrientationAgainstReference(referenceRecord, queryRecord, orientation, options = {}) {
-  const safeReference = normalizeAlignmentRecord(referenceRecord, 'reference');
-  const safeQuery = normalizeAlignmentRecord(queryRecord, 'query');
+function findExactAlignment(reference, query, options) {
+  if (query.sequence.length > reference.sequence.length || !/^[ACGT]+$/.test(query.sequence)
+    || options.matchScore !== undefined || options.mismatchScore !== undefined
+    || options.gapOpenScore !== undefined || options.gapExtendScore !== undefined
+    || options.windowPadding !== undefined) {
+    return null;
+  }
+
+  const searchSequence = reference.topology === 'circular' ? reference.sequence.repeat(2) : reference.sequence;
+  let orientation = 'forward';
+  let sequence = query.sequence;
+  let start = searchSequence.indexOf(sequence);
+  if (start < 0) {
+    orientation = 'reverse';
+    sequence = reverseComplementIupac(sequence);
+    start = searchSequence.indexOf(sequence);
+  }
+  if (start < 0) {
+    return null;
+  }
+
+  // A full exact match reaches the maximum score under the default penalties.
+  // It also wins every k-mer vote, so the first occurrence and forward tie
+  // preference agree with the seeded search.
+  const columns = Array.from(sequence, (base, queryOffset) => ({
+    referenceBase: base,
+    queryBase: base,
+    referenceOffset: start + queryOffset,
+    queryOffset
+  }));
+  const summary = buildAlignmentResultFromColumns(
+    columns, sequence.length, reference.sequence.length, reference.topology,
+    { score: sequence.length * DEFAULT_MATCH_SCORE }
+  );
+  return { ...summary, orientation };
+}
+
+function alignOrientationAgainstReference(safeReference, safeQuery, orientation, options) {
   const orientedQuerySequence = orientation === 'reverse'
     ? reverseComplementIupac(safeQuery.sequence)
     : safeQuery.sequence;
@@ -44,24 +80,9 @@ function alignOrientationAgainstReference(referenceRecord, queryRecord, orientat
     }
 
     const candidate = {
-      referenceName: safeReference.name,
-      queryName: safeQuery.name,
-      referenceFormat: safeReference.sourceFormat,
-      queryFormat: safeQuery.sourceFormat,
+      ...summary,
       orientation,
-      score: aligned.score,
-      identityPercent: summary.identityPercent,
-      queryCoveragePercent: summary.queryCoveragePercent,
-      referenceSpan: summary.referenceSpan,
-      mismatchCount: summary.mismatchCount,
-      insertionCount: summary.insertionCount,
-      deletionCount: summary.deletionCount,
-      alignedReference: summary.alignedReference,
-      alignedMarkers: summary.alignedMarkers,
-      alignedQuery: summary.alignedQuery,
-      differences: summary.differences,
-      coveredQueryBases: summary.coveredQueryBases,
-      anchorCount: window.anchorCount
+      score: aligned.score
     };
 
     if (compareAlignmentResults(best, candidate) > 0) {
@@ -79,22 +100,24 @@ export function alignSequenceToReference(referenceRecord, queryRecord, options =
     throw new Error('Reference and query sequences are both required.');
   }
 
-  const candidates = [
-    alignOrientationAgainstReference(safeReference, safeQuery, 'forward', options),
-    alignOrientationAgainstReference(safeReference, safeQuery, 'reverse', options)
-  ].filter(Boolean);
-
-  if (!candidates.length) {
+  let best = findExactAlignment(safeReference, safeQuery, options);
+  if (!best) {
+    const candidates = [
+      alignOrientationAgainstReference(safeReference, safeQuery, 'forward', options),
+      alignOrientationAgainstReference(safeReference, safeQuery, 'reverse', options)
+    ].filter(Boolean);
+    candidates.sort(compareAlignmentResults);
+    [best] = candidates;
+  }
+  if (!best) {
     throw new Error('No sequencing alignment could be generated for the selected inputs.');
   }
 
-  candidates.sort(compareAlignmentResults);
-  const best = candidates[0];
   return {
-    referenceName: best.referenceName,
-    queryName: best.queryName,
-    referenceFormat: best.referenceFormat,
-    queryFormat: best.queryFormat,
+    referenceName: safeReference.name,
+    queryName: safeQuery.name,
+    referenceFormat: safeReference.sourceFormat,
+    queryFormat: safeQuery.sourceFormat,
     orientation: best.orientation,
     score: best.score,
     identityPercent: best.identityPercent,

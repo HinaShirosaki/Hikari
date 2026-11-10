@@ -12,6 +12,12 @@ export const DEFAULT_CHART_PALETTE = Object.freeze([
 
 const POINT_SHAPES = Object.freeze(['circle', 'square', 'triangle', 'diamond', 'cross']);
 const LINE_STYLES = Object.freeze(['solid', 'dashed', 'dotted']);
+// Minor ticks are false (off) or a density; a saved `true` is the old on switch.
+const TICK_DENSITIES = Object.freeze(['low', 'medium', 'high']);
+const sanitizeMinorTicks = (value) => (value === true ? 'medium' : TICK_DENSITIES.includes(value) ? value : false);
+export const MAJOR_TICK_MIN = 2;
+export const MAJOR_TICK_MAX = 10;
+const LEGACY_MAJOR_TICK_COUNTS = new Map([['low', 3], ['medium', 6], ['high', MAJOR_TICK_MAX]]);
 const FRAME_STYLES = Object.freeze(['offset', 'box', 'l-shape', 'none']);
 const CURVE_TYPES = Object.freeze(['curveMonotoneX', 'curveLinear', 'curveStep']);
 const SCALE_TYPES = Object.freeze(['linear', 'log10', 'log2', 'ln']);
@@ -114,9 +120,13 @@ export function createDefaultChartStyle() {
     showHorizontalGrid: false,
     gridColor: '#9bb0c9',
     gridStrokeWidth: 1,
+    gridStyle: 'solid',
     title: '',
     mode: 'lines+markers',
     legendPosition: 'top',
+    // Dragged legend, in paper coordinates (0..1 spans the plot area); null = legendPosition's spot.
+    legendX: null,
+    legendY: null,
     tickDir: 'outside',
     tickLen: 5,
     minorTicks: false,
@@ -268,12 +278,15 @@ export function normalizeChartStyle(input) {
     showHorizontalGrid: input.showHorizontalGrid === true,
     gridColor: sanitizeColor(input.gridColor, base.gridColor),
     gridStrokeWidth: clampNumber(input.gridStrokeWidth, 0, 6, base.gridStrokeWidth),
+    gridStyle: sanitizeEnum(input.gridStyle, LINE_STYLES, base.gridStyle),
     title: typeof input.title === 'string' ? input.title.slice(0, 200) : base.title,
     mode: sanitizeEnum(input.mode, DISPLAY_MODES, base.mode),
     legendPosition: sanitizeEnum(input.legendPosition, LEGEND_POSITIONS, base.legendPosition),
+    legendX: clampOptional(input.legendX, -2, 3),
+    legendY: clampOptional(input.legendY, -2, 3),
     tickDir: sanitizeEnum(input.tickDir, TICK_DIRECTIONS, base.tickDir),
     tickLen: clampNumber(input.tickLen, 0, 20, base.tickLen),
-    minorTicks: Boolean(input.minorTicks),
+    minorTicks: sanitizeMinorTicks(input.minorTicks),
     tickFormat: sanitizeEnum(input.tickFormat, TICK_FORMATS, base.tickFormat),
     markerFill: sanitizeEnum(input.markerFill, MARKER_FILLS, base.markerFill),
     opacity: clampNumber(input.opacity, 0.1, 1, base.opacity),
@@ -288,11 +301,16 @@ export function normalizeChartStyle(input) {
   };
 }
 
-export const AXIS_STYLE_KEYS = Object.freeze(['tickDir', 'tickLen', 'minorTicks', 'tickFormat', 'tickAngle']);
+export const AXIS_STYLE_KEYS = Object.freeze(['tickDir', 'tickLen', 'majorTicks', 'minorTicks', 'tickFormat', 'tickAngle']);
 export const SERIES_STYLE_KEYS = Object.freeze([
   'color', 'pointShape', 'pointSize', 'markerFill', 'opacity', 'mode', 'lineStyle', 'lineWidth',
   'barOutlineColor', 'barOutlineWidth', 'errorColor', 'errorCapWidth', 'errorThickness'
 ]);
+
+function normalizeMajorTicks(value) {
+  const count = LEGACY_MAJOR_TICK_COUNTS.get(value) ?? value;
+  return Number.isInteger(count) && count >= MAJOR_TICK_MIN && count <= MAJOR_TICK_MAX ? count : null;
+}
 
 function normalizeAxisStyles(input) {
   return Object.fromEntries(['x', 'y'].map((axis) => {
@@ -300,7 +318,8 @@ function normalizeAxisStyles(input) {
     const normalized = {
       tickDir: sanitizeEnum(value.tickDir, TICK_DIRECTIONS, 'outside'),
       tickLen: clampNumber(value.tickLen, 0, 20, 5),
-      minorTicks: Boolean(value.minorTicks),
+      majorTicks: normalizeMajorTicks(value.majorTicks),
+      minorTicks: sanitizeMinorTicks(value.minorTicks),
       tickFormat: sanitizeEnum(value.tickFormat, TICK_FORMATS, 'auto'),
       tickAngle: clampOptional(value.tickAngle, -90, 90)
     };

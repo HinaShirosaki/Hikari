@@ -4,6 +4,16 @@ export const agentJapanese = Object.freeze({
   'citation.openProtocol': 'プロトコルを開く：{source}',
   'citation.openNotebook': '実験ノートのページを開く：{source}',
 
+  'draft.protocolEditKind': '保存済みプロトコルの編集',
+  'draft.pageProtocolEditKind': 'ノートのプロトコルの編集',
+  'draft.protocolEdited': '手順を更新済み',
+  'review.stepNumber': '手順 {number}',
+  'review.beforeEdit': '現在のテキスト',
+  'review.afterEdit': '提案されたテキスト',
+  'status.protocolEdited': 'プロトコルの手順を保存しました。',
+  'status.protocolEditRejected': 'プロトコルの編集を却下しました。',
+  'status.protocolEditFailed': 'プロトコルの編集を保存できませんでした。',
+
   'evidence.title': 'エビデンス',
   'evidence.why': '選定理由',
   'evidence.notes': '自分のメモ',

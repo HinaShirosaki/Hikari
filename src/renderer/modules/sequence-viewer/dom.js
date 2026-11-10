@@ -136,8 +136,6 @@ export function getSequenceViewerElements(rootDocument) {
     featureEditorTypeInput: rootDocument?.getElementById?.('sequence-viewer-feature-editor-type'),
     featureEditorTypeOptions: rootDocument?.getElementById?.('sequence-viewer-feature-editor-type-options'),
     featureEditorStrandSelect: rootDocument?.getElementById?.('sequence-viewer-feature-editor-strand'),
-    featureEditorStartInput: rootDocument?.getElementById?.('sequence-viewer-feature-editor-start'),
-    featureEditorEndInput: rootDocument?.getElementById?.('sequence-viewer-feature-editor-end'),
     featureEditorDescriptionInput: rootDocument?.getElementById?.('sequence-viewer-feature-editor-description'),
     featureEditorCloseBtn: rootDocument?.getElementById?.('sequence-viewer-feature-editor-close'),
     featureEditorCancelBtn: rootDocument?.getElementById?.('sequence-viewer-feature-editor-cancel'),

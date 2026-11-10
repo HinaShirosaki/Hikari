@@ -358,13 +358,14 @@ module.exports = function registerCodexCliProviderSuiteMcpGatewayToolSurface(con
         [...mcpToolNames].sort(),
         [...directToolFileNames, ...PAPER_INTAKE_DIRECT_MCP_TOOL_NAMES, ...require(path.join(directToolDir, 'sequence-tools.js')).SEQUENCE_MCP_TOOLS.map(t => t.definition.name)].sort()
       );
-      assert.deepEqual(mcpToolNames.slice(0, 7), [
+      assert.deepEqual(mcpToolNames.slice(0, 8), [
         'inventory_lookup',
         'chemical_lookup',
         'notebook_lookup',
         'notebook_list',
         'protocol_lookup',
         'protocol_generation',
+        'protocol_edit',
         'notebook_draft'
       ]);
       assert.equal(mcpToolNames.includes('inventory_lookup'), true);

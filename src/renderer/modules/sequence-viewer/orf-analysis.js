@@ -69,7 +69,7 @@ function getOrfCodingIndices(feature, sequenceLength) {
   return indices;
 }
 
-export function buildSelectedOrfTranslationContext(sequence, feature, options = {}) {
+export function buildSelectedOrfTranslationContext(sequence, feature) {
   const text = normalizeSequenceText(sequence);
   const sequenceLength = text.length;
   if (!sequenceLength || !isOrfFeature(feature)) {
@@ -77,7 +77,6 @@ export function buildSelectedOrfTranslationContext(sequence, feature, options = 
   }
 
   const strand = feature?.strand === -1 ? -1 : 1;
-  const stopDisplay = options?.stopVisibility ?? options?.stopMode;
   const codingIndices = getOrfCodingIndices(feature, sequenceLength);
   const codonCount = Math.floor(codingIndices.length / 3);
   if (!codonCount) {
@@ -98,13 +97,7 @@ export function buildSelectedOrfTranslationContext(sequence, feature, options = 
       })
       .join('');
     const aa = translateDnaCodon(codon) || 'X';
-    if (aa === '*') {
-      break;
-    }
-    const display = resolveOrfTranslationDisplay(aa, codon, stopDisplay);
-    if (!display) {
-      continue;
-    }
+    const display = resolveOrfTranslationDisplay(aa, codon, 'star');
     const anchorIndex = Math.min(...codonPositions);
     anchors.push({
       baseIndex: anchorIndex,
@@ -113,11 +106,14 @@ export function buildSelectedOrfTranslationContext(sequence, feature, options = 
       codonPositions,
       displayText: display.text,
       colorKey: display.colorKey,
-      isStop: Boolean(display.isStop),
-      title: aa === '*'
-        ? `Stop codon ${display.text === '*' ? codon : display.text}`
+      isStop: display.isStop,
+      title: display.isStop
+        ? `Stop codon ${codon}`
         : `${display.text} (${codon})`
     });
+    if (display.isStop) {
+      break;
+    }
   }
 
   if (!anchors.length) {

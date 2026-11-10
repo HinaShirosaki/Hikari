@@ -206,3 +206,29 @@ export function buildRecordGenbankText(record) {
   return `${lines.join('\n')}\n`;
 }
 
+
+function buildFastxHeader(record) {
+  const name = sanitizeGenbankToken(record?.name || 'sequence', 'sequence', 200);
+  const description = String(record?.description || '').trim().replace(/\s+/g, ' ');
+  return description && description !== name ? `${name} ${description}` : name;
+}
+
+export function buildRecordFastaText(record) {
+  const sequence = normalizeSequenceText(record?.sequence || '');
+  if (!sequence.length) {
+    return '';
+  }
+  return `>${buildFastxHeader(record)}\n${sequence.match(/.{1,70}/g).join('\n')}\n`;
+}
+
+// Records without per-base quality (anything not imported from FASTQ) get a
+// flat Q40 ('I') so the file stays valid for tools that require FASTQ.
+export function buildRecordFastqText(record) {
+  const sequence = normalizeSequenceText(record?.sequence || '');
+  if (!sequence.length) {
+    return '';
+  }
+  const quality = String(record?.quality || '');
+  const qualityLine = quality.length === sequence.length ? quality : 'I'.repeat(sequence.length);
+  return `@${buildFastxHeader(record)}\n${sequence}\n+\n${qualityLine}\n`;
+}

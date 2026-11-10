@@ -486,7 +486,7 @@
   min-width: 64px;
   height: 78px;
   padding: 3px var(--space-4);
-  vertical-align: top;
+  vertical-align: middle;
   background: var(--assay-plate-surface);
   cursor: pointer;
 }

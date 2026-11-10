@@ -297,6 +297,10 @@ test('[EDGE] sequence-viewer shows the AB1 chromatogram inline for an active seq
       }
     }
   });
+  const alignmentStatus = document.getElementById('sequence-viewer-alignment-status');
+  assert.equal(alignmentStatus.textContent, '');
+  assert.equal(alignmentStatus.hidden, true);
+
   const result = await viewer.runSequencingAlignment();
   await flushAsync();
 

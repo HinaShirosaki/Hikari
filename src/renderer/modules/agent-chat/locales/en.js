@@ -3,6 +3,16 @@ export const agentEnglish = Object.freeze({
   'citation.openProtocol': 'Open protocol: {source}',
   'citation.openNotebook': 'Open notebook page: {source}',
 
+  'draft.protocolEditKind': 'Saved protocol edit',
+  'draft.pageProtocolEditKind': 'Notebook protocol edit',
+  'draft.protocolEdited': 'Steps updated',
+  'review.stepNumber': 'Step {number}',
+  'review.beforeEdit': 'Current text',
+  'review.afterEdit': 'Proposed text',
+  'status.protocolEdited': 'Protocol steps saved.',
+  'status.protocolEditRejected': 'Protocol edit rejected.',
+  'status.protocolEditFailed': 'The protocol edit could not be saved.',
+
   'evidence.title': 'Evidence',
   'evidence.why': 'Why selected',
   'evidence.notes': 'Your notes',

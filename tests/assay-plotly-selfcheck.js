@@ -264,8 +264,10 @@ assert.equal(withRefLine.layout.shapes.length, 3, 'reference line adds to the fr
 
 // Explicit opt-ins still win over the Figure defaults.
 const boxed = draw(barModel, { frameStyle: 'box', showHorizontalGrid: true });
-assert.equal(boxed.layout.shapes, undefined, 'box frame draws no offset arms');
-assert.equal(boxed.layout.xaxis.showline, true, 'box frame uses Plotly axis lines');
+assert.equal(boxed.layout.shapes.length, 1, 'the box uses one outline');
+assert.equal(boxed.layout.shapes[0].type, 'rect', 'the box sits on the plot bounds');
+assert.equal(boxed.layout.xaxis.showline, false, 'the box suppresses the displaced Plotly axis lines');
+assert.equal(draw(barModel, { frameStyle: 'l-shape' }).layout.shapes[0].path, 'M 0,1 L 0,0 L 1,0');
 assert.equal(boxed.layout.yaxis.showgrid, true, 'gridlines can be turned back on');
 assert.equal(createDefaultChartStyle().frameStyle, 'offset', 'offset is the default frame');
 
@@ -385,6 +387,50 @@ assert.equal(JSON.stringify(dragged), JSON.stringify({
   yTitleOffset: 40,
   yTitle: 'Renamed'
 }), 'a dropped title reads back as position, distance and name');
+// The chart title (annotations[2]) and the legend are draggable too, and a dragged
+// legend/title is drawn where it was dropped.
+const movedParts = titleEditPatch({
+  'annotations[2].x': 0.2, 'annotations[2].y': 1.1, 'legend.x': 0.8, 'legend.y': 0.9
+}, { plotWidth: 400, plotHeight: 300, hasTitle: true });
+assert.equal(JSON.stringify(movedParts), JSON.stringify({ titlePos: 0.2, titleOffset: 30, legendX: 0.8, legendY: 0.9 }),
+  'a dropped chart title and legend read back as style');
+const lineTwo = { chartType: 'line', series: [{ label: 'A', data: [{ x: 1, y: 1 }] }, { label: 'B', data: [{ x: 1, y: 2 }] }] };
+const placed = draw(lineTwo, { title: 'T', ...JSON.parse(JSON.stringify(movedParts)) });
+assert.equal(placed.layout.annotations[2].text, 'T', 'the chart title is the third annotation');
+assert.equal(placed.layout.annotations[2].x, 0.2, 'the chart title sits where it was dropped');
+assert.ok(Math.abs(placed.layout.annotations[2].y - (1 + 30 / plotArea(placed.layout).h)) < 1e-9, 'title distance is from the plot');
+assert.equal(placed.layout.legend.x, 0.8, 'the legend sits where it was dropped');
+assert.equal(placed.layout.legend.y, 0.9);
+assert.equal(placed.layout.yaxis.rangemode, 'tozero', 'non-negative data starts the auto range at 0');
+assert.equal(placed.layout.xaxis.rangemode, 'tozero');
+const dipping = draw({ chartType: 'line', series: [{ label: 'A', data: [{ x: 1, y: -1 }, { x: 2, y: 3 }] }] });
+assert.equal(dipping.layout.yaxis.rangemode, undefined, 'negative data keeps Plotly autorange');
+assert.equal(dipping.layout.xaxis.rangemode, 'tozero');
+assert.equal(draw(lineTwo, { yScale: 'log10' }).layout.yaxis.rangemode, undefined, 'log axes never chase 0');
+assert.equal(placed.layout.xaxis.domain[0], placed.layout.shapes[0].x0, 'offset frame: X data starts where its line starts');
+assert.equal(placed.layout.yaxis.domain[0], placed.layout.shapes[1].y0, 'offset frame: Y data starts where its line starts');
+assert.equal(draw(lineTwo, { frameStyle: 'box' }).layout.xaxis.domain, undefined, 'other frames keep the full plot area');
+assert.equal(draw(lineTwo, { showHorizontalGrid: true, gridStyle: 'dashed' }).layout.yaxis.griddash, 'dash', 'grid lines take the chosen pattern');
+assert.equal(normalizeChartStyle({ gridStyle: 'wavy' }).gridStyle, 'solid', 'an unknown grid pattern falls back to solid');
+const densityStyles = { x: { majorTicks: 2 }, y: { majorTicks: 10 } };
+const densityChart = draw(lineTwo, { axisStyles: densityStyles, yScale: 'log10' });
+assert.equal(densityChart.layout.xaxis.nticks, 2);
+assert.equal(densityChart.layout.yaxis.nticks, 10);
+assert.equal(densityChart.layout.yaxis.dtick, undefined, 'log tick density uses automatic spacing');
+const fixedTicks = draw(lineTwo, { axisStyles: densityStyles, xTick: 0.5 }).layout.xaxis;
+assert.equal(fixedTicks.nticks, undefined, 'a fixed interval takes priority over density');
+assert.equal(fixedTicks.dtick, 0.5);
+assert.equal(draw(barModel, { axisStyles: densityStyles, xTick: 10 }).layout.xaxis.nticks, 2, 'category density skips labels independently of saved numeric intervals');
+const normalizedMajorTicks = (majorTicks) => normalizeChartStyle({ axisStyles: { x: { majorTicks } } }).axisStyles.x.majorTicks;
+assert.deepEqual(['low', 'medium', 'high', 'auto'].map(normalizedMajorTicks), [3, 6, 10, null], 'saved density presets migrate to supported counts');
+assert.deepEqual([1, 2, 2.5, 10, 11].map(normalizedMajorTicks), [null, 2, null, 10, null], 'counts must be whole numbers from 2 to 10');
+const minorAt = (minorTicks, extra = {}) => draw(lineTwo, { axisStyles: { y: { minorTicks } }, ...extra }).layout.yaxis.minor;
+assert.equal(minorAt(false), undefined, 'minor ticks stay off by default');
+assert.deepEqual([minorAt('low').nticks, minorAt('medium').nticks, minorAt('high').nticks], [3, 5, 10], 'density sets minor subdivisions');
+assert.equal(minorAt('low', { yScale: 'log10' }).dtick, 'D2', 'a sparse log axis marks 2 and 5');
+assert.equal(minorAt('high', { yScale: 'log10' }).dtick, 'D1', 'a dense log axis marks every digit');
+assert.equal(normalizeChartStyle({ axisStyles: { x: { minorTicks: true } } }).axisStyles.x.minorTicks, 'medium', 'the old on switch reads as medium');
+assert.equal(normalizeChartStyle({ axisStyles: { x: { minorTicks: 'off' } } }).axisStyles.x.minorTicks, false, 'off turns minor ticks off');
 assert.equal(
   Object.keys(titleEditPatch({ 'xaxis.range[0]': 2 }, { plotWidth: 400, plotHeight: 300 })).length,
   0,
@@ -444,8 +490,13 @@ for (const scale of ['linear', 'log10', 'log2', 'ln']) {
   assert.equal(result.layout.yaxis.range.join(','), scale === 'linear' ? '1,1000' : '0,3');
 }
 assert.ok(targets.validateAxisRange('log2', { auto: false, min: 0, max: 8 }));
+assert.ok(targets.validateAxisRange('log2', { auto: false, min: 0, max: null }));
 assert.ok(targets.validateAxisRange('linear', { auto: false, min: 10, max: 1 }));
 assert.equal(targets.validateAxisRange('ln', { auto: true, min: -1, max: null }), '');
+const independentBounds = draw(fittedModel, { ...fresh, xScale: 'linear', yScale: 'log2',
+  xRange: { auto: false, min: 0, max: null }, yRange: { auto: false, min: null, max: 1000 } });
+assert.equal(JSON.stringify(independentBounds.layout.xaxis.range), '[0,null]');
+assert.equal(JSON.stringify(independentBounds.layout.yaxis.range), '[null,3]');
 const axisTarget = draw(fittedModel, { ...fresh, axisStyles: { x: { tickDir: 'inside', tickAngle: 25 }, y: { tickLen: 12 } },
   textStyles: { ...fresh.textStyles, yTicks: { ...fresh.textStyles.yTicks, bold: true, color: '#ff0000' } } });
 assert.equal(axisTarget.layout.xaxis.ticks, 'inside');

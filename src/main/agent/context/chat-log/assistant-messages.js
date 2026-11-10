@@ -56,6 +56,7 @@ function buildAssistantMetaFromResult(result, requestText = '') {
     protocol_to_notebook: protocolWorkflow ? cloneJson(protocolWorkflow, null) : null,
     notebook_draft: notebookDraftWorkflow ? cloneJson(notebookDraftWorkflow, null) : null,
     notebook_append: notebookAppendWorkflow ? cloneJson(notebookAppendWorkflow, null) : null,
+    ...(Array.isArray(payload.protocol_edits) ? { protocol_edits: cloneJson(payload.protocol_edits, []) } : {}),
     protocol_generation: protocolGeneration ? cloneJson(protocolGeneration, null) : null,
     codex_agent: payload.codex_agent && typeof payload.codex_agent === 'object'
       ? cloneJson(payload.codex_agent, null)

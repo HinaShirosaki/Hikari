@@ -4,6 +4,16 @@ export const agentTraditionalChinese = Object.freeze({
   'citation.openProtocol': '開啟實驗方案：{source}',
   'citation.openNotebook': '開啟實驗紀錄頁：{source}',
 
+  'draft.protocolEditKind': '編輯已儲存的實驗方案',
+  'draft.pageProtocolEditKind': '編輯紀錄頁的實驗方案',
+  'draft.protocolEdited': '步驟已更新',
+  'review.stepNumber': '步驟 {number}',
+  'review.beforeEdit': '目前文字',
+  'review.afterEdit': '建議文字',
+  'status.protocolEdited': '實驗方案步驟已儲存。',
+  'status.protocolEditRejected': '已拒絕實驗方案編輯。',
+  'status.protocolEditFailed': '無法儲存實驗方案編輯。',
+
   'evidence.title': '依據',
   'evidence.why': '選擇原因',
   'evidence.notes': '你的註記',

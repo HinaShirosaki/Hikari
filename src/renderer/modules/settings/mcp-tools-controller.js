@@ -8,6 +8,7 @@ export const HIKARI_MCP_TOOL_CATALOG = Object.freeze([
   ['notebook_list', 'Notebook list', 'List notebook titles with date filters and pagination.'],
   ['protocol_lookup', 'Protocol lookup', 'Search saved protocols.'],
   ['protocol_generation', 'Protocol generation', 'Prepare protocols and queue requested saves for review.', 'hikari-protocol-generation'],
+  ['protocol_edit', 'Protocol edit', 'Propose changes to steps in a saved protocol or notebook page.'],
   ['notebook_draft', 'Notebook draft', 'Prepare planned notebook pages for confirmation.', 'hikari-notebook-draft'],
   ['notebook_suggest', 'Notebook suggestion', 'Prepare background next-experiment suggestions.'],
   ['notebook_append', 'Notebook append', 'Propose evidence-backed additions to the active page.'],

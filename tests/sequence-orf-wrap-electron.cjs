@@ -94,7 +94,7 @@ async function main() {
             })`);
             const { anchors, fragments } = await exec('measure()');
             const label = `width=${width}, zoom=${zoom}, strand=${strand}, split=${split}, single=${single}`;
-            assert.equal(anchors.length, single ? 1 : 7, label);
+            assert.equal(anchors.length, single ? 2 : 8, label);
             verifyFragments(anchors, fragments, label);
             assert.equal(fragments.filter(f => f.split).length, split ? 2 : 0, label);
             cases++;

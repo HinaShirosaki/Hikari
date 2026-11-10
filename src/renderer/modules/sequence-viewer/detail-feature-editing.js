@@ -205,14 +205,11 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
       return;
     }
 
-    const sequenceLength = Math.max(0, Number(record.sequence.length) || 0);
     const selectionRange = context?.selectionRange || null;
     const featureContext = context?.featureContext || null;
     const feature = featureContext?.feature || null;
-    const originalRange = getFeatureOverallRange(feature, sequenceLength);
-    const range = selectionRange || originalRange;
 
-    if (!range) {
+    if (mode === 'add' && !selectionRange) {
       setStatus(i18nUi.text("Select a sequence range before adding or editing a feature."), true);
       return;
     }
@@ -224,24 +221,21 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
     const suggestedName = mode === 'edit'
       ? normalizeRecordName(feature?.name || 'feature', 'feature')
       : normalizeRecordName(`feature_${(Array.isArray(record?.features) ? record.features.length : 0) + 1}`, 'feature');
-    const note = mode === 'edit'
-      ? (selectionRange
-        ? `Editing ${feature?.name || 'feature'} with the currently selected range ${formatBaseRangeLabel(selectionRange)}.`
-        : `Editing ${feature?.name || 'feature'} at ${formatBaseRangeLabel(originalRange)}.`)
-      : `Creating a feature for the selected range ${formatBaseRangeLabel(range)}.`;
 
     featureEditorState = {
       mode,
       recordFeatureIndex: Number(featureContext?.recordFeatureIndex),
-      hadSelectionRange: Boolean(selectionRange),
-      originalRange
+      selectionRange
     };
 
     if (elements.featureEditorTitle) {
       i18nUi.setText(elements.featureEditorTitle, (mode === 'edit' ? i18nUi.message("Edit Feature") : i18nUi.message("Add Feature")));
     }
     if (elements.featureEditorNote) {
-      i18nUi.setText(elements.featureEditorNote, note);
+      elements.featureEditorNote.hidden = mode === 'edit';
+      if (mode === 'add') {
+        i18nUi.setText(elements.featureEditorNote, `Creating a feature for the selected range ${formatBaseRangeLabel(selectionRange)}.`);
+      }
     }
     if (elements.featureEditorNameInput) {
       elements.featureEditorNameInput.value = suggestedName;
@@ -251,16 +245,6 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
     }
     if (elements.featureEditorStrandSelect) {
       elements.featureEditorStrandSelect.value = String(feature?.strand === -1 ? -1 : 1);
-    }
-    if (elements.featureEditorStartInput) {
-      elements.featureEditorStartInput.value = String(Math.max(1, range.start + 1));
-      elements.featureEditorStartInput.min = '1';
-      elements.featureEditorStartInput.max = String(Math.max(1, sequenceLength));
-    }
-    if (elements.featureEditorEndInput) {
-      elements.featureEditorEndInput.value = String(Math.max(1, range.end));
-      elements.featureEditorEndInput.min = '1';
-      elements.featureEditorEndInput.max = String(Math.max(1, sequenceLength));
     }
     if (elements.featureEditorDescriptionInput) {
       elements.featureEditorDescriptionInput.value = String(feature?.description || '');
@@ -273,31 +257,12 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
     elements.featureEditorNameInput?.focus?.();
   }
 
-  function readFeatureEditorPayload(record) {
-    const sequenceLength = Math.max(0, Number(record?.sequence?.length) || 0);
-    const startBase = clamp(
-      Math.round(Number(elements.featureEditorStartInput?.value) || 0),
-      1,
-      Math.max(1, sequenceLength)
-    );
-    const endBase = clamp(
-      Math.round(Number(elements.featureEditorEndInput?.value) || 0),
-      1,
-      Math.max(1, sequenceLength)
-    );
-    if (endBase < startBase) {
-      throw new Error('Feature end must be greater than or equal to the start.');
-    }
-
+  function readFeatureEditorPayload() {
     return {
       name: normalizeRecordName(elements.featureEditorNameInput?.value || 'feature', 'feature'),
       type: sanitizeFeatureType(elements.featureEditorTypeInput?.value || 'misc_feature'),
       strand: String(elements.featureEditorStrandSelect?.value || '1') === '-1' ? -1 : 1,
-      description: cleanText(elements.featureEditorDescriptionInput?.value || '', 4000),
-      range: {
-        start: startBase - 1,
-        end: endBase
-      }
+      description: cleanText(elements.featureEditorDescriptionInput?.value || '', 4000)
     };
   }
 
@@ -307,14 +272,7 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
       return;
     }
 
-    let payload;
-    try {
-      payload = readFeatureEditorPayload(record);
-    } catch (error) {
-      setStatus((((((error?.message || i18nUi.text("Feature details are invalid.")))))), true);
-      return;
-    }
-
+    const payload = readFeatureEditorPayload();
     const selectedIndex = clamp(state.selectedRecordIndex, 0, Math.max(0, state.records.length - 1));
     const nextRecords = [...state.records];
     const current = nextRecords[selectedIndex];
@@ -335,44 +293,28 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
       }
 
       const previousFeature = nextFeatures[targetIndex] || {};
-      const preserveSegments = Boolean(
-        !featureEditorState.hadSelectionRange
-        && featureEditorState.originalRange
-        && payload.range.start === featureEditorState.originalRange.start
-        && payload.range.end === featureEditorState.originalRange.end
-      );
-      const nextSegments = preserveSegments
-        ? (Array.isArray(previousFeature?.segments) ? previousFeature.segments : [])
-        : [{ start: payload.range.start, end: payload.range.end }];
+      const strandChanged = payload.strand !== previousFeature.strand;
       updatedFeature = {
         ...previousFeature,
-        name: payload.name,
-        type: payload.type,
-        strand: payload.strand,
-        description: payload.description,
-        segments: nextSegments,
-        locationText: ''
+        ...payload
       };
-      if (
-        payload.type !== previousFeature?.type
-        || payload.strand !== previousFeature?.strand
-        || !preserveSegments
-      ) {
+      if (strandChanged) {
+        updatedFeature.locationText = '';
+      }
+      if (payload.type !== previousFeature.type || strandChanged) {
         delete updatedFeature.translation;
         delete updatedFeature.proteinSequence;
       }
       nextFeatures[targetIndex] = updatedFeature;
       actionLabel = `Updated feature ${updatedFeature.name}.`;
     } else {
+      const { start, end } = featureEditorState.selectionRange;
       updatedFeature = {
         id: buildManualFeatureId(payload.type),
-        name: payload.name,
-        type: payload.type,
-        strand: payload.strand,
-        description: payload.description,
+        ...payload,
         source: 'manual',
         locationText: '',
-        segments: [{ start: payload.range.start, end: payload.range.end }]
+        segments: [{ start, end }]
       };
       nextFeatures.push(updatedFeature);
       actionLabel = `Added feature ${updatedFeature.name}.`;

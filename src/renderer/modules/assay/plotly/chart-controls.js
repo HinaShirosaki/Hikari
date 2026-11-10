@@ -18,7 +18,10 @@ export function mountChartControls(container, { store, promptForName } = {}) {
   let activeTab = 'frame';
   let refreshing = false;
   let form;
+  // True while a keystroke is being applied: half-typed values stay quiet until commit.
+  let typing = false;
   function notice(message = '') {
+    if (typing && message) return;
     i18nUi.setOwnedText(q('validation'), message);
     q('validation').hidden = !message;
   }
@@ -31,11 +34,11 @@ export function mountChartControls(container, { store, promptForName } = {}) {
   }
   const pickers = {};
   [['frameStyle', 'frame-style', FRAME_STYLE_OPTIONS], ['pointShape', 'shape', SHAPE_OPTIONS],
-    ['lineStyle', 'line-style', LINE_STYLE_OPTIONS]].forEach(([key, kind, options]) => {
+    ['lineStyle', 'line-style', LINE_STYLE_OPTIONS], ['gridStyle', 'line-style', LINE_STYLE_OPTIONS]].forEach(([key, kind, options]) => {
     pickers[key] = createChartStylePicker(q(key), { kind, options, value: store.getStyle()[key],
       onChange: (value) => {
         if (refreshing) return;
-        apply(key === 'frameStyle' ? { [key]: value } : seriesStylePatch(store.getStyle(), selection.series, key, value));
+        apply(key === 'frameStyle' || key === 'gridStyle' ? { [key]: value } : seriesStylePatch(store.getStyle(), selection.series, key, value));
       } });
     i18nUi.setAttribute(q(key).querySelector('button'), "aria-label", (key === 'frameStyle' ? i18nUi.message("Frame style") : (key === 'pointShape' ? i18nUi.message("Symbol shape") : i18nUi.message("Line pattern"))));
   });
@@ -136,7 +139,8 @@ export function mountChartControls(container, { store, promptForName } = {}) {
           notice('A logarithmic reference value must be greater than zero.'); return;
         }
       }
-      apply({ [key]: read(key) }); return;
+      // Picking a legend position puts a dragged legend back in that spot.
+      apply({ [key]: read(key), ...(key === 'legendPosition' ? { legendX: null, legendY: null } : {}) }); return;
     }
     if (['titleText', 'titlePos', 'titleOffset'].includes(key)) {
       const target = selection.text;
@@ -152,7 +156,14 @@ export function mountChartControls(container, { store, promptForName } = {}) {
     }
   }
   function onInput(event) {
-    if (event.target.type === 'color' || event.target.dataset.cc === 'titleText') onChange(event);
+    const field = event.target;
+    if (field.type === 'color' || field.dataset.cc === 'titleText') { onChange(event); return; }
+    // Numbers apply as they are typed once the box holds a usable value. A blank,
+    // partial or out-of-range entry waits for the commit (Enter/blur), which reports it.
+    if (field.type === 'number' && field.value !== '' && field.validity.valid) {
+      typing = true;
+      try { onChange(event); } finally { typing = false; }
+    }
   }
   function onClick(event) {
     const button = event.target.closest('button');

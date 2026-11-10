@@ -51,7 +51,7 @@ import {
   renderAssayPlot
 } from './figures.js';
 import { loadHikariPdfIconDataUrl } from './branding.js';
-import { writeNotebookNote } from './notes.js';
+import { writeNotebookNote, writeNotebookWritingSpace } from './notes.js';
 
 // PDF export for protocols, notebook pages, project page bundles and assay
 // definitions, drawn with jsPDF.
@@ -283,6 +283,7 @@ async function writeNotebookEntryBody(ctx, {
     }
   }
 
+  writeNotebookWritingSpace(ctx);
 }
 
 export const exportNotebookEntryPdf = async (params = {}) => {

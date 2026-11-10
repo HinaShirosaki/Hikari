@@ -8,8 +8,8 @@ export const POINT_FIELDS = new Set(['frameStrokeWidth', 'gridStrokeWidth', 'poi
   'xTickLen', 'yTickLen', 'barOutlineWidth', 'barCornerRadius', 'errorCapWidth', 'errorThickness']);
 // Per-axis field suffixes; the data-cc key is the axis plus the suffix (xScale, yTickDir…).
 export const AXIS_FIELDS = ['Scale', 'RangeAuto', 'Min', 'Max', 'TickPreset', 'Tick',
-  'TickDir', 'TickLen', 'MinorTicks', 'TickFormat', 'TickAngle'];
-export const AXIS_STYLE_SUFFIXES = ['TickDir', 'TickLen', 'MinorTicks', 'TickFormat', 'TickAngle'];
+  'TickDir', 'TickLen', 'MajorTicks', 'MinorTicks', 'TickFormat', 'TickAngle'];
+export const AXIS_STYLE_SUFFIXES = ['TickDir', 'TickLen', 'MajorTicks', 'MinorTicks', 'TickFormat', 'TickAngle'];
 export const axisStyleKey = (suffix) => suffix[0].toLowerCase() + suffix.slice(1);
 export const GLOBAL_FIELDS = ['frameStroke', 'frameStrokeWidth', 'backgroundColor', 'showVerticalGrid',
   'showHorizontalGrid', 'gridColor', 'gridStrokeWidth', 'sizeAuto', 'frameWidth', 'frameHeight',
@@ -34,7 +34,11 @@ export function createChartControlsForm({ q, store, selection, pickers, textCont
     if (field.type === 'checkbox') field.checked = Boolean(value);
     else {
       const next = value === null || value === undefined ? '' : String(value);
-      if (field.value !== next) field.value = next;
+      // A box already holding this number keeps its text, so "1.50" being typed is not
+      // rewritten to "1.5" (and the points/pixels round trip's float noise is ignored).
+      const sameNumber = field.type === 'number' && field.value !== '' && next !== ''
+        && Math.abs(Number(field.value) - Number(next)) < 1e-9;
+      if (field.value !== next && !sameNumber) field.value = next;
     }
   }
   function options(key, entries) {
@@ -71,9 +75,11 @@ export function createChartControlsForm({ q, store, selection, pickers, textCont
     q(`${axis}TickHint`).hidden = !customTick || scale === 'linear';
     AXIS_STYLE_SUFFIXES.forEach((suffix) => {
       const field = axisStyleKey(suffix);
-      set(`${axis}${suffix}`, field === 'tickLen' ? pixelsToPoints(axisStyle[field]) : axisStyle[field]);
+      set(`${axis}${suffix}`, field === 'tickLen' ? pixelsToPoints(axisStyle[field])
+        : field === 'minorTicks' ? axisStyle[field] || 'off' : axisStyle[field]);
     });
     const category = axis === 'x' && context.hasCategoryX;
+    q(`${axis}MajorTicks`).disabled = !category && tick > 0;
     q(`${axis}NumericFields`).hidden = category;
     q(`${axis}NumericTickFields`).hidden = category;
   }
@@ -87,6 +93,7 @@ export function createChartControlsForm({ q, store, selection, pickers, textCont
     selection.series ?? '', Math.max(0, seriesIndex));
     GLOBAL_FIELDS.forEach((key) => set(key, POINT_FIELDS.has(key) ? pixelsToPoints(style[key]) : style[key]));
     pickers.frameStyle.setValue(style.frameStyle);
+    pickers.gridStyle.setValue(style.gridStyle);
     ['frameWidth', 'frameHeight'].forEach((key) => { q(key).disabled = style.sizeAuto; });
     ['gridColor', 'gridStrokeWidth'].forEach((key) => {
       q(key).disabled = !style.showVerticalGrid && !style.showHorizontalGrid;

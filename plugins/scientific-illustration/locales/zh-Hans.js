@@ -1,5 +1,8 @@
 // Simplified Chinese preview; other messages fall back to English.
 (function(root){const all=root.HikariUiTranslations=root.HikariUiTranslations||{};all["zh-Hans"]={...(all["zh-Hans"]||{}),figura:{
+  "pngExport.title": "导出 PNG",
+  "pngExport.resolution": "分辨率（PPI）",
+  "pngExport.hint": "以当前像素尺寸设置打印分辨率。",
   "illustrationMenu.actions": "插图操作",
   "illustrationMenu.export": "导出…",
   "illustrationMenu.duplicate": "复制",

@@ -13,6 +13,7 @@ const DIRECT_TOOL_MODULE_SPECS = Object.freeze([
   ['./notebook-list.js', 'NOTEBOOK_LIST_MCP_TOOL', 'callNotebookList'],
   ['./protocol-lookup.js', 'PROTOCOL_LOOKUP_MCP_TOOL', 'callProtocolLookup'],
   ['./protocol-generation.js', 'PROTOCOL_GENERATION_MCP_TOOL', 'callProtocolGeneration'],
+  ['./protocol-edit.js', 'PROTOCOL_EDIT_MCP_TOOL', 'callProtocolEdit'],
   ['./notebook-suggest.js', 'NOTEBOOK_SUGGEST_MCP_TOOL', 'callNotebookSuggest'],
   ['./notebook-draft.js', 'NOTEBOOK_DRAFT_MCP_TOOL', 'callNotebookDraft'],
   ['./notebook-append.js', 'NOTEBOOK_APPEND_MCP_TOOL', 'callNotebookAppend'],

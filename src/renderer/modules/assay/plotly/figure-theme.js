@@ -58,6 +58,7 @@ export function figureAxisDefaults(style = {}, tickFont) {
     showgrid: false,
     gridcolor: style.gridColor || '#9bb0c9',
     gridwidth: style.gridStrokeWidth ?? 1,
+    griddash: { dashed: 'dash', dotted: 'dot' }[style.gridStyle] || 'solid',
     tickfont: tickFont || figureFonts(style).tickFont,
     ticks: tickMark,
     tickwidth: style.frameStrokeWidth ?? 1,
@@ -68,20 +69,24 @@ export function figureAxisDefaults(style = {}, tickFont) {
   };
 }
 
-// 'offset' is the figure frame: an L whose two arms stop short of the origin corner.
-// Plotly's own axis lines always meet, so the arms are drawn as paper-space shapes.
+// Paper-space frames share the plot bounds with ticks at the axis limits.
 export function figureFrameShapes(style = {}) {
-  if ((style.frameStyle || 'offset') !== 'offset') {
+  const frameStyle = style.frameStyle || 'offset';
+  const line = { color: style.frameStroke || '#9bb0c9', width: style.frameStrokeWidth ?? 1 };
+  const paper = { xref: 'paper', yref: 'paper', line };
+  // Keep the connected frame in the primary SVG captured for notebook previews.
+  if (frameStyle === 'box') {
+    return [{ ...paper, layer: 'below', type: 'rect', x0: 0, x1: 1, y0: 0, y1: 1 }];
+  }
+  if (frameStyle === 'l-shape') {
+    return [{ ...paper, layer: 'below', type: 'path', path: 'M 0,1 L 0,0 L 1,0' }];
+  }
+  if (frameStyle !== 'offset') {
     return [];
   }
-  const line = { color: style.frameStroke || '#9bb0c9', width: style.frameStrokeWidth ?? 1 };
   return [
-    {
-      type: 'line', xref: 'paper', yref: 'paper', x0: FIGURE_CORNER_GAP, x1: 1, y0: 0, y1: 0, line
-    },
-    {
-      type: 'line', xref: 'paper', yref: 'paper', x0: 0, x1: 0, y0: FIGURE_CORNER_GAP, y1: 1, line
-    }
+    { ...paper, type: 'line', x0: FIGURE_CORNER_GAP, x1: 1, y0: 0, y1: 0 },
+    { ...paper, type: 'line', x0: 0, x1: 0, y0: FIGURE_CORNER_GAP, y1: 1 }
   ];
 }
 
@@ -125,6 +130,7 @@ export function applyFigureDefaults(figure = {}, style = {}) {
   const axisColor = style.frameStroke || '#9bb0c9';
   const background = style.backgroundColor || '#ffffff';
   const axisDefaults = figureAxisDefaults(style, tickFont);
+  const frameShapes = axisDefaults.showline ? [] : figureFrameShapes(style);
   const axisKeys = new Set(['xaxis', 'yaxis', ...Object.keys(layout).filter((key) => /^[xy]axis\d*$/.test(key))]);
   const axes = {};
   axisKeys.forEach((key) => {
@@ -141,7 +147,7 @@ export function applyFigureDefaults(figure = {}, style = {}) {
       bargroupgap: FIGURE_BAR_GROUP_GAP,
       ...layout,
       ...axes,
-      shapes: [...figureFrameShapes(style), ...asArray(layout.shapes)]
+      shapes: [...frameShapes, ...asArray(layout.shapes)]
     }
   };
 }

@@ -83,6 +83,13 @@
         <section class="canvas-column" aria-label="Illustration canvases" data-i18n-aria-label="figura.full.8e4d6439">
           <div class="canvases">
             <div class="main-stage-wrap">
+              <div class="canvas-ruler-corner" aria-hidden="true">px</div>
+              <svg class="canvas-ruler" data-ruler-axis="x" aria-hidden="true">
+                <g class="canvas-ruler-marks"></g><path class="canvas-ruler-cursor" hidden></path>
+              </svg>
+              <svg class="canvas-ruler" data-ruler-axis="y" aria-hidden="true">
+                <g class="canvas-ruler-marks"></g><path class="canvas-ruler-cursor" hidden></path>
+              </svg>
               <div id="main-canvas" class="canvas-stage" data-canvas="main"></div>
               <div id="selection-toolbar" class="selection-toolbar" role="toolbar" aria-label="Illustration tools" aria-orientation="horizontal" hidden data-i18n-aria-label="figura.full.febdba08">
                 <button type="button" class="icon-button" data-selection-action="group" data-icon="group" title="Group selection (⌘G / Ctrl+G)" aria-label="Group selection" data-i18n-title="figura.full.2e0a8670" data-i18n-aria-label="figura.full.2df3bdea"></button>
@@ -199,6 +206,19 @@
       <button type="submit" data-illustration-task="export" value="png">PNG</button>
       <button type="submit" data-illustration-task="export" value="pptx"><span data-i18n="figura.full.10bab578">PowerPoint</span></button>
       <button type="submit" data-illustration-task="delete" class="danger-button"><span data-i18n="figura.illustrationMenu.confirmDelete">Delete</span></button>
+    </div>
+  </form></dialog>
+  <dialog id="png-export-dialog" aria-labelledby="png-export-title"><form method="dialog">
+    <h2 id="png-export-title" data-i18n="figura.pngExport.title">Export PNG</h2>
+    <label>
+      <span data-i18n="figura.pngExport.resolution">Resolution (PPI)</span>
+      <input id="png-export-ppi" type="number" min="1" step="1" list="png-export-presets" required aria-describedby="png-export-hint">
+    </label>
+    <datalist id="png-export-presets"><option value="72"></option><option value="96"></option><option value="150"></option><option value="300"></option><option value="600"></option><option value="1200"></option></datalist>
+    <p id="png-export-hint" data-i18n="figura.pngExport.hint">Sets print resolution at the current pixel dimensions.</p>
+    <div class="actions">
+      <button id="cancel-png-export" type="button" data-i18n="figura.full.35afca3b">Cancel</button>
+      <button id="confirm-png-export" type="submit" value="export" data-i18n="figura.full.e86349d3">Export</button>
     </div>
   </form></dialog>
   <input id="asset-input" type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp" multiple hidden>

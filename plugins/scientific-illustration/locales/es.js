@@ -1,5 +1,8 @@
 // Spanish preview; other messages fall back to English.
 (function(root){root.HikariUiSpanish={...(root.HikariUiSpanish||{}),figura:{
+  "pngExport.title": "Exportar PNG",
+  "pngExport.resolution": "Resolución (PPI)",
+  "pngExport.hint": "Ajusta la resolución de impresión con las dimensiones actuales en píxeles.",
   "illustrationMenu.actions": "Acciones de ilustración",
   "illustrationMenu.export": "Exportar…",
   "illustrationMenu.duplicate": "Duplicar",

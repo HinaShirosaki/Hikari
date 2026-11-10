@@ -158,8 +158,8 @@ test('[EDGE] sequence-viewer circular nested ORFs and translation survive every 
           };
           return distance(left) - distance(right);
         });
-        assert.equal(anchors.map((anchor) => anchor.aa).join(''), 'MKMP', label);
-        assert.equal(anchors.map((anchor) => anchor.codon).join(''), codingSequence.slice(0, -3), label);
+        assert.equal(anchors.map((anchor) => anchor.aa).join(''), 'MKMP*', label);
+        assert.equal(anchors.map((anchor) => anchor.codon).join(''), codingSequence, label);
       }
     }
   }
@@ -398,18 +398,26 @@ test('[EDGE] sequence-viewer line feature renderer emits px-based span bars', ()
         name: 'Feat_A',
         type: 'promoter',
         strand: 1,
-        segments: [{ start: 2, end: 10 }]
+        segments: [{ start: 2, end: 11 }]
       },
       {
         name: 'Feat_B',
         type: 'cds',
-        strand: 1,
+        strand: -1,
         segments: [{ start: 6, end: 11 }]
+      },
+      {
+        name: 'Feat_C',
+        type: 'misc_feature',
+        segments: [{ start: 1, end: 3 }]
       }
     ]
   });
 
   assert.match(stripI18nMarkup(html), /sequence-viewer-line-features" style="width:[0-9.]+px;height:[0-9.]+px;margin-left:[0-9.]+px;"/);
+  assert.match(html, /sequence-viewer-line-feature-bar-forward[^"]*"\s+data-feature-index="0"/);
+  assert.match(html, /sequence-viewer-line-feature-bar-reverse[^"]*"\s+data-feature-index="1"/);
+  assert.match(html, /sequence-viewer-line-feature-bar sequence-viewer-line-feature-compact"\s+data-feature-index="2"/);
   const styleMatch = html.match(
     /class="sequence-viewer-line-feature sequence-viewer-line-feature-bar[^"]*"\s+data-feature-index="0"\s+style="([^"]+)"/
   );
@@ -483,9 +491,9 @@ test('[EDGE] sequence-viewer selected ORF translation context uses genomic left-
 
   assert.equal(Boolean(context), true);
   assert.equal(context.strand, -1);
-  assert.equal(context.anchors.map((anchor) => anchor.aa).join(''), 'KM');
+  assert.equal(context.anchors.map((anchor) => anchor.aa).join(''), '*KM');
   assert.equal(context.anchors[0].baseIndex < context.anchors[1].baseIndex, true);
-  assert.deepEqual(Array.from(context.anchors[0].codonPositions), [5, 4, 3]);
+  assert.deepEqual(Array.from(context.anchors[0].codonPositions), [2, 1, 0]);
 });
 test('[EDGE] sequence-viewer amino-acid substitution chooses the nearest codon on both strands', () => {
   assert.equal(sequenceViewerInternals.chooseClosestAminoAcidCodon('AAA', 'E'), 'GAA');
@@ -656,24 +664,23 @@ test('[EDGE] sequence-viewer dual-strand renderer inserts AB1 trace between refe
   assert.equal(firstTopIndex < firstTraceIndex && firstTraceIndex < firstReferenceIndex && firstReferenceIndex < firstGuideIndex && firstGuideIndex < firstAlignmentIndex && firstAlignmentIndex < firstBottomIndex, true);
   assert.equal(secondTopIndex < secondTraceIndex && secondTraceIndex < secondReferenceIndex && secondReferenceIndex < secondGuideIndex && secondGuideIndex < secondAlignmentIndex && secondAlignmentIndex < secondBottomIndex, true);
 });
-test('[EDGE] sequence-viewer ORF translation context terminates before stop codons', () => {
-  const sequence = 'ATGAAATAGCCC';
-  const feature = sequenceViewerInternals.buildOrfFeatures(sequence, 'linear', { minAaLength: 2 })[0];
-  const context = sequenceViewerInternals.buildSelectedOrfTranslationContext(sequence, feature, {
-    stopVisibility: { TAG: true }
-  });
+test('[EDGE] sequence-viewer ORF translation displays a star and terminates at the first stop codon', () => {
+  for (const codon of ['TAG', 'TAA', 'TGA']) {
+    const sequence = `ATGAAA${codon}CCC`;
+    const feature = { type: 'open_reading_frame', strand: 1, segments: [{ start: 0, end: sequence.length }] };
+    const context = sequenceViewerInternals.buildSelectedOrfTranslationContext(sequence, feature);
 
-  assert.equal(Boolean(context), true);
-  assert.equal(context.anchors.map((anchor) => anchor.displayText).join('|'), 'M|K');
-  assert.equal(context.anchors.some((anchor) => anchor.isStop), false);
-  assert.equal(context.anchors.some((anchor) => anchor.codon === 'TAG'), false);
+    assert.equal(context.anchors.map((anchor) => anchor.displayText).join(''), 'MK*');
+    const stop = context.anchors.at(-1);
+    assert.equal(stop.isStop, true);
+    assert.equal(stop.codon, codon);
+    assert.deepEqual(Array.from(stop.codonPositions), [6, 7, 8]);
+  }
 });
-test('[EDGE] sequence-viewer dual-strand renderer color-codes amino-acid cells without rendering stop labels', () => {
+test('[EDGE] sequence-viewer dual-strand renderer color-codes amino-acid cells and renders a stop star', () => {
   const sequence = 'ATGAAATAGCCC';
   const feature = sequenceViewerInternals.buildOrfFeatures(sequence, 'linear', { minAaLength: 2 })[0];
-  const context = sequenceViewerInternals.buildSelectedOrfTranslationContext(sequence, feature, {
-    stopVisibility: { TAG: true }
-  });
+  const context = sequenceViewerInternals.buildSelectedOrfTranslationContext(sequence, feature);
   const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml(sequence, [], {
     lineLength: 12,
     charAdvancePx: 8,
@@ -684,7 +691,7 @@ test('[EDGE] sequence-viewer dual-strand renderer color-codes amino-acid cells w
   });
 
   assert.match(stripI18nMarkup(html), /sequence-viewer-aa-chip/);
-  assert.doesNotMatch(stripI18nMarkup(html), /data-aa-display="TAG"/);
+  assert.match(html, /sequence-viewer-aa-chip-stop[^>]+title="Stop codon TAG"[^>]*>\*<\/button>/);
   assert.match(stripI18nMarkup(html), /data-aa-codon="ATG"/);
   assert.match(stripI18nMarkup(html), /data-aa-codon-positions="0,1,2"/);
   assert.match(stripI18nMarkup(html), /Right-click to change this amino acid/);

@@ -1,17 +1,72 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 
+async function verifyCanvasRulers({ tool, evaluate, check, win, temp }) {
+  const paint = () => evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
+  const measure = () => evaluate(`(() => {
+    const stage = document.getElementById('main-canvas'), svg = stage.querySelector(':scope > svg'), matrix = svg.getScreenCTM();
+    const axes = [...document.querySelectorAll('[data-ruler-axis]')].map(ruler => {
+      const x = ruler.dataset.rulerAxis === 'x', marker = ruler.querySelector('.canvas-ruler-cursor');
+      const labels = [...ruler.querySelectorAll('text')].map(label => {
+        const value = Number(label.textContent);
+        const origin = x ? new DOMPoint(Number(label.getAttribute('x')), 0) : new DOMPoint();
+        const actual = origin.matrixTransform(label.getScreenCTM())[x ? 'x' : 'y'];
+        const expected = (x ? new DOMPoint(value, 0) : new DOMPoint(0, value)).matrixTransform(matrix)[x ? 'x' : 'y'];
+        return { value, error: Math.abs(actual - expected) };
+      });
+      const point = marker.hasAttribute('hidden') ? null : marker.getPointAtLength(0).matrixTransform(marker.getScreenCTM());
+      return { labels, marker: point?.[x ? 'x' : 'y'] ?? null, bounds: ruler.getBoundingClientRect().toJSON() };
+    });
+    return { axes, stage: stage.getBoundingClientRect().toJSON(), scroll: [stage.scrollLeft, stage.scrollTop], scale: matrix.a };
+  })()`);
+  const ticksAlign = value => value.axes.every(axis => axis.labels.length >= 2 && axis.labels.every(label => label.error < 0.6));
+  const cursorAligns = (value, pointer) => value.axes.every((axis, index) => axis.marker !== null && Math.abs(axis.marker - pointer[index]) < 0.6);
+  await evaluate('document.getElementById("zoom-fit").click()'); await paint();
+  const before = await tool({ action: 'read' }), fit = await measure();
+  const [x, y] = fit.axes;
+  check(Math.abs(x.bounds.bottom - fit.stage.top) < 0.6 && Math.abs(y.bounds.right - fit.stage.left) < 0.6, 'The fixed X and Y rulers sit above and beside the canvas viewport');
+  check(ticksAlign(fit) && fit.axes.every(axis => axis.labels.some(label => label.value === 0)), 'Both ruler scales align to the fitted canvas and show its origin');
+  await evaluate('document.getElementById("layers-tab").click()'); await paint(); await paint();
+  const docked = await measure();
+  check(docked.stage.width < fit.stage.width && ticksAlign(docked), 'Both ruler scales refit when the Layers panel docks');
+  await evaluate('document.getElementById("close-layers").click()'); await paint(); await paint();
+  const pointer = [Math.round(fit.stage.left + fit.stage.width * 0.58), Math.round(fit.stage.top + fit.stage.height * 0.42)];
+  win.webContents.debugger.attach('1.3');
+  const move = ([x, y]) => win.webContents.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y, button: 'none', buttons: 0 });
+  try {
+    await move(pointer); await paint();
+    check(cursorAligns(await measure(), pointer), 'Pointer movement places a cursor on both rulers');
+    await fs.writeFile(path.join(temp, 'canvas-rulers-fit.png'), (await win.webContents.capturePage()).toPNG());
+    await evaluate(`for (let i = 0; i < 5; i++) document.getElementById('zoom-in').click();
+      const stage = document.getElementById('main-canvas'); stage.scrollLeft = 240; stage.scrollTop = 160;`);
+    await paint();
+    const zoomed = await measure();
+    check(zoomed.scale > fit.scale && zoomed.scroll.every(offset => offset > 0) && ticksAlign(zoomed), 'Ruler labels stay aligned through zoom and two-axis panning');
+    const fitInterval = fit.axes[0].labels[1].value - fit.axes[0].labels[0].value;
+    const zoomInterval = zoomed.axes[0].labels[1].value - zoomed.axes[0].labels[0].value;
+    check(zoomInterval < fitInterval && cursorAligns(zoomed, pointer), 'Tick intervals adapt to zoom and both cursors stay under a stationary pointer during panning');
+    await move([pointer[0], Math.round(zoomed.stage.top - 10)]); await paint();
+    check((await measure()).axes.every(axis => axis.marker === null), 'Both ruler cursors clear when the pointer leaves the stage');
+  } finally {
+    win.webContents.debugger.detach();
+    await evaluate('document.getElementById("zoom-fit").click()'); await paint();
+  }
+  check((await tool({ action: 'read' })).revision === before.revision, 'Ruler interaction leaves the saved scene revision intact');
+  check(await evaluate(`import('./artwork.mjs').then(async ({ svgSource }) =>
+    !(await svgSource(illustrationWorkspace.getDocument(), 'main')).includes('canvas-ruler'))`), 'Rulers are outside the exported artwork');
+}
+
 async function verifyCanvasLayout({ tool, evaluate, check, win, pause, temp }) {
   const measure = () => evaluate(`(() => {
     const box=id=>{const r=document.getElementById(id).getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,right:r.right,bottom:r.bottom}};
     const work=document.querySelector('.work-area').getBoundingClientRect(),panel=document.getElementById('layer-inspector');
-    return {stage:box('main-canvas'),panel:box('layer-inspector'),tools:box('workspace-tools'),work:{width:work.width,height:work.height,gap:parseFloat(getComputedStyle(document.querySelector('.work-area')).columnGap)},hidden:panel.hidden,inert:panel.inert,expanded:document.getElementById('layers-tab').getAttribute('aria-expanded')};
+    return {stage:box('main-canvas'),rulerWidth:document.querySelector('[data-ruler-axis="y"]').getBoundingClientRect().width,panel:box('layer-inspector'),tools:box('workspace-tools'),work:{width:work.width,height:work.height,gap:parseFloat(getComputedStyle(document.querySelector('.work-area')).columnGap)},hidden:panel.hidden,inert:panel.inert,expanded:document.getElementById('layers-tab').getAttribute('aria-expanded')};
   })()`);
   await win.webContents.executeJavaScript('qaRailRuntime.setExpanded(false)');
   await evaluate('document.getElementById("close-layers").click();document.getElementById("zoom-fit").click()');
   await pause(80);
   const before = await tool({ action: 'read' }), images = await tool({ action: 'render', canvas: 'main' }), closed = await measure();
-  check(closed.hidden && closed.inert && closed.expanded === 'false' && Math.abs(closed.stage.width+closed.tools.width+8-closed.work.width)<1,
+  check(closed.hidden && closed.inert && closed.expanded === 'false' && Math.abs(closed.stage.width+closed.rulerWidth+closed.tools.width+8-closed.work.width)<1,
     'Closed Layers releases the entire editing width and removes its controls from focus');
   check(closed.stage.height > closed.work.height * 0.85, 'The main stage dominates the editing height');
   const matrix = () => evaluate('(()=>{const m=document.querySelector("#main-canvas > svg").getScreenCTM();return [m.a,m.d,m.e,m.f]})()');
@@ -55,7 +110,7 @@ async function verifyCanvasLayout({ tool, evaluate, check, win, pause, temp }) {
     win.setSize(width, 800); await pause(80);
     await evaluate('document.getElementById("layers-tab").click()'); await pause(80);
     const value = await measure(); narrow.push({ width, ...value });
-    check(!value.hidden && value.panel.right <= width && value.panel.width > 200 && Math.abs(value.stage.width+value.tools.width+8-value.work.width)<1,
+    check(!value.hidden && value.panel.right <= width && value.panel.width > 200 && Math.abs(value.stage.width+value.rulerWidth+value.tools.width+8-value.work.width)<1,
       `${width}px Layers overlays in bounds without reducing the canvas width`);
     check(await evaluate('document.documentElement.scrollWidth<=innerWidth && document.querySelector(".canvas-controls").getBoundingClientRect().bottom<=innerHeight && document.getElementById("complexity").getBoundingClientRect().width>=60'),
       `${width}px keeps the canvas controls inside the bounded workspace`);
@@ -73,4 +128,4 @@ async function verifyCanvasLayout({ tool, evaluate, check, win, pause, temp }) {
   await fs.writeFile(path.join(temp, 'canvas-layout.json'), JSON.stringify({ closed, opened, narrow, unchangedRevision: before.revision === after.revision, unchangedPreviews: true }, null, 2));
 }
 
-module.exports = { verifyCanvasLayout };
+module.exports = { verifyCanvasLayout, verifyCanvasRulers };

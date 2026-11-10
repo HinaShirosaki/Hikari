@@ -23,6 +23,7 @@ export function buildAssistantResponseMessage({
       notebook_draft: response.notebookDraftWorkflow,
       notebook_append: response.notebookAppendWorkflow,
       notebookAppend: response.notebookAppendWorkflow,
+      ...(response.protocolEdits?.length ? { protocol_edits: response.protocolEdits } : {}),
       protocol_generation: response.protocolGeneration,
       codex_agent: response.codexAgent,
       user_question: response.userQuestion,
