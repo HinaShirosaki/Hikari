@@ -42,7 +42,7 @@ button:disabled { opacity: .5; cursor: default; }
 input, select, textarea { background: var(--theme-surface-elevated); border: 1px solid var(--theme-border); border-radius: 6px; padding: 6px 8px; min-width: 0; width: 100%; }
 input::placeholder, textarea::placeholder { color: var(--theme-text-muted); }
 textarea { resize: vertical; }
-.canvas-text-editor { position: fixed; z-index: 10; left: 0; top: 0; margin: 0; min-width: 0; border: 0; border-radius: 0; resize: none; overflow: hidden; transform-origin: 0 0; background: #ffffff; color-scheme: light; outline: 1px solid var(--theme-accent); outline-offset: 1px; font-optical-sizing: none; font-kerning: normal; font-synthesis: style; }
+.canvas-text-editor { position: fixed; z-index: 1; left: 0; top: 0; margin: 0; min-width: 0; border: 0; border-radius: 0; resize: none; overflow: hidden; transform-origin: 0 0; background: #ffffff; color-scheme: light; outline: 1px solid var(--theme-accent); outline-offset: 1px; font-optical-sizing: none; font-kerning: normal; font-synthesis: style; }
 .canvas-text-editor:focus-visible { outline-width: 1px; outline-offset: 1px; }
 .illustration-workspace {
   position: relative;
@@ -243,7 +243,7 @@ body.theme-night .canvas-context-menu > .danger-button:is(:hover, :focus-visible
 .smart-guide-label { fill: #8258c2; stroke: #fff; paint-order: stroke; font-family: Arial, sans-serif; stroke-linejoin: round; }
 .smart-guide-toggle { padding: 8px 8px 0; margin-bottom: 4px; font-size: .75rem; color: var(--theme-text); cursor: pointer; }
 .smart-guide-hint { margin: 0 8px 6px; max-width: 190px; color: var(--theme-text-muted); font-size: .6875rem; line-height: 1.5; }
-.is-area-selecting .selection, .is-area-selecting .selection-members { display: none; }
+.is-area-selecting .selection, .is-area-selecting .selection-members, .is-editing-text .selection { display: none; }
 .canvas-heading #selection-tool { width: auto; max-width: 100%; font-size: .6875rem; padding: 4px 6px; background: transparent; border-color: transparent; cursor: pointer; }
 .canvas-heading #selection-tool:hover, .canvas-heading #selection-tool:focus-visible { background: var(--theme-surface-subtle); }
 .canvas-heading #selection-tool option { background: var(--theme-surface-elevated); color: var(--theme-text); }
@@ -396,8 +396,9 @@ input[type="color"] { width: 28px; height: 28px; padding: 3px !important; cursor
 .object-actions > span { flex: 1; }
 .object-actions .ui-icon { width: 16px; height: 16px; }
 .danger-button:hover { color: var(--theme-danger); }
-/* Always in flow: collapsing it when empty resized the canvas on every save. */
-#status { color: var(--theme-text-muted); font-size: 0.625rem; line-height: 1.4; min-height: 14px; }
+/* Floats over the canvas corner, so messages never take height from (or resize) the canvas. */
+#status { position: absolute; z-index: 2; left: calc(var(--canvas-ruler-size) + 8px); bottom: 8px; max-width: calc(100% - var(--canvas-ruler-size) - 16px); color: var(--theme-text-muted); font-size: 0.625rem; line-height: 1.4; pointer-events: none; }
+#status:not(:empty) { padding: 2px 8px; border-radius: 6px; background: var(--theme-surface-elevated); box-shadow: 0 1px 4px var(--theme-shadow-color-subtle); }
 .check { flex-direction: row; align-items: center; }
 .check input { width: auto; accent-color: var(--theme-accent); }
 .actions { display: flex; align-items: center; gap: 6px; }

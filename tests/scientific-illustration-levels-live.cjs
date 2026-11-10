@@ -72,7 +72,7 @@ async function snapshot(name, inspectionRunId = '') {
     await fs.writeFile(path.join(output, `${name}-full.png`), Buffer.from(full.data_url.split(',')[1], 'base64'));
     assert.equal(full.width, read.canvases.main.width, 'Full export preserves the canvas width');
     assert.equal(full.height, read.canvases.main.height, 'Full export preserves the canvas height');
-    await fs.writeFile(path.join(output, `${name}.svg`), await evaluate(`illustrationWorkspace.exportSvg('main')`));
+    await fs.writeFile(path.join(output, `${name}.svg`), await evaluate(`(async()=>(await import("./artwork.mjs")).svgSource(await illustrationWorkspace.getExportDocument(),"main"))()`));
     await fs.writeFile(path.join(output, `${name}-scene.json`), JSON.stringify(await evaluate('illustrationWorkspace.getDocument()')));
   }
   for (const object of read.objects.filter(item => item.type === 'raster')) {

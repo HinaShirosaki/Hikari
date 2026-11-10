@@ -26,14 +26,10 @@ const url = file => pathToFileURL(path.join(root, file)).href;
 
 async function run() {
   await app.whenReady();
-  servers = registerPluginIpc({ app, ipcMain, session, dialog, fs, runGit: async (command, args, options) => {
+  servers = registerPluginIpc({ app, ipcMain, session, dialog, fs, downloadRepository: async (repositoryUrl, checkout) => {
     cloneCalls += 1;
-    assert.equal(command, 'git');
-    assert.equal(options.env.GIT_TERMINAL_PROMPT, '0');
     if (cloneGate) await cloneGate;
-    const checkout = args.at(-1);
-    await fs.mkdir(checkout);
-    const invalid = args.at(-2).endsWith('/invalid.git');
+    const invalid = repositoryUrl.endsWith('/invalid');
     await fs.writeFile(path.join(checkout, 'plugin.json'), JSON.stringify({
       id: 'github-demo', name: 'GitHub Demo', version: '1.0.0', tool: true,
       permissions: invalid ? ['unknown'] : ['storage']
@@ -157,7 +153,7 @@ async function run() {
   const cloneCount = cloneCalls;
   await installFromGitHub('https://github.com/owner/different-repo-name.git');
   await waitFor('document.getElementById("setting-plugins-github-install-btn").disabled');
-  check(await evaluate('document.getElementById("setting-plugins-github-url").disabled && document.getElementById("setting-plugins-add-btn").disabled && document.getElementById("setting-plugins-reload-btn").disabled && document.getElementById("setting-plugins-status").textContent.includes("Cloning")'), 'Install shows progress and blocks competing add/reload actions');
+  check(await evaluate('document.getElementById("setting-plugins-github-url").disabled && document.getElementById("setting-plugins-add-btn").disabled && document.getElementById("setting-plugins-reload-btn").disabled && document.getElementById("setting-plugins-status").textContent.includes("Downloading")'), 'Install shows progress and blocks competing add/reload actions');
   await evaluate('document.getElementById("setting-plugins-github-form").dispatchEvent(new Event("submit", {cancelable:true}))');
   releaseClone(); cloneGate = null;
   await waitFor('qaState.settings.plugins.length === 2 && !document.getElementById("setting-plugins-github-install-btn").disabled');

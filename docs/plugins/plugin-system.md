@@ -245,7 +245,7 @@ is the minimal one, reading pKa values through `chemicals.list`.
      the spot; a rejected folder shows the exact reason in the status line. The
      plugin is saved turned on.
    - **Install from GitHub** with a root `https://github.com/owner/repo` URL.
-     Hikari shallow-clones the default branch into its app data, names the
+     Hikari downloads the default branch into its app data, names the
      folder after the manifest `id`, and applies the same validation. A plugin
      that requests any permission is saved turned **off**: a pasted URL is code
      the user has not read, so they review its host access on the row and turn
@@ -494,11 +494,12 @@ directory picker reuses `storage:pick-directory`.
 `window.hikariApi.installPluginFromGitHub(url, installedPluginIds)` and
 implemented in
 [`install-github-plugin.js`](../../src/main/lib/install-github-plugin.js). It
-shallow-clones over HTTPS only — no submodules, Git LFS contents, hooks, or
-credential prompts — into a `.install-*` staging folder under
-`<userData>/plugin-repositories/`, rejects symbolic links, renames the checkout
+downloads GitHub's `codeload` tarball of the default branch (`tar.gz/HEAD`,
+public repositories only, no Git needed) and unpacks it with the system bsdtar
+(shared with the tutorial download) into a `.install-*` staging folder under
+`<userData>/plugin-repositories/`, rejects symbolic links, renames the folder
 to the manifest `id`, validates it with `inspectPluginFolder`, and only then
-moves it to a permanent `<uuid>/<id>` folder. Failed clones, failed validation,
+moves it to a permanent `<uuid>/<id>` folder. Failed downloads, failed validation,
 and duplicate ids remove the staging folder. The result adds `repositoryUrl`,
 which the renderer uses to save a plugin that requests permissions turned off
 (§2). Publishing rules for repository authors are in
@@ -841,9 +842,9 @@ folder to a **first-class module** wired into the codebase:
   install, atomic partial patches that roll back on a failed save and store
   only overrides, imported state that never trusts a schema without the grant,
   and reads, writes, and `settings.changed` confined to the owning frame.
-- The four `GitHub …` tests (`github-install.js`) — URL normalization, a real
-  clone from a local fixture repository, cleanup and messages for every failure
-  (missing Git, missing Command Line Tools, timeout, clone error, bad
+- The `GitHub …` tests (`github-install.js`) — URL normalization, a real
+  tarball unpacked with the system tar, cleanup and messages for every failure
+  (missing or private repository, GitHub error, offline, timeout, bad
   manifest, symlinks), and one install at a time.
 - Service plugins have their own suite — see
   [service-plugins.md §7](service-plugins.md#7-testing).

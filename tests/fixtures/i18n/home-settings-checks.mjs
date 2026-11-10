@@ -174,7 +174,7 @@ export async function checkLocalizedHomeAndSettings({ core, i18n, check }) {
   pluginController.render();
   const installing = pluginController.onInstallFromGitHub();
   i18n.setLocale('en'); i18n.setLocale('es');
-  check(install.disabled && install.textContent === 'Instalando…' && pluginStatus.textContent === 'Clonando y validando el complemento…'
+  check(install.disabled && install.textContent === 'Instalando…' && pluginStatus.textContent === 'Descargando y validando el complemento…'
     && url.value === 'https://github.com/example/i18n-fixture', 'Pending plugin installs retain translated progress and the repository URL');
   finish({ ok: true, id: 'qa-installed', name: 'Installed plugin <&>', path: '/fixture/plugin', repositoryUrl: 'https://github.com/example/i18n-fixture', permissions: ['settings'], settings: plugin.settings });
   await installing;

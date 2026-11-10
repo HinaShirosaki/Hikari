@@ -108,7 +108,7 @@ async function verifyPlacement({ tool, evaluate, check, win, pause, temp }) {
     check(metrics.opticalSizing === 'none' && Math.abs(metrics.liveWidth - metrics.previewWidth) <= 2 && Math.abs(metrics.liveHeight - metrics.previewHeight) <= 2,
       `Inter preview matches the painted live text (${fontWeight}, italic=${italic}): ${JSON.stringify(metrics)}`);
     await fs.writeFile(path.join(temp, `font-${fontWeight}-live.png`), liveImage.toPNG());
-    const exported = await evaluate('illustrationWorkspace.exportSvg("main")');
+    const exported = await evaluate('(async()=>(await import("./artwork.mjs")).svgSource(await illustrationWorkspace.getExportDocument(),"main"))()');
     check(exported.includes('data:font/woff2;base64,') && exported.includes('<text') && exported.includes('iiiiiiiiWWWW'), 'Export embeds Inter and preserves editable text');
     await fs.writeFile(path.join(temp, `font-${fontWeight}.svg`), exported);
   }
