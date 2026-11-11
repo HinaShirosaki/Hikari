@@ -12,11 +12,13 @@ const {
 const {
   bufferLooksLikePdf,
   createDownloadError,
+  fileLooksLikePdf,
   isExplicitFalse,
   normalizeHeadersObject,
   readResponseBuffer,
   readResponseText
 } = require('./http-response.js');
+const { pdfNamesRequestedPaper } = require('./pdf-identity.js');
 const { resolvePaperCollectionName } = require('./storage-paths.js');
 
 // Getting the bytes onto disk: the direct fetch, the browser-session fallback
@@ -154,12 +156,12 @@ function createPaperTransfer({
     const source = ensureObject(input);
 
     updateJob(downloadId, {
-      status: 'awaiting_browser_click',
+      status: isExplicitFalse(source.simulate_one_click) ? 'awaiting_browser_click' : 'resolving_browser_pdf',
       method: 'browser',
       browser_session_active: true,
       browser_entry_url: extraction.browser_entry_url,
       selected_pdf_url: extraction.selected_pdf_url,
-      summary: 'Waiting for the browser-assisted download session.'
+      summary: 'Opening the browser-assisted paper download session.'
     });
 
     const result = await startDefaultBrowserDownloadSession({
@@ -168,7 +170,7 @@ function createPaperTransfer({
       selectedPdfUrl: extraction.selected_pdf_url,
       targetFilePath: target.target_file_path,
       storagePath: target.storage_path,
-      simulateOneClick: source.simulate_one_click !== false,
+      simulateOneClick: !isExplicitFalse(source.simulate_one_click),
       timeoutMs: Number(source.timeout_ms || source.timeoutMs) || 120000,
       updateProgress: (patch) => updateJob(downloadId, patch)
     });
@@ -191,6 +193,19 @@ function createPaperTransfer({
       await fsPromises.writeFile(target.target_file_path, Buffer.from(String(result.data_base64), 'base64'));
     }
 
+    const filePath = cleanText(result.file_path, 4000) || target.target_file_path;
+    const rejectBrowserFile = async (message) => {
+      if (filePath === target.target_file_path) await fsPromises.rm(filePath, { force: true });
+      throw createDownloadError(message, { browser_required: true });
+    };
+    if (!await fileLooksLikePdf(filePath)) {
+      await rejectBrowserFile('Browser download did not contain a PDF.');
+    }
+    // In manual mode the person chose the file, so only automatic clicks are checked.
+    if (!isExplicitFalse(source.simulate_one_click) && !await pdfNamesRequestedPaper(filePath, source)) {
+      await rejectBrowserFile('Browser download did not match the requested paper.');
+    }
+
     return updateJob(downloadId, {
       ok: true,
       status: 'completed',
@@ -199,7 +214,7 @@ function createPaperTransfer({
       browser_session_id: browserSessionId,
       browser_session_terminated: Boolean(browserSessionId),
       file_name: cleanText(result.file_name, 240) || target.file_name,
-      file_path: cleanText(result.file_path, 4000) || target.target_file_path,
+      file_path: filePath,
       relative_path: cleanText(result.relative_path, 2000) || target.relative_path,
       received_bytes: Number(result.received_bytes) || Number(result.total_bytes) || 0,
       total_bytes: Number(result.total_bytes) || Number(result.received_bytes) || 0,

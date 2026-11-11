@@ -696,7 +696,6 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePdfToMarkd
         const viewerUrl = 'https://publisher.example.org/pdf/viewer?id=paper-1';
         const result = await runtime.downloadPaper({
           paper_pdf_url: viewerUrl,
-          page_url: 'https://publisher.example.org/article/paper-1',
           paper_title: 'Viewer-backed paper',
           linked_type: 'literature-search',
           linked_name: 'Atlas',
@@ -708,8 +707,10 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePdfToMarkd
         assert.equal(openedUrls[0], viewerUrl);
         assert.deepEqual(forcedDownloadUrls, []);
         assert.equal(executedScripts.length >= 2, true);
-        assert.equal(executedScripts.every((script) => script.includes('hikari-paper-download-notice')), true);
-        assert.equal(executedScripts.every((script) => script.includes('Click the Download button on this page.')), true);
+        const noticeScripts = executedScripts.filter((script) => script.includes('hikari-paper-download-notice'));
+        assert.equal(noticeScripts.length >= 1, true);
+        assert.equal(noticeScripts.every((script) => script.includes('Hikari will find and download the PDF automatically.')), true);
+        assert.equal(executedScripts.some((script) => script.includes('paperAutoDownloadPage')), true);
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
@@ -837,10 +838,12 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePdfToMarkd
         });
 
         assert.equal(popupDecision?.action, 'allow');
+        assert.equal(popupDecision?.outlivesOpener, true);
         assert.equal(popupDecision?.overrideBrowserWindowOptions, undefined);
         assert.equal(childWindowShown, true);
         assert.equal(childExecutedScripts.length >= 1, true);
-        assert.equal(childExecutedScripts.every((script) => script.includes('hikari-paper-download-notice')), true);
+        assert.equal(childExecutedScripts.some((script) => script.includes('hikari-paper-download-notice')), true);
+        assert.equal(childExecutedScripts.some((script) => script.includes('paperAutoDownloadPage')), true);
         assert.equal(result.ok, true);
         assert.equal(result.method, 'browser');
       } finally {

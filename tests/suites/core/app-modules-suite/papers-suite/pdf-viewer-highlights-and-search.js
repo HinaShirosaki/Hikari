@@ -443,6 +443,29 @@ test('papers hover markup shows escaped saved comments and labels linked deletio
   assert.doesNotMatch(markup, /<script>/);
   assert.doesNotMatch(buildHighlightPopoverMarkup({ text: 'Text' }, { canDelete: false }), /data-paper-highlight-delete/);
 });
+test('papers hides placeholder authors in comment popovers and pin labels', () => {
+  const viewerPath = path.join(__dirname, 'src/renderer/modules/papers/pdf-viewer');
+  const { buildHighlightCommentPopoverMarkup } = loadEsmStyleModule(path.join(viewerPath, 'pdf-viewer-search.js'));
+  const { renderPins } = loadEsmStyleModule(path.join(viewerPath, 'pdf-viewer-overlays.js'));
+  const overlay = createMockDocument().createElement('div');
+  const localComment = { id: 'local', pageNumber: 1, anchorX: 0.4, anchorY: 0.2, author: 'Local user', text: 'Saved note' };
+  const unnamedComment = { ...localComment, id: 'unnamed', author: undefined };
+  const namedComment = { ...localComment, id: 'named', author: 'Alice' };
+
+  for (const comment of [localComment, unnamedComment]) {
+    const markup = buildHighlightCommentPopoverMarkup(comment);
+    assert.match(markup, /<p>Saved note<\/p>/);
+    assert.doesNotMatch(markup, /<strong>|Local user/);
+  }
+
+  renderPins({
+    pageRecords: [{ pageNumber: 1, overlay }],
+    comments: [localComment, unnamedComment, namedComment],
+    isActive: true
+  });
+  const labels = overlay.querySelectorAll('[aria-label]').map((pin) => pin.getAttribute('aria-label'));
+  assert.deepEqual(labels, ['Comment', 'Comment', 'Comment by Alice']);
+});
 test('papers directly deletes stored highlights and linked notes without touching other annotations', async () => {
   const harness = buildPapersManagementHarness();
   await openPaperInHarness(harness);

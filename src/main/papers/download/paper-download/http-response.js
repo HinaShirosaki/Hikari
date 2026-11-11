@@ -1,5 +1,6 @@
 'use strict';
 
+const fsPromises = require('node:fs/promises');
 const path = require('node:path');
 const { ensureObject } = require('../../../lib/normalize.js');
 const { readResponseText } = require('../../../lib/web-text.js');
@@ -80,6 +81,20 @@ function bufferLooksLikePdf(buffer) {
   return buffer.subarray(0, 5).toString('utf8') === '%PDF-';
 }
 
+async function fileLooksLikePdf(filePath) {
+  let handle;
+  try {
+    handle = await fsPromises.open(filePath, 'r');
+    const header = Buffer.alloc(5);
+    await handle.read(header, 0, header.length, 0);
+    return bufferLooksLikePdf(header);
+  } catch {
+    return false;
+  } finally {
+    await handle?.close();
+  }
+}
+
 async function readResponseBuffer(response, onChunk) {
   if (Buffer.isBuffer(response?.body)) {
     const chunk = response.body;
@@ -130,6 +145,7 @@ async function readResponseBuffer(response, onChunk) {
 module.exports = {
   bufferLooksLikePdf,
   createDownloadError,
+  fileLooksLikePdf,
   inferPdfFileName,
   isExplicitFalse,
   normalizeHeadersObject,

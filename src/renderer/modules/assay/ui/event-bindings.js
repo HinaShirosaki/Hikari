@@ -60,7 +60,10 @@ export function bindAssayEvents({
   elements.assayAnalysisGroupByInput?.addEventListener('change', analysisView.onAnalysisMethodChange);
   elements.assayAnalysisDataSourceInput?.addEventListener('change', analysisView.onAnalysisDataSourceChange);
   elements.assayAnalysisXAxisInput?.addEventListener('change', analysisView.onAnalysisMethodChange);
-  elements.assayAnalysisPolyOrderInput?.addEventListener('change', analysisView.onAnalysisConfigChange);
+  // The order applies as it is typed; a blank or out-of-range box waits.
+  elements.assayAnalysisPolyOrderInput?.addEventListener('input', (event) => {
+    if (event.target.value !== '' && event.target.validity.valid) analysisView.onAnalysisConfigChange(event);
+  });
   elements.assayAnalysisSubtotalsInput?.addEventListener('change', analysisView.onAnalysisConfigChange);
   elements.assayAnalysisHighControlInput?.addEventListener('change', analysisView.onAnalysisConfigChange);
   elements.assayAnalysisLowControlInput?.addEventListener('change', analysisView.onAnalysisConfigChange);

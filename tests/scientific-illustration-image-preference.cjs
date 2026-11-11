@@ -17,7 +17,7 @@ async function verifyImageGenerationPreference({ tool, evaluate, check, win, pau
   await evaluate('document.getElementById("figure-menu").open=true;document.getElementById("image-generation-enabled").click();document.getElementById("image-generation-percent").value="77";document.getElementById("image-generation-percent").dispatchEvent(new Event("input",{bubbles:true}));document.getElementById("image-generation-percent").dispatchEvent(new Event("change",{bubbles:true}))');
   const changed = await waitForPercent(75);
   check(await evaluate('document.getElementById("figure-menu").open && document.getElementById("image-generation-enabled").checked && !document.getElementById("image-generation-percent").disabled && document.getElementById("image-generation-value").textContent==="75%" && document.getElementById("image-generation-percent").step==="25" && document.getElementById("status").textContent===""'), 'Slider snaps 77 to 75 in quarter steps and saves rapid changes without closing the menu');
-  check(changed.agent_contract.instructions.includes('Image generation target: 75%') && changed.agent_contract.instructions.includes('always remain separate SVG or text objects, even at 100%'), 'Actual MCP read supplies the snapped user target and mandatory SVG geometry rules');
+  check(changed.agent_contract.instructions.includes('Image generation target: 75%') && changed.agent_contract.instructions.includes('exact scientific geometry as separate SVG layers'), 'Actual MCP read supplies the snapped user target and mandatory SVG geometry rules');
   win.webContents.debugger.attach('1.3');
   try {
     await evaluate('document.getElementById("image-generation-percent").focus()');
@@ -35,6 +35,7 @@ async function verifyImageGenerationPreference({ tool, evaluate, check, win, pau
     request_id: randomUUID(), operations: [{ op: 'image_generation', imageGenerationPercent: 100 }] })).ok, 'Agent can adjust the percentage through its public operation');
   await pause(80);
   check(await evaluate('document.getElementById("image-generation-percent").value==="100" && document.getElementById("image-generation-value").textContent==="100%"'), 'Agent preference edits update the same user controls');
+  check((await read()).agent_contract.instructions.includes('Assign every eligible component to image generation, including flat or simple subjects'), 'The 100% contract includes flat and simple subjects');
   for (const [percent, label] of [[25, 'Mostly SVG'], [50, 'Balanced'], [75, 'Mostly image generation'], [100, 'All eligible artwork']]) {
     await evaluate(`document.getElementById("image-generation-percent").value=${JSON.stringify(String(percent))};document.getElementById("image-generation-percent").dispatchEvent(new Event("change",{bubbles:true}))`);
     const current = await waitForPercent(percent);

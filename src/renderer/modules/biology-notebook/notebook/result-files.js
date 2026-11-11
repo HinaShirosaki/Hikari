@@ -13,6 +13,7 @@ import { mergeFilesIntoInput } from '../../../lib/file-drop.js';
 // along with them, and the queue that serializes agent appends into Results.
 function createNotebookResultFiles({
   elements,
+  refreshNotesPreview = () => {},
   resultFileAttachmentController,
   getActiveEntry,
   getSampleLinkDrafts,
@@ -110,6 +111,7 @@ function createNotebookResultFiles({
     }
     const current = String(notebookResult.value || '').trim();
     notebookResult.value = current ? `${current}\n${cleanLine}` : cleanLine;
+    refreshNotesPreview();
   }
 
   // Overlapping appends both read notebookResult.value before either writes it,

@@ -19,7 +19,7 @@ use `src/main/lib/llm/` but must not import agent tools or controllers.
 | Folder | What it does |
 | --- | --- |
 | `search/` | `literature_search`: PubMed, Europe PMC, Crossref, UniProt, and web results, with preferred-journal filtering (journal filters apply only to PubMed, Europe PMC, and Crossref) and candidate scoring. |
-| `download/` | `paper_download`: finds PDF URLs, downloads over HTTP, falls back to a browser-assisted download, verifies the PDF, and reconciles with saved receipts (`.hikari-downloads/`) so a repeat request reuses the file. |
+| `download/` | `paper_download`: finds PDF URLs, downloads over HTTP, falls back to a browser with automatic PDF discovery/clicking, verifies the PDF, and reconciles with saved receipts (`.hikari-downloads/`) so a repeat request reuses the file. |
 | `parse/` | PDF text extraction (pdf.js), layout cleanup (running headers, tables), figure extraction to PNG, and the Markdown written under `KnowledgeBase/papers.md/<paper>/`. |
 | `identity/` | DOI / PMID / PMCID / title normalization and identity matching, used to de-duplicate papers. |
 | `store/` | The knowledge index (`KnowledgeBase/knowledge.index.sqlite`: paper identity and locations only), per-paper `meta.json`, and experiment **intake** (see below). |
@@ -28,6 +28,35 @@ use `src/main/lib/llm/` but must not import agent tools or controllers.
 | `workflow/` | Multi-step literature research: search → acquire → read, the Codex paper-context sub-agent, research sessions, and line-range payloads. |
 | `finding/` | The scheduled **paper finder**: task input, frequency and project binding, result parsing, and marking papers already saved. Runs as a scheduled Codex task (`src/main/scheduled-tasks/`). |
 | `shared/` | Paper comment/annotation context and the review-journal filter (skips review venues without dropping journals such as *Physical Review Letters*). |
+
+## Automatic browser downloads
+
+The browser fallback includes a bundled helper in
+`download/paper-download/browser-auto-download.js`. It looks for article PDF
+metadata, PDF links, and clearly labeled PDF controls on publisher pages and
+viewers, including popups, open shadow roots, and embedded viewer frames. It
+polls for controls that appear after page load or sign-in and bounds attempts
+to avoid repeated clicks. Downloads use the existing persistent publisher
+session and save into the requested paper collection, then close the browser.
+
+Sign-in, verification, subscriptions, and purchases remain user actions. The
+helper skips reference/supplement downloads and unrelated controls. A page it
+cannot recognize stays available for manual downloading until the normal
+session timeout. `simulate_one_click: false` retains the manual browser flow.
+Browser results must start with the PDF header before receipts or knowledge
+intake are written. Automatic downloads must also name the requested DOI or
+title on their first page; a mismatch is removed and reported, while scanned
+PDFs with no readable text pass. Closing or failing a browser session does not
+reopen it. The session timeout covers waiting for a download, then any stall
+once bytes are flowing, so a slow transfer that keeps progressing is not
+canceled.
+
+This is a host-owned browser helper, not an installable workspace plugin;
+sandboxed workspace plugins do not get access to publisher DOM or cookies.
+`node tests/paper-browser-auto-download-selfcheck.js` checks cancellation,
+cleanup, and invalid files. `node node_modules/electron/cli.js
+tests/paper-browser-auto-download-electron.cjs` checks real browser downloads
+against local publisher fixtures using a disposable profile and storage.
 
 ## Intake
 

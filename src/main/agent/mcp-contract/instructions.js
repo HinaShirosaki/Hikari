@@ -7,6 +7,7 @@ const HIKARI_MCP_TOOL_NAMES = Object.freeze([
   'notebook_list',
   'protocol_lookup',
   'protocol_generation',
+  'protocol_edit',
   'notebook_draft',
   'notebook_suggest',
   'notebook_append',

@@ -1,6 +1,7 @@
 import { createSavedNotebookAppend } from '../modules/biology-notebook/agent/saved-append.js';
 import { initAgentChat } from '../modules/agent-chat/index.js';
 import { createOpenRecordCitation } from './agent-record-citations.js';
+import { createAgentProtocolEdit } from './agent-protocol-edit.js';
 
 function createAgentChatOptions({
   state,
@@ -28,6 +29,7 @@ function createAgentChatOptions({
     },
     onAppendNotebookEntry: createSavedNotebookAppend({ state, persist,
       onChanged: rendererServices.notebook.handleAgentNotebookEntriesChanged }),
+    onEditProtocolSteps: createAgentProtocolEdit({ state, persist, modules, rendererServices }),
     onOpenPaperCitation: (source) => {
       showView(views.PAPERS);
       return modules.papers?.openPaperCitation?.(source);

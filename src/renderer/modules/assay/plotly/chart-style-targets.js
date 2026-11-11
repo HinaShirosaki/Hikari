@@ -49,25 +49,27 @@ export function axisStylePatch(style, axis, key, value) {
 
 export function validateAxisRange(scale, range) {
   if (range?.auto !== false) return '';
-  if (!Number.isFinite(range.min) || !Number.isFinite(range.max) || range.min >= range.max) {
+  const limits = [range.min, range.max].filter((value) => value !== null);
+  if (!limits.every(Number.isFinite) || (limits.length === 2 && range.min >= range.max)) {
     return 'Enter a minimum smaller than the maximum.';
   }
-  if (scale !== 'linear' && (range.min <= 0 || range.max <= 0)) {
+  if (scale !== 'linear' && limits.some((value) => value <= 0)) {
     return 'Logarithmic limits must both be greater than zero.';
   }
   return '';
 }
 
 export function plotlyAxisRange(scale, range) {
-  if (!range || range.auto !== false || validateAxisRange(scale, range)) return null;
-  return scale === 'linear' ? [range.min, range.max] : [Math.log10(range.min), Math.log10(range.max)];
+  if (range?.auto !== false || (range.min === null && range.max === null) || validateAxisRange(scale, range)) return null;
+  const limits = [range.min, range.max];
+  return scale === 'linear' ? limits : limits.map((value) => value === null ? null : Math.log10(value));
 }
 
 export function figureClassicPatch() {
   const defaults = createDefaultChartStyle();
   const keys = [
     'frameStyle', 'frameStroke', 'frameStrokeWidth', 'backgroundColor', 'showVerticalGrid',
-    'showHorizontalGrid', 'gridColor', 'gridStrokeWidth', 'axisStyles', 'tickDir', 'tickLen',
+    'showHorizontalGrid', 'gridColor', 'gridStrokeWidth', 'gridStyle', 'axisStyles', 'tickDir', 'tickLen',
     'minorTicks', 'tickFormat', 'palette', 'seriesColors', 'seriesShapes', 'seriesStyles',
     'seriesColor', 'replicateStyle', 'pointShape', 'pointSize', 'markerFill', 'opacity', 'lineStyle', 'lineWidth',
     'barOutlineColor', 'barOutlineWidth', 'barCornerRadius', 'errorColor', 'errorCapWidth',

@@ -79,6 +79,9 @@
                   <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="move-entry" hidden data-i18n="dna.ui.moveToFolder">Move to Folder...</button>
                   <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="recognize-backbone" hidden data-i18n="dna.ui.recognizeBackboneAndInsert">Recognize Backbone/Insert...</button>
                   <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="assemble" hidden data-i18n="dna.full.2f52a4d2">Assemble DNA…</button>
+                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="export-gbk" hidden data-i18n="dna.ui.exportGbk">Export as GenBank (.gbk)</button>
+                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="export-fasta" hidden data-i18n="dna.ui.exportFasta">Export as FASTA</button>
+                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="export-fastq" hidden data-i18n="dna.ui.exportFastq">Export as FASTQ</button>
                   <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="rename-folder" hidden data-i18n="dna.ui.renameFolder">Rename Folder</button>
                   <button type="button" class="sequence-viewer-context-item sequence-viewer-context-item-danger" data-sequence-library-action="delete-folder" hidden data-i18n="dna.ui.deleteFolder">Delete Folder</button>
                 </div>
@@ -304,19 +307,11 @@
                 <datalist id="sequence-viewer-feature-editor-type-options"></datalist>
               </label>
               <label>
-                <span data-i18n="dna.ui.strand">Strand</span>
+                <span data-i18n="dna.ui.orientation">Orientation</span>
                 <select id="sequence-viewer-feature-editor-strand">
                   <option value="1" data-i18n="dna.ui.forward">Forward (+)</option>
                   <option value="-1" data-i18n="dna.ui.reverse">Reverse (-)</option>
                 </select>
-              </label>
-              <label>
-                <span data-i18n="dna.ui.start">Start</span>
-                <input id="sequence-viewer-feature-editor-start" type="number" min="1" step="1" />
-              </label>
-              <label>
-                <span data-i18n="dna.ui.end">End</span>
-                <input id="sequence-viewer-feature-editor-end" type="number" min="1" step="1" />
               </label>
               <label class="sequence-viewer-feature-editor-field-wide">
                 <span data-i18n="dna.ui.description">Description</span>

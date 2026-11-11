@@ -40,6 +40,19 @@ if(!process.versions.electron){
   async function load(){await win.loadFile(fixture);await waitFor(()=>js('Boolean(window.qa)'),'Plate did not initialize');await js('qa.ready()');}
   async function read(file){try{return await fsp.readFile(file,'utf8');}catch{return '';}}
   await load();
+  await waitFor(()=>js('Boolean(qa.state.assays[0].latestAnalysis?.chartPath)'),'The analysis chart was not saved');
+  const preview=()=>js(`(() => {const analysis=qa.state.assays[0].latestAnalysis;
+   return analysis && {analyzedAt:analysis.analyzedAt,chartPath:analysis.chartPath,hasImage:analysis.chartDataUrl.startsWith('data:image/svg+xml')};
+  })()`);
+  const beforeSave=await preview();
+  assert.equal(beforeSave.hasImage,true);
+  await js("document.getElementById('assay-save-results-btn').click()");
+  assert.deepEqual(await preview(),beforeSave,'saving unchanged results keeps the completed analysis preview');
+  const savedAssay=await js('(({updatedAt,analysisResultPath})=>({updatedAt,analysisResultPath}))(qa.state.assays[0])');
+  await waitFor(async()=>{
+   const saved=JSON.parse(await read(savedAssay.analysisResultPath)||'null');
+   return saved?.updatedAt===savedAssay.updatedAt&&saved.latestAnalysis?.chartPath===beforeSave.chartPath;
+  },'the saved analysis record did not retain the chart');
   async function importFile(content,drop){
    await js(`(() => {const transfer=new DataTransfer();transfer.items.add(new File([${JSON.stringify(content)}],'original-plate.csv',{type:'text/csv'}));
     ${drop ? "document.querySelector('.assay-results-layout').dispatchEvent(new DragEvent('drop',{bubbles:true,cancelable:true,dataTransfer:transfer}));" : "const input=document.getElementById('assay-result-file-input');input.files=transfer.files;input.dispatchEvent(new Event('change',{bubbles:true}));"}

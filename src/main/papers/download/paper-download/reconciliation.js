@@ -3,7 +3,7 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { createHash } = require('node:crypto');
-const { bufferLooksLikePdf } = require('./http-response.js');
+const { fileLooksLikePdf } = require('./http-response.js');
 const { buildPaperStorageFolder, buildRelativePath, ensurePathWithinRoot, resolvePaperCollectionName } = require('./storage-paths.js');
 const { extractPaperDownloadTargets } = require('./url-targets.js');
 const { normalizeDoi } = require('../../identity/paper-identity.js');
@@ -30,19 +30,11 @@ function downloadIdentity(source) {
 
 async function verifiedPdf(filePath, identity) {
   if (!filePath || path.dirname(path.resolve(filePath)) !== identity.folder) return false;
-  let handle;
   try {
     ensurePathWithinRoot(await fs.realpath(identity.root), await fs.realpath(filePath));
-    handle = await fs.open(filePath, 'r');
-    const stat = await handle.stat();
-    if (!stat.isFile() || stat.size < 5) return false;
-    const header = Buffer.alloc(5);
-    await handle.read(header, 0, 5, 0);
-    return bufferLooksLikePdf(header);
+    return await fileLooksLikePdf(filePath);
   } catch {
     return false;
-  } finally {
-    await handle?.close();
   }
 }
 

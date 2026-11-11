@@ -1,5 +1,8 @@
 // Traditional Chinese preview; other messages fall back to English.
 (function(root){const all=root.HikariUiTranslations=root.HikariUiTranslations||{};all["zh-Hant"]={...(all["zh-Hant"]||{}),figura:{
+  "pngExport.title": "匯出 PNG",
+  "pngExport.resolution": "解析度（PPI）",
+  "pngExport.hint": "以目前的像素尺寸設定列印解析度。",
   "illustrationMenu.actions": "插圖操作",
   "illustrationMenu.export": "匯出…",
   "illustrationMenu.duplicate": "複製",

@@ -1,10 +1,58 @@
 import { showTransientNotice } from '../../../lib/notify.js';
 import { bindFileDropTarget } from '../../../lib/file-drop.js';
+import { positionContextMenu } from '../../../lib/context-menu.js';
+
+function bindNotesContextMenu(elements, sampleLinkMenu, showNotesEditor) {
+  const {
+    notebookViewerColumn: workspace,
+    notebookProtocolArea: page,
+    notebookPageContextMenu: menu,
+    notebookResult: notes
+  } = elements;
+  const addNote = menu?.querySelector('[role="menuitem"]');
+  if (!workspace || !page || !addNote || !notes) return;
+
+  let previousFocus;
+  const close = () => { menu.hidden = true; };
+
+  workspace.addEventListener('contextmenu', (event) => {
+    if (page.hidden || event.defaultPrevented
+      || event.target.closest('input, textarea, select, [contenteditable]')) return;
+    event.preventDefault();
+    if (menu.contains(event.target)) return;
+    sampleLinkMenu.close();
+    if (!menu.contains(document.activeElement)) previousFocus = document.activeElement;
+    positionContextMenu(menu, event.clientX, event.clientY);
+    addNote.focus({ preventScroll: true });
+  });
+
+  addNote.addEventListener('click', () => {
+    close();
+    showNotesEditor();
+    notes.scrollIntoView({ block: 'center' });
+    notes.focus({ preventScroll: true });
+    notes.setSelectionRange(notes.value.length, notes.value.length);
+    notes.scrollTop = notes.scrollHeight;
+  });
+  menu.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    close();
+    previousFocus?.focus({ preventScroll: true });
+  });
+  menu.addEventListener('focusout', close);
+  document.addEventListener('pointerdown', (event) => {
+    if (!menu.contains(event.target)) close();
+  });
+  window.addEventListener('resize', close);
+  window.addEventListener('scroll', close, true);
+}
 
 // Every DOM listener the notebook viewer installs, plus the small handlers that
 // exist only to be bound here.
 function bindNotebookEvents({
   elements,
+  showNotesEditor = () => {},
   state,
   sampleLinkMenu,
   protocolEditor,
@@ -259,6 +307,7 @@ function bindNotebookEvents({
     }
   });
   inlinePlaceholders.bindEvents();
+  bindNotesContextMenu(elements, sampleLinkMenu, showNotesEditor);
   elements.notebookSteps?.addEventListener('input', onNotebookPlaceholderInput);
   if (typeof document.addEventListener === 'function') {
     document.addEventListener('click', onDocumentClickForTableSizeDialog);

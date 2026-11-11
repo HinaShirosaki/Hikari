@@ -280,6 +280,7 @@
 .assay-chart-picker__caret {
   display: inline-flex;
   align-items: center;
+  margin-inline-start: auto;
   color: var(--theme-text-muted);
 }
 

@@ -200,11 +200,14 @@ export function createChartTextControls(mount, config) {
   sizeUnit.className = 'assay-chart-text-bar__unit';
   i18nUi.setText(sizeUnit, 'pt');
   sizeMount.appendChild(sizeUnit);
-  sizeInput.addEventListener('change', () => {
-    if (!sizeInput.value || !sizeInput.validity.valid) return;
+  // Live while typing; change still covers a value set without keystrokes.
+  const applySize = () => {
+    if (!sizeInput.value || !sizeInput.validity.valid || Number(sizeInput.value) === value.fontSize) return;
     value.fontSize = Number(sizeInput.value);
     emit();
-  });
+  };
+  sizeInput.addEventListener('input', applySize);
+  sizeInput.addEventListener('change', applySize);
 
   colorInput.value = value.color || '#222222';
   colorInput.addEventListener('input', () => {
@@ -315,7 +318,8 @@ export function createChartTextControls(mount, config) {
     value = { ...next };
     if (fontPicker) fontPicker.setValue(value.fontFamily);
     updateTriggerFont();
-    sizeInput.value = String(Number((value.fontSize || 10).toFixed(6)));
+    const size = String(Number((value.fontSize || 10).toFixed(6)));
+    if (Math.abs(Number(sizeInput.value) - Number(size)) > 1e-9 || !sizeInput.value) sizeInput.value = size;
     if (colorInput) colorInput.value = value.color || '#222222';
     boldBtn.classList.toggle('is-active', Boolean(value.bold));
     italicBtn.classList.toggle('is-active', Boolean(value.italic));

@@ -111,7 +111,16 @@ if (!process.versions.electron) {
         check(state.notebookEntries[0].protocolSnapshot.purpose==='Purpose made in the editor.','Historical protocol snapshot remains frozen');
         const imported=await hikariApi.qaImport();check(imported.notebookEntries[0].result==='External pressure-test observation.','Folder import consumes MD');
         const found=await hikariApi.qaSearch();check(found.items.length===1&&found.source==='markdown','Agent lookup consumes MD');
-        document.getElementById('biology-notebook-result').value+='\\nEdited after reload.';
+        document.getElementById('protocol-management-view').classList.remove('is-active');
+        document.getElementById('biology-notebook-view').classList.add('is-active');
+        const notes=document.getElementById('biology-notebook-result');
+        const notesMenu=document.getElementById('biology-notebook-page-context-menu');
+        const rightClick=(target)=>target.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:480,clientY:210,button:2}));
+        check(!rightClick(document.getElementById('biology-notebook-protocol-title'))&&!notesMenu.hidden,'Right-clicking the notebook workspace opens Add Note');
+        notesMenu.querySelector('[role="menuitem"]').click();
+        check(notesMenu.hidden&&document.activeElement===notes&&notes.selectionStart===notes.value.length&&notes.selectionEnd===notes.value.length,'Add Note focuses the end of the existing Notes');
+        check(rightClick(notes)&&notesMenu.hidden,'The Notes field keeps its text-editing context menu');
+        notes.setRangeText('\\nEdited after reload.',notes.selectionStart,notes.selectionEnd,'end');
         check(await notebook.saveUnsavedChanges(),'Notebook edits after reload');await flush();
         protocols.editProtocol(protocolId);document.getElementById('protocol-purpose').value+=' Edited after reload.';
         check(await protocols.saveUnsavedChanges(),'Protocol edits after reload');await flush();

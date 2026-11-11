@@ -111,6 +111,14 @@ if (!process.versions.electron) {
     if (phase.startsWith('workspace')) {
       assert.equal(await js('qa.initialChartRendered'),true,'opening an assay renders Chart view before any control changes');
       assert.equal(await js('Boolean(qa.host?.data?.length)'),true,'the production Assay module renders the saved plate');
+      const captions=await js(`[...document.querySelectorAll('.assay-chart-style-actions > button')]
+        .map(b=>({key:b.dataset.cc,text:b.dataset.hoverCaption,content:getComputedStyle(b,'::after').content}))`);
+      assert.equal(captions.length,4);
+      assert.ok(captions.every(c=>c.text&&c.content===JSON.stringify(c.text)),`Chart Format icon buttons show hover captions: ${JSON.stringify(captions)}`);
+      const reset=await js(`(()=>{const b=document.querySelector('.assay-chart-style-actions [data-cc=resetBtn]');b.scrollIntoView({block:'center'});const r=b.getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()`);
+      win.webContents.sendInputEvent({type:'mouseMove',x:reset.x,y:reset.y});await new Promise(r=>setTimeout(r,500));
+      assert.equal(await js("getComputedStyle(document.querySelector('.assay-chart-style-actions [data-cc=resetBtn]'),'::after').opacity"),'1','hovering shows the caption');
+      await shot('workspace-hover-caption');
       const rawBefore=await js('JSON.stringify(qa.state.assays[0].resultValues)');
       const dataBefore=await js('JSON.stringify(qa.host.data.map(trace=>({x:trace.x,y:trace.y})))');
       const tableBefore=await js("document.querySelector('#assay-analysis-summary-table table')?.textContent");
@@ -224,6 +232,8 @@ if (!process.versions.electron) {
       assert.equal(await js('qa.host._fullLayout.yaxis.tickfont.size'),expected.textStyles.yTicks.fontSize);
       await js("qa.tab('axis')");
       assert.equal(await js("qa.q('yTickPreset').value"),'20','saved tick interval restores its preset selection');
+      assert.equal(await js("qa.q('xMajorTicks').value"),'10','major tick density survives restarting');
+      assert.equal(await js('qa.host.layout.xaxis.nticks'),10,'the saved density applies to the reopened plot');
       await shot('06-restarted');
       console.log('Electron restart persistence passed');
     } else {
@@ -259,8 +269,19 @@ if (!process.versions.electron) {
       await js("qa.tab('series');qa.set('seriesTarget','1');qa.tab('text');qa.set('textTarget','yTicks')");
       assert.equal(await js('JSON.stringify(qa.store.getStyle())'),before,'target selection does not edit style');
       await js("qa.tab('axis')");
+      const majorLabels = () => js("qa.host.querySelectorAll('.ytick text').length");
+      await edit('yMajorTicks',2);const sparse = await majorLabels();
+      await edit('yMajorTicks',10);const dense = await majorLabels();
+      assert.ok(sparse < dense, 'higher density displays more major labels');
+      await edit('yMajorTicks',11);
+      assert.equal(await js('qa.host.layout.yaxis.nticks'),10,'out-of-range entries preserve the last valid count');
+      await edit('yMajorTicks','');
+      assert.equal(await js('qa.host.layout.yaxis.nticks'),undefined,'clearing the field restores Auto');
+      await edit('yMajorTicks',10);
+      assert.equal(await js('qa.host.layout.xaxis.nticks'),undefined,'Y density leaves X ticks untouched');
       await edit('yTickPreset','20');
       assert.equal(await js('qa.host.layout.yaxis.dtick'),20,'a linear preset changes the rendered tick spacing');
+      assert.equal(await js("qa.q('yMajorTicks').disabled"),true,'a fixed interval takes priority over density');
       assert.equal(await js('qa.store.getStyle().xTick'),null,'Y preset leaves X ticks untouched');
       assert.equal(await js("qa.q('yTick').closest('label').hidden"),true,'custom field stays compact until requested');
       const axisColumns = await js(`(() => {
@@ -287,6 +308,7 @@ if (!process.versions.electron) {
       await shot('11-tick-custom');
       await edit('yTickPreset','auto');
       assert.equal(await js('qa.store.getStyle().yTick'),null,'Auto clears the explicit interval');
+      assert.equal(await majorLabels(),dense,'the saved density resumes with an automatic interval');
       for (const [scale,base] of [['log10',10],['log2',2],['ln',Math.E]]) {
         await edit('xScale',scale);await edit('xTickPreset','2');
         assert.ok(Math.abs(await js('qa.host.layout.xaxis.dtick') - 2*Math.log10(base)) < 1e-12,'log presets use the selected base');
@@ -294,10 +316,72 @@ if (!process.versions.electron) {
       await edit('xTickPreset','custom');
       await js("qa.click('resetTabBtn')");await settle();
       assert.equal(await js("qa.q('xTickPreset').value"),'auto','Axis reset restores Auto and exits custom entry');
+      assert.equal(await js("qa.q('yMajorTicks').value"),'','Axis reset restores default density');
+      for (const axis of ['x', 'y']) {
+        await edit(`${axis}RangeAuto`,false);
+        assert.equal(await js('qa.validation()'),'','leaving both bounds blank keeps automatic limits');
+        await edit(`${axis}Min`,0);
+        const range = await js(`qa.host._fullLayout.${axis}axis.range`);
+        assert.equal(range[0],0,'a lone zero minimum starts at the frame');
+        assert.ok(range[1]>0,'the blank maximum still autoscales');
+        await edit(`${axis}Max`,120);
+        assert.deepEqual(await js(`qa.host._fullLayout.${axis}axis.range`),[0,120],'both explicit bounds apply exactly');
+        await edit(`${axis}Min`,'');
+        assert.equal(await js(`qa.host._fullLayout.${axis}axis.range[1]`),120,'the maximum can be set independently');
+      }
+      await edit('xMax','');await edit('xMin',2000);
+      assert.ok(await js('qa.host._fullLayout.xaxis.range[1]>2000'),'an empty window beyond the data keeps the axis ascending');
+      await edit('xMin',0);await edit('xMax',120);await edit('yMin',0);
+      await js("qa.tab('frame')");
+      for (const style of ['box', 'l-shape']) {
+        await js(`qa.picker('frameStyle',${JSON.stringify(style)})`);await settle();
+        assert.equal(await js(`(() => {
+          const svg = qa.host.querySelector('.main-svg');
+          const frame = svg.querySelector('.shapelayer path').getBBox();
+          const xTick = svg.querySelector('path.xtick.ticks').transform.baseVal.getItem(0).matrix;
+          const yTick = svg.querySelector('path.ytick.ticks').transform.baseVal.getItem(0).matrix;
+          return frame.x === xTick.e && frame.y + frame.height === yTick.f;
+        })()`),true,`${style} frame and zero ticks share the same origin in the preview SVG`);
+      }
+      await edit('showHorizontalGrid',true);await js("qa.picker('gridStyle','dotted')");await settle();
+      assert.equal(await js('qa.store.getStyle().gridStyle'),'dotted');
+      assert.equal(await js('qa.host._fullLayout.yaxis.griddash'),'dot','the grid pattern picker restyles the grid lines');
+      await shot('01b-dotted-grid');
+      await js("qa.picker('gridStyle','solid')");await edit('showHorizontalGrid',false);
+      // Typing into a number box restyles the plot without Enter or blur, and a value that is
+      // still being typed ("1.50") keeps its text.
+      const typeInto = async (key, text) => {
+        await js(`(()=>{const f=qa.q(${JSON.stringify(key)});f.focus();f.select();})()`);
+        for (const ch of text) { win.webContents.insertText(ch); await new Promise(r=>setTimeout(r,30)); }
+        await settle();
+      };
+      await typeInto('frameStrokeWidth','1.50');
+      assert.equal(await js("qa.q('frameStrokeWidth').value"),'1.50','a half-typed number keeps its text');
+      assert.equal(await js('document.activeElement === qa.q("frameStrokeWidth")'),true,'typing keeps focus');
+      assert.equal(await js('qa.store.getStyle().frameStrokeWidth'),2,'the frame updates while typing (1.5 pt = 2 px)');
+      await typeInto('frameStrokeWidth','3');
+      assert.equal(await js('qa.host.layout.shapes[0].line.width'),4,'the plot redraws on each keystroke');
+      await js("qa.tab('axis')");
+      await typeInto('yMax','1');
+      assert.equal(await js("qa.q('validation').hidden"),true,'a half-typed limit does not flash an error');
+      await typeInto('yMax','150');
+      assert.equal(await js('qa.store.getStyle().yRange.max'),150,'axis limits apply while typing');
+      await edit('yMax',120);await js("qa.tab('frame')");await edit('frameStrokeWidth',1.5);
+      await js("qa.picker('frameStyle','offset');qa.tab('axis')");await settle();
+      const yTickPaths = () => js("qa.host.querySelectorAll('path.ytick.ticks').length");
+      const majorOnly = await yTickPaths();
+      await edit('yMinorTicks','low');const lowTicks = await yTickPaths();
+      await edit('yMinorTicks','high');
+      assert.equal(await js('qa.host._fullLayout.yaxis.minor.nticks'),10,'the minor tick density select reaches Plotly');
+      const highTicks = await yTickPaths();
+      assert.ok(majorOnly < lowTicks && lowTicks < highTicks, `denser minor ticks draw more ticks: ${majorOnly} < ${lowTicks} < ${highTicks}`);
+      await shot('02b-minor-high');
+      await edit('yMinorTicks','off');
+      assert.equal(await js('qa.store.getStyle().axisStyles.y.minorTicks'),false);
+      await js("qa.click('resetTabBtn')");await settle();
       await edit('yTickPreset','20');
       await edit('xScale','log10');await edit('xTickPreset','1');
       await edit('xRangeAuto',false);
-      assert.equal(await js('qa.store.getStyle().xRange.auto'),true,'incomplete manual range is not committed');
       await edit('xMin',0);await edit('xMax',1000);
       assert.match(await js('qa.validation()'),/greater than zero/);
       await edit('xMin',1);
@@ -354,10 +438,36 @@ if (!process.versions.electron) {
       await js('qa.model("bar")');await settle();await js("qa.tab('axis')");
       assert.equal(await js('qa.q("xNumericFields").hidden'),true,'category axis hides numeric controls');
       assert.equal(await js('qa.q("yNumericFields").hidden'),false,'the Y column stays available on a category chart');
+      await edit('xMajorTicks',2);
+      assert.equal(await js('qa.host.layout.xaxis.nticks'),2,'category labels can use a sparser density');
       await js("qa.tab('series')");await edit('barLabels',true);await edit('barOutlineWidth',2);
       assert.equal(await js('qa.host.data[0].marker.line.width'),8/3);
       await edit('legendPosition','bottom');await shot('05-bars');
       await js('qa.model("line")');await settle();
+      await edit('xTickPreset','auto');await edit('xMajorTicks',10);
+      // The legend and chart title are dragged on the figure like the axis titles.
+      const drag = async (selector, dx, dy) => {
+        const at = await js(`(()=>{const el=document.querySelector(${JSON.stringify(selector)});el.scrollIntoView({block:'center'});
+          const b=el.getBoundingClientRect();return {x:Math.round(b.x+b.width/2),y:Math.round(b.y+b.height/2)}})()`);
+        const send = (type, x, y) => win.webContents.sendInputEvent({type,x,y,button:'left',clickCount:1,modifiers:type==='mouseMove'?['leftButtonDown']:[]});
+        send('mouseDown',at.x,at.y);
+        for (let i=1;i<=6;i++) { send('mouseMove',at.x+dx*i/6,at.y+dy*i/6); await new Promise(r=>setTimeout(r,16)); }
+        send('mouseUp',at.x+dx,at.y+dy); await settle();
+      };
+      await js("qa.store.setStyle({title:'Drag me'})");await settle();
+      const titleBefore = await js("qa.host.layout.annotations[2].y");
+      await drag('.annotation[data-index=\"2\"] .annotation-text', 60, -20);
+      const titleAfter = await js('qa.store.getStyle()');
+      assert.ok(titleAfter.titlePos > 0.5, 'dragging the chart title right moves it along');
+      assert.ok(await js("qa.host.layout.annotations[2].y") > titleBefore, 'dragging the chart title up moves it away from the plot');
+      await drag('.legend .bg', -80, 60);
+      const legendStyle = await js('qa.store.getStyle()');
+      assert.ok(Number.isFinite(legendStyle.legendX) && Number.isFinite(legendStyle.legendY), 'a dropped legend is saved');
+      assert.equal(await js('qa.host.layout.legend.x'), legendStyle.legendX, 'the legend redraws where it was dropped');
+      await shot('05b-dragged-legend-title');
+      await edit('legendPosition','top');
+      assert.equal(await js('qa.store.getStyle().legendX'), null, 'picking a legend position resets a dragged legend');
+      await js("qa.store.setStyle({title:''})");await settle();
       await js("document.getElementById('qa').style.gridTemplateColumns='420px minmax(0,1fr)';qa.render();qa.tab('frame')");await settle();
       const wideRail = await js(`(() => {
         const panel = document.querySelector('[data-cc-panel=frame]');
@@ -365,7 +475,7 @@ if (!process.versions.electron) {
         return { height: panel.getBoundingClientRect().height, spin };
       })()`);
       assert.equal(wideRail.spin,'textfield','numeric fields drop their spinners');
-      assert.ok(wideRail.height <= 500, 'the Frame panel stays dense on a wide rail');
+      assert.ok(wideRail.height <= 560, 'the Frame panel stays dense on a wide rail: '+wideRail.height);
       await shot('13-wide');
       win.setSize(900,700);await js("document.getElementById('qa').style.gridTemplateColumns='240px minmax(0,1fr)';qa.render();qa.tab('frame')");await settle();
       const narrow = await js("[...document.querySelectorAll('[role=tab]:not([hidden])')].map(e=>({y:e.getBoundingClientRect().y,w:e.clientWidth,s:e.scrollWidth}))");

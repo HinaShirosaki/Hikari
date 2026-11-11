@@ -1,5 +1,6 @@
 import { createPresentation } from "../../../lib/i18n/presentation.js";
 import "../localization.js";
+import { MAJOR_TICK_MIN, MAJOR_TICK_MAX } from './chart-style-model.js';
 const i18nUi = createPresentation("plate");
 // Assay-owned formatting controls. All dimensions are displayed in pt except plot size.
 const TABS = [
@@ -8,11 +9,11 @@ const TABS = [
 ];
 const TAB_KEYS = {
   frame: ['frameStyle', 'frameStroke', 'frameStrokeWidth', 'backgroundColor', 'showVerticalGrid',
-    'showHorizontalGrid', 'gridColor', 'gridStrokeWidth', 'sizeAuto', 'frameWidth', 'frameHeight'],
+    'showHorizontalGrid', 'gridColor', 'gridStrokeWidth', 'gridStyle', 'sizeAuto', 'frameWidth', 'frameHeight'],
   axis: ['xScale', 'yScale', 'xRange', 'yRange', 'xTick', 'yTick', 'axisStyles',
     'tickDir', 'tickLen', 'minorTicks', 'tickFormat', 'refLineAxis', 'refLineValue'],
   series: ['xColumn', 'yColumn', 'seriesColumn', 'barMode', 'barLabels', 'barCornerRadius',
-    'mode', 'legendPosition', 'pointShape', 'pointSize', 'markerFill', 'opacity', 'lineStyle', 'lineWidth',
+    'mode', 'legendPosition', 'legendX', 'legendY', 'pointShape', 'pointSize', 'markerFill', 'opacity', 'lineStyle', 'lineWidth',
     'seriesColors', 'seriesShapes', 'seriesStyles', 'replicateStyle', 'palette', 'seriesColor', 'barOutlineColor',
     'barOutlineWidth', 'errorColor', 'errorCapWidth', 'errorThickness'],
   text: ['title', 'xTitle', 'yTitle', 'text', 'textStyles', 'titlePos', 'titleOffset',
@@ -25,7 +26,7 @@ const number = (key, label, min, max, step = 'any', placeholder = '') => `<label
   step="${step}" ${i18nUi.attributeMessage("placeholder", i18nUi.owned(placeholder))} /></label>`;
 const check = (key, label) => `<label class="assay-chart-style-checkbox"><input type="checkbox" data-cc="${key}" />${i18nUi.renderOwned(label)}</label>`;
 const color = (key, label) => `<label>${i18nUi.renderOwned(label)}<input type="color" data-cc="${key}" ${i18nUi.attributeMessage("aria-label", i18nUi.owned(label))} /></label>`;
-// Preset and reset actions share one icon strip; aria-label supplies the hover caption.
+// Preset and reset actions share one icon strip; data-hover-caption is Assay's visible caption.
 const ICON_PATHS = {
   presetSaveBtn: '<path d="M5 3h11l4 4v14H5Z" /><path d="M8 3v6h7V3" /><path d="M8 21v-7h8v7" />',
   presetDeleteBtn: '<path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v5" /><path d="M14 11v5" />',
@@ -33,7 +34,8 @@ const ICON_PATHS = {
   resetBtn: '<path d="M21 12a9 9 0 0 0-9-9 9 9 0 0 0-6.4 2.6L3 8" /><path d="M3 3v5h5" /><path d="M3 12a9 9 0 0 0 9 9 9 9 0 0 0 6.4-2.6L21 16" /><path d="M16 16h5v5" />'
 };
 const iconButton = (key, label, danger = false) => `<button type="button" data-cc="${key}"
-  class="row-action-icon-btn${danger ? ' row-action-icon-btn-danger' : ''}" ${i18nUi.attributeMessage("aria-label", i18nUi.owned(label))}>
+  class="row-action-icon-btn${danger ? ' row-action-icon-btn-danger' : ''}" ${i18nUi.attributeMessage("aria-label", i18nUi.owned(label))}
+  ${i18nUi.attributeMessage("data-hover-caption", i18nUi.owned(label))}>
   <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">${ICON_PATHS[key]}</svg></button>`;
 const picker = (key, label) => `<label>${i18nUi.renderOwned(label)}<div data-cc="${key}" class="assay-chart-picker-mount"></div></label>`;
 const section = (title, content, attributes = '') => `<div class="assay-chart-style-subsection" ${attributes}>
@@ -47,13 +49,15 @@ const axisGrid = (content) => `<div class="assay-chart-style-axis-grid">${conten
 const axisColumn = (axis) => stack(`<span class="assay-chart-style-subhead">${axis.toUpperCase()} ${i18nUi.html("axis")}</span>`
   + stack(select(`${axis}Scale`, 'Scale', [['linear', 'Linear'], ['log10', 'Log10'], ['log2', 'Log2'], ['ln', 'Natural log']])
     + check(`${axis}RangeAuto`, 'Auto range')
-    + number(`${axis}Min`, 'Minimum', null, null) + number(`${axis}Max`, 'Maximum', null, null)
+    + number(`${axis}Min`, 'Minimum', null, null, 'any', 'Auto')
+    + number(`${axis}Max`, 'Maximum', null, null, 'any', 'Auto')
     + select(`${axis}TickPreset`, 'Tick interval', [])
     + number(`${axis}Tick`, 'Custom interval', 0, null, 'any', 'Auto')
     + `<p data-cc="${axis}TickHint" class="assay-chart-style-note" hidden></p>`, `data-cc="${axis}NumericFields"`));
 const tickColumn = (axis) => stack(select(`${axis}TickDir`, 'Direction', [['outside', 'Outside'], ['inside', 'Inside'], ['none', 'None']])
   + number(`${axis}TickLen`, 'Length (pt)', 0, 15, 0.25)
-  + stack(check(`${axis}MinorTicks`, 'Minor ticks')
+  + number(`${axis}MajorTicks`, 'Major ticks', MAJOR_TICK_MIN, MAJOR_TICK_MAX, 1, 'Auto')
+  + stack(select(`${axis}MinorTicks`, 'Minor ticks', [['off', 'Off'], ['low', 'Low'], ['medium', 'Medium'], ['high', 'High']])
     + select(`${axis}TickFormat`, 'Number format', [['auto', 'Auto'], ['fixed1', '0.0'], ['fixed2', '0.00'],
       ['sci', '1e3'], ['si', 'SI (k/M)'], ['power', 'Powers']]), `data-cc="${axis}NumericTickFields"`)
   + number(`${axis}TickAngle`, 'Label angle (°)', -90, 90, 1, 'Auto'));
@@ -78,7 +82,8 @@ const PANEL_HTML = `<div class="assay-chart-style">
     ${row(color('frameStroke', 'Color') + number('frameStrokeWidth', 'Thickness (pt)', 0, 4.5, 0.25))}
     ${color('backgroundColor', 'Background')}
     ${section('Grid', row(check('showVerticalGrid', 'Vertical') + check('showHorizontalGrid', 'Horizontal'))
-      + row(color('gridColor', 'Grid color') + number('gridStrokeWidth', 'Thickness (pt)', 0, 4.5, 0.25)))}
+      + color('gridColor', 'Grid color')
+      + row(picker('gridStyle', 'Pattern') + number('gridStrokeWidth', 'Thickness (pt)', 0, 4.5, 0.25)))}
     ${section('Plot dimensions', check('sizeAuto', 'Fit to canvas')
       + row(number('frameWidth', 'Width (px)', 320, 2000, 1) + number('frameHeight', 'Height (px)', 180, 1200, 1)))}
   `)}

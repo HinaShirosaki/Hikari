@@ -1,4 +1,6 @@
-import { writeBulletLines, writeMinorHeading, writeParagraph } from './text-blocks.js';
+import { EDITORIAL_RULE } from './constants.js';
+import { ensureSpace } from './doc-context.js';
+import { writeBulletLines, writeHeading, writeMinorHeading, writeParagraph } from './text-blocks.js';
 import { writeSimpleTable } from './tables.js';
 
 const heading = /^\s*#{1,6}\s+(.+)$/;
@@ -36,5 +38,19 @@ export function writeNotebookNote(ctx, value) {
         && !(lines[index].includes('|') && tableRule.test(lines[index + 1] || ''))) paragraph.push(lines[index++]);
       writeParagraph(ctx, paragraph.join('\n'));
     }
+  }
+}
+
+export function writeNotebookWritingSpace(ctx) {
+  const lineCount = 4;
+  const lineSpacing = 18;
+  // Keep the compact section heading and all of the writing lines together.
+  ensureSpace(ctx, 36 + lineCount * lineSpacing);
+  writeHeading(ctx, 'Additional notes');
+  ctx.doc.setDrawColor(...EDITORIAL_RULE);
+  ctx.doc.setLineWidth(0.35);
+  for (let index = 0; index < lineCount; index += 1) {
+    ctx.y += lineSpacing;
+    ctx.doc.line(ctx.margin, ctx.y, ctx.margin + ctx.maxWidth, ctx.y);
   }
 }

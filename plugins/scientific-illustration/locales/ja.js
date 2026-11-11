@@ -1,5 +1,8 @@
 // Japanese preview; other messages fall back to English.
 (function(root){const all=root.HikariUiTranslations=root.HikariUiTranslations||{};all["ja"]={...(all["ja"]||{}),figura:{
+  "pngExport.title": "PNG をエクスポート",
+  "pngExport.resolution": "解像度（PPI）",
+  "pngExport.hint": "現在のピクセル寸法で印刷解像度を設定します。",
   "illustrationMenu.actions": "イラストの操作",
   "illustrationMenu.export": "エクスポート…",
   "illustrationMenu.duplicate": "複製",

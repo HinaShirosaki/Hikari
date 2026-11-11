@@ -26,12 +26,17 @@ const PDF_SELECTION_SEARCH_STOP_WORDS = new Set([
 
 export { escapeHtml };
 
+export function getCommentDisplayAuthor(comment) {
+  const author = String(comment?.author || '').trim();
+  return author === 'Local user' ? '' : author;
+}
+
 export function buildHighlightCommentPopoverMarkup(comment = {}) {
-  const author = String(comment.author || 'Local user').trim() || 'Local user';
+  const author = getCommentDisplayAuthor(comment);
   const text = String(comment.text || '').trim();
   return `
     <div class="papers-highlight-comment-content">
-      <p><strong>${escapeHtml(author)}</strong></p>
+      ${author ? `<p><strong>${escapeHtml(author)}</strong></p>` : ''}
       <p>${escapeHtml(text)}</p>
     </div>
     `;

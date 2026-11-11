@@ -397,6 +397,7 @@ function createCodexAgentRuntime(deps = {}) {
         ? { notebook_append: streamState.streamedNotebookAppendPayload }
         : {}),
       ...(protocolGenerationArtifact ? { protocol_generation: protocolGenerationArtifact } : {}),
+      ...(streamState.protocolEdits.length ? { protocol_edits: streamState.protocolEdits } : {}),
       thinking_trace: {
         intent_parse_question: 'Codex owned this request without Hikari parser dispatch.',
         final_synthesize: cleanText(codexAgent.reasoning_summary, 1000)

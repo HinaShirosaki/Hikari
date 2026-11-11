@@ -13,6 +13,50 @@ module.exports = function registerAppLabAndProjectSuiteNotebookPageEditing(conte
     test,
     shared
   } = scope;
+test('biology-notebook renders saved Markdown tables and exposes the original Notes editor', async () => {
+  const { createNotebookNotesPreview } = loadEsmStyleModule(path.join(__dirname,
+    'src/renderer/modules/biology-notebook/notebook/notes-preview.js'));
+  const document = createMockDocument(['notes', 'composer', 'preview', 'mode']);
+  const notes = document.getElementById('notes');
+  const composer = document.getElementById('composer');
+  const preview = document.getElementById('preview');
+  const mode = document.getElementById('mode');
+  const controller = createNotebookNotesPreview({
+    notebookResult: notes, notebookNotesComposer: composer, notebookNotesPreview: preview, notebookNotesMode: mode
+  }, shared.safeText);
+  const table = [
+    '| Well | Observation |',
+    '| --- | ---: |',
+    '| A1 | A\\|B <img src=x onerror=alert(1)> |'
+  ].join('\n');
+  notes.value = 'Original note.\n\n' + table;
+  controller.refresh({ reset: true });
+  assert.equal(preview.hidden, false);
+  assert.equal(composer.hidden, true);
+  assert.match(preview.innerHTML, /<table class="markdown-table">/);
+  assert.match(preview.innerHTML, /data-align="right">A\|B &lt;img/);
+  assert.doesNotMatch(preview.innerHTML, /<img/);
+  assert.match(preview.innerHTML, /Original note/);
+  assert.equal(notes.value, 'Original note.\n\n' + table);
+
+  await trigger(mode, 'click');
+  assert.equal(composer.hidden, false);
+  assert.equal(preview.hidden, true);
+  notes.value = notes.value.replace('A1', 'A2');
+  await trigger(mode, 'click');
+  assert.equal(preview.hidden, false);
+  assert.match(preview.innerHTML, />A2<\/td>/);
+
+  for (const literal of [`~~~md\n${table}\n~~~`, '| Too | Few |\n| --- |', 'A plain note with a pipe | character.']) {
+    notes.value = literal;
+    controller.refresh({ reset: true });
+    assert.equal(composer.hidden, false);
+    assert.equal(preview.hidden, true);
+    assert.equal(mode.hidden, true);
+    assert.equal(notes.value, literal);
+  }
+});
+
 test('biology-notebook derives legacy Protein Builder protocols from the stored thermocycle program', () => {
   const entryHelpers = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'entry', 'entry-helpers.js')
@@ -514,7 +558,7 @@ test('biology-notebook places Clarify and Save inside the notes composer', () =>
     'notebook-and-tables.css'
   ), 'utf8');
   assert.match(stripI18nMarkup(html), /class="biology-notebook-notes-field"[\s\S]*?for="biology-notebook-result"[\s\S]*?class="biology-notebook-notes-composer"[\s\S]*?id="biology-notebook-result"[\s\S]*?id="clarify-save-biology-notebook-btn"/);
-  assert.match(stripI18nMarkup(html), /<label for="biology-notebook-result"(?: data-i18n="notebook.viewer.notes")?>Notes<\/label>/);
+  assert.match(stripI18nMarkup(html), /<label\b[^>]*for="biology-notebook-result"[^>]*>Notes<\/label>/);
   assert.doesNotMatch(stripI18nMarkup(html), /class="form-actions"[\s\S]*?id="clarify-save-biology-notebook-btn"/);
   assert.doesNotMatch(stripI18nMarkup(html), /class="biology-notebook-linked-toolbar"/);
   assert.match(stripI18nMarkup(html), /id="biology-notebook-table-context-menu"[^>]*role="menu"[\s\S]*?id="biology-notebook-add-table-row-btn"[^>]*role="menuitem"[\s\S]*?id="biology-notebook-add-table-column-btn"[^>]*role="menuitem"[\s\S]*?id="biology-notebook-remove-table-btn"[^>]*role="menuitem"/);

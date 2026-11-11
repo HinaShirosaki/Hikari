@@ -98,7 +98,7 @@ test('[EDGE] sequence-viewer ORF clicks control the persistent translation row',
   trigger(sequenceHost, 'click', { target: clickTarget });
   assert.equal(sequenceHost.innerHTML.includes('sequence-viewer-aa-row-plus'), true);
   assert.equal(sequenceHost.innerHTML.indexOf('sequence-viewer-strand-row-bottom') < sequenceHost.innerHTML.indexOf('sequence-viewer-aa-row-plus'), true);
-  assert.equal(sequenceHost.innerHTML.includes('data-aa-display="TAA"'), false);
+  assert.equal(sequenceHost.innerHTML.includes('data-aa-display="*"'), true);
   assert.equal(sequenceHost.innerHTML.includes('data-aa="K"'), true);
   assert.equal(sequenceHost.innerHTML.includes('data-aa="E"'), false);
 
@@ -321,8 +321,6 @@ test('[EDGE] sequence-viewer drag selection context menu can add a feature', asy
     'sequence-viewer-feature-editor-name',
     'sequence-viewer-feature-editor-type',
     'sequence-viewer-feature-editor-strand',
-    'sequence-viewer-feature-editor-start',
-    'sequence-viewer-feature-editor-end',
     'sequence-viewer-feature-editor-description',
     'sequence-viewer-feature-editor-close',
     'sequence-viewer-feature-editor-cancel'
@@ -398,5 +396,6 @@ test('[EDGE] sequence-viewer drag selection context menu can add a feature', asy
   assert.match(featureRailHost.innerHTML, /Manual_A/);
   assert.match(featureDetail.innerHTML, /Manual_A/);
   assert.match(featureDetail.innerHTML, /promoter/);
+  assert.match(featureDetail.innerHTML, /1\.\.4/);
 });
 };

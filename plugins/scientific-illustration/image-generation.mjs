@@ -1,10 +1,10 @@
 // null preserves the automatic SVG-first policy of existing illustrations.
 export const IMAGE_GENERATION_PRESETS = Object.freeze({
-  0: { label: 'SVG only', guidance: 'Do not call image_gen for this request; use SVG or suitable existing artwork. If the requested appearance cannot be achieved, explain the limitation.' },
-  25: { label: 'Mostly SVG', guidance: 'Use SVG for most eligible illustrative artwork. Reserve Codex image_gen for key organic or textured components, aiming for about one quarter of their combined visual area.' },
-  50: { label: 'Balanced', guidance: 'Aim for roughly equal visual shares of SVG and Codex image_gen among eligible illustrative components. Use generation for organic or textured detail and SVG for simpler forms.' },
-  75: { label: 'Mostly image generation', guidance: 'Use Codex image_gen for most eligible illustrative artwork, aiming for about three quarters of its visual area. Keep simpler illustrative components as SVG.' },
-  100: { label: 'All eligible artwork', guidance: 'Use Codex image_gen for all eligible illustrative artwork. Mandatory schematic geometry remains SVG and every label remains a separate text object.' }
+  0: { label: 'SVG only', guidance: 'Do not call image_gen. Use SVG for new artwork or reuse suitable existing artwork.' },
+  25: { label: 'Mostly SVG', guidance: 'Assign about one quarter of the eligible artwork area to image generation and the remainder to SVG.' },
+  50: { label: 'Balanced', guidance: 'Split the eligible artwork area roughly evenly between image generation and SVG.' },
+  75: { label: 'Mostly image generation', guidance: 'Assign about three quarters of the eligible artwork area to image generation and the remainder to SVG.' },
+  100: { label: 'All eligible artwork', guidance: 'Assign every eligible component to image generation, including flat or simple subjects. Generate directly when no compatible generated asset is available. The ability to draw a component in SVG does not justify switching it to SVG.' }
 });
 
 export function imageGenerationPercent(value = null) {
@@ -21,7 +21,12 @@ export function imageGenerationSummary(value = null) {
 export function imageGenerationInstructions(value = null) {
   const percent = imageGenerationPercent(value);
   const target = percent === null
-    ? 'Image generation: Automatic. Follow the SVG-first renderer rules below.'
-    : `Image generation target: ${percent}% of eligible illustrative artwork area (${imageGenerationSummary(percent)}). In your internal brief, plan this renderer mix: ${IMAGE_GENERATION_PRESETS[percent]?.guidance || 'Aim for this approximate visual share using Codex image_gen for components that benefit from realistic, organic or textured detail. Use SVG for the remaining artwork.'}`;
-  return `${target} The target is a visual preference, not a quota of assets or tool calls, and excludes text, boxes, arrows, connectors, panel frames, charts, scale bars and exact scientific geometry. Those always remain separate SVG or text objects, even at 100%. Never rasterize schematic symbols or invent texture/extra components just to reach a percentage. If the requested content has no eligible raster detail, keep it SVG and explain why the target was not applicable. Apply this setting to new or requested changes; preserve existing artwork unless the user asks to replace it. Check the renderer mix during final inspection and explain any shortfall. Change the saved target only when the user requests it.`;
+    ? 'Image generation: Automatic (SVG-first). Use SVG by default. Use image_gen when SVG cannot clearly depict the required appearance. When unsure in Automatic, try one simple SVG draft at the final size, then switch if it cannot convey the intended subject.'
+    : `Image generation target: ${percent}% of eligible illustrative artwork area (${imageGenerationSummary(percent)}). ${IMAGE_GENERATION_PRESETS[percent]?.guidance || 'Assign this approximate share of eligible artwork area to image generation and the remainder to SVG.'}`;
+  const plan = percent > 0 ? `
+Plan the renderer for each eligible component before drawing. Estimate the share from visible placed area, using whole components. This is an area target, not a quota of assets or tool calls. Choose components that suit the requested composition and style. Use image_gen or reuse compatible generated assets for the share assigned to image generation. Check the actual mix for this request in the final artwork review. In the final reply, explain any material shortfall, including the specific reason if the requested artwork contains zero generated components.` : '';
+  return `Renderer choice applies to new and explicitly replaced artwork. Preserve existing artwork unless the user asks to replace it. An explicit SVG or image-generation choice for one new component overrides the saved renderer mix for that addition only. Keep the saved target unless the user asks to change it.
+Keep boxes, arrows, connectors, panel frames, scale bars, schematic symbols and exact scientific geometry as separate SVG layers. Keep labels as separate editable text and data plots as Plotly layers. Use known values or verified structures for scale bars and atom/bond diagrams. Use vectors for shapes the user needs to edit precisely or recolor independently.
+A component is eligible for image generation if a separate text-free image can represent it accurately at the required size and placement. This includes flat and stylized subjects within schematics. Image layers can be moved, resized and rotated independently. Use the requested style and detail for either renderer. Keep exact boundaries and connections on separate vector layers when needed.
+${target}${plan}`;
 }

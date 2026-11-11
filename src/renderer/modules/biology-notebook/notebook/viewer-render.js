@@ -11,6 +11,7 @@ import { resolveSampleTypeForPlaceholder } from '../samples/sample-helpers.js';
 // plus the save-button states those two views drive.
 function createNotebookViewerRender({
   elements,
+  notesPreview,
   onProjectDashboardRendered = () => {},
   state,
   safeText,
@@ -111,6 +112,7 @@ function createNotebookViewerRender({
     }));
 
     notebookResult.value = entry?.result || '';
+    notesPreview?.refresh({ reset: true });
     resultTableController.renderEditor(resultTablesOverride ?? resultTableOverride ?? entry?.resultTables ?? entry?.resultTable ?? null);
     if (entry) {
       toolSidebarController.setCalculations(entry.toolCalculations || [], entry.id);
@@ -223,6 +225,7 @@ function createNotebookViewerRender({
     i18nUi.setHtml(notebookSteps, '');
     notebookSteps.hidden = false;
     notebookResult.value = '';
+    notesPreview?.refresh({ reset: true });
     clearPendingNotebookResultFiles();
     resultFileAttachmentController.clear();
     resultTableController.renderEditor(null);

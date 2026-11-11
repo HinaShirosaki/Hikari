@@ -4,6 +4,16 @@ export const agentSimplifiedChinese = Object.freeze({
   'citation.openProtocol': '打开实验方案：{source}',
   'citation.openNotebook': '打开实验记录页：{source}',
 
+  'draft.protocolEditKind': '编辑已保存的实验方案',
+  'draft.pageProtocolEditKind': '编辑记录页的实验方案',
+  'draft.protocolEdited': '步骤已更新',
+  'review.stepNumber': '步骤 {number}',
+  'review.beforeEdit': '当前文本',
+  'review.afterEdit': '建议文本',
+  'status.protocolEdited': '实验方案步骤已保存。',
+  'status.protocolEditRejected': '已拒绝实验方案编辑。',
+  'status.protocolEditFailed': '无法保存实验方案编辑。',
+
   'evidence.title': '依据',
   'evidence.why': '选择原因',
   'evidence.notes': '你的批注',

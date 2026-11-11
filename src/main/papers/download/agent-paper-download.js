@@ -224,6 +224,7 @@ function createPaperDownloadRuntime(deps = {}) {
       summary: extraction.summary
     });
 
+    let browserAttempted = false;
     try {
       if (extraction.selected_pdf_url) {
         const completed = await performDirectDownload({
@@ -235,6 +236,7 @@ function createPaperDownloadRuntime(deps = {}) {
         return await finishDownload(downloadId, completed, input);
       }
       if (extraction.browser_entry_url) {
+        browserAttempted = true;
         const completed = await performBrowserFallback({
           input,
           extraction,
@@ -248,7 +250,7 @@ function createPaperDownloadRuntime(deps = {}) {
       const shouldUseBrowser = error?.retry_with_browser === true
         || error?.browser_required === true
         || (!extraction.selected_pdf_url && Boolean(extraction.browser_entry_url));
-      if (shouldUseBrowser && !isExplicitFalse(ensureObject(input).use_browser_fallback) && extraction.browser_entry_url) {
+      if (!browserAttempted && shouldUseBrowser && !isExplicitFalse(ensureObject(input).use_browser_fallback) && extraction.browser_entry_url) {
         try {
           const completed = await performBrowserFallback({
             input,

@@ -9,6 +9,7 @@ import { imageGenerationSummary } from './image-generation.mjs';
 import { IMAGE_STYLE_PRESETS } from './image-style.mjs';
 import { resizeObject, resizeAnchor } from './geometry.mjs';
 import { createCanvasViewport } from './viewport.mjs';
+import { createCanvasRulers } from './canvas-rulers.mjs';
 import { selectionBounds, resizeSelection, transformSelection } from './grouping.mjs';
 import { alignmentOperations, selectionLayoutUnits } from './alignment.mjs';
 import { smartGuideTargets, snapTranslation } from './smart-guides.mjs';
@@ -20,6 +21,7 @@ import { rectanglePoints, regionSelection } from './area-selection.mjs';
 import { createWorkspaceTools } from './workspace-tools.mjs';
 import { installSourceActions } from './source-context.mjs';
 import { exportPowerPoint } from './powerpoint.mjs';
+import { DEFAULT_PNG_PPI, MAX_PNG_PPI, setPngPpi } from './png-export.mjs';
 import { angleDelta, rotateComponents } from './rotation.mjs';
 import { installCanvasClipboard } from './clipboard.mjs';
 import { readChemicalClipboard, prepareChemicalImage, prepareChemicalVector, chemicalStructureSnapshot } from './chemical-clipboard.mjs';
@@ -200,7 +202,10 @@ function renderZoom() {
   $('zoom-fit').setAttribute('aria-pressed', String(view.zoom === null));
   workspaceTools?.sync();
 }
-const viewport = createCanvasViewport(stage => { syncSelectionSize(stage); renderZoom(); textEditor?.layout(); syncSelectionToolbar(); });
+const canvasRulers = createCanvasRulers($('main-canvas'));
+const viewport = createCanvasViewport(stage => {
+  syncSelectionSize(stage); renderZoom(); textEditor?.layout(); syncSelectionToolbar(); canvasRulers.update();
+});
 function renderCanvas(canvas, documentState = state) {
   const stage = $(`${canvas}-canvas`), focusedId = document.activeElement?.dataset.objectId,
     focusedRotation = document.activeElement?.dataset.rotateId;
@@ -382,7 +387,7 @@ async function manageIllustration(action, id, title) {
     return result;
   } catch (error) { status(error.message); return { ok: false, error: error.message }; }
 }
-const illustrationMenu = installIllustrationMenu({ document, workspace, manageIllustration, exportFigure, status });
+const illustrationMenu = installIllustrationMenu({ document, workspace, manageIllustration, exportFigure, i18nUi, status });
 // The left rail switches between the figure library and the shared assets.
 function showLibrary(view) {
   illustrationMenu.close();
@@ -1033,24 +1038,48 @@ document.addEventListener('keydown', event => {
   }
 });
 let exporting = false;
+let pngPpi = DEFAULT_PNG_PPI;
+const pngExportDialog = $('png-export-dialog'), pngExportPpi = $('png-export-ppi');
+pngExportPpi.max = MAX_PNG_PPI;
+$('cancel-png-export').addEventListener('click', () => pngExportDialog.close());
+function choosePngPpi() {
+  pngExportPpi.value = pngPpi;
+  pngExportDialog.returnValue = '';
+  pngExportDialog.showModal();
+  pngExportPpi.focus();
+  pngExportPpi.select();
+  return new Promise(resolve => pngExportDialog.addEventListener('close', () => {
+    if (pngExportDialog.returnValue !== 'export') { resolve(null); return; }
+    pngPpi = pngExportPpi.valueAsNumber;
+    resolve(pngPpi);
+  }, { once: true }));
+}
 async function exportFigure(format, id = illustrationId) {
   if (exporting) return;
   exporting = true;
   const buttons = ['export-svg', 'export-png', 'export-pptx'].map($);
-  buttons.forEach(button => { button.disabled = true; });
   try {
     await flushImagePreferences();
     const documentState = await workspace.getExportDocument(id);
+    const ppi = format === 'png' ? await choosePngPpi() : null;
+    if (format === 'png' && ppi === null) { status(i18nUi.text("Export canceled")); return; }
+    buttons.forEach(button => { button.disabled = true; });
     if (format === 'pptx') status(i18nUi.text("Preparing PowerPoint…"));
     const dataBase64 = format === 'pptx' ? await exportPowerPoint(documentState)
       : format === 'svg' ? encodeText(await svgSource(documentState, 'main'))
-      : (await renderPreview(documentState, 'main', 8000)).data_url.split(',')[1];
+      : setPngPpi((await renderPreview(documentState, 'main', 8000)).data_url.split(',')[1], ppi);
     const result = await hikari.call('downloads.save', { fileName: `${documentState.title || 'figure'}.${format}`, dataBase64 });
     status((result.saved ? i18nUi.text("Exported {p0}", { p0: format.toUpperCase() }) : i18nUi.text("Export canceled")));
   } catch (error) { status(error.message); }
   finally { exporting = false; buttons.forEach(button => { button.disabled = false; }); }
 }
-$('export-svg').addEventListener('click', () => void exportFigure('svg')); $('export-png').addEventListener('click', () => void exportFigure('png'));
+$('export-svg').addEventListener('click', () => void exportFigure('svg'));
+$('export-png').addEventListener('click', () => {
+  const menu = $('export-menu');
+  menu.open = false;
+  menu.querySelector('summary').focus();
+  void exportFigure('png');
+});
 $('export-pptx').addEventListener('click', () => void exportFigure('pptx'));
 $('complexity').addEventListener('change', event => void edit([{ op: 'complexity', complexity: event.target.value }]));
 for (const id of ['image-generation-style', 'generate-asset-style', 'generate-here-style']) for (const [value, { label }] of Object.entries(IMAGE_STYLE_PRESETS)) { const option = new Option(label, value); i18nUi.setOwnedText(option, label); $(id).add(option); };

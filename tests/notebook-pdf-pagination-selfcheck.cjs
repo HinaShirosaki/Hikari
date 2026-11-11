@@ -13,7 +13,9 @@ let latest;
 function RecordingPdf(...args) {
   const doc = new jsPDF(...args);
   const draws = [];
+  const rules = [];
   const text = doc.text;
+  const line = doc.line;
   const addPage = doc.addPage;
   let additions = 0;
   doc.addPage = (...params) => {
@@ -27,12 +29,16 @@ function RecordingPdf(...args) {
       pageWidth: doc.internal.pageSize.getWidth(), pageHeight: doc.internal.pageSize.getHeight() });
     return text.call(doc, value, x, y, options);
   };
+  doc.line = (x1, y1, x2, y2, ...rest) => {
+    rules.push({ x1, y1, x2, y2, page: doc.internal.getCurrentPageInfo().pageNumber });
+    return line.call(doc, x1, y1, x2, y2, ...rest);
+  };
   doc.save = () => {};
-  latest = { doc, draws };
+  latest = { doc, draws, rules };
   return doc;
 }
 
-const { exportNotebookEntryPdf } = loadEsmStyleModule(path.join(root, 'src/renderer/modules/pdf-export/index.js'), {
+const { exportNotebookEntryPdf, exportProjectNotebookEntriesPdf } = loadEsmStyleModule(path.join(root, 'src/renderer/modules/pdf-export/index.js'), {
   window: { jspdf: { jsPDF: RecordingPdf } }
 });
 const protocol = { steps: [{ text: 'Record the sample measurements.', placeholders: [] }] };
@@ -51,6 +57,21 @@ function checkBounds() {
     const footer = Math.abs(draw.y - (draw.pageHeight - 40)) < 0.1;
     assert.ok(draw.x >= 18 && draw.x + draw.width <= draw.pageWidth - 18, 'Text must fit the page width: ' + draw.text);
     assert.ok(draw.y >= 18 && (footer || draw.y <= draw.pageHeight - 60), 'Text must stay above the footer: ' + draw.text);
+  }
+}
+
+function checkWritingSpace(count, marginLeft) {
+  const headings = latest.draws.filter(draw => draw.text === 'ADDITIONAL NOTES');
+  assert.equal(headings.length, count, 'Each notebook entry gets an additional notes section');
+  for (const heading of headings) {
+    const lines = latest.rules.filter(rule => rule.page === heading.page
+      && rule.y1 > heading.y + 9 && rule.y1 <= heading.pageHeight - 64);
+    assert.equal(lines.length, 4, 'All four writing lines stay with the heading above the footer');
+    for (const line of lines) {
+      assert.equal(line.x1, marginLeft);
+      assert.equal(line.x2, heading.pageWidth - 54);
+      assert.equal(line.y1, line.y2);
+    }
   }
 }
 
@@ -90,11 +111,19 @@ async function run() {
         assert.equal(draw.page, header.page, 'Tool headings and metadata must share the first table page');
       }
       checkBounds();
+      checkWritingSpace(1, pdfSettings.stapleEdge === 'left' ? 90 : 54);
       if (lines === 26 && pdfSettings.pageSize === 'letter') save('tool-heading-fixed');
       cases++;
     }
   }
-  console.log('Notebook PDF pagination selfcheck passed: ' + cases + ' real exports, full long headings and tool boundary placement.');
+  assert.equal(await exportProjectNotebookEntriesPdf({
+    project: { name: base.projectName },
+    entries: [{ ...base, protocolSnapshot: protocol }, { ...base, id: 'blank', experimentName: 'Blank notes', result: '' }],
+    pdfSettings: { pageSize: 'a5', stapleEdge: 'left' }
+  }), true);
+  checkWritingSpace(2, 90);
+  checkBounds();
+  console.log('Notebook PDF pagination selfcheck passed: ' + (cases + 1) + ' real exports with writing space, long headings and tool boundary placement.');
 }
 
 run().catch(error => { console.error(error); process.exitCode = 1; });

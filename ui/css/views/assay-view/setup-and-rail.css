@@ -2,11 +2,11 @@
 
 /* Match the Notebook's visible hover/focus captions while keeping each Assay
    action's existing accessible name and compact geometry. */
-#assay-view button[data-hover-caption]:not(.app-dialog-close-btn) {
+:is(#assay-view, #assay-context-rail) button[data-hover-caption]:not(.app-dialog-close-btn) {
   position: relative;
 }
 
-#assay-view button[data-hover-caption]::after {
+:is(#assay-view, #assay-context-rail) button[data-hover-caption]::after {
   content: attr(data-hover-caption);
   position: absolute;
   z-index: 3200;
@@ -32,29 +32,30 @@
   transition: opacity 90ms ease, visibility 0s linear 90ms;
 }
 
-#assay-view button[data-hover-caption]:hover::after,
-#assay-view button[data-hover-caption]:focus-visible::after {
+:is(#assay-view, #assay-context-rail) button[data-hover-caption]:hover::after,
+:is(#assay-view, #assay-context-rail) button[data-hover-caption]:focus-visible::after {
   opacity: 1;
   visibility: visible;
   transition-delay: 180ms;
 }
 
-#assay-view .assay-form-actions > button[data-hover-caption]:first-of-type::after,
-#assay-view .assay-results-actions > button[data-hover-caption]:first-of-type::after,
-#assay-view .assay-analysis-group-actions > button[data-hover-caption]:first-of-type::after,
-#assay-view .assay-chart-text-bar__row > button[data-hover-caption]:first-of-type::after {
+:is(#assay-view, #assay-context-rail) .assay-form-actions > button[data-hover-caption]:first-of-type::after,
+:is(#assay-view, #assay-context-rail) .assay-results-actions > button[data-hover-caption]:first-of-type::after,
+:is(#assay-view, #assay-context-rail) .assay-analysis-group-actions > button[data-hover-caption]:first-of-type::after,
+:is(#assay-view, #assay-context-rail) .assay-chart-text-bar__row > button[data-hover-caption]:first-of-type::after {
   right: auto;
   left: 0;
   transform: none;
 }
 
-#assay-view .assay-form-actions > button[data-hover-caption]:last-of-type::after,
-#assay-view .assay-results-actions > button[data-hover-caption]:last-of-type::after,
-#assay-view .assay-analysis-group-actions > button[data-hover-caption]:last-of-type::after,
-#assay-view .assay-browser-item-actions > button[data-hover-caption]:last-of-type::after,
-#assay-view .assay-result-table-panel > .foldable-section__summary > button[data-hover-caption]::after,
-#assay-view .app-dialog-head > button[data-hover-caption]::after,
-#assay-view .assay-chart-text-bar__row > button[data-hover-caption]:last-of-type::after {
+:is(#assay-view, #assay-context-rail) .assay-form-actions > button[data-hover-caption]:last-of-type::after,
+:is(#assay-view, #assay-context-rail) .assay-results-actions > button[data-hover-caption]:last-of-type::after,
+:is(#assay-view, #assay-context-rail) .assay-analysis-group-actions > button[data-hover-caption]:last-of-type::after,
+:is(#assay-view, #assay-context-rail) .assay-browser-item-actions > button[data-hover-caption]:last-of-type::after,
+:is(#assay-view, #assay-context-rail) .assay-result-table-panel > .foldable-section__summary > button[data-hover-caption]::after,
+:is(#assay-view, #assay-context-rail) .app-dialog-head > button[data-hover-caption]::after,
+:is(#assay-view, #assay-context-rail) .assay-chart-text-bar__row > button[data-hover-caption]:last-of-type::after,
+:is(#assay-view, #assay-context-rail) .assay-chart-style-actions > button[data-hover-caption]:last-of-type::after {
   right: 0;
   left: auto;
   transform: none;
@@ -557,6 +558,8 @@
   height: 100%;
   min-height: 0;
   align-self: stretch;
+  margin-top: 0;
+  padding-top: 0;
 }
 
 .assay-create-preview-panel > .assay-plate-toolbar {
@@ -567,7 +570,7 @@
   align-items: center;
   gap: var(--space-12);
   margin: 0 0 var(--space-16);
-  padding: var(--space-20) 0 var(--space-16);
+  padding: var(--space-16) 0;
   border-bottom: 1px solid var(--theme-border);
 }
 

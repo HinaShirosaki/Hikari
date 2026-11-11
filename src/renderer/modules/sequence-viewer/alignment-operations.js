@@ -76,7 +76,9 @@ function createAlignmentOperations({
       } else if (!next.records.length) {
         setAlignmentStatus(i18nUi.text("No {p0} records were loaded.", { p0: label }), true);
       } else {
-        setAlignmentStatus(i18nUi.text("Loaded {p0} input: {p1}", { p0: label, p1: describeSelectedRecord(next.records[0]) }));
+        setAlignmentStatus(role === 'reference'
+          ? i18nUi.text("Loaded {p0} input: {p1}", { p0: label, p1: describeSelectedRecord(next.records[0]) })
+          : '');
         setStatus(i18nUi.text("Loaded sequencing {p0} input.", { p0: label }));
       }
     } catch (error) {

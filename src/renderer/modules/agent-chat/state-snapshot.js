@@ -89,6 +89,7 @@ export function buildStateSnapshot(state, projectId) {
     .map((protocol) => ({
       id: trimText(protocol?.id, 120),
       name: trimText(protocol?.name, 220),
+      updatedAt: trimText(protocol?.updatedAt, 80),
       purpose: trimText(protocol?.purpose || protocol?.description, 700),
       projectId: trimText(protocol?.projectId, 120),
       projectName: trimText(protocol?.projectName, 220),

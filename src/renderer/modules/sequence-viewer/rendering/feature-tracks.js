@@ -27,7 +27,8 @@ function renderLineFeatureButtonsHtml(
       const title = `${feature.name || '-'} (${location})`;
       const color = hashTypeToColor(String(feature?.type || 'misc_feature'));
       const isPrimer = isPrimerBindingFeature(feature?.type);
-      const direction = feature?.strand === -1 ? -1 : 1;
+      const strand = Number(feature?.strand);
+      const direction = strand === -1 || strand === 1 ? strand : 0;
       return segments
         .map((segment) => {
           const geometry = computeRestrictionAnnotationGeometry(segment, lineStart, lineEnd, safeAdvance);
@@ -40,7 +41,7 @@ function renderLineFeatureButtonsHtml(
             title,
             color,
             isPrimer,
-            direction,
+            direction: isPrimer ? direction || 1 : direction,
             hasFivePrime: isPrimer && (direction === -1
               ? geometry.overlapEnd === Number(segment?.end)
               : geometry.overlapStart === Number(segment?.start)),
@@ -126,7 +127,8 @@ function buildLineFeatureTrackHtml(fragments, options) {
       const label = String(fragment.feature?.name || `feature_${fragment.index + 1}`);
       const labelWidthPx = (label.length * safeAdvance) + (LINE_FEATURE_BAR_HORIZONTAL_PADDING_PX * 2);
       // A wrapped primer is named once, on the fragment carrying its 5' end.
-      const showLabel = fragment.widthPx >= (labelWidthPx + (fragment.isPrimer ? 38 : 0))
+      const directionWidthPx = fragment.direction ? 7 : 0;
+      const showLabel = fragment.widthPx >= (labelWidthPx + (fragment.isPrimer ? 38 : directionWidthPx))
         && (!fragment.isPrimer || fragment.hasFivePrime);
       if (fragment.oligo) {
         return buildOligoPrimerHtml(fragment, { topPx, isActive, label, lineWidthPx });
@@ -158,10 +160,13 @@ function buildLineFeatureTrackHtml(fragments, options) {
           </button>
         `;
       }
+      const directionClass = fragment.direction
+        ? ` sequence-viewer-line-feature-bar-${fragment.direction === -1 ? 'reverse' : 'forward'}`
+        : '';
       return `
         <button
           type="button"
-          class="sequence-viewer-line-feature sequence-viewer-line-feature-bar${isActive ? ' sequence-viewer-line-feature-active' : ''}${showLabel ? '' : ' sequence-viewer-line-feature-compact'}"
+          class="sequence-viewer-line-feature sequence-viewer-line-feature-bar${directionClass}${isActive ? ' sequence-viewer-line-feature-active' : ''}${showLabel ? '' : ' sequence-viewer-line-feature-compact'}"
           data-feature-index="${fragment.index}"
           style="left:${fragment.leftPx.toFixed(3)}px;width:${fragment.widthPx.toFixed(3)}px;top:${topPx.toFixed(3)}px;--sequence-viewer-feature-color:${fragment.color};"
           title="${escapeHtml(fragment.title)}"

@@ -193,7 +193,7 @@ export function startHikariCore({
     normalizeStateStoragePaths(state);
     persistState(state);
     if (windowObject.hikariApi?.autoSaveDataFile && String(state.settings?.storagePath || '').trim()) {
-      syncMarkdownRecordState(windowObject.hikariApi, state)
+      return syncMarkdownRecordState(windowObject.hikariApi, state)
         .then((result) => {
           undoService?.acceptExternalChanges();
           // autoSaveDataFile resolves { ok:false, error } on a write failure (it
@@ -209,9 +209,11 @@ export function startHikariCore({
           } else {
             saveError = '';
           }
+          return result;
         })
         .catch((error) => {
           console.warn('Auto-save to the storage folder failed:', error);
+          return { ok: false, error: error.message };
         });
     }
   }

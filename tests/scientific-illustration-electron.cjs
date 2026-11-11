@@ -17,7 +17,7 @@ const { verifyTextEditing } = require('./scientific-illustration-text-editing.cj
 const { verifySystemFonts } = require('./scientific-illustration-fonts.cjs');
 const { verifyLayerOrder } = require('./scientific-illustration-layer-order.cjs');
 const { verifyRailFolding, verifyHeaderRail } = require('./scientific-illustration-rail.cjs');
-const { verifyCanvasLayout } = require('./scientific-illustration-layout.cjs');
+const { verifyCanvasLayout, verifyCanvasRulers } = require('./scientific-illustration-layout.cjs');
 const { verifyGrouping } = require('./scientific-illustration-grouping.cjs');
 const { verifySelectionToolbar } = require('./scientific-illustration-selection-toolbar.cjs');
 const { verifyOpacity } = require('./scientific-illustration-opacity.cjs');
@@ -265,6 +265,11 @@ async function run() {
     await verifyLibraryNavigation({ tool, evaluate, check, win, pause, waitFor, temp });
     check(errors.length === 0, errors.join('\n'));
     console.log(`Figura library navigation: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
+  }
+  if (process.env.HIKARI_CANVAS_RULERS_QA_ONLY === '1') {
+    await verifyCanvasRulers({ tool, evaluate, check, win, temp });
+    check(errors.length === 0, errors.join('\n'));
+    console.log(`Figura canvas rulers: ${checks} checks passed. Runtime: ${runtime}. Artifacts: ${temp}`); return;
   }
   if (process.env.HIKARI_SINGLE_CANVAS_QA_ONLY === '1') {
     await verifySingleCanvas({ tool, evaluate, check, win, pause, temp, storage, reloadPlugin: async () => {
@@ -651,6 +656,7 @@ async function run() {
     await evaluate('illustrationWorkspace.ready.then(()=>true)');
   } });
   await verifyCanvasLayout({ tool, evaluate, check, win, pause, temp });
+  await verifyCanvasRulers({ tool, evaluate, check, win, temp });
   await evaluate('document.querySelector("[data-layer-id=label] .layer-select").click()');
   await pause(100);
   await fs.writeFile(path.join(temp, 'day.png'), (await win.webContents.capturePage()).toPNG());

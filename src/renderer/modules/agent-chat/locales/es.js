@@ -4,6 +4,16 @@ export const agentSpanish = Object.freeze({
   'citation.openProtocol': 'Abrir protocolo: {source}',
   'citation.openNotebook': 'Abrir página del cuaderno: {source}',
 
+  'draft.protocolEditKind': 'Edición de protocolo guardado',
+  'draft.pageProtocolEditKind': 'Edición de protocolo del cuaderno',
+  'draft.protocolEdited': 'Pasos actualizados',
+  'review.stepNumber': 'Paso {number}',
+  'review.beforeEdit': 'Texto actual',
+  'review.afterEdit': 'Texto propuesto',
+  'status.protocolEdited': 'Se guardaron los pasos del protocolo.',
+  'status.protocolEditRejected': 'Se rechazó la edición del protocolo.',
+  'status.protocolEditFailed': 'No se pudo guardar la edición del protocolo.',
+
   'evidence.title': 'Evidencia',
   'evidence.why': 'Motivo de selección',
   'evidence.notes': 'Tus notas',

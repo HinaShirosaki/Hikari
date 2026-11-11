@@ -61,7 +61,6 @@ export const plateEnglish = Object.freeze({
   'grid.wellConcentration': '{well} • Sample ID: {sample} | Conc.: {concentration} • Click to edit Conc.',
   'grid.sampleShort': 'S: {value}',
   'grid.concentrationShort': 'C: {value}',
-  'grid.previewNote': 'Previewing first {rows} rows x {columns} columns for {count} well plate.',
   'grid.results': 'Assay result spreadsheet',
   'grid.transformed': 'Transformed assay plate spreadsheet',
   'grid.failed': 'Spreadsheet component failed to load (Tabulator).',
@@ -425,6 +424,7 @@ export const plateEnglish = Object.freeze({
   "full.304ff7fb": "None",
   "full.6992c07b": "{p0}TickLen",
   "full.ab6e4d18": "Length (pt)",
+  "full.61235220": "Major ticks",
   "full.44b980a8": "{p0}MinorTicks",
   "full.6365d674": "Minor ticks",
   "full.23c6cde7": "{p0}TickFormat",
@@ -635,5 +635,8 @@ export const plateEnglish = Object.freeze({
   "full.20c4709": "Remove element",
   "full.1cd4a3ab": "Label {p0}",
   "full.9808f547": "Line",
-  "full.9774b466": "Band"
+  "full.9774b466": "Band",
+  "full.b1dd9521": "Low",
+  "full.9be5f96": "Medium",
+  "full.be0a061d": "High"
 });

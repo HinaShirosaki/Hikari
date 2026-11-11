@@ -112,6 +112,39 @@ function renderNotebookPreview(item, safeText, { actions = null, inline = false 
   `;
 }
 
+function protocolEditKind(proposal) {
+  return proposal.target_type === 'notebook_page' ? 'draft.pageProtocolEditKind' : 'draft.protocolEditKind';
+}
+
+function renderProtocolEditPreview(item, safeText, { inline = false, applying = false } = {}) {
+  const { proposal } = item;
+  return `
+    <article class="agent-review-card draft-review-document${inline ? ' agent-inline-review' : ''}" data-agent-review-card="${safeText(item.id)}">
+      <div class="agent-review-card-header draft-review-heading">
+        <span class="agent-review-type draft-review-kind">${agentMessage(protocolEditKind(proposal))}</span>
+        <h4>${safeText(proposal.target_title)}</h4>
+      </div>
+      <div class="agent-review-content">
+        ${proposal.step_edits.map(edit => `
+          <section class="agent-review-section">
+            <h5>${agentMessage('review.stepNumber', { number: edit.step_number })}</h5>
+            <p><strong>${agentMessage('review.beforeEdit')}</strong></p>
+            <p style="white-space: pre-wrap">${safeText(edit.expected_text)}</p>
+            <p><strong>${agentMessage('review.afterEdit')}</strong></p>
+            <p style="white-space: pre-wrap">${safeText(edit.replacement_text)}</p>
+          </section>
+        `).join('')}
+      </div>
+      ${inline ? '' : `
+        <div class="agent-review-actions draft-review-actions">
+          <button type="button" class="ghost-btn" data-agent-review-reject="${safeText(item.id)}" ${applying ? 'disabled' : ''}>${agentMessage('draft.reject')}</button>
+          <button type="button" class="primary-btn" data-agent-review-approve="${safeText(item.id)}" ${applying ? 'disabled' : ''}>${agentMessage('review.approve')}</button>
+        </div>
+      `}
+    </article>
+  `;
+}
+
 function renderNotebookAppendPreview(item, safeText, { actions = null, inline = false } = {}) {
   const append = item.append || {};
   const proposal = append.proposal || {};
@@ -161,6 +194,8 @@ function renderNotebookAppendPreview(item, safeText, { actions = null, inline = 
 }
 
 export {
+  protocolEditKind,
+  renderProtocolEditPreview,
   renderNotebookAppendPreview,
   renderNotebookPreview,
   renderProtocolPreview

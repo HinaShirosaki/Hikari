@@ -439,6 +439,8 @@ export function initProtocolManagement({
         // The history guard has already protected dirty drafts. Refresh a
         // clean open editor so its next Save cannot put back the old content.
         openEditorWithDraft(protocol, 'editor.edit', { isCreateMode: false });
+      } else if (localState.protocolDetailMode === 'view' && protocol) {
+        viewProtocol(protocol.id);
       }
     },
     renderPlaceholderPresets,

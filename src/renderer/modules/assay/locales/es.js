@@ -57,7 +57,6 @@ export const plateSpanish = Object.freeze({
   "grid.wellSample": "{well} • ID de muestra: {sample} | Conc.: {concentration} • Haga clic para editar el ID de muestra",
   "grid.wellConcentration": "{well} • ID de muestra: {sample} | Conc.: {concentration} • Haga clic para editar la conc.",
   "grid.sampleShort": "M: {value}",
-  "grid.previewNote": "Vista previa de las primeras {rows} filas x {columns} columnas de la placa de {count} pocillos.",
   "grid.results": "Hoja de resultados del ensayo",
   "grid.transformed": "Hoja de la placa transformada",
   "grid.failed": "No se pudo cargar el componente de hoja de cálculo (Tabulator).",
@@ -289,5 +288,9 @@ export const plateSpanish = Object.freeze({
   "storage.noFolder": "Configure una carpeta de almacenamiento antes de adjuntar resultados.",
   "storage.missingData": "Faltan los datos del archivo adjunto.",
   "storage.unavailable": "El almacenamiento de archivos adjuntos no está disponible.",
-  "storage.saveFailed": "No se pudo guardar el archivo adjunto."
+  "storage.saveFailed": "No se pudo guardar el archivo adjunto.",
+  "full.61235220": "Marcas principales",
+  "full.b1dd9521": "Baja",
+  "full.9be5f96": "Media",
+  "full.be0a061d": "Alta"
 });

@@ -45,6 +45,7 @@ export function initAgentChat({
   onOpenPaperCitation,
   onOpenRecordCitation,
   onAppendNotebookEntry = async () => ({ ok: false, error: 'Notebook append is unavailable.' }),
+  onEditProtocolSteps,
   onProtocolsChanged = () => {},
   notebookDraftAdapter: providedNotebookDraftAdapter = null,
   protocolReviewAdapter: providedProtocolReviewAdapter = null,
@@ -205,6 +206,7 @@ export function initAgentChat({
     notebookActions: historyController.notebookActions,
     notebookDraftAdapter,
     protocolReviewAdapter,
+    onEditProtocolSteps,
     onAppendNotebookEntry
   });
 

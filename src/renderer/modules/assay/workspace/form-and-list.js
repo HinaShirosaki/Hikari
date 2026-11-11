@@ -101,9 +101,19 @@ function createAssayFormAndList({
     }
     const def = getPlateDefinition(assay.plateType || elements.assayPlateTypeInput?.value || '96');
     resultsManager.syncCurrentResultsFromGrid();
-    assay.resultValues = layoutManager.filterMappedResults(normalizeResults(runtime.currentResults, def));
+    const resultValues = layoutManager.filterMappedResults(normalizeResults(runtime.currentResults, def));
+    // Table edits invalidate previews as they are committed. Also handle a
+    // pending grid edit that is first picked up by Save.
+    if (assay.latestAnalysis) {
+      const savedValues = layoutManager.filterMappedResults(normalizeResults(assay.resultValues, def));
+      const entries = Object.entries(resultValues);
+      if (Object.keys(savedValues).length !== entries.length
+        || entries.some(([well, value]) => savedValues[well] !== value)) {
+        assay.latestAnalysis = null;
+      }
+    }
+    assay.resultValues = resultValues;
     assay.transformSpec = analysisView.getTransformSpec();
-    assay.latestAnalysis = null;
     assay.updatedAt = new Date().toISOString();
     syncNotebookAssayLinks();
     persist();

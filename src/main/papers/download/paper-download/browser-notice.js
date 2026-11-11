@@ -1,14 +1,15 @@
 'use strict';
 
 const PAPER_DOWNLOAD_NOTICE_ID = 'hikari-paper-download-notice';
-const PAPER_DOWNLOAD_NOTICE_HEADING = 'Download this paper';
-const PAPER_DOWNLOAD_NOTICE_MESSAGE = 'Click the Download button on this page. Hikari will save the PDF automatically.';
+const PAPER_DOWNLOAD_NOTICE_HEADING = 'Automatic paper download';
+const PAPER_DOWNLOAD_NOTICE_MESSAGE = 'Hikari will find and download the PDF automatically. Complete sign-in or verification here if needed.';
+const PAPER_DOWNLOAD_MANUAL_MESSAGE = 'Click the Download button on this page. Hikari will save the PDF automatically.';
 
-function buildPaperDownloadNoticeScript() {
+function buildPaperDownloadNoticeScript({ automatic = true } = {}) {
   return `(() => {
     const noticeId = ${JSON.stringify(PAPER_DOWNLOAD_NOTICE_ID)};
-    const heading = ${JSON.stringify(PAPER_DOWNLOAD_NOTICE_HEADING)};
-    const message = ${JSON.stringify(PAPER_DOWNLOAD_NOTICE_MESSAGE)};
+    const heading = ${JSON.stringify(automatic ? PAPER_DOWNLOAD_NOTICE_HEADING : 'Download this paper')};
+    const message = ${JSON.stringify(automatic ? PAPER_DOWNLOAD_NOTICE_MESSAGE : PAPER_DOWNLOAD_MANUAL_MESSAGE)};
     const existing = document.getElementById(noticeId);
     if (existing) {
       return true;
@@ -125,24 +126,25 @@ function buildPaperDownloadNoticeScript() {
   })()`;
 }
 
-function showPaperDownloadNotice(webContents) {
+function showPaperDownloadNotice(webContents, options = {}) {
   if (!webContents || typeof webContents.executeJavaScript !== 'function' || webContents.isDestroyed?.()) {
     return Promise.resolve(false);
   }
-  return Promise.resolve(webContents.executeJavaScript(buildPaperDownloadNoticeScript(), true))
+  return Promise.resolve(webContents.executeJavaScript(buildPaperDownloadNoticeScript(options), true))
     .then((result) => result === true)
     .catch(() => false);
 }
 
-function attachPaperDownloadNotice(webContents) {
+function attachPaperDownloadNotice(webContents, options = {}) {
   if (!webContents) {
     return;
   }
   const showNotice = () => {
-    void showPaperDownloadNotice(webContents);
+    void showPaperDownloadNotice(webContents, options);
   };
   webContents.on?.('did-finish-load', showNotice);
   showNotice();
+  return () => webContents.removeListener?.('did-finish-load', showNotice);
 }
 
 module.exports = {

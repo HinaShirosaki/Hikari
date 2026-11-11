@@ -25,7 +25,7 @@ export function imageGenerationStyle(value = { preset: 'automatic', prompt: '' }
 export function oneOffImageStyle(preset, savedPreset) {
   if (preset === savedPreset) return '';
   const { label, guidance } = IMAGE_STYLE_PRESETS[preset];
-  return ` Image style for this request only: ${label}. ${guidance} It replaces the saved style and style line; save neither. If SVG cannot show it, use image_gen.`;
+  return ` Image style for this request only: ${label}. ${guidance} Use it in place of the saved style and style line for this addition. Keep the saved settings.`;
 }
 
 export function imageStyleInstructions(value, line = '') {

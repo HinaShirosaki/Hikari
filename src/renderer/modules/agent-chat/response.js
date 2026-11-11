@@ -107,6 +107,7 @@ export function normalizeAgentResponse(result) {
     protocolWorkflow,
     notebookDraftWorkflow,
     notebookAppendWorkflow,
+    protocolEdits: asArray(result?.protocol_edits),
     protocolGeneration,
     notebookPayload,
     notebookPayloads: asArray(result?.notebookDrafts).length ? result.notebookDrafts

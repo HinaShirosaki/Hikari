@@ -221,7 +221,8 @@ Existing figures default to Standard. The canvas surround has no separate fill.
 
 Build complex components as editable groups on the canvas, or save them as reusable assets. Layer ordering, visibility, duplication, deletion, undo/redo,
 and canvas sizes are available. **Export → SVG** keeps artwork
-and text in separate SVG groups; **Export → PNG** exports the assembled main canvas.
+and text in separate SVG groups. **Export → PNG** lets you choose the print
+resolution in PPI at the canvas's existing pixel dimensions.
 **Export → PowerPoint** creates one slide matching the main canvas. Every visible
 component remains a separate object you can move, resize, rotate, or delete in
 PowerPoint. Labels are editable text boxes; SVG artwork remains vector graphics,
@@ -284,45 +285,39 @@ Codex chooses the renderer separately for each component:
 
 | Appearance or requirement | Renderer |
 | --- | --- |
-| Schematic cells, membranes, receptors, vesicles, DNA cartoons, abstract protein shapes | SVG |
-| Arrows, connectors, panels; exact counts, positions and connections | SVG |
+| Illustrative subjects that can be placed as separate images | SVG or Codex `image_gen`, according to the saved target |
+| Arrows, connectors, panels and geometry that must remain precise or directly editable | SVG |
 | Quantitative charts | Plotly layer from supplied data and documented calculations |
 | Scale bars, precise atom/bond geometry | SVG from known values or verified structure |
-| Realistic anatomy, organic surface detail, dense textures, photographic lighting | Codex `image_gen` when simple SVG cannot express the required appearance clearly |
 | Figure labels, titles and annotations | Separate editable text objects; chart labels use Plotly data/layout |
 
-A detailed schematic mitochondrion can remain SVG. A realistic textured
-mitochondrion portrait can use image generation, with its labels and arrows
-added independently. Simple / Standard / Detailed controls detail, not renderer
-selection; a large number of objects does not justify rasterizing the figure.
+Simple / Standard / Detailed controls the amount of scientific detail. Image
+style controls the appearance of generated components.
 
-Open the **Image generation settings** sliders button beside **Detail** and turn on **Image generation** to choose
-0%, 25%, 50%, 75% or 100%. Off keeps Automatic SVG-first choice; 0% disables new
-image generation. The percentage describes the approximate visual area of
-eligible illustrative artwork, excluding boxes, arrows, connectors, panel
-frames, charts, scale bars, exact scientific geometry and text. Those always
-remain separate plot, SVG or text objects, even at 100%. It is a preference, not
-an exact pixel measurement or a quota of components/calls. A fully schematic
-request stays SVG rather than adding unnecessary texture to reach a target.
-The setting belongs to this illustration, survives reload and duplication,
-and guides subsequent requested edits without converting existing artwork.
+Open **Image generation settings** beside **Detail** and turn on **Image
+generation** to choose 0%, 25%, 50%, 75% or 100%. With the setting off,
+Automatic starts with SVG. The percentage estimates the share of eligible
+illustrative artwork by visible area. Boxes, arrows, connectors, panel frames,
+charts, scale bars, exact scientific geometry and labels stay separate SVG,
+plot or text objects at every setting. Flat and stylized subjects qualify when
+an independent image can meet the scientific and editing requirements.
+The setting saves per illustration, carries over when duplicated, and guides
+new or explicitly replaced artwork.
 
 | Target | Agent guidance |
 | --- | --- |
-| 0% | SVG only; no new image generation. |
-| 25% | Mostly SVG; image generation for key organic or textured detail. |
+| 0% | Use SVG for new artwork. |
+| 25% | Image generation for roughly one quarter of eligible artwork by area. |
 | 50% | Balanced visual shares of SVG and image-generated illustrative artwork. |
-| 75% | Mostly image generation; SVG for simpler illustrative components. |
-| 100% | Image generation for all eligible artwork; schematic geometry stays SVG. |
+| 75% | Image generation for roughly three quarters of eligible artwork by area. |
+| 100% | Image generation for every eligible component, including simple and flat artwork. |
 
-If the choice is uncertain, Codex renders one simple SVG draft at final size.
-It keeps a clear, recognizable draft or switches that component to image
-generation when the requested natural appearance remains inadequate. An
-obvious raster need can go straight to generation. Hybrid figures combine
-independent raster and SVG layers. Any part requiring its own movement or
-restyling must have its own layer; pixels inside a raster object cannot be
-edited individually. Generated artwork cannot establish measured data or exact
-molecular structure.
+In Automatic, Codex can try a simple SVG draft and use image generation if
+SVG cannot show the required appearance. With a positive target, Codex plans
+the mix before drawing and explains any material shortfall in the final reply.
+Hybrid figures combine independent raster and SVG layers. Each part that
+needs its own movement or restyling has its own layer. Use SVG for shapes
+that need precise edits.
 
 **Image generation settings → Image style** controls the appearance of generated components:
 Automatic, Scientific illustration, Flat illustration, 3D render,

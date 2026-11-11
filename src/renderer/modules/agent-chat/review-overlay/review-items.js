@@ -1,9 +1,24 @@
 import { trimText } from '../shared.js';
+import { normalizeProtocolStepEdits } from '../../../../shared/protocol-step-edits.mjs';
 import { collectNotebookDrafts } from '../notebook-draft-list.js';
 import {
   getProtocolReviewStatus,
   resolveNotebookAppendReviewState
 } from './review-status.js';
+
+function collectProtocolEdits(meta, messageId) {
+  if (!Array.isArray(meta.protocol_edits)) return [];
+  return meta.protocol_edits.flatMap(proposal => {
+    const proposalId = trimText(proposal?.proposal_id, 80);
+    const stepEdits = normalizeProtocolStepEdits(proposal?.step_edits);
+    if (!proposalId || !stepEdits || !['notebook_page', 'protocol'].includes(proposal.target_type)) return [];
+    const id = `protocol-edit:${messageId}:${proposalId}`;
+    return [{
+      id, type: 'protocol-edit', messageId, proposal: { ...proposal, step_edits: stepEdits },
+      status: getProtocolReviewStatus(meta, id)
+    }];
+  });
+}
 
 function collectReviewItemsForMessage(message, {
   notebookDraftAdapter,
@@ -15,7 +30,7 @@ function collectReviewItemsForMessage(message, {
   if (!messageId) {
     return [];
   }
-  const items = [];
+  const items = collectProtocolEdits(meta, messageId).filter(item => !['approved', 'rejected'].includes(item.status));
   for (const { draft: notebookDraft, draftId } of collectNotebookDrafts(meta, notebookDraftAdapter)) {
     const existingNotebookEntry = notebookDraftAdapter?.findEntryForDraft?.(notebookDraft) || null;
     if (
@@ -71,5 +86,6 @@ function collectReviewItemsForMessage(message, {
 }
 
 export {
+  collectProtocolEdits,
   collectReviewItemsForMessage
 };

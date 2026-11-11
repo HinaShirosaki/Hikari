@@ -21,7 +21,9 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          # vendor/pdfjs uses Map#getOrInsertComputed, Uint8Array#toHex and
+          # Math.sumPrecise, which Electron's V8 has and Node 24 lacks.
+          node-version: '25'
           cache: npm
 
       - run: npm ci

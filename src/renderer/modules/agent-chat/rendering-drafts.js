@@ -3,7 +3,8 @@ import { collectNotebookDrafts } from './notebook-draft-list.js';
 import { renderAgentChatIcon } from './icons.js';
 import { agentMessage } from './localization.js';
 import { getProtocolReviewStatus, resolveNotebookAppendReviewState } from './review-overlay/review-status.js';
-import { renderNotebookAppendPreview, renderNotebookPreview, renderProtocolPreview } from './review-overlay/review-previews.js';
+import { protocolEditKind, renderNotebookAppendPreview, renderNotebookPreview, renderProtocolEditPreview, renderProtocolPreview } from './review-overlay/review-previews.js';
+import { collectProtocolEdits } from './review-overlay/review-items.js';
 
 // kind/status are agent catalog keys; titles come from the draft and stay literal.
 function renderCard({ key, title, titleKey = '', kind, status, preview, className = '', reviewMessageId = '' }, safeText) {
@@ -28,6 +29,17 @@ export function renderDraftCards(meta, messageId, { safeText, notebookDraftAdapt
   const id = trimText(messageId, 120);
   if (!id) return '';
   const sections = [];
+  for (const item of collectProtocolEdits(meta, id)) {
+    const pending = !['approved', 'rejected'].includes(item.status);
+    sections.push(renderCard({
+      key: item.id,
+      title: item.proposal.target_title,
+      kind: protocolEditKind(item.proposal),
+      status: pending ? 'draft.reviewRequired' : item.status === 'approved' ? 'draft.protocolEdited' : 'draft.rejected',
+      preview: renderProtocolEditPreview(item, safeText, { inline: true }),
+      reviewMessageId: pending ? id : ''
+    }, safeText));
+  }
   for (const { draft, draftId } of collectNotebookDrafts(meta, notebookDraftAdapter)) {
     const entry = notebookDraftAdapter?.findEntryForDraft?.(draft) || null;
     if (draft && (draft.save?.mode === 'confirm_before_save' || entry)) {

@@ -83,14 +83,14 @@ On Windows use Ctrl in place of ⌘.
 
 - **Detail** (Simple, Standard, Detailed) sets how much scientific detail the
   brief asks for. It is saved per figure and does not redraw existing artwork.
-- **Renderer per component:** SVG for schematics, arrows, panels and exact
-  geometry; a Plotly layer for data; Codex's built-in `image_gen` only for
-  realistic or textured detail that SVG cannot show clearly. Labels are always
-  separate text layers, and artwork never contains text.
+- **Renderer per component:** SVG for arrows, panels and exact geometry,
+  Plotly for data, and editable text for labels. Codex chooses SVG or its
+  built-in `image_gen` for illustrative subjects using the saved target.
 - **Image generation settings** (beside Detail): off means SVG first; on sets a
-  target share of 0–100% for eligible artwork. Boxes, arrows, charts, exact
-  geometry and labels stay SVG or text even at 100%. **Image style** and
-  **Style notes** steer new generated images only.
+  target share of 0–100% of eligible artwork by placed area. At 100%, flat and
+  stylized subjects qualify whenever they can be placed as separate images
+  without sacrificing precision or editability. **Image style** and **Style
+  notes** steer new generated images only.
 - **Image generation** uses the signed-in Codex; there is no separate provider or
   API key. Hikari imports results from Codex's own `generated_images` folder and
   stores the bytes in the figure. If generation is unavailable, Codex says so and

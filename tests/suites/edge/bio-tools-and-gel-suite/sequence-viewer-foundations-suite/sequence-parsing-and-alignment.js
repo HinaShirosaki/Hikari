@@ -504,6 +504,17 @@ test('[EDGE] sequence-viewer alignSequenceToReference normalizes wraparound span
   assert.equal(result.referenceSpan.end, 6);
   assert.equal(result.identityPercent, 100);
 });
+test('[EDGE] sequence-viewer exact full-length circular alignment matches affine scoring', () => {
+  const reference = makeAlignmentRecord('TTTAAACCCGGG', { topology: 'circular' });
+  const query = makeAlignmentRecord('GGGTTTAAACCC', { sourceFormat: 'ab1' });
+  const result = sequenceViewerInternals.alignSequenceToReference(reference, query);
+  const affineResult = sequenceViewerInternals.alignSequenceToReference(reference, query, { matchScore: 2 });
+
+  assert.deepEqual(result, affineResult);
+  assert.equal(result.referenceSpan.start, 9);
+  assert.equal(result.referenceSpan.end, 9);
+  assert.equal(result.referenceSpan.wraps, true);
+});
 test('[EDGE] sequence-viewer alignSequenceToReference breaks score ties by identity before coverage', () => {
   const result = sequenceViewerInternals.alignSequenceToReference(
     makeAlignmentRecord('GGGAAAAAACCCGGGAAAAAAGGG', { name: 'ref' }),
