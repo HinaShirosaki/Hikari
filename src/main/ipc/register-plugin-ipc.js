@@ -65,7 +65,7 @@ function registerPluginIpc(deps = {}) {
   const installGitHubPlugin = createGitHubPluginInstaller({
     fs,
     getInstallRoot: () => path.join(deps.app.getPath('userData'), 'plugin-repositories'),
-    runGit: deps.runGit
+    download: deps.downloadRepository
   });
 
   const pluginServers = createPluginServerRegistry({

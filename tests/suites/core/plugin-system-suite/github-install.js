@@ -1,12 +1,23 @@
 module.exports = function registerGitHubInstallSuite(context = {}) {
   const { assert, fsPromises: fs, path, test } = context.scope;
   const root = context.__dirname;
-  const { createGitHubPluginInstaller, normalizeGitHubRepositoryUrl } = require(
+  const { createGitHubPluginInstaller, downloadRepository, normalizeGitHubRepositoryUrl } = require(
     path.join(root, 'src/main/lib/install-github-plugin.js')
   );
-  const { execFile } = require('node:child_process');
-  const exec = require('node:util').promisify(execFile);
+  const { execFileSync } = require('node:child_process');
   const manifest = { id: 'my-plugin', name: 'My Plugin', version: '1.0.0', permissions: ['storage'] };
+  // GitHub's codeload tarballs wrap the branch in one `<repo>-HEAD/` folder.
+  const tarball = async (folder, files) => {
+    const top = path.join(folder, 'repo-HEAD');
+    await fs.mkdir(top, { recursive: true });
+    for (const [name, body] of Object.entries(files)) {
+      await fs.mkdir(path.dirname(path.join(top, name)), { recursive: true });
+      if (body.symlink) await fs.symlink(body.symlink, path.join(top, name));
+      else await fs.writeFile(path.join(top, name), body);
+    }
+    return execFileSync('tar', ['-czf', '-', '-C', folder, 'repo-HEAD']);
+  };
+  const respond = (body, status = 200) => new Response(body, { status });
 
   test('plugin system: GitHub URLs accept repository links and reject other hosts, credentials, and paths', () => {
     assert.equal(normalizeGitHubRepositoryUrl(' https://github.com/Owner/Plugin-Repo.git/ '), 'https://github.com/Owner/Plugin-Repo');
@@ -21,61 +32,68 @@ module.exports = function registerGitHubInstallSuite(context = {}) {
     ]) assert.throws(() => normalizeGitHubRepositoryUrl(url), /GitHub repository URL/);
   });
 
-  test('plugin system: GitHub installer clones a real repository and keeps final paths after staging', async () => {
-    const temp = await fs.mkdtemp(path.join(root, 'tmp', 'github-clone-'));
-    const repository = path.join(temp, 'different-repository-name');
+  test('plugin system: GitHub installer unpacks the default-branch tarball and keeps final paths after staging', async () => {
+    const temp = await fs.mkdtemp(path.join(root, 'tmp', 'github-download-'));
     const installs = path.join(temp, 'installed');
     try {
-      await fs.mkdir(repository);
-      await fs.writeFile(path.join(repository, 'plugin.json'), JSON.stringify(manifest));
-      await fs.writeFile(path.join(repository, 'index.html'), '<!doctype html><h1>My Plugin</h1>');
-      await exec('git', ['init', repository]);
-      await exec('git', ['-C', repository, 'add', '.']);
-      await exec('git', ['-C', repository, '-c', 'user.name=QA', '-c', 'user.email=qa@example.test',
-        '-c', 'core.hooksPath=', '-c', 'commit.gpgsign=false', 'commit', '-m', 'Plugin fixture']);
-      const { pathToFileURL } = require('node:url');
-      const clone = async (command, args, options) => {
-        assert.equal(command, 'git');
-        assert.equal(args.at(-2), 'https://github.com/owner/different-repository-name.git');
-        assert.equal(options.env.GIT_TERMINAL_PROMPT, '0');
-        assert.equal(options.windowsHide, true);
-        assert.ok(args.includes('--no-recurse-submodules'));
-        // Redirect only the test fixture's GitHub URL to a local Git repository.
-        return exec(command, ['-c', `url.${pathToFileURL(repository).href}.insteadOf=${args.at(-2)}`,
-          '-c', 'protocol.file.allow=always', ...args], options);
+      const archive = await tarball(path.join(temp, 'fixture'), {
+        'plugin.json': JSON.stringify(manifest), 'index.html': '<!doctype html><h1>My Plugin</h1>', 'assets/app.js': 'export {};'
+      });
+      const requested = [];
+      const fetchImpl = async (url, options) => {
+        requested.push(url);
+        assert.ok(options.signal, 'the download has a timeout');
+        return respond(archive);
       };
-      const install = createGitHubPluginInstaller({ fs, getInstallRoot: () => installs, runGit: clone });
+      const install = createGitHubPluginInstaller({ fs, getInstallRoot: () => installs,
+        download: (url, destination) => downloadRepository(url, destination, { fetchImpl }) });
       const result = await install({ url: 'https://github.com/owner/different-repository-name.git' });
+      assert.deepEqual(requested, ['https://codeload.github.com/owner/different-repository-name/tar.gz/HEAD']);
       assert.equal(result.ok, true);
       assert.equal(result.id, 'my-plugin');
       assert.equal(path.basename(result.path), 'my-plugin');
       assert.equal(result.repositoryUrl, 'https://github.com/owner/different-repository-name');
+      const { pathToFileURL } = require('node:url');
       assert.equal(result.entryUrl, pathToFileURL(path.join(result.path, 'index.html')).href);
       assert.deepEqual(result.permissions, ['storage']);
       assert.match(await fs.readFile(path.join(result.path, 'index.html'), 'utf8'), /My Plugin/);
-      assert.ok((await fs.stat(path.join(result.path, '.git'))).isDirectory(), 'retains the cloned repository');
+      assert.equal(await fs.readFile(path.join(result.path, 'assets', 'app.js'), 'utf8'), 'export {};', 'the wrapping folder is stripped');
       const before = await fs.readdir(installs);
       await assert.rejects(install({ url: result.repositoryUrl, installedPluginIds: ['my-plugin'] }), /already installed/);
-      assert.deepEqual(await fs.readdir(installs), before, 'duplicate install leaves the existing checkout untouched');
+      assert.deepEqual(await fs.readdir(installs), before, 'duplicate install leaves the existing copy untouched');
+      if (process.platform !== 'win32') {
+        const linked = await tarball(path.join(temp, 'linked'), {
+          'plugin.json': JSON.stringify({ ...manifest, id: 'linked' }), 'index.html': '<h1>x</h1>', 'secret': { symlink: '/etc/hosts' }
+        });
+        const linkedInstall = createGitHubPluginInstaller({ fs, getInstallRoot: () => installs,
+          download: (url, destination) => downloadRepository(url, destination, { fetchImpl: async () => respond(linked) }) });
+        await assert.rejects(linkedInstall({ url: 'https://github.com/owner/linked' }), /symbolic links/);
+        assert.deepEqual(await fs.readdir(installs), before, 'a rejected archive leaves no staging folder');
+      }
     } finally {
       await fs.rm(temp, { recursive: true, force: true });
     }
   });
 
-  test('plugin system: GitHub installer cleans failed clones and invalid manifests and permits retry', async () => {
+  test('plugin system: GitHub downloads explain missing, refused, offline, and slow repositories', async () => {
+    const download = (fetchImpl) => downloadRepository('https://github.com/owner/repo', '/unused', {
+      fetchImpl, extract: async () => assert.fail('nothing to unpack')
+    });
+    await assert.rejects(download(async () => respond('Not Found', 404)), /no public repository at that URL/);
+    await assert.rejects(download(async () => respond('busy', 503)), /GitHub answered 503/);
+    await assert.rejects(download(async () => { throw new TypeError('fetch failed'); }), /Check your internet connection/);
+    await assert.rejects(download(async () => { throw new DOMException('timed out', 'TimeoutError'); }), /timed out/);
+  });
+
+  test('plugin system: GitHub installer cleans failed downloads and invalid manifests and permits retry', async () => {
     const temp = await fs.mkdtemp(path.join(root, 'tmp', 'github-errors-'));
-    let mode = 'missing-git';
+    let mode = 'offline';
     let calls = 0;
     const install = createGitHubPluginInstaller({
       fs, getInstallRoot: () => temp,
-      runGit: async (_command, args) => {
+      download: async (_url, checkout) => {
         calls += 1;
-        const checkout = args.at(-1);
-        await fs.mkdir(checkout);
-        if (mode === 'missing-git') throw Object.assign(new Error('spawn failed'), { code: 'ENOENT' });
-        if (mode === 'timeout') throw Object.assign(new Error('killed'), { killed: true });
-        if (mode === 'network') throw Object.assign(new Error('remote failure'), { stderr: "Cloning into '.repository'...\nfatal: repository 'https://github.com/owner/repo.git/' not found\n" });
-        if (mode === 'no-clt') throw Object.assign(new Error('exit 1'), { code: 1, stderr: 'xcode-select: note: No developer tools were found, requesting install.\n' });
+        if (mode === 'offline') throw new Error('Could not download the repository. Check your internet connection and try again.');
         if (mode === 'missing-manifest') return;
         await fs.writeFile(path.join(checkout, 'plugin.json'), JSON.stringify({
           ...manifest,
@@ -90,9 +108,7 @@ module.exports = function registerGitHubInstallSuite(context = {}) {
       await assert.rejects(install({ url: 'https://evil.test/a/b' }), /GitHub repository URL/);
       assert.equal(calls, 0);
       for (const [failure, message] of [
-        ['missing-git', /Git is required/], ['no-clt', /Git is required/], ['timeout', /timed out/],
-        ['network', /Could not clone .* Git said: fatal: repository '.*' not found$/],
-        ['missing-manifest', /plugin.json at its root/], ['traversal', /plugin id/],
+        ['offline', /internet connection/], ['missing-manifest', /plugin.json at its root/], ['traversal', /plugin id/],
         ['permissions', /Unknown permission/], ['missing-entry', /index.html/], ['symlink', /symbolic links/]
       ]) {
         mode = failure;
@@ -110,12 +126,12 @@ module.exports = function registerGitHubInstallSuite(context = {}) {
     const temp = await fs.mkdtemp(path.join(root, 'tmp', 'github-busy-'));
     let release;
     const gate = new Promise((resolve) => { release = resolve; });
-    const install = createGitHubPluginInstaller({ fs, getInstallRoot: () => temp, runGit: async () => {
+    const install = createGitHubPluginInstaller({ fs, getInstallRoot: () => temp, download: async () => {
       await gate;
-      throw new Error('offline');
+      throw new Error('Could not download the repository. Check your internet connection and try again.');
     } });
     try {
-      const pending = assert.rejects(install({ url: 'https://github.com/owner/repo' }), /Could not clone/);
+      const pending = assert.rejects(install({ url: 'https://github.com/owner/repo' }), /Could not download/);
       await assert.rejects(install({ url: 'https://github.com/owner/other' }), /already in progress/);
       release();
       await pending;

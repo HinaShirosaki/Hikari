@@ -89,7 +89,7 @@ async function verifyTextResize({ tool, evaluate, check, win, pause, temp }) {
       await evaluate(`document.querySelector('#main-canvas [data-object-id=${id}]').dispatchEvent(new MouseEvent('dblclick',{bubbles:true}))`);
       check(await evaluate(`(()=>{const input=document.getElementById('canvas-text-editor');return input&&getComputedStyle(input).textAlign===${JSON.stringify(css)}&&parseFloat(input.style.width)>=300&&parseFloat(input.style.fontSize)===24})()`), 'Inline editing shares the text box width, alignment, and fixed font size');
       await evaluate('document.getElementById("canvas-text-editor").dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}))');
-      const exported = await evaluate('illustrationWorkspace.exportSvg("main")');
+      const exported = await evaluate('(async()=>(await import("./artwork.mjs")).svgSource(await illustrationWorkspace.getExportDocument(),"main"))()');
       const text = exported.match(new RegExp(`<g[^>]+data-object-id="${id}"[^>]*>[\\s\\S]*?<text([^>]*)>`))?.[1] || '';
       check(text.includes(` x="${anchorX}"`) && text.includes(` text-anchor="${align}"`) && text.includes(' font-size="24"'), 'SVG exports preserve text alignment within the box and the exact font size');
     }

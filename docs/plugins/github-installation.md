@@ -1,9 +1,9 @@
 # Publish a plugin for installation from GitHub
 
-Hikari can clone a GitHub repository and install it directly from **Settings →
-Plugins → Install from GitHub**. Put a complete, ready-to-run plugin at the
-repository root on its default branch. Users only need the repository URL and
-Git installed on their computer.
+Hikari can download a public GitHub repository and install it directly from
+**Settings → Plugins → Install from GitHub**. Put a complete, ready-to-run
+plugin at the repository root on its default branch. Users only need the
+repository URL; Git is not required.
 
 This guide describes the repository that the installer accepts. For building
 the plugin itself, start with [the quickstart](quickstart.md); for host data,
@@ -123,7 +123,7 @@ needs.
 
 ## Ship the files that actually run
 
-The installer shallow-clones the default branch, validates the plugin, and
+The installer downloads the default branch's archive, validates the plugin, and
 adds its Settings entry. An entry that requests permissions starts turned off
 until the user reviews its host access. It does not run `npm install`, lifecycle hooks,
 build scripts, development servers, or other setup commands.
@@ -149,9 +149,10 @@ files; users should not need `node_modules` or a server on `localhost` to open
 the plugin. The page runs in Hikari's sandboxed iframe and does not have
 direct Node.js or Electron access. Use the public plugin API for host access.
 
-All required files must be tracked on the default branch. The installer does
-not fetch release ZIPs, initialize Git submodules, or download Git LFS asset
-contents. Symbolic links are rejected; ship regular files and directories.
+All required files must be tracked on the default branch. The installer uses
+GitHub's source archive of that branch, so it does not fetch release ZIPs,
+Git submodules, Git LFS asset contents, or files marked `export-ignore` in
+`.gitattributes`. Symbolic links are rejected; ship regular files and directories.
 For an offline-capable local plugin, include its scripts, styles, fonts, and
 other runtime assets rather than depending on a CDN.
 
@@ -164,16 +165,14 @@ https://github.com/your-org/my-plugin-repo
 https://github.com/your-org/my-plugin-repo.git
 ```
 
-The installer does not accept SSH clone addresses, GitHub Enterprise hosts,
+The installer does not accept SSH addresses, GitHub Enterprise hosts,
 GitHub Pages URLs, branch/tag links, subfolder/file links, release links, or
 URLs containing credentials, query parameters, or fragments. It always
-clones the repository's default branch; it cannot select a release tag or a
+downloads the repository's default branch; it cannot select a release tag or a
 different branch from the pasted URL.
 
-Public repositories are the simplest distribution option. A private
-repository needs working Git credentials already configured on the user's
-computer. Hikari does not prompt for login during installation. Users need
-Git available on PATH and internet access to the repository.
+The repository must be public: the download is anonymous and Hikari does not
+prompt for login. Users need internet access to github.com.
 
 ## Test and share your plugin
 
@@ -195,7 +194,7 @@ the example URL:
 ```markdown
 ## Install in Hikari
 
-Requires Git and a Hikari build with GitHub plugin installation.
+Requires a Hikari build with GitHub plugin installation.
 
 1. Open **Settings → Plugins**.
 2. Paste `https://github.com/your-org/my-plugin-repo` into **GitHub repository URL**.
@@ -203,7 +202,7 @@ Requires Git and a Hikari build with GitHub plugin installation.
    click **Reload App**.
 ```
 
-An installation is a snapshot of the cloned default branch. Hikari does not
+An installation is a snapshot of the downloaded default branch. Hikari does not
 automatically pull later commits or update a plugin when its `version`
 changes. To install a newer snapshot, remove the Settings entry and install
 the URL again, then reload. Removing a plugin keeps its previous checkout on
@@ -215,10 +214,9 @@ because permissions are captured at install time.
 | Symptom | What to check |
 | --- | --- |
 | “Enter a GitHub repository URL…” | Paste the root `https://github.com/owner/repo` URL, without a branch, subfolder, query, or fragment. |
-| “Git is required…” | Install Git, ensure Hikari can find it on PATH, and restart Hikari. On macOS, accept the Command Line Tools prompt or run `xcode-select --install`. |
-| “Could not clone… Git said: …” | Git's own last error line follows, e.g. `repository … not found` for a wrong or private URL. |
-| “Could not clone the repository…” | Check the URL, repository access, internet connection, and existing Git credentials for private repositories. |
-| “Cloning timed out…” | Cloning has a two-minute timeout. Check the connection and keep the install branch small enough to download promptly. |
+| “GitHub has no public repository at that URL…” | Check the owner and repository name, and that the repository is public. |
+| “Could not download the repository…” | Check the internet connection; a GitHub status code after it (for example 429 or 503) means GitHub refused or is unavailable, so try again later. |
+| “The download timed out…” | The download has a two-minute timeout. Check the connection and keep the default branch small enough to download promptly. |
 | “The repository must contain a valid plugin.json at its root…” | Commit valid JSON at the default branch's root; keep it at most 64 KiB. |
 | “Plugin folder does not contain index.html.” | Commit the runnable entry at the root; an entry only under `dist/` is insufficient. |
 | “Unknown permission…” | Use capability names from the [plugin API](plugin-api.md). |

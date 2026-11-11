@@ -18,7 +18,7 @@ export function createCanvasTextEditor({ getContext, save, status }) {
     if (!session) return;
     const { input, stage, id } = session;
     session = null;
-    input.remove();
+    input.remove(); stage.classList.remove('is-editing-text');
     stage.querySelector(`[data-object-id="${id}"] text`)?.style.removeProperty('visibility');
     if (focus) stage.focus({ preventScroll: true });
   }
@@ -42,15 +42,26 @@ export function createCanvasTextEditor({ getContext, save, status }) {
     const height = lines.length * lineHeight;
     const x = Number(text.getAttribute('x')) - width * ({ start: 0, middle: 0.5, end: 1 }[object.align]);
     const y = object.anchor === 'top' ? 0 : object.anchor === 'middle' ? (object.height - height) / 2 : object.height - height;
-    const transform = matrix.translate(x - padding, y + object.fontSize - firstBaseline - padding);
+    // The field covers the label's whole box (it stands in for the hidden
+    // selection frame); padding-top places the text at its anchored position.
+    const textTop = y + object.fontSize - firstBaseline, top = Math.min(0, textTop);
+    const bottom = Math.max(object.height, textTop + height);
+    const transform = matrix.translate(x - padding, top - padding);
+    // Fixed to the window, so clip to the stage's scrollport: a label scrolled
+    // under the rulers, rails or tool bar must not paint over them.
+    const view = stage.getBoundingClientRect(), inverse = transform.inverse();
+    const left = view.left + stage.clientLeft, right = left + stage.clientWidth;
+    const viewTop = view.top + stage.clientTop, viewBottom = viewTop + stage.clientHeight;
+    const clip = [[left, viewTop], [right, viewTop], [right, viewBottom], [left, viewBottom]]
+      .map(([x, y]) => new DOMPoint(x, y).matrixTransform(inverse)).map(({ x, y }) => `${x}px ${y}px`).join(',');
     // The font shorthand resets optical sizing and kerning, changing variable
     // fonts such as Inter when switching from SVG to the editing field.
     Object.assign(input.style, { ...font, color: object.color,
       textAlign: { start: 'left', middle: 'center', end: 'right' }[object.align],
-      textDecoration: object.underline ? 'underline' : 'none', padding: `${padding}px`,
-      width: `${width + padding * 2 + 1}px`, height: `${height + padding * 2}px`,
+      textDecoration: object.underline ? 'underline' : 'none', padding: `${padding}px`, paddingTop: `${padding + textTop - top}px`,
+      width: `${width + padding * 2 + 1}px`, height: `${bottom - top + padding * 2}px`, clipPath: `polygon(${clip})`,
       transform: `matrix(${transform.a},${transform.b},${transform.c},${transform.d},${transform.e},${transform.f})` });
-    text.style.visibility = 'hidden';
+    text.style.visibility = 'hidden'; stage.classList.add('is-editing-text');
   }
 
   async function commit({ focus = false } = {}) {
@@ -86,7 +97,8 @@ export function createCanvasTextEditor({ getContext, save, status }) {
     const input = document.createElement('textarea');
     input.id = 'canvas-text-editor'; input.className = 'canvas-text-editor';
     i18nUi.setAttribute(input, "aria-label", i18nUi.message("Edit label text")); input.maxLength = 3000;
-    i18nUi.setAttribute(input, "title", i18nUi.message("Enter to save · Shift+Enter for a new line · Escape to cancel"));
+    // Announced, not shown: a hover tooltip would sit on top of the canvas.
+    input.setAttribute("aria-description", i18nUi.text("Enter to save · Shift+Enter for a new line · Escape to cancel"));
     input.wrap = 'off'; input.value = object.text;
     session = { id, illustrationId, stage, input, original: object.text, saving: false };
     input.addEventListener('input', layout);

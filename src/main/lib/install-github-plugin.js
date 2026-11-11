@@ -1,12 +1,10 @@
 'use strict';
 
-const { execFile } = require('node:child_process');
-const { promisify } = require('node:util');
 const { randomUUID } = require('node:crypto');
 const path = require('node:path');
 const { inspectPluginFolder } = require('./inspect-plugin-folder');
+const { extractTarGz } = require('./tutorial-download');
 
-const execFileAsync = promisify(execFile);
 const PLUGIN_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 function normalizeGitHubRepositoryUrl(value) {
@@ -21,7 +19,6 @@ function normalizeGitHubRepositoryUrl(value) {
 
 async function checkRepositoryFiles(fs, folder) {
   for (const entry of await fs.readdir(folder, { withFileTypes: true })) {
-    if (entry.name === '.git') continue;
     if (entry.isSymbolicLink() || (!entry.isDirectory() && !entry.isFile())) {
       throw new Error('Plugin repositories must contain regular files and folders, without symbolic links.');
     }
@@ -29,7 +26,29 @@ async function checkRepositoryFiles(fs, folder) {
   }
 }
 
-function createGitHubPluginInstaller({ fs, getInstallRoot, runGit = execFileAsync }) {
+// GitHub serves the default branch (HEAD) as a tarball, so installing needs no
+// Git: the system bsdtar unpacks it. bsdtar refuses `..` paths and writing
+// through symbolic links; checkRepositoryFiles then rejects any link it made.
+// ponytail: the archive is held in memory, fine for plugin-sized repositories.
+async function downloadRepository(repositoryUrl, destination, { fetchImpl = fetch, extract = extractTarGz } = {}) {
+  const repository = new URL(repositoryUrl).pathname;
+  let response, archive;
+  try {
+    response = await fetchImpl(`https://codeload.github.com${repository}/tar.gz/HEAD`, { signal: AbortSignal.timeout(120_000) });
+    if (response.ok) archive = Buffer.from(await response.arrayBuffer());
+  } catch (error) {
+    if (error?.name === 'TimeoutError') throw new Error('The download timed out. Check your connection and try again.');
+    throw new Error('Could not download the repository. Check your internet connection and try again.');
+  }
+  if (!response.ok) {
+    throw new Error(response.status === 404
+      ? 'GitHub has no public repository at that URL. Check the URL and that the repository is public.'
+      : `Could not download the repository (GitHub answered ${response.status}).`);
+  }
+  await extract(archive, destination);
+}
+
+function createGitHubPluginInstaller({ fs, getInstallRoot, download = downloadRepository }) {
   let installing = false;
 
   return async function installGitHubPlugin({ url, installedPluginIds = [] } = {}) {
@@ -44,35 +63,8 @@ function createGitHubPluginInstaller({ fs, getInstallRoot, runGit = execFileAsyn
       await fs.mkdir(root, { recursive: true });
       stagingPath = await fs.mkdtemp(path.join(root, '.install-'));
       const checkout = path.join(stagingPath, '.repository');
-      const hooks = path.join(stagingPath, '.hooks');
-      await fs.mkdir(hooks);
-      try {
-        await runGit('git', [
-          '-c', `core.hooksPath=${hooks}`,
-          '-c', 'protocol.allow=never',
-          '-c', 'protocol.https.allow=always',
-          '-c', 'http.followRedirects=false',
-          '-c', 'credential.interactive=false',
-          'clone', '--depth=1', '--single-branch', '--no-recurse-submodules', '--template=',
-          '--', `${repositoryUrl}.git`, checkout
-        ], {
-          cwd: stagingPath,
-          env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GIT_LFS_SKIP_SMUDGE: '1' },
-          timeout: 120_000,
-          killSignal: 'SIGKILL',
-          maxBuffer: 1024 * 1024,
-          windowsHide: true
-        });
-      } catch (error) {
-        const stderr = String(error.stderr || '').trim();
-        // Without Command Line Tools, macOS's /usr/bin/git is a shim that exits non-zero.
-        if (error.code === 'ENOENT' || /^(xcrun: error|xcode-select: note)/m.test(stderr)) {
-          throw new Error('Git is required. Install Git, restart Hikari, and try again.');
-        }
-        if (error.killed) throw new Error('Cloning timed out. Check your connection and try again.');
-        const detail = stderr.split('\n').pop().trim().slice(0, 300);
-        throw new Error(`Could not clone the repository. Check the URL, your internet connection, and repository access.${detail ? ` Git said: ${detail}` : ''}`);
-      }
+      await fs.mkdir(checkout);
+      await download(repositoryUrl, checkout);
 
       await checkRepositoryFiles(fs, checkout);
       let manifest;
@@ -96,7 +88,6 @@ function createGitHubPluginInstaller({ fs, getInstallRoot, runGit = execFileAsyn
       if (Array.isArray(installedPluginIds) && installedPluginIds.includes(inspected.id)) {
         throw new Error(`A plugin named "${inspected.name}" is already installed.`);
       }
-      await fs.rm(hooks, { recursive: true, force: true });
       committedPath = path.join(root, randomUUID());
       await fs.rename(stagingPath, committedPath);
       stagingPath = '';
@@ -115,4 +106,4 @@ function createGitHubPluginInstaller({ fs, getInstallRoot, runGit = execFileAsyn
   };
 }
 
-module.exports = { createGitHubPluginInstaller, normalizeGitHubRepositoryUrl };
+module.exports = { createGitHubPluginInstaller, downloadRepository, normalizeGitHubRepositoryUrl };
