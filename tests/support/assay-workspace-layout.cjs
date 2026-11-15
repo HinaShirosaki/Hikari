@@ -29,9 +29,15 @@ module.exports = async function checkWorkspaceLayout({ js, settle, shot, win }) 
   await js("document.getElementById('assay-workspace-view-chart').focus();document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}))");
   await settle();
   assert.equal(await js('document.activeElement.id'), 'assay-workspace-view-data', 'vertical view tabs support arrow keys');
-  await js("document.getElementById('assay-data-tab-summary').click();document.getElementById('assay-workspace-view-chart').click();document.getElementById('assay-workspace-view-data').click()");
+  await js("document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}))");
   await settle();
-  assert.equal(await js("document.getElementById('assay-summary-panel').hidden"), false, 'the data tab survives view switches');
+  assert.equal(await js('document.activeElement.id'), 'assay-workspace-view-summary', 'the next right toolbar tab opens Analysis Results');
+  assert.equal(await js("document.getElementById('assay-summary-panel').hidden"), false);
+  await shot('15-analysis-results');
+  await js("document.activeElement.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}))");
+  await settle();
+  assert.equal(await js('document.activeElement.id'), 'assay-workspace-view-chart', 'vertical view tabs wrap back to Chart');
+  await js("document.getElementById('assay-workspace-view-data').click()");
   await shot('15-data-only');
 
   const width = () => js("document.getElementById('universal-agent-chat-rail').getBoundingClientRect().width");
@@ -71,6 +77,7 @@ module.exports = async function checkWorkspaceLayout({ js, settle, shot, win }) 
     i18n.setLocale('zh-Hans');
   })()`);
   assert.equal(await js("document.getElementById('assay-workspace-view-data').getAttribute('aria-label')"), '数据', 'moved controls switch language live');
+  assert.equal(await js("document.getElementById('assay-workspace-view-summary').title"), '分析结果', 'the Analysis Results tooltip switches language live');
   await js("qaLayoutI18n.setLocale('en')");
 
   win.setContentSize(900, 700);await settle();

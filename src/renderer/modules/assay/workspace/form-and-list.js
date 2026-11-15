@@ -6,6 +6,7 @@ import {
   normalizeResults
 } from '../plate-model.js';
 import { oppositeAxis } from '../shared.js';
+import { getConditionAxisValues, getFieldAxis } from '../axis-fields.js';
 import { plateUi, setPlateText } from '../localization.js';
 
 // The create/edit form and the saved-assay list: switching between create and
@@ -139,11 +140,9 @@ function createAssayFormAndList({
     }
 
     const plateDef = getPlateDefinition(elements.assayPlateTypeInput?.value);
-    const sampleAxis = elements.assaySampleAxisInput?.value === 'column' ? 'column' : 'row';
-    const selectedConcentrationAxis = elements.assayConcentrationAxisInput?.value === 'row' ? 'row' : 'column';
-    const concentrationAxis = selectedConcentrationAxis === oppositeAxis(sampleAxis)
-      ? selectedConcentrationAxis
-      : oppositeAxis(sampleAxis);
+    const sampleAxis = layoutManager.getSampleAxis();
+    const axisFields = layoutManager.getAxisFields();
+    const concentrationAxis = getFieldAxis(axisFields, 'concentration') || oppositeAxis(sampleAxis);
     const project = (state.projects || []).find((item) => item.id === elements.assayProjectInput?.value);
     const notebookEntry = (state.notebookEntries || []).find((entry) => entry.id === elements.assayNotebookEntryInput?.value);
     const editingId = elements.assayIdInput?.value || '';
@@ -165,6 +164,8 @@ function createAssayFormAndList({
       wellCount: plateDef.rows * plateDef.columns,
       sampleAxis,
       concentrationAxis,
+      axisFields,
+      conditionAxisValues: getConditionAxisValues(axisValues),
       concentrationUnit: layoutManager.getConcentrationUnit(),
       sampleAxisValues: axisValues.sampleValues,
       concentrationAxisValues: axisValues.concentrationValues,
@@ -217,6 +218,7 @@ function createAssayFormAndList({
   function resetForm() {
     elements.assayIdInput.value = '';
     elements.assayForm?.reset();
+    layoutManager.resetAxisAssignments();
     runtime.activeResultsAssayId = '';
     runtime.activeWellEditorId = '';
     runtime.manualWellOverrides = {};
@@ -265,21 +267,16 @@ function createAssayFormAndList({
     resultsManager.refreshAnalysisGroupDisplay();
     setCsvStatus('');
     setLayoutStatus('');
-    if (elements.assaySampleAxisInput) {
-      elements.assaySampleAxisInput.value = 'row';
-    }
     if (elements.assayPlateTypeInput) {
       elements.assayPlateTypeInput.value = '96';
     }
     renderProjectOptions();
     renderNotebookOptions();
-    layoutManager.syncAxisDisplay();
     layoutManager.syncAxisTemplateValues();
     layoutManager.renderPlateDefinition();
     layoutManager.renderPlatePreview();
     renderAssayNumberDisplay();
     renderResultsAssayOptions();
-    resultsManager.renderResultTable();
     analysisView.clearOutput();
     layoutManager.updateActiveWellPreviewState();
     setAssayMode('create');
@@ -305,17 +302,14 @@ function createAssayFormAndList({
     elements.assayProjectInput.value = assay.projectId || '';
     renderNotebookOptions();
     elements.assayPlateTypeInput.value = String(assay.plateType || '96');
-    elements.assaySampleAxisInput.value = assay.sampleAxis === 'column' ? 'column' : 'row';
     const def = layoutManager.getCurrentDefinition();
     const axisValues = layoutManager.restoreAssayLayoutState(assay, def);
     layoutManager.restoreSerialDilutionSnapshot(assay.serialDilution || null);
     runtime.activeResultsAssayId = assay.id;
-    layoutManager.syncAxisDisplay();
     layoutManager.renderPlateDefinition();
     layoutManager.renderPlatePreview(axisValues);
     renderAssayNumberDisplay();
     renderResultsAssayOptions(assay.id);
-    resultsManager.renderResultTable();
     elements.assayNotebookEntryInput.value = assay.notebookEntryId || '';
     if (assay.notebookEntryId && !Array.from(elements.assayNotebookEntryInput.options).some((option) => option.value === assay.notebookEntryId)) {
       const option = document.createElement('option');
@@ -340,7 +334,7 @@ function createAssayFormAndList({
       runtime.activeResultsAssayId = '';
       runtime.currentResults = {};
       runtime.currentLayout = [];
-      resultsManager.renderResultTable();
+      if (runtime.assayMode === 'results') resultsManager.renderResultTable();
       analysisView.clearOutput();
     }
     syncNotebookAssayLinks();
@@ -384,13 +378,11 @@ function createAssayFormAndList({
     }
     renderProjectOptions();
     renderNotebookOptions();
-    layoutManager.syncAxisDisplay();
     layoutManager.syncAxisTemplateValues();
     layoutManager.renderPlateDefinition();
     renderAssayNumberDisplay();
     renderResultsAssayOptions(runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '');
     layoutManager.renderPlatePreview();
-    resultsManager.renderResultTable();
     renderList();
     setAssayMode(runtime.assayMode);
     if (!hasSavedCreateDraftSnapshot()) {

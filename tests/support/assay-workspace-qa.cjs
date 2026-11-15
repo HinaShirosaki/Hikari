@@ -10,12 +10,14 @@ module.exports = function workspacePage({ root, url }) {
     <style>body{display:block;margin:0}#assay-view{display:block!important;height:100vh;padding:0}
     #assay-view .assay-results-layout{height:100vh}[hidden]{display:none!important}</style>
     <script src="${url('vendor/plotly/plotly.min.js')}"></script>
+    <script src="${url('vendor/jspdf.umd.min.js')}"></script>
     <script src="${url('vendor/tabulator/tabulator.min.js')}"></script>
     <div class="workspace-shell"><main class="workspace-main">${markup}</main>${rail}</div>
     <script type="module">
       import {initAssay} from '${url('src/renderer/modules/assay/index.js')}';
       import {createAgentChatRail} from '${url('src/renderer/app/navigation-shell/agent-rail.js')}';
       import {bindTranslations} from '${url('src/renderer/lib/i18n/dom.js')}';
+      import {safeText} from '${url('src/renderer/lib/app-utils.js')}';
       bindTranslations(document);
       document.body.dataset.activeView='assay-view';
       document.body.dataset.agentAvailability='connected';
@@ -35,7 +37,6 @@ module.exports = function workspacePage({ root, url }) {
         assays:[{id:'qa-workspace-assay',name:'Reporter dose response',plateType:'96',sampleAxis:'row',wellLayout:layout,resultValues:results}],
         projects:[],notebookEntries:[],settings:{}
       };
-      const safeText=value=>{const e=document.createElement('span');e.textContent=String(value??'');return e.innerHTML;};
       const module=initAssay({state,persist:()=>localStorage.setItem('assay-workspace-state',JSON.stringify(state)),createId:()=>crypto.randomUUID(),safeText,
         onAssayModeChanged:mode=>{document.getElementById('assay-view').dataset.agentChatRail=mode==='results'?'enabled':'disabled';agentRail.syncState('assay-view');}});
       module.render();

@@ -29,19 +29,12 @@ export function bindAssayEvents({
     layoutManager.onPlateTypeChange();
     renderAssayNumberDisplay();
   });
-  elements.assaySampleAxisInput?.addEventListener('change', () => {
-    layoutManager.syncAxisDisplay();
-    layoutManager.setLayoutFromAxisAndOverrides();
-    layoutManager.renderPlatePreview();
-    resultsManager.renderResultTable();
+  elements.assayRowAxisInput?.addEventListener('change', (event) => {
+    layoutManager.onAxisAssignmentChange('row', event.currentTarget.value);
   });
-  elements.assaySampleAxisRowBtn?.addEventListener('click', () => layoutManager.setSampleAxis('row'));
-  elements.assaySampleAxisColumnBtn?.addEventListener('click', () => layoutManager.setSampleAxis('column'));
-  elements.assayConcentrationAxisInput?.addEventListener('change', () => {
-    layoutManager.setConcentrationAxis(elements.assayConcentrationAxisInput?.value);
+  elements.assayColumnAxisInput?.addEventListener('change', (event) => {
+    layoutManager.onAxisAssignmentChange('column', event.currentTarget.value);
   });
-  elements.assayConcentrationAxisRowBtn?.addEventListener('click', () => layoutManager.setConcentrationAxis('row'));
-  elements.assayConcentrationAxisColumnBtn?.addEventListener('click', () => layoutManager.setConcentrationAxis('column'));
   elements.assayFillModeInput?.addEventListener('change', layoutManager.syncFillModeInputs);
   elements.assayDilutionFillBtn?.addEventListener('click', layoutManager.onFillConcentrations);
   layoutManager.syncFillModeInputs();
@@ -52,7 +45,13 @@ export function bindAssayEvents({
   elements.assaySerialDilutionOverlay?.addEventListener('input', layoutManager.onSerialDilutionDialogInput);
   elements.assaySearchInput?.addEventListener('input', renderList);
   elements.assayResultsSearchInput?.addEventListener('input', renderList);
-  elements.assayExportTemplateBtn?.addEventListener('click', layoutManager.exportCsvTemplate);
+  elements.assayLayoutExportMenu?.addEventListener('click', (event) => {
+    const format = event.target.closest('[data-assay-layout-export]')?.dataset.assayLayoutExport;
+    if (format) {
+      event.currentTarget.hidePopover();
+      void layoutManager.exportLayout(format);
+    }
+  });
   elements.assayImportTemplateBtn?.addEventListener('click', () => elements.assayImportFile?.click());
   elements.assayImportFile?.addEventListener('change', layoutManager.onImportCsv);
   elements.assayResultsAssaySelect?.addEventListener('change', onResultsAssaySelected);

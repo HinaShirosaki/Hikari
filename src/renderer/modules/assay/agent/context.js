@@ -1,4 +1,6 @@
+import { AXIS_FIELDS, CONDITION_FIELDS, getAssayAxisFields, getFieldAxis } from '../axis-fields.js';
 import { axisLabel } from '../shared.js';
+import { plateText } from '../localization.js';
 import { getPlateDefinition, parseWellId, toRowLabel } from '../plate-model.js';
 import { describeAnalysisSpec } from '../analysis/index.js';
 import { ASSAY_CONTEXT_COLUMNS, normalizeAssayContextTable } from '../../../../shared/assay-agent-context.mjs';
@@ -196,6 +198,11 @@ export function createAssayAgentContext({
     const assayName = compactAgentText(elements.assayNameInput?.value || assay?.name || '', 320);
     const assayNumber = compactAgentText(assay?.assayNumber || elements.assayNumberDisplay?.textContent || '', 120);
     const plateDef = getPlateDefinition(elements.assayPlateTypeInput?.value || assay?.plateType || '96');
+    const fields = layoutManager.getAxisFields?.() || getAssayAxisFields(assay);
+    const sampleAxis = getFieldAxis(fields, 'sample');
+    const concentrationAxis = getFieldAxis(fields, 'concentration');
+    const conditionAxes = Object.entries(fields).filter(([, field]) => CONDITION_FIELDS.includes(field));
+    const axisValues = layoutManager.getAxisTemplateValues?.() || assay?.conditionAxisValues || {};
     const layout = getAgentLayoutForContext(assay);
     const results = getAgentResultsForContext(assay);
     const resultCount = Object.keys(results || {}).length;
@@ -232,8 +239,14 @@ export function createAssayAgentContext({
       assayId ? 'Use assay_plot read to inspect and style the native plot, including labels, reference lines and shaded bands.' : '',
       projectName ? `Project: ${projectName}` : '',
       `Plate: ${plateDef.label || plateDef.value}`,
-      `Sample axis: ${axisLabel(elements.assaySampleAxisInput?.value || assay?.sampleAxis || 'row')}`,
-      `Concentration axis: ${axisLabel(elements.assayConcentrationAxisInput?.value || assay?.concentrationAxis || 'column')}`,
+      sampleAxis ? `Sample axis: ${axisLabel(sampleAxis)}` : '',
+      concentrationAxis ? `Concentration axis: ${axisLabel(concentrationAxis)}` : '',
+      ...conditionAxes.map(([axis, field]) => {
+        const { label, valuesKey } = AXIS_FIELDS[field];
+        const values = (axisValues[valuesKey] || []).map((value, index) =>
+          value ? `${axis === 'row' ? toRowLabel(index) : index + 1}=${compactAgentText(value, 80)}` : '').filter(Boolean);
+        return [`${axisLabel(axis)} axis: ${plateText(label)}`, ...values].join(' · ');
+      }),
       compactAgentText(layoutManager.getConcentrationUnit?.() || assay?.concentrationUnit || '', 80)
         ? `Concentration unit: ${compactAgentText(layoutManager.getConcentrationUnit?.() || assay?.concentrationUnit || '', 80)}`
         : '',

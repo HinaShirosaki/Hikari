@@ -20,6 +20,7 @@ function normalizeSessionSummary(rawSummary = {}) {
   }
   return {
     id,
+    ...(source.chat_surface === 'rail' ? { chat_surface: 'rail' } : {}),
     title: cleanText(source.title) || 'New Chat',
     project_id: cleanText(source.project_id || source.projectId),
     project_name: cleanText(source.project_name || source.projectName),
@@ -80,19 +81,6 @@ function normalizeTransformIndex(rawTransforms = {}) {
   };
 }
 
-function mergeTransformIndexes(primaryTransforms = {}, fallbackTransforms = {}) {
-  const primary = normalizeTransformIndex(primaryTransforms);
-  const fallback = normalizeTransformIndex(fallbackTransforms);
-  return normalizeTransformIndex({
-    updated_at: primary.updated_at || fallback.updated_at,
-    output_folder: primary.output_folder || fallback.output_folder,
-    files: {
-      ...fallback.files,
-      ...primary.files
-    }
-  });
-}
-
 // Normalize the overall chat index payload loaded from disk.
 function normalizeIndexPayload(rawIndex = {}) {
   const source = rawIndex && typeof rawIndex === 'object' ? rawIndex : {};
@@ -148,6 +136,7 @@ function applyEntryToSummary(summary, entry) {
   // Session creation establishes the initial title/project metadata and resets the status.
   if (row.type === CHAT_LOG_EVENT_TYPES.SESSION_CREATED) {
     next.status = 'ready';
+    if (row.chat_surface === 'rail') next.chat_surface = 'rail';
     next.project_id = cleanText(row.project_id || next.project_id) || next.project_id;
     next.project_name = cleanText(row.project_name || next.project_name) || next.project_name;
     next.title = cleanText(row.title) || next.title;
@@ -248,7 +237,6 @@ module.exports = {
   normalizeSessionSummary,
   normalizeTransformStatus,
   normalizeTransformIndex,
-  mergeTransformIndexes,
   normalizeIndexPayload,
   normalizeSessionRow,
   buildMessageRow,

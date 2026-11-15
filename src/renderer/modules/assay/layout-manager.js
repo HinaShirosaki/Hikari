@@ -2,6 +2,7 @@ import { createPresentation } from "../../lib/i18n/presentation.js";
 import "./localization.js";
 const i18nUi = createPresentation("plate");
 import { oppositeAxis } from './shared.js';
+import { AXIS_FIELDS, CONDITION_FIELDS, getAssayAxisFields, getFieldAxis, getSampleAxisOrientation, getVisibleConditionFields } from './axis-fields.js';
 import {
   applyAxisTemplate,
   getAssayAxisTemplateValues,
@@ -13,7 +14,8 @@ import {
   normalizeResults,
   removeSuppressedWellsFromLayout
 } from './plate-model.js';
-import { createLayoutCsv } from './layout/csv.js';
+import { createLayoutCsvImporter } from './layout/csv.js';
+import { exportPlateLayout } from './layout/export.js';
 import { buildPlatePreviewHtml } from './plate-preview-renderer.js';
 import {
   isKnownUnit,
@@ -34,9 +36,8 @@ export function createAssayLayoutManager({
   clearAnalysisOutput
 }) {
   const {
-    assayConcentrationAxisColumnBtn,
-    assayConcentrationAxisInput,
-    assayConcentrationAxisRowBtn,
+    assayColumnAxisInput,
+    assayDilutionFillBtn,
     assayDilutionFactorInput,
     assayFillModeInput,
     assayImportFile,
@@ -44,12 +45,11 @@ export function createAssayLayoutManager({
     assayPlateDefinition,
     assayPlatePreview,
     assaySerialDilutionContent,
+    assaySerialDilutionBtn,
     assaySerialDilutionOverlay,
     assaySerialDilutionSummary,
     assaySerialDilutionVolumeInput,
-    assaySampleAxisColumnBtn,
-    assaySampleAxisInput,
-    assaySampleAxisRowBtn,
+    assayRowAxisInput,
     assayNameInput,
     assayPlateTypeInput
   } = elements;
@@ -77,10 +77,9 @@ export function createAssayLayoutManager({
     return false;
   }
 
-  function getSampleAxis() {
-    return assaySampleAxisInput?.value === 'column' ? 'column' : 'row';
-  }
-
+  let axisFields = getAssayAxisFields();
+  const getAxisFields = () => axisFields;
+  const getSampleAxis = () => getSampleAxisOrientation(axisFields);
 
   const {
     setAxisTemplateValues,
@@ -96,7 +95,7 @@ export function createAssayLayoutManager({
     runtime,
     assayPlatePreview,
     getCurrentDefinition,
-    getSampleAxis
+    getAxisFields
   });
 
   function syncAxisTemplateValues(values = null) {
@@ -135,6 +134,7 @@ export function createAssayLayoutManager({
     assaySerialDilutionVolumeInput,
     getCurrentDefinition,
     getSampleAxis,
+    getAxisFields,
     getConcentrationUnit,
     recognizeConcentrationUnit,
     getAxisTemplateValues,
@@ -145,65 +145,42 @@ export function createAssayLayoutManager({
     renderPlatePreview: (values, options) => renderPlatePreview(values, options)
   });
 
-  function renderAxisSwitchButtons() {
-    const sampleAxis = getSampleAxis();
-    const concentrationAxis = oppositeAxis(sampleAxis);
-    assaySampleAxisRowBtn?.classList.toggle('calendar-view-active', sampleAxis === 'row');
-    assaySampleAxisColumnBtn?.classList.toggle('calendar-view-active', sampleAxis === 'column');
-    assayConcentrationAxisRowBtn?.classList.toggle('calendar-view-active', concentrationAxis === 'row');
-    assayConcentrationAxisColumnBtn?.classList.toggle('calendar-view-active', concentrationAxis === 'column');
+  function setAxisAssignments(fields) {
+    axisFields = fields;
+    if (assayRowAxisInput) assayRowAxisInput.value = fields.row;
+    if (assayColumnAxisInput) assayColumnAxisInput.value = fields.column;
+    const canFill = Boolean(getFieldAxis(fields, 'concentration'));
+    if (assayFillModeInput) assayFillModeInput.disabled = !canFill;
+    if (assayDilutionFactorInput) assayDilutionFactorInput.disabled = !canFill;
+    if (assayDilutionFillBtn) assayDilutionFillBtn.disabled = !canFill;
+    if (assaySerialDilutionBtn) {
+      assaySerialDilutionBtn.disabled = !getFieldAxis(fields, 'sample') || !canFill;
+    }
   }
 
-  function syncAxisDisplay() {
-    const sampleAxis = getSampleAxis();
-    if (assayConcentrationAxisInput) {
-      assayConcentrationAxisInput.value = oppositeAxis(sampleAxis);
-    }
-    renderAxisSwitchButtons();
-  }
-
-  function setSampleAxis(axis) {
-    if (!assaySampleAxisInput) {
-      return;
-    }
-    const next = axis === 'column' ? 'column' : 'row';
-    if (assaySampleAxisInput.value === next) {
-      syncAxisDisplay();
-      return;
-    }
-    assaySampleAxisInput.value = next;
-    syncAxisDisplay();
-    setLayoutFromAxisAndOverrides();
-    renderPlatePreview();
+  function onAxisAssignmentChange(axis, field) {
+    if (!Object.hasOwn(AXIS_FIELDS, field) || field === axisFields[axis]) return;
+    const axisValues = getAxisTemplateValues();
+    const other = oppositeAxis(axis);
+    const fields = { ...axisFields, [axis]: field };
+    if (axisFields[other] === field) fields[other] = axisFields[axis];
+    setAxisAssignments(fields);
+    // Axis changes can temporarily unmap wells. Keep draft readings until Save
+    // so switching the assignments back restores the same measurements.
+    setLayoutFromAxisAndOverrides({ axisValues });
+    renderPlatePreview(getAxisTemplateValues({ includePreview: false }));
     renderResultTable();
+    setLayoutStatus('');
   }
 
-  function setConcentrationAxis(axis) {
-    setSampleAxis(axis === 'row' ? 'column' : 'row');
-  }
-
-  function onSwapAxes() {
-    if (!assaySampleAxisInput) {
-      return;
-    }
-    const { sampleValues, concentrationValues } = getAxisTemplateValues();
-    assaySampleAxisInput.value = assaySampleAxisInput.value === 'column' ? 'row' : 'column';
-    syncAxisDisplay();
-    const swapped = {
-      sampleValues: concentrationValues,
-      concentrationValues: sampleValues
-    };
-    syncAxisTemplateValues(swapped);
-    setLayoutFromAxisAndOverrides();
-    renderPlatePreview();
-    renderResultTable();
-    setLayoutStatus(plateUi(assaySampleAxisInput.value === 'column' ? 'status.axisColumn' : 'status.axisRow'));
+  function resetAxisAssignments() {
+    setAxisAssignments(getAssayAxisFields());
   }
 
   function restoreAssayLayoutState(assay, def) {
-    const sampleAxis = assay?.sampleAxis === 'column' ? 'column' : 'row';
+    setAxisAssignments(getAssayAxisFields(assay));
     const axisValues = getAssayAxisTemplateValues(assay, def);
-    setAxisTemplateValues(axisValues, def, sampleAxis);
+    setAxisTemplateValues(axisValues, def);
     setConcentrationUnit(assay?.concentrationUnit);
     runtime.suppressedWells = new Set(Array.isArray(assay?.suppressedWells) ? assay.suppressedWells : []);
     runtime.activeWellEditorId = '';
@@ -217,15 +194,13 @@ export function createAssayLayoutManager({
       runtime.manualWellOverrides = {};
       const expectedIntersectionLayout = removeSuppressedWellsFromLayout(applyAxisTemplate({
         def,
-        sampleAxis,
-        sampleValues: axisValues.sampleValues,
-        concentrationValues: axisValues.concentrationValues
+        fields: axisFields,
+        values: axisValues
       }), def, runtime.suppressedWells);
       const expectedLegacyUnionLayout = removeSuppressedWellsFromLayout(applyAxisTemplate({
         def,
-        sampleAxis,
-        sampleValues: axisValues.sampleValues,
-        concentrationValues: axisValues.concentrationValues,
+        fields: axisFields,
+        values: axisValues,
         mappingMode: 'union'
       }), def, runtime.suppressedWells);
 
@@ -246,17 +221,18 @@ export function createAssayLayoutManager({
     }
     inventorySamplePicker.hide();
     const def = getCurrentDefinition();
-    const sampleAxis = getSampleAxis();
-    const { sampleValues, concentrationValues } = sourceValues
-      ? normalizeCurrentAxisTemplateValues(sourceValues, def, sampleAxis)
+    const values = sourceValues
+      ? normalizeCurrentAxisTemplateValues(sourceValues, def, axisFields)
       : getAxisTemplateValues();
 
     const html = buildPlatePreviewHtml({
       def,
-      sampleAxis,
+      fields: axisFields,
       layout: runtime.currentLayout,
-      sampleValues,
-      concentrationValues,
+      values,
+      conditionFields: preserveEditors
+        ? CONDITION_FIELDS.filter(field => assayPlatePreview.querySelector(`[data-well-inline-field="${field}"]`))
+        : getVisibleConditionFields(axisFields, runtime.currentLayout),
       concentrationUnit: getConcentrationUnit(),
       activeWellEditorId: runtime.activeWellEditorId,
       safeText
@@ -297,11 +273,11 @@ export function createAssayLayoutManager({
   function onClearWellMappings() {
     runtime.manualWellOverrides = {};
     runtime.suppressedWells = new Set();
-    setAxisTemplateValues({ sampleValues: [], concentrationValues: [] });
+    setAxisTemplateValues({});
     runtime.currentLayout = [];
     runtime.activeWellEditorId = '';
     runtime.currentResults = {};
-    renderPlatePreview();
+    renderPlatePreview(getAxisTemplateValues({ includePreview: false }));
     renderResultTable();
     setLayoutStatus(plateUi('status.clearedMappings'));
     setCsvStatus('');
@@ -345,22 +321,34 @@ export function createAssayLayoutManager({
     setCsvStatus(droppedResults > 0 ? plateUi('status.resizeDropped', { count: droppedResults }) : '');
   }
 
-  const { exportCsvTemplate, onImportCsv } = createLayoutCsv({
+  function exportLayout(format) {
+    return exportPlateLayout(format, {
+      assayName: assayNameInput?.value,
+      definition: getCurrentDefinition(),
+      layout: runtime.currentLayout,
+      axisFields,
+      concentrationUnit: getConcentrationUnit(),
+      setCsvStatus
+    });
+  }
+
+  const onImportCsv = createLayoutCsvImporter({
     runtime,
-    assayNameInput,
     assayImportFile,
     getCurrentDefinition,
-    getSampleAxis,
     setAxisTemplateValues,
     setLayoutFromAxisAndOverrides,
     renderPlatePreview,
     renderResultTable,
-    setCsvStatus
+    setCsvStatus,
+    setAxisAssignments
   });
 
   return {
     getCurrentDefinition,
     getSampleAxis,
+    getAxisFields,
+    resetAxisAssignments,
     getMappedWellSet,
     isMappedWell,
     filterMappedResults,
@@ -369,15 +357,11 @@ export function createAssayLayoutManager({
     syncAxisTemplateValues,
     setLayoutFromAxisAndOverrides,
     restoreAssayLayoutState,
-    renderAxisSwitchButtons,
-    setSampleAxis,
-    setConcentrationAxis,
+    onAxisAssignmentChange,
     getConcentrationUnit,
     setConcentrationUnit,
     onFillConcentrations,
     syncFillModeInputs,
-    syncAxisDisplay,
-    onSwapAxes,
     renderPlatePreview,
     onPlatePreviewInput,
     onPlatePreviewChange,
@@ -393,13 +377,14 @@ export function createAssayLayoutManager({
     getSerialDilutionSnapshot: serialDilution.getSnapshot,
     restoreSerialDilutionSnapshot: serialDilution.restoreSnapshot,
     resetSerialDilutionState: serialDilution.reset,
-    getSerialDilutionSummaryData: serialDilution.getSummaryData,
+    getSerialDilutionSummaryData: () => getFieldAxis(axisFields, 'sample') && getFieldAxis(axisFields, 'concentration')
+      ? serialDilution.getSummaryData() : null,
     focusPlateWellInput,
     renderPlateDefinition,
     renderAssayNumberDisplay,
     updateActiveWellPreviewState,
     onPlateTypeChange,
-    exportCsvTemplate,
+    exportLayout,
     onImportCsv,
     hideInventorySamplePicker: inventorySamplePicker.hide,
     onGlobalPointerDown,

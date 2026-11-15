@@ -12,6 +12,7 @@ import { agentNotice, agentUi } from './localization.js';
 function createSessionLoading({
   state,
   api,
+  chatSurface,
   persist,
   ensureAgentState,
   getStoragePath,
@@ -39,6 +40,30 @@ function createSessionLoading({
   // leave the draft alone instead of swapping the old session back in.
   let newChatDraftActive = false;
   let sessionSelectionRevision = 0;
+
+  function getLegacyRailSessionIds() {
+    // Older sessions have no surface marker in the log. Use the saved rail
+    // state, which also stores the separate Home experiment log.
+    return new Set(Object.entries(state.paperAgentChatSessions || {}).flatMap(([scope, chat]) => {
+      if (scope === 'home:experiment-log') return [];
+      return [chat?.currentSessionId, ...asArray(chat?.sessions).map((session) => session?.id)].filter(Boolean);
+    }));
+  }
+
+  function discardRailChats() {
+    const legacyRailIds = getLegacyRailSessionIds();
+    const chat = state.agentChat;
+    for (const session of chat.sessions) {
+      if (session?.chat_surface === 'rail') legacyRailIds.add(session.id);
+    }
+    chat.sessions = chat.sessions.filter((session) => !legacyRailIds.has(session?.id));
+    if (legacyRailIds.has(chat.currentSessionId)) {
+      chat.currentSessionId = '';
+      chat.messages = [];
+      onActiveSessionChanged('');
+      persist();
+    }
+  }
 
   async function loadChatSession(sessionId, options = {}) {
     ensureAgentState();
@@ -162,7 +187,8 @@ function createSessionLoading({
     setSessionStatus(agentUi('session.loading'));
     sessionListPromise = api.agentChatLogListSessions({
       storagePath,
-      limit: 200
+      limit: 200,
+      legacyRailSessionIds: [...getLegacyRailSessionIds()]
     }).then(async (result) => {
       if (!result?.ok) {
         throw new Error(result?.error || 'Failed to load saved chats.');
@@ -224,6 +250,7 @@ function createSessionLoading({
     const projectName = asArray(state.projects).find((item) => item.id === projectId)?.name || '';
     const result = await api.agentChatLogCreateSession({
       storagePath,
+      ...(chatSurface ? { chatSurface } : {}),
       projectId,
       projectName,
       title: messageText
@@ -274,6 +301,7 @@ function createSessionLoading({
   }
 
   return {
+    discardRailChats,
     loadChatSession,
     refreshPersistentSessions,
     ensureCurrentChatSession,

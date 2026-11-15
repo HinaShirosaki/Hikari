@@ -32,6 +32,7 @@ function createAgentSessionService({
       const ensured = await agentChatLogRuntime.ensureSession({
         storagePath: chatSessionStoragePath,
         sessionId: requestedChatSessionId,
+        chatSurface: payload?.chatSurface,
         title: cleanText(payload?.title, 220) || 'New Chat',
         projectId: cleanText(payload?.projectId, 80),
         projectName: cleanText(payload?.projectName, 180)
@@ -52,6 +53,7 @@ function createAgentSessionService({
     }
     try {
       const appended = await agentChatLogRuntime.appendRows(chatSessionStoragePath, chatSession.id, rows, {
+        chatSurface: chatSession.chat_surface,
         llm: options?.llm && typeof options.llm === 'object' ? options.llm : {},
         projectId: cleanText(options?.projectId || payload?.projectId, 80),
         projectName: cleanText(options?.projectName || payload?.projectName, 180)

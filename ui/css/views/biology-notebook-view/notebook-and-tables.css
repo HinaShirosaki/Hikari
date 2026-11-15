@@ -462,23 +462,47 @@
   border-right: 1px solid var(--theme-border-soft);
 }
 
-/* Tabulator ships its own zebra striping, grey hover and blue selection, and its
-   stylesheet loads after ours — so each of these has to out-specify the vendor rule
-   it replaces, not merely name the element. */
+/* Override the vendor grid colors with the current theme. */
 .spreadsheet-table .tabulator-row,
 .spreadsheet-table .tabulator-row.tabulator-row-even,
 .spreadsheet-table .tabulator-row.tabulator-row-odd {
   background: var(--theme-surface-elevated);
 }
 
-.spreadsheet-table .tabulator-row.tabulator-selectable:hover {
-  background: var(--theme-surface-hover);
+.spreadsheet-table.tabulator .tabulator-cell[tabulator-field]:not(.tabulator-editing) {
   cursor: cell;
 }
 
-.spreadsheet-table .tabulator-row.tabulator-selected,
-.spreadsheet-table .tabulator-row.tabulator-selected:hover {
-  background: var(--theme-surface-active);
+.spreadsheet-table.tabulator .tabulator-header .tabulator-col.tabulator-range-highlight,
+.spreadsheet-table.tabulator .tabulator-row.tabulator-range-highlight .tabulator-range-row-header {
+  background-color: var(--theme-surface-active);
+  color: var(--theme-text);
+}
+
+.spreadsheet-table.tabulator .tabulator-row .tabulator-cell.tabulator-range-selected:not(.tabulator-range-only-cell-selected):not(.tabulator-range-row-header),
+.spreadsheet-table.tabulator .tabulator-cell.is-fill-target {
+  background-color: var(--theme-accent-soft);
+}
+
+.spreadsheet-table.tabulator .tabulator-tableholder .tabulator-range-overlay :is(.tabulator-range, .tabulator-range-cell-active) {
+  border-color: var(--theme-accent);
+}
+
+/* The built-in corner dot is decorative. Notebook provides a real drag target. */
+.spreadsheet-table.tabulator .tabulator-tableholder .tabulator-range-overlay .tabulator-range.tabulator-range-active::after {
+  content: none;
+}
+
+.notebook-range-fill-handle {
+  position: absolute;
+  z-index: 2;
+  inset: auto 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background-color: var(--theme-accent);
+  box-shadow: 0 0 0 1px var(--theme-surface-elevated) inset;
+  cursor: crosshair;
 }
 
 /* An empty cell has no content to give the row height, which collapses a new table

@@ -237,6 +237,61 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuiteChatLogPersis
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
     });
+    test('Agent chat history filters rail sessions before the limit and keeps their saved logs', async () => {
+      const storagePath = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'agent-chat-rail-'));
+      try {
+        const runtime = agentChatLog.createAgentChatLogRuntime({ now: () => '2026-11-12T20:00:00Z' });
+        const { createAgentSessionService } = require(path.join(__dirname, 'src/main/agent/context/chat-log/session-service.js'));
+        const { registerAgentLogHandlers } = require(path.join(__dirname, 'src/main/ipc/register-agent-ipc/agent-log-handlers.js'));
+        const { AGENT } = require(path.join(__dirname, 'src/shared/ipc/channels.js'));
+        const cleanText = (value) => String(value || '');
+        const handlers = new Map();
+        registerAgentLogHandlers({
+          ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
+          cleanText,
+          lifecycleService: { normalizeJsonPayload: (payload) => payload },
+          agentChatLogRuntime: runtime,
+          getAgentChatSessionStoragePath: () => storagePath
+        });
+
+        const createSession = (payload) => handlers.get(AGENT.CHAT_LOG_CREATE_SESSION)({}, payload);
+        await runtime.createSession({ storagePath, sessionId: 'main', createdAt: '2026-11-12T18:00:00Z' });
+        await runtime.createSession({ storagePath, sessionId: 'legacy', createdAt: '2026-11-12T19:00:00Z' });
+        const { session: rail } = await createSession({ chatSurface: 'rail', title: 'Rail conversation' });
+        const service = createAgentSessionService({
+          cleanText,
+          agentChatLogRuntime: runtime,
+          chatSessionStoragePath: storagePath,
+          requestedChatSessionId: rail.id,
+          payload: { chatSurface: 'rail' }
+        });
+        await service.ensureSession();
+        const fallback = createAgentSessionService({
+          cleanText,
+          agentChatLogRuntime: runtime,
+          chatSessionStoragePath: storagePath,
+          payload: { chatSurface: 'rail' }
+        });
+        await Promise.all([
+          fallback.ensureSession(),
+          service.appendRows([{
+            type: 'agent-chat-result', session_id: rail.id, codex_session_id: 'codex-rail',
+            timestamp: '2026-11-12T20:05:00Z'
+          }])
+        ]);
+        const listed = await handlers.get(AGENT.CHAT_LOG_LIST_SESSIONS)({}, {
+          limit: 1, legacyRailSessionIds: ['legacy']
+        });
+        assert.deepEqual(listed.items.map((session) => session.id), ['main']);
+        assert.equal((await runtime.listSessions({ storagePath })).items.length, 4);
+        const loaded = await runtime.getSession({ storagePath, sessionId: rail.id });
+        assert.equal(loaded.session.chat_surface, 'rail');
+        assert.equal(loaded.session.codex_session_id, 'codex-rail');
+        assert.equal(fallback.getSession().chat_surface, 'rail');
+      } finally {
+        await fsPromises.rm(storagePath, { recursive: true, force: true });
+      }
+    });
     test('shared agent cleanText keeps long strings intact', () => {
       const { defaultCleanText } = require(path.join(
         __dirname,

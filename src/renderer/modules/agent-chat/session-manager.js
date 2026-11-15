@@ -152,6 +152,7 @@ export function createAgentChatSessionManager(deps = {}) {
     }
     const normalized = {
       id: sessionId,
+      ...(source?.chat_surface === 'rail' ? { chat_surface: 'rail' } : {}),
       title: trimText(source?.title, 220) || 'New Chat',
       project_id: trimText(source?.project_id || source?.projectId, 120),
       project_name: trimText(source?.project_name || source?.projectName, 220),
@@ -245,6 +246,7 @@ export function createAgentChatSessionManager(deps = {}) {
 
 
   const {
+    discardRailChats,
     loadChatSession,
     refreshPersistentSessions,
     ensureCurrentChatSession,
@@ -252,6 +254,7 @@ export function createAgentChatSessionManager(deps = {}) {
   } = createSessionLoading({
     state,
     api,
+    chatSurface: deps.chatSurface,
     persist,
     ensureAgentState,
     getStoragePath,
@@ -392,6 +395,7 @@ export function createAgentChatSessionManager(deps = {}) {
   }
 
   return {
+    discardRailChats,
     findSessionCard,
     upsertSessionSummary,
     renderSessionList,

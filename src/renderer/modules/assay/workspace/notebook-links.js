@@ -1,3 +1,5 @@
+import { getAssayAxisFields } from '../axis-fields.js';
+
 // Keeps notebook pages pointing at the assays they reference, and stores the
 // analysis preview a saved assay shows without re-running the analysis.
 function createAssayNotebookLinks({
@@ -65,7 +67,9 @@ function createAssayNotebookLinks({
     if (fieldsToCompare.some((field) => String(existing?.[field] || '') !== String(nextRecord?.[field] || ''))) {
       return true;
     }
-    return JSON.stringify(existing?.sampleAxisValues || []) !== JSON.stringify(nextRecord?.sampleAxisValues || [])
+    return JSON.stringify(getAssayAxisFields(existing)) !== JSON.stringify(getAssayAxisFields(nextRecord))
+      || JSON.stringify(existing?.conditionAxisValues || {}) !== JSON.stringify(nextRecord?.conditionAxisValues || {})
+      || JSON.stringify(existing?.sampleAxisValues || []) !== JSON.stringify(nextRecord?.sampleAxisValues || [])
       || JSON.stringify(existing?.concentrationAxisValues || []) !== JSON.stringify(nextRecord?.concentrationAxisValues || [])
       || JSON.stringify(existing?.manualWellOverrides || {}) !== JSON.stringify(nextRecord?.manualWellOverrides || {})
       || JSON.stringify(existing?.suppressedWells || []) !== JSON.stringify(nextRecord?.suppressedWells || [])

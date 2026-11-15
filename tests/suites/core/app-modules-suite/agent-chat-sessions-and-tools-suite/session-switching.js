@@ -61,41 +61,52 @@ test('agent-chat loads saved sessions from chat logs and switches sessions from 
       },
       agent: {}
     },
+    paperAgentChatSessions: {
+      'plugin:example:item:figure': {
+        currentSessionId: 'rail-current',
+        sessions: [{ id: 'rail-older' }],
+        messages: [{ role: 'user', text: 'Rail conversation' }]
+      },
+      'home:experiment-log': { currentSessionId: 'home-chat' }
+    },
     agentChat: {
       projectId: '',
-      currentSessionId: '',
-      sessions: [],
-      messages: []
+      currentSessionId: 'rail-current',
+      sessions: [{ id: 'rail-current', title: 'Cached rail conversation' }],
+      messages: [{ role: 'user', text: 'Rail conversation' }]
     }
   };
 
   const window = {
     hikariApi: {
-      agentChatLogListSessions: async () => ({
-        ok: true,
-        items: [
-          {
-            id: 'chat-2',
-            title: 'Recent literature search',
-            project_id: '',
-            project_name: '',
-            updated_at: '2026-03-22T18:00:00.000Z',
-            created_at: '2026-03-22T18:00:00.000Z',
-            message_count: 2,
-            last_message_preview: 'Found 3 recent papers.'
-          },
-          {
-            id: 'chat-1',
-            title: 'Atlas notebook question',
-            project_id: 'p1',
-            project_name: 'Cancer Study',
-            updated_at: '2026-03-22T17:00:00.000Z',
-            created_at: '2026-03-22T17:00:00.000Z',
-            message_count: 2,
-            last_message_preview: 'I found the notebook entry.'
-          }
-        ]
-      }),
+      agentChatLogListSessions: async ({ legacyRailSessionIds }) => {
+        assert.deepEqual([...legacyRailSessionIds], ['rail-current', 'rail-older']);
+        return {
+          ok: true,
+          items: [
+            {
+              id: 'chat-2',
+              title: 'Recent literature search',
+              project_id: '',
+              project_name: '',
+              updated_at: '2026-03-22T18:00:00.000Z',
+              created_at: '2026-03-22T18:00:00.000Z',
+              message_count: 2,
+              last_message_preview: 'Found 3 recent papers.'
+            },
+            {
+              id: 'chat-1',
+              title: 'Atlas notebook question',
+              project_id: 'p1',
+              project_name: 'Cancer Study',
+              updated_at: '2026-03-22T17:00:00.000Z',
+              created_at: '2026-03-22T17:00:00.000Z',
+              message_count: 2,
+              last_message_preview: 'I found the notebook entry.'
+            }
+          ]
+        };
+      },
       agentChatLogGetSession: async ({ sessionId }) => ({
         ok: true,
         session: {
@@ -191,6 +202,9 @@ test('agent-chat loads saved sessions from chat logs and switches sessions from 
   });
 
   agent.render();
+  assert.doesNotMatch(sessionList.innerHTML, /Cached rail conversation/);
+  assert.doesNotMatch(history.innerHTML, /Rail conversation/);
+  assert.equal(state.paperAgentChatSessions['plugin:example:item:figure'].messages[0].text, 'Rail conversation');
   await flushAsync();
   await flushAsync();
 

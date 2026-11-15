@@ -1,4 +1,5 @@
 import { oppositeAxis } from '../shared.js';
+import { CONDITION_FIELDS, getFieldAxis } from '../axis-fields.js';
 import { parseWellId, wellIdFor } from '../plate-model.js';
 import { plateUi } from '../localization.js';
 
@@ -11,6 +12,7 @@ export function createPlatePreviewEvents({
   serialDilution,
   getCurrentDefinition,
   getSampleAxis,
+  getAxisFields,
   getFillMode,
   getAxisTemplateValues,
   syncAxisTemplateValues,
@@ -46,7 +48,7 @@ export function createPlatePreviewEvents({
   function onPlatePreviewChange(event) {
     const axisInput = event.target.closest('[data-axis-dimension]');
     if (axisInput) {
-      const isConcentrationAxis = axisInput.dataset.axisDimension === oppositeAxis(getSampleAxis());
+      const isConcentrationAxis = axisInput.dataset.axisField === 'concentration';
       if (isConcentrationAxis) {
         recognizeConcentrationUnit(axisInput.value);
       }
@@ -195,11 +197,10 @@ export function createPlatePreviewEvents({
 
   function focusPlateWellField(wellId, field) {
     const normalizedWell = String(wellId || '').trim().toUpperCase();
-    const normalizedField = field === 'concentration' ? 'concentration' : 'sampleId';
     if (!normalizedWell || !assayPlatePreview) {
       return;
     }
-    const input = assayPlatePreview.querySelector(`[data-well="${normalizedWell}"] [data-well-inline-field="${normalizedField}"]`);
+    const input = assayPlatePreview.querySelector(`[data-well="${normalizedWell}"] [data-well-inline-field="${field}"]`);
     input?.focus();
     input?.select?.();
   }
@@ -226,6 +227,7 @@ export function createPlatePreviewEvents({
   }
 
   function getWellEntryDirection(field) {
+    if (CONDITION_FIELDS.includes(field)) return getFieldAxis(getAxisFields(), field) || 'row';
     return field === 'concentration' ? oppositeAxis(getSampleAxis()) : getSampleAxis();
   }
 

@@ -117,8 +117,7 @@ function createSpreadsheetColumnDefs({
       // Wide sheets scroll horizontally instead of squeezing every value into
       // Tabulator's 40px default minimum and showing only ellipses.
       minWidth: 120,
-      // 'input' edits the underlying value, so clicking a computed cell brings the
-      // formula back the way a spreadsheet does.
+      // Editing a computed cell opens the underlying formula.
       editor: 'input',
       formatter: (cell) => formatCell(tableIndex, cell),
       headerSort: false,

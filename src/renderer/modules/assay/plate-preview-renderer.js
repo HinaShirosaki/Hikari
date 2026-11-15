@@ -1,6 +1,7 @@
 import { layoutToMap, toRowLabel, wellIdFor } from './plate-model.js';
 import { parseConcentrationMagnitude } from './concentration-utils.js';
 import { plateAttributes, plateMessage } from './localization.js';
+import { AXIS_FIELDS, hasWellValues } from './axis-fields.js';
 
 function hashSampleId(sampleId) {
   let hash = 2166136261;
@@ -73,10 +74,10 @@ function buildRankedConcentrations(filledLayouts) {
 
 export function buildPlatePreviewHtml({
   def,
-  sampleAxis,
+  fields,
   layout,
-  sampleValues,
-  concentrationValues,
+  values,
+  conditionFields,
   concentrationUnit,
   activeWellEditorId,
   safeText
@@ -86,15 +87,18 @@ export function buildPlatePreviewHtml({
   const maxRows = totalWells > 384 ? 16 : def.rows;
   const maxColumns = totalWells > 384 ? 24 : def.columns;
 
-  const rowAxisRole = sampleAxis === 'row' ? 'sample' : 'concentration';
-  const columnAxisRole = sampleAxis === 'row' ? 'concentration' : 'sample';
+  const rowField = AXIS_FIELDS[fields.row];
+  const columnField = AXIS_FIELDS[fields.column];
   const unit = String(concentrationUnit || '').trim();
   const concentrationAxisLabel = unit ? plateMessage('grid.concentrationUnit', { unit }) : plateMessage('grid.concentration');
-  const rowAxisLabel = rowAxisRole === 'sample' ? plateMessage('field.sampleId') : concentrationAxisLabel;
-  const columnAxisLabel = columnAxisRole === 'sample' ? plateMessage('field.sampleId') : concentrationAxisLabel;
-  const axisPlaceholder = role => plateAttributes({ placeholder: role === 'sample' ? 'grid.samplePlaceholder' : 'grid.concentrationPlaceholder' });
-  const rowAxisValues = rowAxisRole === 'sample' ? sampleValues : concentrationValues;
-  const columnAxisValues = columnAxisRole === 'sample' ? sampleValues : concentrationValues;
+  const rowAxisLabel = fields.row === 'concentration' ? concentrationAxisLabel : plateMessage(rowField.label);
+  const columnAxisLabel = fields.column === 'concentration' ? concentrationAxisLabel : plateMessage(columnField.label);
+  const axisPlaceholder = field => plateAttributes({
+    placeholder: field === 'sample' ? 'grid.samplePlaceholder'
+      : field === 'concentration' ? 'grid.concentrationPlaceholder' : AXIS_FIELDS[field].label
+  });
+  const rowAxisValues = values[rowField.valuesKey];
+  const columnAxisValues = values[columnField.valuesKey];
   const filledLayouts = Object.values(cellMap).filter((item) => item && (item.sampleId || item.concentration));
   const rankedConcentrations = buildRankedConcentrations(filledLayouts);
 
@@ -112,9 +116,10 @@ export function buildPlatePreviewHtml({
           type="text"
           class="assay-axis-input"
           data-axis-dimension="column"
+          data-axis-field="${fields.column}"
           data-axis-index="${col}"
           value="${safeText(value)}"
-          ${axisPlaceholder(columnAxisRole)}
+          ${axisPlaceholder(fields.column)}
         />
       </td>
     `);
@@ -132,9 +137,10 @@ export function buildPlatePreviewHtml({
             type="text"
             class="assay-axis-input"
             data-axis-dimension="row"
+            data-axis-field="${fields.row}"
             data-axis-index="${row}"
             value="${safeText(rowAxisValue)}"
-            ${axisPlaceholder(rowAxisRole)}
+            ${axisPlaceholder(fields.row)}
           />
         </td>
       `
@@ -142,7 +148,7 @@ export function buildPlatePreviewHtml({
     for (let col = 0; col < maxColumns; col += 1) {
       const well = wellIdFor(row, col);
       const cellLayout = cellMap[well];
-      const filled = cellLayout && (cellLayout.sampleId || cellLayout.concentration) ? ' is-filled' : '';
+      const filled = hasWellValues(cellLayout) ? ' is-filled' : '';
       const active = activeWellEditorId === well ? ' is-active' : '';
       const sampleValue = String(cellLayout?.sampleId || '').trim();
       const concentrationValue = String(cellLayout?.concentration || '').trim();
@@ -157,7 +163,7 @@ export function buildPlatePreviewHtml({
         : (sampleValue ? 0.36 : 0);
       const saturation = Math.round(Math.min(94, color.saturation - 10 + (intensity * 18)));
       const lightness = Math.round(Math.max(58, 96 - (intensity * 34)));
-      const cellStyle = sampleValue || concentrationValue
+      const cellStyle = filled
         ? ` style="background-color: hsl(${color.hue} ${saturation}% ${lightness}%); color: ${wellTextColor(color.hue, saturation, lightness)};"`
         : '';
       cells.push(`
@@ -179,6 +185,11 @@ export function buildPlatePreviewHtml({
             value="${safeText(concentrationValue)}"
             ${fieldAttributes('grid.wellConcentration', 'grid.concentrationPlaceholder')}
           />
+          ${conditionFields.map(field => `
+            <input type="text" class="assay-well-inline-input assay-well-concentration-input"
+              data-well-inline-field="${field}" data-well="${well}" value="${safeText(cellLayout?.[field] || '')}"
+              ${plateAttributes({ placeholder: AXIS_FIELDS[field].label, 'aria-label': AXIS_FIELDS[field].label })}
+            />`).join('')}
         </td>
       `);
     }

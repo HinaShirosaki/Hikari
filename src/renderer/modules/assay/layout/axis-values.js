@@ -1,10 +1,9 @@
-import { oppositeAxis } from '../shared.js';
+import { AXIS_FIELDS, getAssayAxisFields } from '../axis-fields.js';
 import {
   applyAxisTemplate,
   buildAllWells,
   buildMappedWellSet,
   filterResultsToMappedWells,
-  getAxisLength,
   isValidWellForDefinition,
   layoutToMap,
   mergeAxisTemplateValues,
@@ -13,17 +12,17 @@ import {
   normalizeManualWellOverrideMap
 } from '../plate-model.js';
 
-// Axis template values are the sample/concentration labels a plate layout is
+// Axis template values are the labels a plate layout is
 // generated from; this owns reading them back off the preview and re-deriving
 // the layout when either axis changes.
 function createAxisValues({
   runtime,
   assayPlatePreview,
   getCurrentDefinition,
-  getSampleAxis
+  getAxisFields = () => getAssayAxisFields()
 } = {}) {
-  function setAxisTemplateValues(values, def = getCurrentDefinition(), sampleAxis = getSampleAxis()) {
-    runtime.axisTemplateValues = normalizeCurrentAxisTemplateValues(values, def, sampleAxis);
+  function setAxisTemplateValues(values, def = getCurrentDefinition()) {
+    runtime.axisTemplateValues = normalizeCurrentAxisTemplateValues(values, def, getAxisFields());
     return runtime.axisTemplateValues;
   }
 
@@ -31,55 +30,22 @@ function createAxisValues({
     if (!assayPlatePreview) {
       return null;
     }
-    const rowInputs = [...assayPlatePreview.querySelectorAll('[data-axis-dimension="row"]')];
-    const columnInputs = [...assayPlatePreview.querySelectorAll('[data-axis-dimension="column"]')];
-    if (!rowInputs.length && !columnInputs.length) {
-      return null;
+    const fields = getAxisFields();
+    const values = {};
+    for (const input of assayPlatePreview.querySelectorAll('[data-axis-dimension]')) {
+      const field = input.dataset.axisField;
+      if (field !== fields[input.dataset.axisDimension]) continue;
+      const { valuesKey } = AXIS_FIELDS[field];
+      values[valuesKey] ||= [];
+      values[valuesKey][Number(input.dataset.axisIndex)] = input.value;
     }
-    const def = getCurrentDefinition();
-    const sampleAxis = getSampleAxis();
-    const sampleLength = getAxisLength(sampleAxis, def);
-    const concentrationLength = getAxisLength(oppositeAxis(sampleAxis), def);
-    const sampleValues = new Array(sampleLength).fill('');
-    const concentrationValues = new Array(concentrationLength).fill('');
-    rowInputs.forEach((input) => {
-      const index = Number(input.dataset.axisIndex);
-      if (!Number.isFinite(index) || index < 0) {
-        return;
-      }
-      const text = String(input.value || '').trim();
-      if (sampleAxis === 'row') {
-        if (index < sampleValues.length) {
-          sampleValues[index] = text;
-        }
-      } else if (index < concentrationValues.length) {
-        concentrationValues[index] = text;
-      }
-    });
-    columnInputs.forEach((input) => {
-      const index = Number(input.dataset.axisIndex);
-      if (!Number.isFinite(index) || index < 0) {
-        return;
-      }
-      const text = String(input.value || '').trim();
-      if (sampleAxis === 'column') {
-        if (index < sampleValues.length) {
-          sampleValues[index] = text;
-        }
-      } else if (index < concentrationValues.length) {
-        concentrationValues[index] = text;
-      }
-    });
-    return {
-      sampleValues,
-      concentrationValues
-    };
+    return values;
   }
 
   function getAxisTemplateValues({ includePreview = true } = {}) {
     return mergeAxisTemplateValues({
       def: getCurrentDefinition(),
-      sampleAxis: getSampleAxis(),
+      fields: getAxisFields(),
       sources: includePreview
         ? [runtime.axisTemplateValues, readAxisValuesFromPlatePreview()]
         : [runtime.axisTemplateValues]
@@ -120,39 +86,25 @@ function createAxisValues({
 
   function setLayoutFromAxisAndOverrides({ preserveActiveWell = true, axisValues = null } = {}) {
     const def = getCurrentDefinition();
-    const sampleAxis = getSampleAxis();
+    const fields = getAxisFields();
     const normalizedAxisValues = axisValues
-      ? normalizeCurrentAxisTemplateValues(axisValues, def, sampleAxis)
+      ? normalizeCurrentAxisTemplateValues(axisValues, def, fields)
       : getAxisTemplateValues();
-    const { sampleValues, concentrationValues } = normalizedAxisValues;
-    setAxisTemplateValues(normalizedAxisValues, def, sampleAxis);
+    setAxisTemplateValues(normalizedAxisValues, def);
     normalizeManualWellOverrides(def);
     normalizeSuppressedWells(def);
-    const baseLayout = applyAxisTemplate({
-      def,
-      sampleAxis,
-      sampleValues,
-      concentrationValues
-    });
+    const baseLayout = applyAxisTemplate({ def, fields, values: normalizedAxisValues });
     const map = layoutToMap(baseLayout);
     Object.entries(runtime.manualWellOverrides).forEach(([well, value]) => {
-      const sampleId = String(value?.sampleId || '').trim();
-      const concentration = String(value?.concentration || '').trim();
-      if (!sampleId && !concentration) {
-        delete map[well];
-        return;
-      }
-      map[well] = { sampleId, concentration };
+      map[well] = { ...map[well], ...value };
     });
     runtime.suppressedWells.forEach((well) => {
       delete map[well];
     });
     runtime.currentLayout = normalizeLayout(Object.entries(map).map(([well, value]) => ({
       well,
-      sampleId: value.sampleId,
-      concentration: value.concentration
+      ...value
     })), def);
-    runtime.currentResults = filterMappedResults(runtime.currentResults);
     if (preserveActiveWell && runtime.activeWellEditorId && !isValidWellForDefinition(runtime.activeWellEditorId, def)) {
       runtime.activeWellEditorId = '';
     }
@@ -163,15 +115,8 @@ function createAxisValues({
     if (!normalizedWell) {
       return { sampleId: '', concentration: '' };
     }
-    const currentMap = layoutToMap(runtime.currentLayout);
-    const current = currentMap[normalizedWell];
-    if (current) {
-      return {
-        sampleId: String(current.sampleId || '').trim(),
-        concentration: String(current.concentration || '').trim()
-      };
-    }
-    return { sampleId: '', concentration: '' };
+    const current = runtime.currentLayout.find(well => well.well === normalizedWell);
+    return current || { sampleId: '', concentration: '' };
   }
 
   function updateActiveWellPreviewState() {

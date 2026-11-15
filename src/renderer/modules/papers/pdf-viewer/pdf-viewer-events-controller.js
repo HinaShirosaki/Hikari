@@ -24,7 +24,7 @@ export const installPdfViewerEventsController = (ctx) => {
     selectionSearchLibraryBtn,
     selectionSearchPrevBtn,
     selectionSearchNextBtn,
-    selectionCommentSaveBtn,
+    selectionCommentPopover,
     selectionCommentCancelBtn,
     selectionCommentText,
     highlightCommentPopover
@@ -82,21 +82,16 @@ export const installPdfViewerEventsController = (ctx) => {
     selectionSearchNextBtn?.addEventListener('click', () => {
       ctx.activateSearchMatch(state.activeSearchMatchIndex + 1);
     });
-    selectionCommentSaveBtn?.addEventListener('click', () => {
+    selectionCommentPopover?.addEventListener('submit', (event) => {
+      event.preventDefault();
       ctx.saveSelectionComment();
     });
-    selectionCommentCancelBtn?.addEventListener('click', () => {
-      ctx.hideSelectionCommentPopover();
-      ctx.showSelectionMenu();
-    });
+    selectionCommentCancelBtn?.addEventListener('click', ctx.cancelSelectionComment);
+    selectionCommentText?.addEventListener('input', ctx.updateSelectionCommentInput);
     selectionCommentText?.addEventListener('keydown', (event) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+      if (!event.isComposing && (event.metaKey || event.ctrlKey) && event.key === 'Enter') {
         event.preventDefault();
         ctx.saveSelectionComment();
-      } else if (event.key === 'Escape') {
-        event.preventDefault();
-        ctx.hideSelectionCommentPopover();
-        ctx.showSelectionMenu();
       }
     });
     openExternalBtn?.addEventListener('click', () => {
@@ -131,12 +126,17 @@ export const installPdfViewerEventsController = (ctx) => {
       doc.addEventListener('pointerdown', ctx.handleDocumentPointerDown);
       doc.addEventListener('selectionchange', ctx.schedulePendingSelectionUpdate);
       doc.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
-          ctx.hideSelectionMenu();
-          ctx.hideSelectionCommentPopover();
-          ctx.hideSelectionSearchPopover();
-          ctx.hideHighlightCommentPopover();
+        if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing) {
+          return;
         }
+        if (selectionCommentPopover?.getClientRects().length) {
+          event.preventDefault();
+          ctx.cancelSelectionComment();
+          return;
+        }
+        ctx.hideSelectionMenu();
+        ctx.hideSelectionSearchPopover();
+        ctx.hideHighlightCommentPopover();
       });
     }
 
@@ -145,6 +145,10 @@ export const installPdfViewerEventsController = (ctx) => {
         ctx.handleResize();
       });
       observer.observe(stage);
+    }
+    if (selectionCommentPopover && typeof ResizeObserver === 'function') {
+      const observer = new ResizeObserver(ctx.clampSelectionCommentPopover);
+      observer.observe(selectionCommentPopover);
     }
   }
 

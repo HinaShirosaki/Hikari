@@ -22,6 +22,7 @@ export function createAssayResultsManager({
   isMappedWell,
   getCurrentDefinition,
   getSampleAxis,
+  getAxisFields,
   filterAndNormalizeResults,
   setResultStatus,
   clearAnalysisOutput,
@@ -60,7 +61,7 @@ export function createAssayResultsManager({
     buildResultGridColumns,
     buildResultGridData,
     getResultGridHeight
-  } = createResultGridModel({ runtime, getSampleAxis, isMappedWell, escapeHtml, toResultField });
+  } = createResultGridModel({ runtime, getSampleAxis, getAxisFields, isMappedWell, escapeHtml, toResultField });
 
   function getResultValueCount() {
     return Object.keys(runtime.currentResults || {}).length;
@@ -202,6 +203,7 @@ export function createAssayResultsManager({
   }
 
   function syncCurrentResultsFromGrid() {
+    if (runtime.assayMode === 'create') return filterAndNormalizeResults(runtime.currentResults);
     // Tabulator defers its initial build to the next task. During that window the
     // instance exists, but getRows() is empty even when the saved assay supplied
     // result data. Keep the restored model as the source of truth until the grid

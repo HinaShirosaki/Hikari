@@ -117,6 +117,8 @@ export function createAssayArtifactStorage({
       wellCount: assay.wellCount,
       sampleAxis: assay.sampleAxis,
       concentrationAxis: assay.concentrationAxis,
+      axisFields: assay.axisFields,
+      conditionAxisValues: assay.conditionAxisValues,
       sampleAxisValues: assay.sampleAxisValues,
       concentrationAxisValues: assay.concentrationAxisValues,
       manualWellOverrides: assay.manualWellOverrides,

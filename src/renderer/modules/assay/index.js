@@ -264,7 +264,9 @@ export function initAssay({
     getInventorySamples: () => (Array.isArray(state.samples) ? state.samples : []),
     setCsvStatus,
     setLayoutStatus,
-    renderResultTable: () => resultsManager.renderResultTable(),
+    renderResultTable: () => {
+      if (runtime.assayMode === 'results') resultsManager.renderResultTable();
+    },
     clearAnalysisOutput: () => analysisView?.clearOutput()
   });
 
@@ -275,6 +277,7 @@ export function initAssay({
     isMappedWell: layoutManager.isMappedWell,
     getCurrentDefinition: layoutManager.getCurrentDefinition,
     getSampleAxis: layoutManager.getSampleAxis,
+    getAxisFields: layoutManager.getAxisFields,
     filterAndNormalizeResults: (results) => layoutManager.filterMappedResults(
       normalizeResults(results, layoutManager.getCurrentDefinition())
     ),
@@ -400,8 +403,6 @@ export function initAssay({
     }
     elements.assayIdInput.value = assay.id;
     elements.assayPlateTypeInput.value = String(assay.plateType || '96');
-    elements.assaySampleAxisInput.value = assay.sampleAxis === 'column' ? 'column' : 'row';
-    layoutManager.syncAxisDisplay();
     const def = layoutManager.getCurrentDefinition();
     const axisValues = layoutManager.restoreAssayLayoutState(assay, def);
     layoutManager.renderPlatePreview(axisValues);

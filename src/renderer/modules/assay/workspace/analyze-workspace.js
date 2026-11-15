@@ -12,11 +12,14 @@ export function createAnalyzeWorkspace({ elements, runtime, resultsManager, anal
   const find = (id) => root.querySelector(`#${id}`);
   const tabs = Array.from(root.querySelectorAll('[data-assay-data-tab]'));
   const viewTabs = Array.from(root.ownerDocument.querySelectorAll('[data-assay-workspace-view]'));
-  const views = { chart: find('assay-workspace-chart'), data: find('assay-workspace-data') };
+  const views = {
+    chart: find('assay-workspace-chart'),
+    data: find('assay-workspace-data'),
+    summary: find('assay-summary-panel')
+  };
   const panels = {
     raw: find('assay-result-table-panel'),
-    transformed: find('assay-transformed-data-panel'),
-    summary: find('assay-summary-panel')
+    transformed: find('assay-transformed-data-panel')
   };
   let activeTab = 'raw';
   let activeView = 'chart';
@@ -47,10 +50,10 @@ export function createAnalyzeWorkspace({ elements, runtime, resultsManager, anal
       if (root.closest('[hidden]')) return;
       if (activeView === 'chart') {
         analysisView.redrawChart();
-        return;
+      } else if (activeView === 'data') {
+        if (!panels.raw.hidden) resultsManager.redrawResultGrid();
+        if (!panels.transformed.hidden) analysisView.redrawTransformGrid();
       }
-      if (!panels.raw.hidden) resultsManager.redrawResultGrid();
-      if (!panels.transformed.hidden) analysisView.redrawTransformGrid();
     });
   }
 
@@ -102,15 +105,12 @@ export function createAnalyzeWorkspace({ elements, runtime, resultsManager, anal
     else if (methodKey) setTranslatedText(find('assay-workspace-chart-title'), methodKey);
     else bindPlateMessage(find('assay-workspace-chart-title'), info.methodLabel);
     setPlateText(find('assay-workspace-chart-source'), info.dataSource === 'transformed' ? 'source.transformed' : 'source.raw');
-    if (activeTab === 'summary') setPlateText(find('assay-workspace-table-label'), 'workspace.summaryLabel');
-    else bindPlateMessage(find('assay-workspace-table-label'), comparing ? 'Table1 + Table2' : 'Table1');
-    find('assay-show-empty-rows-field').hidden = activeTab === 'summary';
+    bindPlateMessage(find('assay-workspace-table-label'), comparing ? 'Table1 + Table2' : 'Table1');
     find('assay-show-empty-rows').checked = runtime.showEmptyResultRows === true;
     const rows = resultsManager.buildResultGridData(definition, {
       ...runtime.currentResults, ...analysisView.getTransformSpec().formulas
     });
     const hiddenRows = runtime.showEmptyResultRows ? 0 : rows.filter((row) => !row.__hasContent).length;
-    find('assay-workspace-row-status').hidden = activeTab === 'summary';
     if (hiddenRows) setPlateText(find('assay-workspace-row-status'), 'workspace.rowsHidden', { shown: rows.length - hiddenRows, hidden: hiddenRows });
     else setPlateText(find('assay-workspace-row-status'), 'workspace.rowsShown', { count: rows.length });
     const count = find('assay-transform-error-count');

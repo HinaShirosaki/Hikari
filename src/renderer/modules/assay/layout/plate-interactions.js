@@ -2,12 +2,8 @@ import { createInventorySamplePicker } from '../inventory-sample-picker.js';
 import { createPlatePreviewEvents } from './preview-events.js';
 import { createSerialDilutionController } from '../serial-dilution.js';
 import { createConcentrationFill } from './concentration-fill.js';
-import {
-  applyAxisTemplate,
-  isValidWellForDefinition,
-  layoutToMap,
-  normalizeCurrentAxisTemplateValues
-} from '../plate-model.js';
+import { applyAxisTemplate, getAxisLength, isValidWellForDefinition, layoutToMap } from '../plate-model.js';
+import { AXIS_FIELDS, getFieldAxis, hasWellValues } from '../axis-fields.js';
 import { plateUi } from '../localization.js';
 
 // Per-well edits that sit on top of the generated layout: dropping an inventory
@@ -29,6 +25,7 @@ function createPlateInteractions({
   assaySerialDilutionVolumeInput,
   getCurrentDefinition,
   getSampleAxis,
+  getAxisFields,
   getConcentrationUnit,
   recognizeConcentrationUnit,
   getAxisTemplateValues,
@@ -86,6 +83,8 @@ function createPlateInteractions({
     assayPlatePreview,
     serialDilution,
     getSampleAxis,
+    getConcentrationAxis: () => getFieldAxis(getAxisFields(), 'concentration'),
+    getConcentrationLength: () => getAxisLength(getFieldAxis(getAxisFields(), 'concentration'), getCurrentDefinition()),
     getConcentrationUnit,
     getAxisTemplateValues,
     syncAxisTemplateValues,
@@ -113,6 +112,7 @@ function createPlateInteractions({
     serialDilution,
     getCurrentDefinition,
     getSampleAxis,
+    getAxisFields,
     getFillMode,
     getAxisTemplateValues,
     syncAxisTemplateValues,
@@ -134,80 +134,49 @@ function createPlateInteractions({
     }
 
     const def = getCurrentDefinition();
-    const sampleAxis = getSampleAxis();
-    const { sampleValues, concentrationValues } = getAxisTemplateValues();
-    const baseMap = layoutToMap(applyAxisTemplate({
-      def,
-      sampleAxis,
-      sampleValues,
-      concentrationValues
-    }));
+    const baseMap = layoutToMap(applyAxisTemplate({ def, fields: getAxisFields(), values: getAxisTemplateValues() }));
     const current = getEffectiveWellMapping(normalizedWell);
     const base = baseMap[normalizedWell] || { sampleId: '', concentration: '' };
-    const next = {
-      sampleId: current.sampleId,
-      concentration: current.concentration
-    };
-
-    next[field === 'concentration' ? 'concentration' : 'sampleId'] = String(rawValue || '').trim();
-
-    const matchesBase = next.sampleId === String(base.sampleId || '').trim()
-      && next.concentration === String(base.concentration || '').trim();
-
-    if (!next.sampleId && !next.concentration) {
-      delete runtime.manualWellOverrides[normalizedWell];
-      if (base.sampleId || base.concentration) {
-        runtime.suppressedWells.add(normalizedWell);
-      } else {
-        runtime.suppressedWells.delete(normalizedWell);
-      }
-    } else if (matchesBase) {
-      delete runtime.manualWellOverrides[normalizedWell];
-      runtime.suppressedWells.delete(normalizedWell);
+    const value = String(rawValue ?? '').trim();
+    const override = { ...runtime.manualWellOverrides[normalizedWell] };
+    if (value === (base[field] || '')) {
+      delete override[field];
     } else {
-      runtime.suppressedWells.delete(normalizedWell);
-      runtime.manualWellOverrides[normalizedWell] = next;
+      override[field] = value;
     }
+    if (runtime.suppressedWells.delete(normalizedWell)) {
+      for (const { wellKey } of Object.values(AXIS_FIELDS)) {
+        if (wellKey !== field && base[wellKey] && !current[wellKey]) override[wellKey] = '';
+      }
+    }
+    if (Object.keys(override).length) runtime.manualWellOverrides[normalizedWell] = override;
+    else delete runtime.manualWellOverrides[normalizedWell];
 
     runtime.activeWellEditorId = normalizedWell;
     setLayoutFromAxisAndOverrides();
   }
 
   function deriveManualWellOverridesFromLayout(layout, def, axisValues = null) {
-    const sampleAxis = getSampleAxis();
-    const resolvedAxisValues = axisValues
-      ? normalizeCurrentAxisTemplateValues(axisValues, def, sampleAxis)
-      : getAxisTemplateValues();
     const baseLayout = applyAxisTemplate({
       def,
-      sampleAxis,
-      sampleValues: resolvedAxisValues.sampleValues,
-      concentrationValues: resolvedAxisValues.concentrationValues
+      fields: getAxisFields(),
+      values: axisValues || getAxisTemplateValues()
     });
     const baseMap = layoutToMap(baseLayout);
     const currentMap = layoutToMap(layout);
-    const keys = new Set([
-      ...Object.keys(baseMap),
-      ...Object.keys(currentMap)
-    ]);
     const overrides = {};
-    keys.forEach((well) => {
+    Object.entries(currentMap).forEach(([well, current]) => {
       if (!isValidWellForDefinition(well, def)) {
         return;
       }
-      const base = baseMap[well] || { sampleId: '', concentration: '' };
-      const current = currentMap[well] || { sampleId: '', concentration: '' };
-      if (!current.sampleId && !current.concentration) {
-        return;
+      const base = baseMap[well] || {};
+      if (!hasWellValues(current)) return;
+      const override = {};
+      for (const { wellKey } of Object.values(AXIS_FIELDS)) {
+        const value = current[wellKey] || '';
+        if (value !== (base[wellKey] || '')) override[wellKey] = value;
       }
-      if (String(base.sampleId || '').trim() === String(current.sampleId || '').trim()
-        && String(base.concentration || '').trim() === String(current.concentration || '').trim()) {
-        return;
-      }
-      overrides[well] = {
-        sampleId: String(current.sampleId || '').trim(),
-        concentration: String(current.concentration || '').trim()
-      };
+      if (Object.keys(override).length) overrides[well] = override;
     });
     runtime.manualWellOverrides = overrides;
   }

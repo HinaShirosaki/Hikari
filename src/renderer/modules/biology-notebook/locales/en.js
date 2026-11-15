@@ -44,6 +44,7 @@ export const notebookEnglish = Object.freeze({
   "table.columns": "Columns",
   "table.rows": "Rows",
   "table.create": "Add Table",
+  "table.selectionHint": "Drag to select cells, then drag the corner handle to fill. Double-click or press Enter to edit.",
   "experiment.description": "Choose a project and protocol to create a notebook experiment.",
   "experiment.close": "Close new experiment dialog",
   "action.close": "Close",

@@ -74,7 +74,7 @@ export const installPdfViewerDataController = (ctx) => {
 
   function handleResize() {
     ctx.hideSelectionMenu();
-    ctx.hideSelectionCommentPopover();
+    ctx.clampSelectionCommentPopover();
     ctx.hideSelectionSearchPopover();
     ctx.hideHighlightCommentPopover();
     if (!state.pdfDocument) {
@@ -93,7 +93,6 @@ export const installPdfViewerDataController = (ctx) => {
 
   function handleStageScroll() {
     ctx.hideSelectionMenu();
-    ctx.hideSelectionCommentPopover();
     if (!state.searchMatches.length) {
       ctx.hideSelectionSearchPopover();
     }

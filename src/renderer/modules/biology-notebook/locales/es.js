@@ -45,6 +45,7 @@ export const notebookSpanish = Object.freeze({
   "table.columns": "Columnas",
   "table.rows": "Filas",
   "table.create": "Añadir tabla",
+  "table.selectionHint": "Arrastra para seleccionar celdas y luego arrastra el tirador de la esquina para rellenar. Haz doble clic o pulsa Intro para editar.",
   "experiment.description": "Elige un proyecto y un protocolo para crear un experimento del cuaderno.",
   "experiment.close": "Cerrar diálogo de nuevo experimento",
   "action.close": "Cerrar",

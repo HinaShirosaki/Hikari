@@ -102,6 +102,7 @@ function registerAgentLogHandlers({
       return await agentChatLogRuntime.createSession({
         storagePath,
         sessionId: cleanText(normalizedPayload?.sessionId || normalizedPayload?.session_id, 120),
+        chatSurface: normalizedPayload?.chatSurface,
         title: cleanText(normalizedPayload?.title, 220) || 'New Chat',
         projectId: cleanText(normalizedPayload?.projectId || normalizedPayload?.project_id, 120),
         projectName: cleanText(normalizedPayload?.projectName || normalizedPayload?.project_name, 220)
@@ -126,7 +127,9 @@ function registerAgentLogHandlers({
     try {
       return await agentChatLogRuntime.listSessions({
         storagePath,
-        limit: Math.max(1, Number(normalizedPayload?.limit) || 200)
+        limit: Math.max(1, Number(normalizedPayload?.limit) || 200),
+        excludeRailChats: true,
+        legacyRailSessionIds: normalizedPayload?.legacyRailSessionIds
       });
     } catch (error) {
       return {
