@@ -9,6 +9,7 @@ export function renderAgentChat({
   loadPersistentSessions = true
 }) {
   shell.ensureAgentState();
+  if (loadPersistentSessions) sessionManager.discardRailChats();
   shell.renderProjectOptions();
   shell.renderScopedComposer();
   shell.renderContextSummary();

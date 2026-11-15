@@ -1,6 +1,6 @@
 import { PLATE_DEFINITIONS } from './constants.js';
-import { oppositeAxis } from './shared.js';
 import { toRowLabel } from '../../lib/plate-wells.js';
+import { AXIS_FIELDS, getAssayAxisFields, getFieldAxis, hasWellValues, readConditionValues } from './axis-fields.js';
 
 export { toRowLabel };
 
@@ -65,20 +65,23 @@ export function normalizeLayout(layout, def) {
     .map((item) => ({
       well: String(item?.well || '').trim().toUpperCase(),
       sampleId: String(item?.sampleId || '').trim(),
-      concentration: String(item?.concentration || '').trim()
+      concentration: String(item?.concentration || '').trim(),
+      ...readConditionValues(item)
     }))
-    .filter((item) => validIds.has(item.well) && (item.sampleId || item.concentration));
+    .filter((item) => validIds.has(item.well) && hasWellValues(item));
 }
 
 export function layoutToMap(layout) {
   const map = {};
   (layout || []).forEach((item) => {
-    if (!item?.well) {
+    const well = String(item?.well || '').trim().toUpperCase();
+    if (!well) {
       return;
     }
-    map[item.well] = {
+    map[well] = {
       sampleId: String(item.sampleId || ''),
-      concentration: String(item.concentration || '')
+      concentration: String(item.concentration || ''),
+      ...readConditionValues(item)
     };
   });
   return map;
@@ -174,44 +177,32 @@ export function getAxisLength(axis, def) {
   return axis === 'column' ? def.columns : def.rows;
 }
 
-export function normalizeAxisTemplateValues(values, maxLength) {
-  return (Array.isArray(values) ? values : [])
-    .map((item) => String(item || '').trim())
-    .slice(0, maxLength);
-}
-
-export function normalizeCurrentAxisTemplateValues(values, def, sampleAxis) {
-  return {
-    sampleValues: normalizeAxisTemplateValues(values?.sampleValues, getAxisLength(sampleAxis, def)),
-    concentrationValues: normalizeAxisTemplateValues(values?.concentrationValues, getAxisLength(oppositeAxis(sampleAxis), def))
-  };
+export function normalizeCurrentAxisTemplateValues(values, def, fields) {
+  return mergeAxisTemplateValues({ def, fields, sources: [values] });
 }
 
 export function hasAxisTemplateValues(values) {
   return (Array.isArray(values) ? values : []).some((item) => String(item || '').trim());
 }
 
-export function mergeAxisTemplateValues({ def, sampleAxis, sources }) {
-  const sampleLength = getAxisLength(sampleAxis, def);
-  const concentrationLength = getAxisLength(oppositeAxis(sampleAxis), def);
-  const merged = {
-    sampleValues: new Array(sampleLength).fill(''),
-    concentrationValues: new Array(concentrationLength).fill('')
-  };
-
-  (Array.isArray(sources) ? sources : []).filter(Boolean).forEach((source) => {
-    if (Array.isArray(source.sampleValues)) {
-      for (let index = 0; index < Math.min(source.sampleValues.length, sampleLength); index += 1) {
-        merged.sampleValues[index] = String(source.sampleValues[index] || '').trim();
+export function mergeAxisTemplateValues({ def, fields, sources }) {
+  const merged = { sampleValues: [], concentrationValues: [] };
+  for (const [field, { valuesKey }] of Object.entries(AXIS_FIELDS)) {
+    const axis = getFieldAxis(fields, field);
+    const maxLength = Math.max(def.rows, def.columns);
+    const sourceArrays = sources.map(source => source?.[valuesKey]).filter(Array.isArray);
+    const assignedLength = axis ? getAxisLength(axis, def) : 0;
+    const length = sourceArrays.reduce((size, entries) =>
+      Math.max(size, entries.slice(0, maxLength).findLastIndex(value => String(value ?? '').trim()) + 1), assignedLength);
+    if (!length) continue;
+    const values = new Array(length).fill('');
+    for (const entries of sourceArrays) {
+      for (let index = 0; index < Math.min(entries.length, length); index += 1) {
+        if (entries[index] !== undefined) values[index] = String(entries[index] ?? '').trim();
       }
     }
-    if (Array.isArray(source.concentrationValues)) {
-      for (let index = 0; index < Math.min(source.concentrationValues.length, concentrationLength); index += 1) {
-        merged.concentrationValues[index] = String(source.concentrationValues[index] || '').trim();
-      }
-    }
-  });
-
+    merged[valuesKey] = values;
+  }
   return merged;
 }
 
@@ -224,52 +215,33 @@ export function normalizeManualWellOverrideMap(source, def) {
     if (!normalizedWell || !isValidWellForDefinition(normalizedWell, def)) {
       return;
     }
-    const sampleId = String(value?.sampleId || '').trim();
-    const concentration = String(value?.concentration || '').trim();
-    if (!sampleId && !concentration) {
-      return;
+    const fields = readConditionValues(value, { keepEmpty: true });
+    for (const field of ['sampleId', 'concentration']) {
+      if (Object.hasOwn(value || {}, field)) fields[field] = String(value[field] ?? '').trim();
     }
-    normalized[normalizedWell] = { sampleId, concentration };
+    if (Object.keys(fields).length) normalized[normalizedWell] = fields;
   });
   return normalized;
 }
 
-// Fills a layout from the axis template: sampleAxis ('row' or 'column') holds
-// one sample per line and the opposite axis one concentration per line, so
-// well (r, c) gets that row's and column's values. With both axes filled
-// (mappingMode 'auto') only wells with both values are created; 'union' also
-// keeps wells with just one.
-export function applyAxisTemplate({
-  def,
-  sampleAxis,
-  sampleValues,
-  concentrationValues,
-  mappingMode = 'auto'
-}) {
-  const requireIntersection = mappingMode === 'union'
-    ? false
-    : hasAxisTemplateValues(sampleValues) && hasAxisTemplateValues(concentrationValues);
+export function applyAxisTemplate({ def, fields, values, mappingMode = 'auto' }) {
+  const rowField = AXIS_FIELDS[fields.row];
+  const columnField = AXIS_FIELDS[fields.column];
+  const rowValues = values[rowField.valuesKey];
+  const columnValues = values[columnField.valuesKey];
+  const requireIntersection = mappingMode !== 'union'
+    && hasAxisTemplateValues(rowValues.slice(0, def.rows))
+    && hasAxisTemplateValues(columnValues.slice(0, def.columns));
   const layout = [];
   for (let rowIndex = 0; rowIndex < def.rows; rowIndex += 1) {
     for (let columnIndex = 0; columnIndex < def.columns; columnIndex += 1) {
-      const sampleId = sampleAxis === 'row'
-        ? (sampleValues[rowIndex] || '')
-        : (sampleValues[columnIndex] || '');
-      const concentration = sampleAxis === 'row'
-        ? (concentrationValues[columnIndex] || '')
-        : (concentrationValues[rowIndex] || '');
-      if (requireIntersection) {
-        if (!sampleId || !concentration) {
-          continue;
-        }
-      } else if (!sampleId && !concentration) {
-        continue;
-      }
-      layout.push({
-        well: wellIdFor(rowIndex, columnIndex),
-        sampleId,
-        concentration
-      });
+      const rowValue = rowValues[rowIndex] || '';
+      const columnValue = columnValues[columnIndex] || '';
+      if (requireIntersection ? !(rowValue && columnValue) : !(rowValue || columnValue)) continue;
+      const well = { well: wellIdFor(rowIndex, columnIndex), sampleId: '', concentration: '' };
+      if (rowValue) well[rowField.wellKey] = rowValue;
+      if (columnValue) well[columnField.wellKey] = columnValue;
+      layout.push(well);
     }
   }
   return layout;
@@ -284,10 +256,8 @@ export function layoutsEqual(left, right, def) {
   ]);
 
   for (const key of keys) {
-    const leftValue = leftMap[key] || { sampleId: '', concentration: '' };
-    const rightValue = rightMap[key] || { sampleId: '', concentration: '' };
-    if (String(leftValue.sampleId || '').trim() !== String(rightValue.sampleId || '').trim()
-      || String(leftValue.concentration || '').trim() !== String(rightValue.concentration || '').trim()) {
+    if (Object.values(AXIS_FIELDS).some(({ wellKey }) =>
+      (leftMap[key]?.[wellKey] || '') !== (rightMap[key]?.[wellKey] || ''))) {
       return false;
     }
   }
@@ -301,15 +271,14 @@ export function removeSuppressedWellsFromLayout(layout, def, suppressed) {
   });
   return normalizeLayout(Object.entries(map).map(([well, value]) => ({
     well,
-    sampleId: value.sampleId,
-    concentration: value.concentration
+    ...value
   })), def);
 }
 
 export function getAssayAxisTemplateValues(assay, def) {
-  const sampleAxis = assay?.sampleAxis === 'column' ? 'column' : 'row';
   return normalizeCurrentAxisTemplateValues({
+    ...assay?.conditionAxisValues,
     sampleValues: assay?.sampleAxisValues,
     concentrationValues: assay?.concentrationAxisValues
-  }, def, sampleAxis);
+  }, def, getAssayAxisFields(assay));
 }

@@ -32,26 +32,27 @@
                   <div id="agent-attachment-list" class="agent-attachment-list" hidden></div>
                   <div class="agent-composer-toolbar">
                     <div class="agent-composer-toolbar-start">
-                      <button type="button" id="agent-codex-permission-btn" class="ghost-btn agent-codex-permission-btn" popovertarget="agent-codex-permission-picker" disabled>
-                        <span class="agent-codex-permission-label" data-i18n="agent.permission.title">Codex permissions</span>
+                      <button type="button" id="agent-codex-permission-btn" class="agent-codex-permission-btn" popovertarget="agent-codex-permission-picker" title="Codex permissions" data-i18n-title="agent.permission.title" disabled>
+                        <svg class="agent-chat-icon agent-codex-permission-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 22s7-3.5 7-10V5l-7-3-7 3v7c0 6.5 7 10 7 10Z"/></svg>
+                        <span class="sr-only" data-i18n="agent.permission.title">Codex permissions</span>
                         <span id="agent-codex-permission-current" data-i18n="agent.permission.readOnly">Read Only</span>
-                        <svg class="btn-icon agent-codex-permission-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>
+                        <svg class="agent-chat-icon agent-codex-permission-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>
                       </button>
                       <div id="agent-codex-permission-picker" class="agent-codex-permission-picker" popover="auto" role="group" aria-labelledby="agent-codex-permission-title">
                         <h3 id="agent-codex-permission-title" data-i18n="agent.permission.title">Codex permissions</h3>
-                        <button type="button" class="ghost-btn" data-codex-preset="read-only" aria-pressed="true">
+                        <button type="button" data-codex-preset="read-only" aria-pressed="true">
                           <span data-i18n="agent.permission.readOnly">Read Only</span>
                           <small data-i18n="agent.permission.readOnlyHelp">Read files. Ask before editing or using the network.</small>
                         </button>
-                        <button type="button" class="ghost-btn" data-codex-preset="default" aria-pressed="false">
+                        <button type="button" data-codex-preset="default" aria-pressed="false">
                           <span data-i18n="agent.permission.default">Default</span>
                           <small data-i18n="agent.permission.defaultHelp">Edit in the workspace. Ask before going beyond it.</small>
                         </button>
-                        <button type="button" class="ghost-btn" data-codex-preset="approve-for-me" aria-pressed="false">
+                        <button type="button" data-codex-preset="approve-for-me" aria-pressed="false">
                           <span data-i18n="agent.permission.approveForMe">Approve for me</span>
                           <small data-i18n="agent.permission.approveForMeHelp">Edit in the workspace. Send eligible approvals to an automatic reviewer.</small>
                         </button>
-                        <button type="button" class="ghost-btn" data-codex-preset="full-access" aria-pressed="false">
+                        <button type="button" data-codex-preset="full-access" aria-pressed="false">
                           <span data-i18n="agent.permission.fullAccess">Full Access</span>
                           <small data-i18n="agent.permission.fullAccessHelp">Run without the sandbox or approval prompts.</small>
                         </button>

@@ -45,6 +45,7 @@ export const notebookTraditionalChinese = Object.freeze({
   "table.columns": "欄",
   "table.rows": "列",
   "table.create": "新增表格",
+  "table.selectionHint": "拖曳以選取儲存格，再拖曳選取範圍角落的控點以填滿。按兩下或按 Enter 鍵即可編輯。",
   "experiment.description": "選擇專案和實驗方案以建立實驗紀錄。",
   "experiment.close": "關閉新增實驗對話框",
   "action.close": "關閉",

@@ -14,13 +14,14 @@ import {
 } from '../../../lib/notebook-result-tables.js';
 import {
   computeNotebookResultTables,
+  isNotebookTableFormula,
   notebookTableColumnLetter
 } from '../../../lib/notebook-table-formulas.js';
 import { createSpreadsheetReferencePicker } from '../../../lib/spreadsheet-reference-picker.js';
 import { normalizeCellForColumn } from '../../../lib/table-units.js';
 import { showTransientNotice } from '../../../lib/notify.js';
-import { createSpreadsheetFillHandle } from '../../../lib/spreadsheet-fill-handle.js';
 import { createSpreadsheetColumnDefs } from './column-defs.js';
+import { bindNotebookRangeFill } from './range-fill.js';
 import { createSpreadsheetTableContextMenu } from './context-menu.js';
 
 function getResultTableHeight(table) {
@@ -32,7 +33,7 @@ function getResultTableHeight(table) {
 }
 
 // A list of spreadsheet tables on one host element: A1 addressing, formulas, click-to-
-// reference while editing a formula, and drag-to-fill from a cell's border. The wording
+// reference while editing a formula, and drag-to-fill from a selection. The wording
 // differs per feature, so the few user-facing strings are passed in.
 export function createSpreadsheetTables({
   host,
@@ -50,6 +51,7 @@ export function createSpreadsheetTables({
   placeholder = 'Use Add row / Add column to shape this table.'
 } = {}) {
   let grids = [];
+  let rangeFillControllers = [];
   let draftTables = [];
   let activeTableIndex = -1;
   // Computed values for every cell, index-aligned with draftTables. Cells store the
@@ -136,24 +138,13 @@ export function createSpreadsheetTables({
     return `${notebookTableColumnLetter(columnIndex)}${rowIndex + 1}`;
   }
 
-  const {
-    hideFillHandle,
-    onHostMouseMove,
-    pointerInFillZone,
-    findOpenFormulaEditor,
-    onHostFillPointerDown
-  } = createSpreadsheetFillHandle({
-    host,
-    getGrids: () => grids,
-    getDraftTables: () => draftTables,
-    handleEdited: (tableIndex) => handleEdited(tableIndex)
-  });
-
-
   createSpreadsheetReferencePicker({
     roots: [host],
-    findEditor: findOpenFormulaEditor,
-    shouldIgnore: (event) => pointerInFillZone(event),
+    findEditor: () => {
+      const input = host?.querySelector?.('.tabulator-editing input');
+      return input && isNotebookTableFormula(input.value) ? input : null;
+    },
+    shouldIgnore: (event) => event.target?.classList?.contains('notebook-range-fill-handle'),
     addressOfCell: ({ cellElement }) => {
       const tableHost = cellElement?.closest?.('[data-result-table-host]');
       const tableIndex = Number(tableHost?.dataset?.resultTableHost);
@@ -166,6 +157,8 @@ export function createSpreadsheetTables({
   });
 
   function destroyGrids() {
+    rangeFillControllers.forEach((controller) => controller?.destroy());
+    rangeFillControllers = [];
     grids.forEach((grid) => {
       if (grid && typeof grid.destroy === 'function') {
         grid.destroy();
@@ -290,11 +283,12 @@ export function createSpreadsheetTables({
   }
 
   function handleEdited(tableIndex) {
-    activeTableIndex = clampActiveIndex(tableIndex, draftTables);
+    selectActiveTable(tableIndex);
     const tables = syncDraftFromGrid();
     recomputeTables();
     // One edit can change formulas in any sibling table, so every grid re-renders.
     grids.forEach((grid) => grid?.getRows?.().forEach((row) => row?.reformat?.()));
+    rangeFillControllers.forEach((controller) => controller?.syncHandle());
     setStatus(tables);
   }
 
@@ -306,7 +300,6 @@ export function createSpreadsheetTables({
       draftTables
     );
     destroyGrids();
-    hideFillHandle();
     recomputeTables();
     syncControls(draftTables);
     setStatus(draftTables);
@@ -352,6 +345,10 @@ export function createSpreadsheetTables({
         ],
         index: 'id',
         layout: 'fitColumns',
+        selectableRows: false,
+        selectableRange: 1,
+        selectableRangeRows: true,
+        editTriggerEvent: 'dblclick',
         // The header always shows, because it carries the column letters formulas
         // reference, not just whatever the columns happen to be named.
         headerVisible: true,
@@ -362,7 +359,20 @@ export function createSpreadsheetTables({
       if (gridHeight) {
         gridOptions.height = gridHeight;
       }
+      // Tabulator focuses its first range as it builds. Keep opening a Notebook
+      // page from shifting focus or scrolling to its last table.
+      tableHost.inert = true;
       const grid = new TabulatorLib(tableHost, gridOptions);
+      grid.on?.('tableBuilt', () => {
+        if (grids[index] !== grid) return;
+        tableHost.inert = false;
+        rangeFillControllers[index] = bindNotebookRangeFill({
+          grid,
+          tableHost,
+          onFill: () => handleEdited(index),
+          onSelectTable: () => selectActiveTable(index)
+        });
+      });
       // Tabulator 6 dropped callbacks passed in the options object; they are accepted
       // and never fired. Without this the computed values never refresh, so the
       // formatter repaints a stale cell over whatever was just typed.
@@ -468,13 +478,10 @@ export function createSpreadsheetTables({
     if (!Number.isFinite(selectedIndex)) {
       return;
     }
-    renderEditor(syncDraftFromGrid(), { activeIndex: selectedIndex });
+    selectActiveTable(selectedIndex);
   }
 
   host?.addEventListener?.('click', onHostClick);
-  host?.addEventListener?.('mousemove', onHostMouseMove);
-  host?.addEventListener?.('mouseleave', hideFillHandle);
-  host?.addEventListener?.('mousedown', onHostFillPointerDown, true);
 
   return {
     renderEditor,

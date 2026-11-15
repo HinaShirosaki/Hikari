@@ -2,9 +2,14 @@ import { createPresentation } from "../../lib/i18n/presentation.js";
 import "./localization.js";
 const i18nUi = createPresentation("notebook");
 import {
+  AXIS_FIELDS,
+  getAssayAxisFields,
   getAssayAxisTemplateValues,
   getPlateDefinition,
+  getVisibleConditionFields,
+  hasWellValues,
   layoutToMap,
+  plateText,
   wellIdFor
 } from '../assay/public-api.js';
 import { toRowLabel } from '../../lib/plate-wells.js';
@@ -126,18 +131,19 @@ export function buildNotebookAssayPlatePreviewHtml(assay, safeText) {
   }
 
   const definition = getPlateDefinition(assay.plateType);
-  const sampleAxis = assay.sampleAxis === 'column' ? 'column' : 'row';
+  const fields = getAssayAxisFields(assay);
   const axisValues = getAssayAxisTemplateValues(assay, definition);
   const layoutMap = layoutToMap(assay.wellLayout || []);
   const totalWells = definition.rows * definition.columns;
   const maxRows = totalWells > 384 ? 16 : definition.rows;
   const maxColumns = totalWells > 384 ? 24 : definition.columns;
-  const rowAxisRole = sampleAxis === 'row' ? 'sample' : 'concentration';
-  const columnAxisRole = sampleAxis === 'row' ? 'concentration' : 'sample';
-  const rowAxisLabel = rowAxisRole === 'sample' ? 'Sample ID' : 'Concentration';
-  const columnAxisLabel = columnAxisRole === 'sample' ? 'Sample ID' : 'Concentration';
-  const rowAxisValues = rowAxisRole === 'sample' ? axisValues.sampleValues : axisValues.concentrationValues;
-  const columnAxisValues = columnAxisRole === 'sample' ? axisValues.sampleValues : axisValues.concentrationValues;
+  const rowField = AXIS_FIELDS[fields.row];
+  const columnField = AXIS_FIELDS[fields.column];
+  const rowAxisLabel = plateText(rowField.label);
+  const columnAxisLabel = plateText(columnField.label);
+  const rowAxisValues = axisValues[rowField.valuesKey];
+  const columnAxisValues = axisValues[columnField.valuesKey];
+  const conditionFields = getVisibleConditionFields(fields, assay.wellLayout || []);
   const concentrationIntensityMap = buildConcentrationIntensityMap(layoutMap);
 
   const headers = ['<th></th>', `<th>${safeText(rowAxisLabel)}</th>`];
@@ -168,12 +174,14 @@ export function buildNotebookAssayPlatePreviewHtml(assay, safeText) {
       const intensity = concentrationValue
         ? (concentrationIntensityMap.get(concentrationValue) || 0.52)
         : (sampleValue ? 0.3 : 0);
-      const cellStyle = sampleValue || concentrationValue
+      const cellStyle = hasWellValues(layout)
         ? ` style="background: hsla(${hue}, 72%, 74%, ${intensity}); border-color: hsla(${hue}, 45%, 52%, 0.42);"`
         : '';
-      const meta = layout
+      const baseMeta = layout
         ? `Sample ID: ${sampleValue || '-'} | Concentration: ${concentrationValue || '-'}`
         : 'Sample ID: - | Concentration: -';
+      const meta = [baseMeta, ...conditionFields.filter(field => layout?.[field]).map(field =>
+        `${plateText(AXIS_FIELDS[field].label)}: ${layout[field]}`)].join(' | ');
 
       cells.push(`
         <td class="assay-well"${cellStyle} title="${safeText(`${well} • ${meta}`)}">

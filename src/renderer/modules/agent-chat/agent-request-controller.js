@@ -30,6 +30,7 @@ import { agentFailure, agentNotice, agentUi, setAgentText } from './localization
 export function createAgentRequestController(deps) {
   const {
     api,
+    chatSurface,
     useCodexPermissions = false,
     state,
     runtime,
@@ -256,6 +257,7 @@ export function createAgentRequestController(deps) {
       }
       const result = await api.agentChat({
         clientRequestId,
+        ...(chatSurface ? { chatSurface } : {}),
         ...(useCodexPermissions ? { useCodexPermissions: true } : {}),
         message: messageText,
         attachments,

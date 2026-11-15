@@ -31,8 +31,6 @@ const {
 } = require('./chat-log/assistant-messages.js');
 const {
   normalizeSessionSummary,
-  normalizeTransformIndex,
-  mergeTransformIndexes,
   normalizeIndexPayload,
   normalizeSessionRow,
   buildMessageRow,
@@ -139,26 +137,19 @@ function createAgentChatLogRuntime(deps = {}) {
     }
   }
 
-  // Persist the normalized index back to disk after session metadata changes.
-  function writeIndex(paths, index) {
-    return withFileLock(paths.indexPath, async () => {
-      let existingTransforms = normalizeTransformIndex({});
-      try {
-        const existingRaw = await runtimeFs.readFile(paths.indexPath, 'utf8');
-        existingTransforms = normalizeIndexPayload(parseJsonSalvagingTornTail(existingRaw)).transforms;
-      } catch (error) {
-        if (error?.code !== 'ENOENT') {
-          throw error;
-        }
+  // Update one session against the latest index while other chats and the
+  // transform monitor may be writing to the same storage folder.
+  function updateSession(storagePath, sessionId, update) {
+    return withFileLock(resolvePaths(storagePath).indexPath, async () => {
+      const { paths, index } = await readIndex(storagePath);
+      const existing = index.sessions.find((item) => item.id === sessionId);
+      const session = await update(existing, paths);
+      if (session !== existing) {
+        index.sessions = sortSessions([session, ...index.sessions.filter((item) => item.id !== sessionId)]);
+        index.updated_at = now();
+        await writeFileAtomic(runtimeFs, paths.indexPath, JSON.stringify(index, null, 2));
       }
-      const normalized = normalizeIndexPayload({
-        ...index,
-        transforms: mergeTransformIndexes(index?.transforms, existingTransforms)
-      });
-      normalized.updated_at = cleanText(normalized.updated_at) || now();
-      await runtimeFs.mkdir(paths.chatLogPath, { recursive: true });
-      await writeFileAtomic(runtimeFs, paths.indexPath, JSON.stringify(normalized, null, 2));
-      return normalized;
+      return { ok: true, session };
     });
   }
 
@@ -173,49 +164,43 @@ function createAgentChatLogRuntime(deps = {}) {
         appended_count: 0
       };
     }
-    const { paths, index } = await readIndex(storagePath);
     const normalizedSessionId = cleanText(sessionId);
     if (!normalizedSessionId) {
       throw new Error('sessionId is required.');
     }
-    let session = index.sessions.find((item) => item.id === normalizedSessionId) || null;
-    if (!session) {
-      session = normalizeSessionSummary({
+    const firstUserRow = filteredRows.find((row) => row.type === CHAT_LOG_EVENT_TYPES.USER_MESSAGE && cleanText(row.text));
+    let suggestedTitle = '';
+    if (firstUserRow) {
+      const { index } = await readIndex(storagePath);
+      const existing = index.sessions.find((item) => item.id === normalizedSessionId);
+      if (!existing || existing.title === 'New Chat') {
+        suggestedTitle = await summarizeFirstUserMessageAsTitle({
+          message: firstUserRow.text,
+          llm: options?.llm && typeof options.llm === 'object' ? options.llm : {},
+          projectId: cleanText(options?.projectId || firstUserRow.project_id || firstUserRow.projectId),
+          projectName: cleanText(options?.projectName || firstUserRow.project_name || firstUserRow.projectName)
+        }).catch(() => deriveSessionTitle(firstUserRow.text, 'New Chat'));
+      }
+    }
+
+    return updateSession(storagePath, normalizedSessionId, async (existing, paths) => {
+      let session = existing || normalizeSessionSummary({
         id: normalizedSessionId,
-        title: 'New Chat',
+        chat_surface: options.chatSurface,
         project_id: cleanText(filteredRows[0]?.project_id || filteredRows[0]?.projectId),
         project_name: cleanText(filteredRows[0]?.project_name || filteredRows[0]?.projectName),
         created_at: filteredRows[0]?.timestamp || now(),
         updated_at: filteredRows[0]?.timestamp || now(),
         log_file: `${sanitizeFileName(normalizedSessionId)}.log`
       });
-      index.sessions.push(session);
-    }
-
-    const logPath = runtimePath.join(paths.chatLogPath, session.log_file);
-    const titleWasUntitled = !cleanText(session?.title) || session.title === 'New Chat';
-    const payload = filteredRows.map((row) => JSON.stringify(row)).join('\n');
-    await runtimeFs.appendFile(logPath, `${payload}\n`, 'utf8');
-    filteredRows.forEach((row) => {
-      session = applyEntryToSummary(session, row);
+      const titleWasUntitled = session.title === 'New Chat';
+      const logPath = runtimePath.join(paths.chatLogPath, session.log_file);
+      const payload = filteredRows.map((row) => JSON.stringify(row)).join('\n');
+      await runtimeFs.appendFile(logPath, `${payload}\n`, 'utf8');
+      for (const row of filteredRows) session = applyEntryToSummary(session, row);
+      if (titleWasUntitled && suggestedTitle) session.title = suggestedTitle;
+      return session;
     });
-    if (titleWasUntitled) {
-      const firstUserRow = filteredRows.find((row) => row.type === CHAT_LOG_EVENT_TYPES.USER_MESSAGE && cleanText(row.text));
-      if (firstUserRow) {
-        session.title = await summarizeFirstUserMessageAsTitle({
-          message: firstUserRow.text,
-          llm: options?.llm && typeof options.llm === 'object' ? options.llm : {},
-          projectId: cleanText(options?.projectId || firstUserRow?.project_id || firstUserRow?.projectId),
-          projectName: cleanText(options?.projectName || firstUserRow?.project_name || firstUserRow?.projectName)
-        });
-      }
-    }
-    index.sessions = sortSessions(index.sessions.map((item) => item.id === session.id ? session : item));
-    await writeIndex(paths, index);
-    return {
-      ok: true,
-      session
-    };
   }
 
   // Create a brand-new session summary and seed its log with a creation event.
@@ -226,72 +211,49 @@ function createAgentChatLogRuntime(deps = {}) {
     const projectName = cleanText(input.projectName || input.project_name);
     const sessionId = cleanText(input.sessionId || input.session_id) || createId();
     const timestamp = cleanText(input.created_at || input.createdAt) || now();
-    const { paths, index } = await readIndex(storagePath);
-    const existing = index.sessions.find((item) => item.id === sessionId);
-    if (existing) {
-      return {
-        ok: true,
-        session: existing
-      };
-    }
-    const session = normalizeSessionSummary({
-      id: sessionId,
-      title,
-      project_id: projectId,
-      project_name: projectName,
-      codex_session_id: input.codex_session_id || input.codexSessionId,
-      log_file: `${sanitizeFileName(sessionId)}.log`,
-      created_at: timestamp,
-      updated_at: timestamp,
-      status: 'ready',
-      message_count: 0,
-      request_count: 0
-    });
-    index.sessions = sortSessions([session, ...index.sessions]);
-    await writeIndex(paths, index);
-    await appendRows(storagePath, session.id, [{
-      type: CHAT_LOG_EVENT_TYPES.SESSION_CREATED,
-      session_id: session.id,
-      timestamp,
-      title: session.title,
-      project_id: session.project_id,
-      project_name: session.project_name
-    }]);
-    return {
-      ok: true,
-      session
-    };
-  }
-
-  // Reuse an existing session when possible, otherwise create one from the provided input.
-  async function ensureSession(input = {}) {
-    const storagePath = cleanText(input.storagePath || input.storage_path);
-    const sessionId = cleanText(input.sessionId || input.session_id);
-    if (!sessionId) {
-      return createSession(input);
-    }
-    const { index } = await readIndex(storagePath);
-    const existing = index.sessions.find((item) => item.id === sessionId);
-    if (existing) {
-      return {
-        ok: true,
-        session: existing
-      };
-    }
-    return createSession({
-      ...input,
-      sessionId
+    return updateSession(storagePath, sessionId, async (existing, paths) => {
+      if (existing) {
+        return input.chatSurface === 'rail' && !existing.chat_surface
+          ? { ...existing, chat_surface: 'rail' }
+          : existing;
+      }
+      const session = normalizeSessionSummary({
+        id: sessionId,
+        chat_surface: input.chatSurface,
+        title,
+        project_id: projectId,
+        project_name: projectName,
+        codex_session_id: input.codex_session_id || input.codexSessionId,
+        created_at: timestamp,
+        updated_at: timestamp
+      });
+      const row = normalizeSessionRow({
+        type: CHAT_LOG_EVENT_TYPES.SESSION_CREATED,
+        session_id: session.id,
+        timestamp,
+        title: session.title,
+        project_id: session.project_id,
+        project_name: session.project_name,
+        chat_surface: session.chat_surface
+      });
+      const logPath = runtimePath.join(paths.chatLogPath, session.log_file);
+      await runtimeFs.appendFile(logPath, `${JSON.stringify(row)}\n`, 'utf8');
+      return session;
     });
   }
 
-  // Return the most recent chat sessions for sidebar or picker views.
+  // Filter before applying the sidebar limit so rail chats cannot crowd out Agent chats.
   async function listSessions(input = {}) {
     const storagePath = cleanText(input.storagePath || input.storage_path);
     const limit = Math.max(1, Number(input.limit) || 100);
     const { index } = await readIndex(storagePath);
+    const legacyRailIds = new Set(asArray(input.legacyRailSessionIds));
+    const sessions = input.excludeRailChats === true
+      ? index.sessions.filter((session) => session.chat_surface !== 'rail' && !legacyRailIds.has(session.id))
+      : index.sessions;
     return {
       ok: true,
-      items: sortSessions(index.sessions).slice(0, limit)
+      items: sortSessions(sessions).slice(0, limit)
     };
   }
 
@@ -415,7 +377,7 @@ function createAgentChatLogRuntime(deps = {}) {
     buildRendererMessages,
     ensureChatLogRoot,
     createSession,
-    ensureSession,
+    ensureSession: createSession,
     listSessions,
     getSession,
     readSessionRows,

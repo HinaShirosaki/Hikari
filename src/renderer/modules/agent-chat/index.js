@@ -125,8 +125,10 @@ export function initAgentChat({
     `);
   }
   const syncStateSnapshot = (projectId) => buildSyncedStateSnapshot({ api, state, projectId });
+  const chatSurface = idPrefix === 'agent-rail' ? 'rail' : '';
   const sessionManager = createAgentChatSessionManager({
     api,
+    chatSurface,
     state,
     persist,
     createId,
@@ -214,6 +216,7 @@ export function initAgentChat({
 
   requestController = createAgentRequestController({
     api,
+    chatSurface,
     useCodexPermissions: idPrefix === 'agent',
     state,
     runtime,

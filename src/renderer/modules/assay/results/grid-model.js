@@ -1,36 +1,15 @@
-import { createPresentation } from "../../../lib/i18n/presentation.js";
-import "../localization.js";
-const i18nUi = createPresentation("plate");
-import { toRowLabel, wellIdFor } from '../plate-model.js';
-import { oppositeAxis } from '../shared.js';
+import { layoutToMap, toRowLabel, wellIdFor } from '../plate-model.js';
+import { AXIS_FIELDS, getAssayAxisFields } from '../axis-fields.js';
+import { plateMessage, plateText } from '../localization.js';
 
 // Pure builders for the result spreadsheet: axis metadata, Tabulator column
 // defs, row data, change signature, and height. No grid instance, no DOM state.
-export function createResultGridModel({ runtime, getSampleAxis, isMappedWell, escapeHtml, toResultField }) {
-  function axisDisplayLabel(axisKey) {
-    return axisKey === 'sampleId' ? 'Sample ID' : 'Concentration';
-  }
-
-  function buildLayoutMap() {
-    const map = {};
-    (Array.isArray(runtime.currentLayout) ? runtime.currentLayout : []).forEach((item) => {
-      const well = String(item?.well || '').trim().toUpperCase();
-      if (!well) {
-        return;
-      }
-      map[well] = {
-        sampleId: String(item?.sampleId || '').trim(),
-        concentration: String(item?.concentration || '').trim()
-      };
-    });
-    return map;
-  }
-
+export function createResultGridModel({ runtime, getSampleAxis, getAxisFields, isMappedWell, escapeHtml, toResultField }) {
   function buildAxisMetadata(def) {
-    const sampleAxis = typeof getSampleAxis === 'function' ? getSampleAxis() : 'row';
-    const rowField = sampleAxis === 'row' ? 'sampleId' : 'concentration';
-    const columnField = oppositeAxis(sampleAxis) === 'column' ? 'concentration' : 'sampleId';
-    const layoutMap = buildLayoutMap();
+    const fields = getAxisFields?.() || getAssayAxisFields({ sampleAxis: getSampleAxis?.() });
+    const rowField = AXIS_FIELDS[fields.row].wellKey;
+    const columnField = AXIS_FIELDS[fields.column].wellKey;
+    const layoutMap = layoutToMap(runtime.currentLayout);
     const rowValues = new Array(def.rows).fill('');
     const columnValues = new Array(def.columns).fill('');
 
@@ -52,6 +31,7 @@ export function createResultGridModel({ runtime, getSampleAxis, isMappedWell, es
     return {
       rowField,
       columnField,
+      rowLabel: AXIS_FIELDS[fields.row].label,
       rowValues,
       columnValues
     };
@@ -82,7 +62,7 @@ export function createResultGridModel({ runtime, getSampleAxis, isMappedWell, es
         editable: false
       },
       {
-        title: axisDisplayLabel(metadata.rowField), titleFormatter: () => i18nUi.renderOwned(axisDisplayLabel(metadata.rowField)),
+        title: plateText(metadata.rowLabel), titleFormatter: () => plateMessage(metadata.rowLabel),
         field: 'rowMeta',
         width: 92,
         minWidth: 92,

@@ -24,18 +24,20 @@
 
 .assay-axis-config-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-12);
-  align-items: end;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-8);
 }
 
-.assay-axis-switch {
-  display: grid;
-  gap: var(--space-6);
-  align-content: stretch;
+.assay-axis-config-grid label {
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: center;
 }
 
-.assay-axis-switch .assay-mode-switch,
+.assay-axis-config-grid select {
+  min-width: 0;
+}
+
 .assay-rail-mode-switch .assay-mode-switch {
   justify-self: stretch;
   width: 100%;
@@ -45,21 +47,12 @@
   border-radius: 10px;
 }
 
-.assay-axis-switch .assay-mode-switch > button,
 .assay-rail-mode-switch .assay-mode-switch > button {
   flex: 1 1 0;
   min-width: 0;
   box-sizing: border-box;
   padding: 7px var(--space-8);
   border-radius: 7px;
-}
-
-/* Two switches share the rail width (~48px per button), which already clipped
-   "Column". Segments size from their label so Row/Column (and longer
-   translations such as "Columna") fit without stacking the switches. */
-.assay-axis-switch .assay-mode-switch > button {
-  flex-basis: auto;
-  padding-inline: var(--space-4);
 }
 
 .assay-sample-picker {
@@ -939,10 +932,6 @@
 @media (max-width: 640px) {
   .assay-header-row {
     align-items: stretch;
-  }
-
-  .assay-axis-config-grid {
-    grid-template-columns: 1fr;
   }
 
   .assay-create-sidebar .assay-form-grid,

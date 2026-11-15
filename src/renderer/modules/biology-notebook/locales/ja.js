@@ -45,6 +45,7 @@ export const notebookJapanese = Object.freeze({
   "table.columns": "列",
   "table.rows": "行",
   "table.create": "テーブルを追加",
+  "table.selectionHint": "ドラッグでセルを選択し、選択範囲の角のハンドルをドラッグして入力を繰り返します。編集するにはダブルクリックするか、Enter キーを押します。",
   "experiment.description": "プロジェクトとプロトコルを選択して実験ノートを作成してください。",
   "experiment.close": "新しい実験のダイアログを閉じる",
   "action.close": "閉じる",

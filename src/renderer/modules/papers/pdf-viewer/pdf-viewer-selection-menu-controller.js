@@ -10,6 +10,7 @@ export const installPdfViewerSelectionMenuController = (ctx) => {
     selectionMenu,
     selectionCommentPopover,
     selectionCommentText,
+    selectionCommentSaveBtn,
     selectionSearchPopover
   } = elements;
 
@@ -70,11 +71,15 @@ export const installPdfViewerSelectionMenuController = (ctx) => {
 
   function hideSelectionCommentPopover() {
     state.pendingCommentSelection = null;
-    if (selectionCommentPopover) {
-      selectionCommentPopover.hidden = true;
+    if (!selectionCommentPopover || selectionCommentPopover.hidden) {
+      return;
     }
+    selectionCommentPopover.hidden = true;
     if (selectionCommentText) {
       selectionCommentText.value = '';
+    }
+    if (selectionCommentSaveBtn) {
+      selectionCommentSaveBtn.disabled = true;
     }
   }
 

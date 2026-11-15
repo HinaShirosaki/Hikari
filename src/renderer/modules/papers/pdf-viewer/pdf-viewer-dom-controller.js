@@ -73,7 +73,7 @@ export const installPdfViewerDomController = (ctx) => {
     };
   }
 
-  function positionFloatingElement(element, clientRect, { preferBelow = false } = {}) {
+  function positionFloatingElement(element, clientRect, { preferBelow = false, allowFlip = false } = {}) {
     if (!element || !shell || !clientRect) {
       return;
     }
@@ -87,9 +87,11 @@ export const installPdfViewerDomController = (ctx) => {
       + ((Number(clientRect.width) || 0) / 2)
       - Number(shellRect.left || 0)
       - (width / 2);
-    const rawTop = preferBelow
-      ? (Number(clientRect.top) || 0) + (Number(clientRect.height) || 0) - Number(shellRect.top || 0) + 8
-      : (Number(clientRect.top) || 0) - Number(shellRect.top || 0) - height - 8;
+    const anchorTop = (Number(clientRect.top) || 0) - Number(shellRect.top || 0);
+    const above = anchorTop - height - 8;
+    const below = anchorTop + (Number(clientRect.height) || 0) + 8;
+    const flipAbove = allowFlip && below + height > shellRect.height - 8 && above >= 8;
+    const rawTop = preferBelow && !flipAbove ? below : above;
     const next = clampShellPosition(rawLeft, rawTop, element);
     element.style.left = `${Math.round(next.left)}px`;
     element.style.top = `${Math.round(next.top)}px`;

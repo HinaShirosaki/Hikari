@@ -1,12 +1,16 @@
 import { createPresentation } from "../../../lib/i18n/presentation.js";
-import "../localization.js";
 const i18nUi = createPresentation("papers");
 import { copyPdfHighlightText } from './pdf-viewer-search.js';
+import { paperUi } from '../localization.js';
 
 export const installPdfViewerSelectionActionsController = (ctx) => {
   const { elements, state } = ctx;
   const {
+    stage,
+    selectionMenu,
+    selectionCommentBtn,
     selectionCommentPopover,
+    selectionCommentSaveBtn,
     selectionCommentText
   } = elements;
 
@@ -68,26 +72,50 @@ export const installPdfViewerSelectionActionsController = (ctx) => {
   }
 
   function openSelectionCommentPopover() {
-    if (!state.pendingSelection || !selectionCommentPopover) {
+    const selection = state.pendingSelection;
+    if (!selection?.clientRect || !selectionCommentPopover || !state.onSelectionComment) {
       return;
     }
-    state.pendingCommentSelection = { ...state.pendingSelection };
+    state.pendingCommentSelection = selection;
     ctx.hideSelectionMenu();
     ctx.hideSelectionSearchPopover();
+    ctx.hideHighlightCommentPopover();
     selectionCommentPopover.hidden = false;
-    if (selectionCommentText) {
-      selectionCommentText.value = '';
+    ctx.positionFloatingElement(selectionCommentPopover, selection.clientRect, { preferBelow: true, allowFlip: true });
+    selectionCommentText?.focus({ preventScroll: true });
+  }
+
+  function clampSelectionCommentPopover() {
+    if (!selectionCommentPopover || selectionCommentPopover.hidden) {
+      return;
     }
-    ctx.positionFloatingElement(selectionCommentPopover, state.pendingSelection.clientRect, { preferBelow: true });
-    selectionCommentText?.focus?.();
+    const { style } = selectionCommentPopover;
+    const { left, top } = ctx.clampShellPosition(parseFloat(style.left), parseFloat(style.top), selectionCommentPopover);
+    style.left = `${Math.round(left)}px`;
+    style.top = `${Math.round(top)}px`;
+  }
+
+  function updateSelectionCommentInput() {
+    if (selectionCommentSaveBtn) {
+      selectionCommentSaveBtn.disabled = !selectionCommentText?.value.trim();
+    }
+  }
+
+  function cancelSelectionComment() {
+    ctx.hideSelectionCommentPopover();
+    ctx.updatePendingSelection();
+    const focusTarget = selectionMenu && !selectionMenu.hidden ? selectionCommentBtn : stage;
+    focusTarget?.focus({ preventScroll: true });
   }
 
   function saveSelectionComment() {
-    const text = String(selectionCommentText?.value || '').trim();
-    const selection = state.pendingCommentSelection || state.pendingSelection;
-    if (!text || !selection || typeof state.onSelectionComment !== 'function') {
+    const text = selectionCommentText?.value.trim();
+    const selection = state.pendingCommentSelection;
+    if (!text || !selection || !state.onSelectionComment) {
       return;
     }
+    // The history service coalesces saves made from the same focused editor.
+    stage?.focus({ preventScroll: true });
     const didCreateComment = state.onSelectionComment({
       pageNumber: selection.pageNumber,
       text: selection.text,
@@ -97,9 +125,10 @@ export const installPdfViewerSelectionActionsController = (ctx) => {
       commentText: text
     });
     if (didCreateComment === false) {
+      selectionCommentText.focus({ preventScroll: true });
+      ctx.setStatus(paperUi('comment.saveFailed'), true);
       return;
     }
-    ctx.hideSelectionCommentPopover();
     ctx.clearSelection();
     state.pendingSelection = null;
     ctx.refreshToolbar();
@@ -111,6 +140,9 @@ export const installPdfViewerSelectionActionsController = (ctx) => {
     copySelectedText,
     createSelectionAnnotation,
     openSelectionCommentPopover,
+    clampSelectionCommentPopover,
+    updateSelectionCommentInput,
+    cancelSelectionComment,
     saveSelectionComment
   });
 };

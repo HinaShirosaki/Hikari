@@ -10,6 +10,8 @@ export function createConcentrationFill({
   assayPlatePreview,
   serialDilution,
   getSampleAxis,
+  getConcentrationAxis = () => oppositeAxis(getSampleAxis()),
+  getConcentrationLength = () => undefined,
   getConcentrationUnit,
   getAxisTemplateValues,
   syncAxisTemplateValues,
@@ -31,7 +33,7 @@ export function createConcentrationFill({
   }
 
   function commitConcentrationValues(sampleValues, concentrationValues, statusMessage) {
-    const concentrationAxis = oppositeAxis(getSampleAxis());
+    const concentrationAxis = getConcentrationAxis();
     concentrationValues.forEach((value, axisIndex) => {
       const input = assayPlatePreview?.querySelector(
         `[data-axis-dimension="${concentrationAxis}"][data-axis-index="${axisIndex}"]`
@@ -40,7 +42,9 @@ export function createConcentrationFill({
         input.value = value;
       }
     });
-    syncAxisTemplateValues({ sampleValues, concentrationValues });
+    const values = getAxisTemplateValues();
+    const remaining = values.concentrationValues.slice(concentrationValues.length);
+    syncAxisTemplateValues({ ...values, sampleValues, concentrationValues: [...concentrationValues, ...remaining] });
     setLayoutFromAxisAndOverrides();
     renderPlatePreview(null, { preserveEditors: true });
     renderResultTable();
@@ -58,7 +62,7 @@ export function createConcentrationFill({
       return;
     }
     const values = getAxisTemplateValues();
-    const concentrationValues = values.concentrationValues.slice();
+    const concentrationValues = values.concentrationValues.slice(0, getConcentrationLength());
     if (concentrationValues.length < 2) {
       setLayoutStatus(plateUi('status.fillNeedsTwo'));
       return;
@@ -83,7 +87,7 @@ export function createConcentrationFill({
   // cells in the plate. The user types the start and end straight into the plate.
   function autoFillConcentrationRange(mode, { silent = false } = {}) {
     const values = getAxisTemplateValues();
-    const concentrationValues = values.concentrationValues.slice();
+    const concentrationValues = values.concentrationValues.slice(0, getConcentrationLength());
     const firstIndex = concentrationValues.findIndex((value) => String(value || '').trim());
     let lastIndex = -1;
     for (let index = concentrationValues.length - 1; index >= 0; index -= 1) {
@@ -126,6 +130,7 @@ export function createConcentrationFill({
   }
 
   function onFillConcentrations() {
+    if (!getConcentrationAxis()) return;
     const mode = getFillMode();
     if (mode === 'factor') {
       autoFillConcentrationSeries();

@@ -594,6 +594,36 @@
   white-space: nowrap;
 }
 
+.assay-layout-export-trigger {
+  anchor-name: --assay-layout-export;
+  gap: var(--space-6);
+}
+
+.assay-layout-export-menu {
+  position: fixed;
+  position-anchor: --assay-layout-export;
+  inset: auto;
+  top: calc(anchor(bottom) + var(--space-6));
+  left: min(anchor(left), calc(100vw - 9rem - var(--space-8)));
+  width: 9rem;
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--theme-border);
+  border-radius: var(--space-8);
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text);
+  box-shadow: var(--theme-shadow-medium);
+}
+
+.assay-layout-export-menu:popover-open {
+  display: grid;
+}
+
+.assay-plate-toolbar .assay-layout-export-menu > button {
+  justify-content: flex-start;
+  border-color: transparent;
+}
+
 .assay-plate-toolbar .assay-plate-fill-controls {
   display: flex;
   flex-wrap: wrap;

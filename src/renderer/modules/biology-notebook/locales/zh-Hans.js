@@ -45,6 +45,7 @@ export const notebookSimplifiedChinese = Object.freeze({
   "table.columns": "列",
   "table.rows": "行",
   "table.create": "添加表格",
+  "table.selectionHint": "拖动以选择单元格，再拖动选区角上的手柄以填充。双击或按回车键即可编辑。",
   "experiment.description": "选择项目和实验方案以创建实验记录。",
   "experiment.close": "关闭新建实验对话框",
   "action.close": "关闭",

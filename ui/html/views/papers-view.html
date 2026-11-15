@@ -63,7 +63,7 @@
                 <div id="paper-viewer-shell" class="papers-viewer-shell is-empty">
                   <div id="paper-viewer-empty" class="papers-viewer-empty"></div>
                   <div id="paper-viewer-workspace" class="papers-viewer-workspace" hidden>
-                    <div id="paper-viewer-stage" class="papers-viewer-stage" hidden>
+                    <div id="paper-viewer-stage" class="papers-viewer-stage" tabindex="-1" hidden>
                       <div id="paper-viewer-page-layer" class="papers-viewer-page-layer">
                         <canvas id="paper-viewer-canvas" class="papers-viewer-canvas"></canvas>
                         <div id="paper-viewer-overlay" class="papers-viewer-overlay" aria-label="Paper comment pins" data-i18n-aria-label="papers.viewer.commentPins"></div>
@@ -71,7 +71,7 @@
                     </div>
                   </div>
                   <div id="paper-selection-menu" class="papers-selection-menu" role="toolbar" aria-label="Selected text actions" data-i18n-aria-label="papers.selection.label" hidden>
-                    <button type="button" id="paper-selection-comment-btn" class="ghost-btn papers-selection-action-btn" aria-label="Add comment" data-hover-caption="Add comment" data-i18n-aria-label="papers.selection.comment" data-i18n-hover-caption="papers.selection.comment">
+                    <button type="button" id="paper-selection-comment-btn" class="ghost-btn papers-selection-action-btn" aria-label="Add comment" aria-haspopup="dialog" aria-controls="paper-selection-comment-popover" data-hover-caption="Add comment" data-i18n-aria-label="papers.selection.comment" data-i18n-hover-caption="papers.selection.comment">
                       <svg class="papers-selection-action-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                         <path d="M6.25 5.75h11.5a2 2 0 0 1 2 2v6.5a2 2 0 0 1-2 2H11l-4.75 3v-3h-.25a2 2 0 0 1-2-2v-6.5a2 2 0 0 1 2-2Z"></path>
                         <path d="M8 9.4h8"></path>
@@ -135,16 +135,13 @@
                     </div>
                     <div id="paper-selection-search-results" class="papers-selection-search-results"></div>
                   </div>
-                  <div id="paper-selection-comment-popover" class="papers-selection-comment-popover" hidden>
-                    <label>
-                      <span data-i18n="papers.comment.label">Comment</span>
-                      <textarea id="paper-selection-comment-text" rows="3" placeholder="Add a note for the selected text" data-i18n-placeholder="papers.comment.placeholder"></textarea>
-                    </label>
+                  <form id="paper-selection-comment-popover" class="papers-selection-comment-popover" role="dialog" aria-label="Add comment" data-i18n-aria-label="papers.selection.comment" hidden>
+                    <textarea id="paper-selection-comment-text" rows="3" aria-label="Comment" data-i18n-aria-label="papers.comment.label" placeholder="Write a comment…" data-i18n-placeholder="papers.comment.placeholder"></textarea>
                     <div class="papers-selection-comment-actions">
-                      <button type="button" id="paper-selection-comment-save-btn" class="primary-btn" data-i18n="papers.comment.save">Save</button>
                       <button type="button" id="paper-selection-comment-cancel-btn" class="ghost-btn" data-i18n="papers.comment.cancel">Cancel</button>
+                      <button type="submit" id="paper-selection-comment-save-btn" class="primary-btn" aria-keyshortcuts="Meta+Enter Control+Enter" data-i18n="papers.comment.save" disabled>Save</button>
                     </div>
-                  </div>
+                  </form>
                   <div id="paper-highlight-comment-popover" class="papers-highlight-comment-popover" hidden></div>
                 </div>
               </div>
