@@ -67,6 +67,8 @@
   "full.116f13cc": "Ajustar",
   "full.658f3664": "Copiar",
   "full.574902c": "Grupo",
+  "full.42453e5a": "Editar grupo",
+  "full.11369292": "Terminar de editar el grupo",
   "full.fe07306": "Nombre",
   "full.48052f86": "Componentes pegados",
   "full.e6c29a22": "Preparando PowerPoint…",

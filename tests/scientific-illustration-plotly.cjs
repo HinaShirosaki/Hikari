@@ -22,7 +22,7 @@ async function verifyPlotly({ tool, evaluate, check, win, pause, temp }) {
   check(await win.webContents.executeJavaScript('Boolean(window.Plotly?.version)'), 'The host uses the existing vendored Plotly library');
   check(await evaluate('document.querySelectorAll("#main-canvas [data-object-id=response] svg text").length>4'), 'The plot renders as vector artwork with chart labels on the actual Figura canvas');
   check((await tool({ action: 'render', canvas: 'main', illustration_id: current.illustration_id })).content.some(item => item.type === 'image'), 'MCP render includes the data plot');
-  await fs.writeFile(path.join(temp, 'plotly-scatter.svg'), await evaluate('(async()=>(await import("./artwork.mjs")).svgSource(await illustrationWorkspace.getExportDocument(),"main"))()'));
+  await fs.writeFile(path.join(temp, 'plotly-scatter.svg'), await evaluate('(async()=>(await import("./figure-export.mjs")).svgSource(await illustrationWorkspace.getExportDocument(),"main"))()'));
   await evaluate('document.getElementById("layers-tab").click()'); await pause(80);
   await fs.writeFile(path.join(temp, 'plotly-canvas.png'), (await win.webContents.capturePage()).toPNG());
 
@@ -69,10 +69,10 @@ async function verifyPlotly({ tool, evaluate, check, win, pause, temp }) {
   current = await read();
   check(current.ok, current.error || 'The reloaded plot workspace is ready');
   check(current.objects.filter(o => o.type === 'plot').length === 4 && current.objects.find(o => o.id === 'response').plotly.data[0].y[3] === 7, 'Plot data, reusable copies and cached renders survive reloading the installed plugin');
-  const full = await evaluate('(async()=>{const {renderPreview}=await import("./artwork.mjs");return renderPreview(illustrationWorkspace.getDocument(),"main",8000)})()');
+  const full = await evaluate('(async()=>{const {renderPreview}=await import("./figure-export.mjs");return renderPreview(illustrationWorkspace.getDocument(),"main",8000)})()');
   check(full.width === 3840 && full.height === 2160, 'Data plots export at the full 4K canvas size');
   await fs.writeFile(path.join(temp, 'plotly-full.png'), Buffer.from(full.data_url.split(',')[1], 'base64'));
-  await fs.writeFile(path.join(temp, 'plotly-final.svg'), await evaluate('(async()=>(await import("./artwork.mjs")).svgSource(await illustrationWorkspace.getExportDocument(),"main"))()'));
+  await fs.writeFile(path.join(temp, 'plotly-final.svg'), await evaluate('(async()=>(await import("./figure-export.mjs")).svgSource(await illustrationWorkspace.getExportDocument(),"main"))()'));
   await evaluate('document.getElementById("export-pptx").click()');
   for (let i = 0; i < 160 && await evaluate('document.getElementById("status").textContent!=="Exported PPTX"'); i++) await pause(50);
   check(await evaluate('document.getElementById("status").textContent==="Exported PPTX"'), 'PowerPoint export accepts separate plot SVGs and native figure text');

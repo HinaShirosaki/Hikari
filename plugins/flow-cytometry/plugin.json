@@ -1,0 +1,8 @@
+{
+  "id": "flow-cytometry",
+  "name": "Flow Cytometry",
+  "version": "1.0.0",
+  "description": "Open flow cytometry data files, compare channels, and draw gates on event plots.",
+  "icon": "icon.svg",
+  "permissions": ["layout", "downloads"]
+}

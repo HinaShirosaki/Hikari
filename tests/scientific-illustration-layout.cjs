@@ -52,7 +52,7 @@ async function verifyCanvasRulers({ tool, evaluate, check, win, temp }) {
     await evaluate('document.getElementById("zoom-fit").click()'); await paint();
   }
   check((await tool({ action: 'read' })).revision === before.revision, 'Ruler interaction leaves the saved scene revision intact');
-  check(await evaluate(`import('./artwork.mjs').then(async ({ svgSource }) =>
+  check(await evaluate(`import('./figure-export.mjs').then(async ({ svgSource }) =>
     !(await svgSource(illustrationWorkspace.getDocument(), 'main')).includes('canvas-ruler'))`), 'Rulers are outside the exported artwork');
 }
 

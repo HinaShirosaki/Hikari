@@ -208,7 +208,7 @@ async function verifyFiguraStress({ tool, evaluate, check, win, pause, temp, rel
     await apply([{ op: 'rotate', ids: groupOps[0].ids, degrees: 17, pivot: { x: 760, y: 100 } }], 'rotate mixed group');
     await evaluate('illustrationWorkspace.history("undo").then(()=>true)');
     verify(digest((await read()).objects) === digest(grouped.objects), 'Mixed-group rotation and undo retain exact SVG, raster, chart and text geometry');
-    const bounds = await evaluate(`(async()=>{const {selectionBounds}=await import('./grouping.mjs');const {interactionBox}=await import('./artwork.mjs');const scene=illustrationWorkspace.getDocument();return selectionBounds(scene.objects.filter(object=>scene.groups[0].ids.includes(object.id)).map(interactionBox))})()`);
+    const bounds = await evaluate(`(async()=>{const {selectionBounds}=await import('./geometry.mjs');const {interactionBox}=await import('./artwork.mjs');const scene=illustrationWorkspace.getDocument();return selectionBounds(scene.objects.filter(object=>scene.groups[0].ids.includes(object.id)).map(interactionBox))})()`);
     await apply([{ op: 'transform', id: 'pressure-group-0', patch: { width: bounds.width * 1.1, height: bounds.height * 1.1 } }], 'resize mixed group');
     await evaluate('illustrationWorkspace.history("undo").then(()=>true)');
     verify(digest((await read()).objects) === digest(grouped.objects), 'Mixed-group resize and undo retain exact typography, images and plot specifications');

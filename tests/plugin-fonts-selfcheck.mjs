@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { listCanvasFonts } from '../src/renderer/app/plugin-bridge/fonts.js';
 import { createPluginBridge } from '../src/renderer/app/plugin-bridge.js';
-import { initFontPicker } from '../plugins/scientific-illustration/fonts.mjs';
+import { initFontPicker } from '../plugins/scientific-illustration/selection-properties.mjs';
 
 let reads = 0;
 const windowObject = { queryLocalFonts: async () => {

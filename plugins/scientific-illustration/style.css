@@ -237,6 +237,8 @@ body.theme-night .canvas-context-menu > .danger-button:is(:hover, :focus-visible
 .selection > rect { stroke: var(--theme-accent); }
 .selection-member { stroke: var(--theme-accent); stroke-dasharray: 3 2; }
 .selection-toolbar { position: absolute; z-index: 30; display: flex; align-items: center; gap: 2px; padding: 4px; max-width: calc(100% - 16px); background: var(--theme-surface-elevated); border: 1px solid var(--theme-border); border-radius: 9px; box-shadow: 0 3px 14px var(--theme-shadow-color-subtle); }
+.selection-toolbar:not(.is-editing-group) { left: var(--selection-toolbar-left); top: var(--selection-toolbar-top); }
+.selection-toolbar.is-editing-group { top: calc(var(--canvas-ruler-size) + 8px); right: 8px; }
 .selection-toolbar .icon-button { flex-shrink: 0; width: 30px; height: 30px; }
 .selection-toolbar-separator { height: 18px; border-left: 1px solid var(--theme-border); margin: 0 2px; }
 .workspace-tools .popover.is-selection-menu .popover-panel { left: var(--selection-menu-left); right: auto; top: var(--selection-menu-top); max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); overflow-y: auto; }

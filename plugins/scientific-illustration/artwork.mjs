@@ -7,24 +7,6 @@ const PLOT_TAGS = new Set([...TAGS, 'text', 'tspan', 'image', 'pattern']);
 const PLOT_ATTRIBUTES = new Set([...ATTRIBUTES, 'style', 'xmlns:xlink', 'href', 'xlink:href', 'font-family', 'font-size', 'font-weight', 'font-style', 'font-variant', 'text-anchor', 'text-decoration', 'dominant-baseline', 'alignment-baseline', 'shape-rendering', 'image-rendering', 'text-rendering', 'overflow', 'display', 'visibility', 'white-space', 'pointer-events', 'paint-order', 'letter-spacing', 'word-spacing', 'dx', 'dy', 'rotate', 'textLength', 'lengthAdjust', 'xml:space', 'patternUnits', 'patternContentUnits', 'patternTransform']);
 const PLOT_STYLES = new Set([...ATTRIBUTES, ...PLOT_ATTRIBUTES]);
 
-let interFontData;
-function embeddedInter() {
-  if (!interFontData) interFontData = (async () => {
-    // This URL is always the plugin's bundled font, never user-supplied artwork.
-    const response = await fetch(new URL('./vendor/fonts/InterVariable.woff2', import.meta.url));
-    if (!response.ok) throw new Error('Could not load the bundled Inter font for export.');
-    const bytes = new Uint8Array(await response.arrayBuffer());
-    let binary = '';
-    for (let offset = 0; offset < bytes.length; offset += 8192) binary += String.fromCharCode(...bytes.subarray(offset, offset + 8192));
-    return `data:font/woff2;base64,${btoa(binary)}`;
-  })().catch(error => { interFontData = undefined; throw error; });
-  return interFontData;
-}
-function usesInter(object) {
-  if (object.type === 'plot') return !object.plotly.layout.font?.family || /\bInter\b/i.test(object.plotly.layout.font.family);
-  return object.type === 'text' && object.fontFamily.split(',').some(name => name.trim().replace(/^['"]|['"]$/g, '').toLowerCase() === 'inter');
-}
-
 export function validateSvg(source, { plot = false, chemical = false } = {}) {
   const extended = plot || chemical;
   if (/<!DOCTYPE|<!ENTITY/i.test(source)) throw new Error('SVG entities and document types are not supported.');
@@ -253,29 +235,86 @@ export function scene(documentState, canvas, { interactive = false, selectedId =
   return svg;
 }
 
-export async function svgSource(documentState, canvas) {
-  const svg = scene(documentState, canvas);
-  const interObjects = documentState.objects.filter(object => object.canvas === canvas && object.visible && usesInter(object));
-  if (interObjects.length) {
-    const dataUrl = await embeddedInter();
-    await Promise.all(interObjects.map(object => object.type === 'plot' ? document.fonts.load('16px Inter') : document.fonts.load(`${object.italic ? 'italic ' : ''}${object.fontWeight} ${object.fontSize}px Inter`, object.text)));
-    const defs = element('defs');
-    defs.append(element('style', {}, `@font-face{font-family:Inter;src:url("${dataUrl}") format("woff2");font-weight:100 900;font-style:normal;}`));
-    svg.prepend(defs);
+export function alphaBounds(pixels, width, height) {
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1 || pixels.length !== width * height * 4) throw new Error('Invalid raster pixels.');
+  let left = width, top = height, right = -1, bottom = -1;
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+    // Keep every nonzero alpha value, including faint antialiasing and shadows.
+    if (pixels[(y * width + x) * 4 + 3] === 0) continue;
+    left = Math.min(left, x); top = Math.min(top, y); right = Math.max(right, x); bottom = Math.max(bottom, y);
   }
-  return new XMLSerializer().serializeToString(svg);
+  return right < 0 ? null : { x: left, y: top, width: right - left + 1, height: bottom - top + 1 };
 }
-export async function renderPreview(documentState, canvas, maxDimension = 1600) {
-  const source = await svgSource(documentState, canvas);
-  const image = new Image();
-  const url = URL.createObjectURL(new Blob([source], { type: 'image/svg+xml' }));
-  try {
-    await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = () => reject(new Error('Could not render the canvas artwork.')); image.src = url; });
-    const dimensions = documentState.canvases[canvas];
-    const scale = Math.min(1, maxDimension / Math.max(dimensions.width, dimensions.height));
-    const preview = document.createElement('canvas');
-    preview.width = Math.ceil(dimensions.width * scale); preview.height = Math.ceil(dimensions.height * scale);
-    preview.getContext('2d').drawImage(image, 0, 0, preview.width, preview.height);
-    return { canvas, width: preview.width, height: preview.height, mime_type: 'image/png', data_url: preview.toDataURL('image/png') };
-  } finally { URL.revokeObjectURL(url); }
+
+export function fitRasterBox(width, height, requestedWidth = width) {
+  if (![width, height, requestedWidth].every(value => Number.isFinite(value) && value > 0)) throw new Error('Invalid raster dimensions.');
+  const minimum = 1 / Math.min(width, height), maximum = 8000 / Math.max(width, height);
+  if (minimum > maximum) throw new Error('The raster aspect ratio exceeds canvas object limits. Use a less extreme crop.');
+  const scale = Math.min(maximum, Math.max(minimum, requestedWidth / width));
+  return { width: width * scale, height: height * scale };
+}
+
+// Keep a crop at its original visual position, including stretched/rotated layers.
+export function cropRasterPatch(object, image, crop) {
+  if (![image.width, image.height, crop.width, crop.height].every(value => Number.isFinite(value) && value > 0)
+    || ![crop.x, crop.y].every(value => Number.isFinite(value) && value >= 0)
+    || crop.x + crop.width > image.width || crop.y + crop.height > image.height) throw new Error('Choose a crop inside the image.');
+  const width = object.width * crop.width / image.width, height = object.height * crop.height / image.height;
+  if (width < 1 || height < 1) throw new Error('The crop is too small for this layer. Select a larger area.');
+  const dx = object.width * (crop.x + crop.width / 2) / image.width - object.width / 2;
+  const dy = object.height * (crop.y + crop.height / 2) / image.height - object.height / 2;
+  const radians = object.rotation * Math.PI / 180, cos = Math.cos(radians), sin = Math.sin(radians);
+  return { x: object.x + object.width / 2 + dx * cos - dy * sin - width / 2,
+    y: object.y + object.height / 2 + dx * sin + dy * cos - height / 2, width, height };
+}
+
+export async function prepareRaster(dataUrl, { trim = false } = {}) {
+  const image = await new Promise((resolve, reject) => {
+    const image = new Image(); image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('Could not decode raster artwork.')); image.src = dataUrl;
+  });
+  const width = image.naturalWidth, height = image.naturalHeight;
+  if (!width || !height || width * height > 64000000) throw new Error('Raster images must be at most 64 megapixels.');
+  const result = { dataUrl, width, height, original_width: width, original_height: height, trimmed: false };
+  if (!trim || !dataUrl.startsWith('data:image/png;')) return result;
+  const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(image, 0, 0);
+  const bounds = alphaBounds(ctx.getImageData(0, 0, width, height).data, width, height);
+  if (!bounds) throw new Error('The PNG is fully transparent. Generate visible artwork before importing it.');
+  if (bounds.width === width && bounds.height === height) return result;
+  const cropped = document.createElement('canvas'); cropped.width = bounds.width; cropped.height = bounds.height;
+  cropped.getContext('2d').drawImage(image, bounds.x, bounds.y, bounds.width, bounds.height, 0, 0, bounds.width, bounds.height);
+  return { ...result, dataUrl: cropped.toDataURL('image/png'), width: bounds.width, height: bounds.height, trimmed: true, crop: bounds };
+}
+
+export const EMPTY_PLOT_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500"/>';
+
+export function normalizePlotly(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)
+    || Object.keys(value).some(key => !['data', 'layout', 'source'].includes(key))
+    || !Array.isArray(value.data) || !value.data.length || value.data.length > 100
+    || value.data.some(trace => !trace || typeof trace !== 'object' || Array.isArray(trace))
+    || value.layout !== undefined && (!value.layout || typeof value.layout !== 'object' || Array.isArray(value.layout))
+    || value.source !== undefined && (typeof value.source !== 'string' || value.source.length > 2000)) throw new Error('Plots need plotly:{data:[traces],layout:{...},source:"optional data/processing description"}.');
+  const visit = (item, depth = 0) => {
+    if (depth > 32) throw new Error('The plot specification is too deeply nested.');
+    if (item === null || typeof item === 'string' || typeof item === 'boolean' || typeof item === 'number' && Number.isFinite(item)) return;
+    if (!item || typeof item !== 'object' || ![Object.prototype, Array.prototype, null].includes(Object.getPrototypeOf(item))) throw new Error('Plot data must contain JSON values and finite numbers only.');
+    Object.values(item).forEach(child => visit(child, depth + 1));
+  };
+  visit(value);
+  if (JSON.stringify(value).length > 2000000) throw new Error('Plot data and layout must be at most 2 million characters.');
+  return JSON.parse(JSON.stringify({ data: value.data, layout: value.layout || {}, source: value.source || '' }));
+}
+
+export async function preparePlots(next, previous, hikari, validateSvg) {
+  for (const object of next.objects.filter(object => object.type === 'plot')) {
+    const before = previous.objects.find(item => item.id === object.id);
+    if (before?.type === 'plot' && before.width === object.width && before.height === object.height
+      && before.svg === object.svg && JSON.stringify(before.plotly) === JSON.stringify(object.plotly)) continue;
+    const result = await hikari.call('plotly.render', { figure: { data: object.plotly.data, layout: object.plotly.layout }, width: Math.max(64, object.width), height: Math.max(64, object.height) });
+    if (typeof result?.svg !== 'string') throw new Error('This Hikari build cannot render Plotly plots. Update Hikari and try again.');
+    object.svg = validateSvg(result.svg, { plot: true });
+  }
 }

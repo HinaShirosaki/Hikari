@@ -12,7 +12,7 @@ const plugins = { 'plugins/scientific-illustration': 'figura', 'plugins/qpcr-ana
 const filesIn = dir => fs.readdirSync(path.join(root, dir), { recursive: true }).filter(f => /\.(?:js|mjs)$/.test(f) && !/(?:^|\/)vendor\/|(?:^|\/)tests\/|(?:^|\/)locales\//.test(f) && !/generated|(?:^|\/)i18n(?:\.mjs|\.js|\/)/.test(f)).map(f => path.join(dir, f));
 const human = text => typeof text === 'string' && /[A-Za-z]{3}/.test(text) && !/^\s*(?:https?:|data:|[#./])/.test(text) && !/^[A-Z_\d\s/().+%-]{1,14}$/.test(text) && !['Hikari', 'OpenAI', 'Codex', 'Plotly', 'Tabulator', 'GenBank', 'CropperJS'].includes(text);
 // Persisted record names and exported PowerPoint metadata use canonical data.
-const canonicalAssignments = new Set(['plugins/scientific-illustration/workspace.mjs#next.title', 'src/plugins/gel/workspace/figure/powerpoint.js#pptx.title']);
+const canonicalAssignments = new Set(['plugins/scientific-illustration/library.mjs#next.title', 'src/plugins/gel/workspace/figure/powerpoint.js#pptx.title']);
 const literals = node => node?.type === 'Literal' && typeof node.value === 'string' ? [node.value] : node?.type === 'ConditionalExpression' ? [...literals(node.consequent), ...literals(node.alternate)] : node?.type === 'LogicalExpression' && ['||', '??'].includes(node.operator) ? literals(node.right) : [];
 function walk(node, visit, parents = []) {
   if (!node || typeof node !== 'object') return;

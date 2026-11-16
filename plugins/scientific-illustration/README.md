@@ -140,10 +140,15 @@ scratch canvases migrate automatically.
 
 ## Development
 
-[index.html](index.html) loads [main.mjs](main.mjs). The document model is in
-[model.mjs](model.mjs), saving in [workspace.mjs](workspace.mjs) and
-[library.mjs](library.mjs), and PowerPoint export in
-[powerpoint.mjs](powerpoint.mjs). `vendor/` bundles Cropper.js 1.6.2,
+[index.html](index.html) loads [main.mjs](main.mjs), which connects the workspace
+to the canvas, layer inspector, and host. [canvas-view.mjs](canvas-view.mjs)
+renders the canvas, and [canvas-gestures.mjs](canvas-gestures.mjs) handles pointer
+editing. [model.mjs](model.mjs) validates figure data and edit operations.
+[workspace.mjs](workspace.mjs) serializes changes to the [illustration library](library.mjs)
+and [reusable assets](reusable-assets.mjs). [figure-export.mjs](figure-export.mjs)
+handles SVG, PNG, and PowerPoint exports.
+
+`vendor/` bundles Cropper.js 1.6.2,
 PptxGenJS 4.0.1 (both MIT) and the Inter font, so everything works offline.
 [icon.svg](icon.svg) is the dock icon; Hikari tints it to the current theme.
 

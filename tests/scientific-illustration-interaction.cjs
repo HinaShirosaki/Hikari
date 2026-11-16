@@ -18,7 +18,7 @@ async function verifyCanvasInteraction({ tool, evaluate, check, win, pause, temp
   const before = await read(), imageBefore = await tool({ action: 'render', canvas: 'main' });
   const fitted = await scale('main');
   await evaluate('document.getElementById("zoom-in").click()');
-  check(Math.abs(await scale('main') - fitted * 1.25) < 0.001, 'Zoom in uses the displayed canvas scale');
+  check(Math.abs(await scale('main') - fitted * 1.4) < 0.001, 'Zoom in scales the displayed canvas by 40%');
   await evaluate('document.getElementById("zoom-out").click()');
   check(Math.abs(await scale('main') - fitted) < 0.001, 'Zoom out reverses zoom in');
   for (let step = 0; step < 20 && await scale('main') < 1.5; step += 1) await evaluate('document.getElementById("zoom-in").click()');
@@ -31,7 +31,7 @@ async function verifyCanvasInteraction({ tool, evaluate, check, win, pause, temp
   await evaluate('document.getElementById("zoom-fit").click()');
   await apply([{ op: 'upsert', object: { id: 'resize-fixture', type: 'vector', x: 40, y: 40, width: 130, height: 80,
     svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 80"><rect width="130" height="80" fill="#ff0000"/></svg>' } }]);
-  await evaluate('document.querySelector("[data-layer-id=resize-fixture] .layer-select").click();document.getElementById("zoom-fit").click();for(let i=0;i<6;i++)document.getElementById("zoom-in").click()');
+  await evaluate('document.querySelector("[data-layer-id=resize-fixture] .layer-select").click();document.getElementById("zoom-fit").click();for(let i=0;i<4;i++)document.getElementById("zoom-in").click()');
   check(await evaluate('(()=>{const stage=document.getElementById("main-canvas"),area=stage.getBoundingClientRect();return [...stage.querySelectorAll(".resize-handle")].every(h=>{const b=h.getBoundingClientRect();return b.left>=area.left && b.top>=area.top && b.right<=area.left+stage.clientWidth && b.bottom<=area.top+stage.clientHeight})})()'), 'Button zoom keeps all handles visible for a selected component near the canvas edge');
   await fs.writeFile(path.join(temp, 'zoom-handles.png'), (await win.webContents.capturePage()).toPNG());
   const directions = { nw: [-1,-1], n: [0,-1], ne: [1,-1], e: [1,0], se: [1,1], s: [0,1], sw: [-1,1], w: [-1,0] };
@@ -94,7 +94,7 @@ async function verifyCanvasInteraction({ tool, evaluate, check, win, pause, temp
     })()`);
     await win.webContents.debugger.sendCommand('Input.dispatchMouseEvent', { type: 'mouseWheel', x: anchor.x, y: anchor.y, deltaX: 0, deltaY: -100, modifiers: 2 });
     await pause(80);
-    check(Math.abs(await scale('main') - zoom * Math.exp(0.2)) < 0.001, 'Ctrl-scroll zooms the canvas instead of the page');
+    check(Math.abs(await scale('main') - zoom * Math.exp(0.4)) < 0.001, 'Ctrl-scroll zooms the canvas instead of the page');
     const held = await evaluate(`(() => {const p=new DOMPoint(${anchor.canvasX},${anchor.canvasY}).matrixTransform(document.querySelector('#main-canvas > svg').getScreenCTM());return {x:p.x,y:p.y}})()`);
     check(Math.hypot(held.x - anchor.x, held.y - anchor.y) < 1.5, 'Wheel zoom holds the canvas point under the pointer');
   } finally { win.webContents.debugger.detach(); }
