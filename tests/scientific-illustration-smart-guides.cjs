@@ -47,7 +47,7 @@ async function verifySmartGuides({ tool, evaluate, check, win, pause, temp }) {
     let before = await read(), end = await begin(263, -127);
     check(await evaluate('document.querySelectorAll(".smart-guide-alignment").length>=2'), 'Canvas center produces horizontal and vertical guides during a real pointer drag');
     check((await read()).revision === before.revision, 'The magnetic preview does not save while dragging');
-    check(await evaluate('(async()=>{const {svgSource}=await import("./artwork.mjs");return !(await svgSource(illustrationWorkspace.getDocument(),"main")).includes("smart-guide")})()'), 'Temporary guides do not enter SVG exports');
+    check(await evaluate('(async()=>{const {svgSource}=await import("./figure-export.mjs");return !(await svgSource(illustrationWorkspace.getDocument(),"main")).includes("smart-guide")})()'), 'Temporary guides do not enter SVG exports');
     await fs.writeFile(path.join(temp, 'smart-guides-center.png'), (await win.webContents.capturePage()).toPNG());
     await mouse('mouseReleased', end); let after = await changed(before.revision);
     check(object(after).x === 560 && object(after).y === 370, 'Release persists exact canvas centering on both axes');

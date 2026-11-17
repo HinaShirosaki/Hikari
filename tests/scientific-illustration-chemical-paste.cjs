@@ -94,14 +94,14 @@ async function verifyChemicalPaste({ tool, evaluate, check, win, pause, temp }) 
     && (pdfVector.svg.match(/<path/g) || []).length === 6 && !/<image|<text/.test(pdfVector.svg), 'The original PDF wins over a blurry preview and preserves bonds and atom glyphs as vector paths');
   await fs.writeFile(path.join(temp, 'chemical-vector.pdf'), Buffer.from(pdfDataBase64, 'base64'));
   await fs.writeFile(path.join(temp, 'chemical-vector.svg'), pdfVector.svg);
-  check(await evaluate(`(async()=>{const {svgSource}=await import('./artwork.mjs');const source=await svgSource(illustrationWorkspace.getDocument(),'main');return source.includes('data-object-id="${pdfVector.id}"')&&source.includes(${JSON.stringify(pdfVector.svg.match(/d="[^"]+"/)[0])})})()`), 'Canvas SVG export keeps the PDF vector geometry');
+  check(await evaluate(`(async()=>{const {svgSource}=await import('./figure-export.mjs');const source=await svgSource(illustrationWorkspace.getDocument(),'main');return source.includes('data-object-id="${pdfVector.id}"')&&source.includes(${JSON.stringify(pdfVector.svg.match(/d="[^"]+"/)[0])})})()`), 'Canvas SVG export keeps the PDF vector geometry');
   const scaleBefore = await read();
   check((await tool({ action: 'apply', illustration_id: scaleBefore.illustration_id, expected_revision: scaleBefore.revision,
     request_id: randomUUID(), operations: [{ op: 'update', id: pdfVector.id, patch: { width: 1760, height: 720 } }] })).ok, 'Scale the vector structure proportionally');
   after = await wait(doc => doc.objects.at(-1).width === 1760);
   check(after.objects.at(-1).svg === pdfVector.svg, 'Enlarging a pasted chemical vector eightfold never resamples or rewrites its source');
   await evaluate('illustrationWorkspace.history("undo")'); await pause(60);
-  const exported = await evaluate(`(async()=>{const {exportPowerPoint}=await import('./powerpoint.mjs');const data=await exportPowerPoint(illustrationWorkspace.getDocument());const zip=await JSZip.loadAsync(data,{base64:true});const files=Object.keys(zip.files).filter(name=>name.endsWith('.svg'));const sources=await Promise.all(files.map(name=>zip.file(name).async('string')));return sources.some(source=>source.includes(${JSON.stringify(pdfVector.svg.match(/d="[^"]+"/)[0])})&&!source.includes('<image'))})()`);
+  const exported = await evaluate(`(async()=>{const {exportPowerPoint}=await import('./figure-export.mjs');const data=await exportPowerPoint(illustrationWorkspace.getDocument());const zip=await JSZip.loadAsync(data,{base64:true});const files=Object.keys(zip.files).filter(name=>name.endsWith('.svg'));const sources=await Promise.all(files.map(name=>zip.file(name).async('string')));return sources.some(source=>source.includes(${JSON.stringify(pdfVector.svg.match(/d="[^"]+"/)[0])})&&!source.includes('<image'))})()`);
   check(exported, 'PowerPoint export embeds the chemical drawing as SVG rather than flattening it');
   await fs.writeFile(path.join(temp, 'chemical-vector-canvas.png'), (await win.webContents.capturePage()).toPNG());
   after = await read();

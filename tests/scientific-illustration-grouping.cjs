@@ -27,6 +27,8 @@ async function verifyGrouping({ tool, evaluate, check, win, pause, temp }) {
   const selection = () => evaluate('[...document.querySelectorAll("#layers .layer-select[aria-pressed=true]")].map(b=>b.closest("[data-layer-id]").dataset.layerId)');
   const clickToolbar = async id => {
     const action = id === 'group-selection' ? 'group' : 'ungroup';
+    // Closing Layers can refit the canvas and reposition the bar on the next frame.
+    await evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
     const target = await evaluate(`(()=>{const r=document.querySelector('#selection-toolbar [data-selection-action="${action}"]').getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2}})()`);
     win.webContents.debugger.attach('1.3');
     try {

@@ -117,7 +117,7 @@ test('native imports validate image bytes and size; missing tools have an action
 });
 
 test('all complexity levels request Codex native generation and forbid provider substitution', async () => {
-  const { agentInstructions } = await import('../plugins/scientific-illustration/agent/workflow.mjs');
+  const { agentInstructions } = await import('../plugins/scientific-illustration/agent/figure-agent.mjs');
   for (const complexity of ['simple', 'standard', 'detailed']) {
     const instructions = agentInstructions(complexity);
     assert.match(instructions, /built-in image_gen/);

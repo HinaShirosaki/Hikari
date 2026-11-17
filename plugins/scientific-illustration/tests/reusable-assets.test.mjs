@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createWorkspace, encodeText } from '../workspace.mjs';
 import { createDocument, normalizeObject } from '../model.mjs';
-import { selectionBounds } from '../grouping.mjs';
+import { selectionBounds } from '../geometry.mjs';
 import { ASSETS_PATH, assetPath, snapshotAsset, componentAsset, instantiateAsset, normalizeAssetLibrary, validateAssetRequest } from '../reusable-assets.mjs';
 
 function fixture() {

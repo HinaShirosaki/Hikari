@@ -144,7 +144,10 @@ closes automatically on release. Components whose boxes touch the region are
 selected, including rotated components. Hidden standalone layers are excluded.
 Groups select together; hold Alt to select only the touched members. Multiple
 selected components each show their own outline. A floating bar above the selection
-offers **Group**, **Ungroup**, and **Align and distribute**. Drag any selected member
+offers **Group**, **Ungroup**, and **Align and distribute**. Click a group and choose
+**Edit group** to select and modify its members individually on the canvas. Choose
+**Done editing group** or press Escape to return to the group selection. Selecting a
+layer outside the group also ends group editing. Drag any selected member
 to move the whole selection. Empty gaps remain available for a new area selection.
 Shift adds to the current selection. Escape cancels a gesture and keeps the
 previous selection.

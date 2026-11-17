@@ -68,11 +68,11 @@ async function snapshot(name, inspectionRunId = '') {
     if (data) await fs.writeFile(path.join(output, `${name}-${preview.canvas}.png`), Buffer.from(data.split(',')[1], 'base64'));
   }
   if (read.canvases.main.width > 1600) {
-    const full = await evaluate(`(async()=>{const {renderPreview}=await import('./artwork.mjs');return renderPreview(illustrationWorkspace.getDocument(),'main',8000)})()`);
+    const full = await evaluate(`(async()=>{const {renderPreview}=await import('./figure-export.mjs');return renderPreview(illustrationWorkspace.getDocument(),'main',8000)})()`);
     await fs.writeFile(path.join(output, `${name}-full.png`), Buffer.from(full.data_url.split(',')[1], 'base64'));
     assert.equal(full.width, read.canvases.main.width, 'Full export preserves the canvas width');
     assert.equal(full.height, read.canvases.main.height, 'Full export preserves the canvas height');
-    await fs.writeFile(path.join(output, `${name}.svg`), await evaluate(`(async()=>(await import("./artwork.mjs")).svgSource(await illustrationWorkspace.getExportDocument(),"main"))()`));
+    await fs.writeFile(path.join(output, `${name}.svg`), await evaluate(`(async()=>(await import("./figure-export.mjs")).svgSource(await illustrationWorkspace.getExportDocument(),"main"))()`));
     await fs.writeFile(path.join(output, `${name}-scene.json`), JSON.stringify(await evaluate('illustrationWorkspace.getDocument()')));
   }
   for (const object of read.objects.filter(item => item.type === 'raster')) {

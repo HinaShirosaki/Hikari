@@ -66,7 +66,7 @@ async function verifyPowerPoint({ tool, evaluate, check, win, pause, temp }) {
   check(pngs.length >= 4 && pngs.includes(current.objects.find(object => object.id === 'image').dataUrl.split(',')[1]), 'Placed PNG raster bytes and real SVG fallback previews are embedded');
   check(JSON.stringify((await read()).objects) === JSON.stringify(current.objects) && (await read()).revision === current.revision, 'Export preserves source artwork, groups and revision');
   await fs.writeFile(path.join(temp, 'pptx-structure.json'), JSON.stringify(parts, null, 2));
-  await evaluate(`import('./artwork.mjs').then(async m=>{window.pptxReference=(await m.renderPreview(illustrationWorkspace.getDocument(),'main',1200)).data_url})`);
+  await evaluate(`import('./figure-export.mjs').then(async m=>{window.pptxReference=(await m.renderPreview(illustrationWorkspace.getDocument(),'main',1200)).data_url})`);
   await fs.writeFile(path.join(temp, 'pptx-reference.png'), Buffer.from((await evaluate('window.pptxReference')).split(',')[1], 'base64'));
   check(await evaluate(`import('./artwork.mjs').then(m=>{const object=illustrationWorkspace.getDocument().objects.find(o=>o.id==='cell');const svg=new DOMParser().parseFromString(m.componentSvgSource({...object,width:8000,height:4000}),'image/svg+xml').documentElement;return svg.getAttribute('width')==='2048'&&svg.getAttribute('height')==='1024'&&svg.getAttribute('viewBox')==='0 0 8000 4000'})`), 'Large vector components retain vector resolution with bounded fallback preview memory');
   for (const width of [1300, 480, 320]) {

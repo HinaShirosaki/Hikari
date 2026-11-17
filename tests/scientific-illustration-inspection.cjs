@@ -5,7 +5,7 @@ const { createCodexAgentRuntime } = require('../src/main/agent/codex-agent/runti
 const review = { layout: 'The canvas fits; no clipping.', labels: 'Labels are legible and separate.',
   artwork: 'Artwork contains no text.', science: 'Arrow direction matches the requested process.' };
 
-async function tracker() { return (await import('../plugins/scientific-illustration/inspection.mjs')).createInspectionTracker(); }
+async function tracker() { return (await import('../plugins/scientific-illustration/agent/figure-agent.mjs')).createInspectionTracker(); }
 
 test('inspection requires a rendered canvas and the exact revision receipt', async () => {
   const gate = await tracker();

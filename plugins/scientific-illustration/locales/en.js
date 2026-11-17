@@ -197,6 +197,8 @@
   "full.2df3bdea": "Group selection",
   "full.8fc6a9b3": "Ungroup (⌘⇧G / Ctrl+Shift+G)",
   "full.460af6ed": "Ungroup",
+  "full.42453e5a": "Edit group",
+  "full.11369292": "Done editing group",
   "full.d67ce352": "Align and distribute",
   "full.5e7d57e": "Align",
   "full.486b6923": "Align selected items",

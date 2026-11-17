@@ -21,6 +21,9 @@ async function verifySelectionToolbar({ tool, evaluate, check, win, pause, temp 
     await pause(80);
   };
   const action = name => click(`#selection-toolbar [data-selection-action="${name}"]`);
+  const clickObject = id => click(`#main-canvas [data-object-id="${id}"] .object-hit`);
+  const canvasSelection = () => evaluate('[...document.querySelectorAll("#main-canvas [data-object-id][aria-pressed=true]")].map(node => node.dataset.objectId)');
+  const pressEscape = () => evaluate('document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }))');
   const geometry = () => evaluate(`(()=>{const bar=document.getElementById('selection-toolbar'),r=bar.getBoundingClientRect(),s=document.getElementById('main-canvas').getBoundingClientRect();return {hidden:bar.hidden,left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height,stage:{left:s.left,right:s.right,top:s.top,bottom:s.bottom}}})()`);
   const inBounds = async message => {
     const r = await geometry();
@@ -33,6 +36,7 @@ async function verifySelectionToolbar({ tool, evaluate, check, win, pause, temp 
     check(await evaluate('document.getElementById("selection-toolbar").hidden && document.querySelectorAll(".resize-handle").length===8'), 'Single selection retains its eight resize handles without a floating multi-selection bar');
     await select(2);
     check(await evaluate('!document.querySelector(".selection,.selection-move") && document.querySelectorAll(".selection-member").length===2'), 'Several items have individual outlines with no outer frame or invisible shared hit box');
+    check(await evaluate('document.getElementById("selection-edit-group").hidden'), 'Edit group is hidden for an ungrouped multi-selection');
     await inBounds('The bar floats inside the canvas above the selected items');
     const beforeKeys = await read();
     await evaluate('document.querySelector("[data-selection-action=group]").focus();document.activeElement.dispatchEvent(new KeyboardEvent("keydown",{key:"ArrowRight",bubbles:true}))');
@@ -50,6 +54,31 @@ async function verifySelectionToolbar({ tool, evaluate, check, win, pause, temp 
     await action('group'); after = await read();
     check(after.groups[0]?.ids.length === 2 && await evaluate('!document.querySelector(".selection") && document.querySelectorAll(".selection-member").length===2'), 'Floating Group keeps individual outlines without creating an outer frame');
     check(await evaluate('document.querySelector("[data-selection-action=group]").disabled && !document.querySelector("[data-selection-action=ungroup]").disabled && document.getElementById("selection-align").disabled'), 'Grouped selection enables Ungroup and treats the group as one alignment unit');
+    const group = after.groups[0];
+    await pressEscape();
+    await clickObject('floating-0');
+    check((await canvasSelection()).length === 2 && await evaluate('!document.getElementById("selection-edit-group").hidden'), 'Clicking a group on the canvas shows Edit group in the floating toolbar');
+    await action('edit-group');
+    await clickObject('floating-1');
+    check(JSON.stringify(await canvasSelection()) === '["floating-1"]' && await evaluate('document.querySelectorAll("#main-canvas .resize-handle").length === 8'), 'A plain click in group editing selects one member with its resize handles');
+    await evaluate('document.getElementById("main-canvas").dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }))');
+    await pause(80);
+    const edited = await read();
+    check(JSON.stringify(edited.groups[0].ids) === JSON.stringify(group.ids)
+      && edited.objects[1].x === after.objects[1].x + 1
+      && JSON.stringify(edited.objects[0]) === JSON.stringify(after.objects[0]), 'Nudging the selected member preserves the rest of the group');
+    await evaluate('illustrationWorkspace.history("undo")'); await pause(70);
+    await clickObject('floating-0');
+    check(JSON.stringify(await canvasSelection()) === '["floating-0"]', 'Group editing stays active when switching members after an edit');
+    await pressEscape();
+    check((await canvasSelection()).length === 2, 'Escape restores the group selection');
+    await action('edit-group');
+    await clickObject('floating-2');
+    check(JSON.stringify(await canvasSelection()) === '["floating-2"]' && await evaluate('document.querySelector("[data-selection-action=done-group]").hidden'), 'Selecting an outside layer leaves group editing');
+    await clickObject('floating-0');
+    await action('edit-group');
+    await action('done-group');
+    check((await canvasSelection()).length === 2 && await evaluate('document.activeElement.id === "selection-edit-group"'), 'Done restores the group selection and returns focus to Edit group');
     await action('ungroup');
     check((await read()).groups.length === 0 && JSON.stringify((await read()).objects) === JSON.stringify(beforeKeys.objects), 'Floating Ungroup preserves positions, styles and selection');
     await select(3); await action('align');
@@ -77,7 +106,7 @@ async function verifySelectionToolbar({ tool, evaluate, check, win, pause, temp 
     await pause(60);
     check(await evaluate('document.getElementById("selection-toolbar").hidden && !document.querySelector("[data-object-id][aria-pressed=true]")') && (await read()).revision === beforeGap.revision, 'Clicking an empty gap clears selection instead of grabbing an invisible group box');
     await select(3);
-    const source = await evaluate('(async()=>{const {svgSource}=await import("./artwork.mjs");return svgSource(illustrationWorkspace.getDocument(),"main")})()');
+    const source = await evaluate('(async()=>{const {svgSource}=await import("./figure-export.mjs");return svgSource(illustrationWorkspace.getDocument(),"main")})()');
     check(!/selection-toolbar|selection-member|selection-move/.test(source), 'Floating controls and selection outlines never appear in SVG exports');
   } finally { win.webContents.debugger.detach(); }
 }

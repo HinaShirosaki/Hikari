@@ -1,13 +1,11 @@
 // Scene data is shared by manual controls and the agent. Figure labels stay
 // separate; atom labels belong to pasted chemical structures. SVG is validated
 // in artwork.mjs.
-import { COMPLEXITY_LEVELS, DEFAULT_COMPLEXITY } from './complexity.mjs';
-import { imageGenerationPercent } from './image-generation.mjs';
-import { imageGenerationStyle, MAX_IMAGE_STYLE_LINE } from './image-style.mjs';
-import { normalizePlotly } from './plotly.mjs';
-import { normalizeSourceContext } from './source-context.mjs';
-import { selectionBounds, transformSelection } from './grouping.mjs';
-import { rotateComponents } from './rotation.mjs';
+import { COMPLEXITY_LEVELS, DEFAULT_COMPLEXITY, imageGenerationPercent, imageGenerationStyle, MAX_IMAGE_STYLE_LINE, palette } from './figure-settings.mjs';
+import { normalizePlotly } from './artwork.mjs';
+import { rotateComponents, selectionBounds, transformSelection } from './geometry.mjs';
+
+export { MAX_PALETTE, palette } from './figure-settings.mjs';
 export const CANVASES = ['main'];
 export const MAX_DOCUMENT_CHARS = 12000000;
 // Every group owns at least two objects, so the group cap follows the object cap.
@@ -41,12 +39,22 @@ export function color(value, allowNone = false) {
   if ((allowNone && value === 'none') || /^#[\da-f]{6}(?:[\da-f]{2})?$/i.test(value)) return value;
   throw new Error('Use a hex color (#rrggbb or #rrggbbaa).');
 }
-// The figure's main colors, chosen by the user; empty lets Codex choose.
-export const MAX_PALETTE = 8;
-export function palette(value) {
-  if (!Array.isArray(value) || value.length > MAX_PALETTE || value.some(item => !/^#[\da-f]{6}$/i.test(item))) throw new Error(`palette must list at most ${MAX_PALETTE} #rrggbb colors.`);
-  return value.map(item => item.toLowerCase());
+export function normalizeSourceContext(value) {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== 'object' || Array.isArray(value)
+    || !['protocol', 'paper-selection'].includes(value.kind)) throw new Error('Invalid illustration source context.');
+  if (Object.keys(value).some(key => !['kind', 'id', 'title', 'content', 'selectedText', 'pageNumber', 'markdownRelativePath', 'markdownStatus', 'truncated'].includes(key))) throw new Error('Unknown source context field.');
+  const result = { kind: value.kind };
+  for (const [key, limit] of Object.entries({ id: 200, title: 200, content: 200000, selectedText: 30000, markdownRelativePath: 2400, markdownStatus: 40 })) {
+    if (typeof (value[key] ?? '') !== 'string' || (value[key] || '').length > limit) throw new Error(`Invalid source ${key}.`);
+    result[key] = value[key] || '';
+  }
+  if (value.pageNumber !== undefined && (!Number.isInteger(value.pageNumber) || value.pageNumber < 1)) throw new Error('Invalid source page number.');
+  if (value.pageNumber !== undefined) result.pageNumber = value.pageNumber;
+  result.truncated = value.truncated === true;
+  return result;
 }
+
 export function createDocument() {
   return { version: 1, revision: crypto.randomUUID(), title: 'Untitled figure', complexity: DEFAULT_COMPLEXITY, imageGenerationPercent: null, imageGenerationStyle: imageGenerationStyle(), imageStyleLine: '', palette: [],
     canvases: { main: { width: 1200, height: 800, background: '#ffffff' } },
