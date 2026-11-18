@@ -46,11 +46,10 @@ export function createExperimentSuggestions({
       if (typeof api?.suggestNextExperiment !== 'function') throw new Error('Experiment suggestions require the Hikari desktop app.');
       const response = await api.suggestNextExperiment({
         projectId,
+        // Agent tools read records from storage; the service only needs the project and settings.
         snapshot: JSON.parse(JSON.stringify({
           data_file_path: state.data_file_path || state.dataFilePath || '',
-          settings: state.settings, projects: state.projects, protocols: state.protocols,
-          notebookEntries: state.notebookEntries, workflows: state.workflows,
-          samples: state.samples, inventory: state.inventory, labInventory: state.labInventory
+          settings: state.settings, projects: state.projects
         }))
       });
       if (!response?.ok) throw new Error(response?.error || 'Could not suggest the next experiment.');

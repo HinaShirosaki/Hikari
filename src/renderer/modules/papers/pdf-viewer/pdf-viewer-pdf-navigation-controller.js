@@ -13,6 +13,8 @@ import { paperFailure, paperUi } from '../localization.js';
 
 export const installPdfViewerPdfNavigationController = (ctx) => {
   const { state } = ctx;
+  let wheelFocus = null;
+  const panRemainder = { x: 0, y: 0 };
 
   async function resolveDestinationPageNumber(destination) {
     if (!state.pdfDocument || !destination) {
@@ -149,13 +151,19 @@ export const installPdfViewerPdfNavigationController = (ctx) => {
     }
   }
 
-  async function adjustZoom(delta) {
+  // focus: {clientX, clientY} that stays put on screen; null = stage center.
+  function zoomTo(zoom, focus = null) {
     if (!state.pdfDocument) {
       return;
     }
     state.fitWidth = false;
-    state.zoom = clamp(state.zoom + delta, MIN_ZOOM, MAX_ZOOM);
-    await ctx.renderDocumentPages({ preserveScroll: true });
+    state.zoom = clamp(zoom(state.zoom), MIN_ZOOM, MAX_ZOOM);
+    const rect = ctx.elements?.stage?.getBoundingClientRect?.();
+    ctx.previewZoom(focus || (rect ? { clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 } : null));
+  }
+
+  function adjustZoom(delta) {
+    zoomTo((zoom) => zoom + delta);
   }
 
   async function resetZoom() {
@@ -175,13 +183,39 @@ export const installPdfViewerPdfNavigationController = (ctx) => {
     await ctx.renderDocumentPages({ preserveScroll: true });
   }
 
-  function handleZoomWheel(event) {
-    // Chromium delivers trackpad pinch as a ctrl+wheel event; ctrl+mouse-wheel lands here too.
-    if (!event?.ctrlKey || !state.pdfDocument) {
+  // macOS Chromium "rails" a trackpad scroll to one axis once the gesture leans
+  // that way, but the DOM event keeps both deltas, so pan freely ourselves.
+  // Only when the page also scrolls sideways; otherwise native scrolling is fine.
+  function panStage(event) {
+    const stage = ctx.elements?.stage;
+    if (!stage || event.deltaMode !== 0 || stage.scrollWidth <= stage.clientWidth) {
       return;
     }
     event.preventDefault();
+    const shiftOnly = event.shiftKey && !event.deltaX;
+    // scrollTop may round, so carry the fractions trackpads send between events.
+    panRemainder.x += Number(shiftOnly ? event.deltaY : event.deltaX) || 0;
+    panRemainder.y += shiftOnly ? 0 : Number(event.deltaY) || 0;
+    const x = Math.trunc(panRemainder.x);
+    const y = Math.trunc(panRemainder.y);
+    panRemainder.x -= x;
+    panRemainder.y -= y;
+    stage.scrollLeft += x;
+    stage.scrollTop += y;
+  }
+
+  function handleZoomWheel(event) {
+    if (!event || !state.pdfDocument) {
+      return;
+    }
+    if (!event.ctrlKey) {
+      panStage(event);
+      return;
+    }
+    // Chromium delivers trackpad pinch as a ctrl+wheel event; ctrl+mouse-wheel lands here too.
+    event.preventDefault();
     state.pendingZoomDelta -= (Number(event.deltaY) || 0) * ZOOM_WHEEL_SENSITIVITY;
+    wheelFocus = { clientX: event.clientX, clientY: event.clientY };
     if (state.zoomWheelFrame) {
       return;
     }
@@ -194,8 +228,9 @@ export const installPdfViewerPdfNavigationController = (ctx) => {
       // ponytail: cap per-frame step so one mouse-wheel notch ≈ one button press; a pinch coalesces many small deltas
       const delta = clamp(state.pendingZoomDelta, -ZOOM_STEP, ZOOM_STEP);
       state.pendingZoomDelta = 0;
+      // Multiplicative, so a pinch feels the same at 50% and 300%.
       if (delta) {
-        void adjustZoom(delta);
+        zoomTo((zoom) => zoom * Math.exp(delta), Number.isFinite(wheelFocus?.clientX) ? wheelFocus : null);
       }
     });
   }

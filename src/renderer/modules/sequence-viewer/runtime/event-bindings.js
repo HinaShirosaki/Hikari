@@ -1,6 +1,7 @@
 import { bindFileDropTarget } from '../../../lib/file-drop.js';
 import { FILE_ACCEPT, LIBRARY_STATUS_SAVED } from './config.js';
 import { bindDnaMessage, dnaFailure, dnaUi, setDnaText } from '../localization.js';
+import { shellText } from '../../../lib/i18n/shell.js';
 
 export function bindSequenceViewerRuntimeEvents(ctx) {
   const { actions, controllers, dialogs, elements, state } = ctx;
@@ -33,7 +34,8 @@ export function bindSequenceViewerRuntimeEvents(ctx) {
   });
 
   bindFileDropTarget({
-    target: elements.detailWorkspace || elements.filePanel,
+    target: elements.detailWorkspace?.querySelector?.('.left-rail-template__main') || elements.detailWorkspace || elements.filePanel,
+    caption: () => shellText('fileDrop.caption.sequence'),
     accept: FILE_ACCEPT,
     onFiles: ([file]) => actions.openDroppedSequenceFile(file),
     onRejected: () => actions.setStatus(dnaUi('notice.dropUnsupported'), true),

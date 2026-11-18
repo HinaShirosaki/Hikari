@@ -354,6 +354,7 @@ export function initGelAnalysis({
   });
   const unbindFileDrop = bindFileDropTarget({
     target: elements.gelViewerStage || elements.gelImageRow || elements.gelForm,
+    caption: () => i18nUi.text("Drop an image file to load it into Gel."),
     accept: elements.gelImageFileInput?.getAttribute?.('accept') || 'image/*',
     multiple: true,
     onFiles: (files) => {

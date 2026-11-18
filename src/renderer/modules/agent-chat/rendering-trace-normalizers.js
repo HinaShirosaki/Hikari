@@ -1,4 +1,5 @@
 import { asArray, trimText } from './shared.js';
+import { formatSavedCodexActivity } from '../../../shared/hikari-mcp-activity.mjs';
 
 function normalizeTraceComparableText(value = '') {
   return trimText(value, 2000)
@@ -32,7 +33,7 @@ export function filterGeneratedTraceRows(rows = [], finalText = '') {
 export function normalizeThinkingTraceRows(rows) {
   const seen = new Set();
   return asArray(rows)
-    .map((row) => trimText(row?.text || row, 420))
+    .map((row) => formatSavedCodexActivity(trimText(row?.text || row, 420)))
     .filter((row) => {
       if (!row) {
         return false;
@@ -52,7 +53,7 @@ export function normalizeActivityTraceRows(rows) {
   return asArray(rows)
     .map((row) => {
       const source = row && typeof row === 'object' ? row : { text: row };
-      const text = trimText(source.text, 420);
+      const text = formatSavedCodexActivity(trimText(source.text, 420));
       if (!text) {
         return '';
       }
@@ -115,7 +116,7 @@ export function normalizeCodexCliDisplayRows(rows) {
       if (routingIntent && routingIntent !== 'codex_agent') {
         return '';
       }
-      return text;
+      return formatSavedCodexActivity(text);
     })
     .filter((row) => {
       if (!row) {

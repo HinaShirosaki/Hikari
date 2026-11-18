@@ -1,6 +1,10 @@
-/* PDF highlight color. It marks the reader's own highlights on the page, so it
-   stays the same yellow in every theme. */
+/* Colors drawn over the PDF paper itself, so they stay the same in every theme:
+   the reader's highlight yellow and the floating scrollbar thumb (dark with a
+   light rim, like macOS). */
 
 :root {
   --papers-highlight: rgba(255, 224, 102, 0.5);
+  --papers-scroll-thumb: rgba(0, 0, 0, 0.4);
+  --papers-scroll-thumb-active: rgba(0, 0, 0, 0.55);
+  --papers-scroll-thumb-rim: rgba(255, 255, 255, 0.6);
 }

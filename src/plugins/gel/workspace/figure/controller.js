@@ -548,7 +548,7 @@ export function createBlotFigureController({ runtime, elements, documentObject, 
   }
 
   disposers.push(bindFileDropTarget({
-    target: navigation, accept: 'image/*,.tif,.tiff', multiple: true,
+    target: navigation, accept: 'image/*,.tif,.tiff', multiple: true, ring: false,
     onFiles: handleFileDrop,
     onRejected: () => handleFileDrop([])
   }));

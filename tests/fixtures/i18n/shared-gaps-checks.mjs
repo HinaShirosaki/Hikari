@@ -61,11 +61,17 @@ export async function checkLocalizedSharedGaps({ core, i18n, check }) {
       i18n.setLocale('en'); check(getComputedStyle(more, '::before').content.includes('More modules'), 'Dock overflow caption retains exact English');
     }
     const alignment = document.querySelector('.sequence-viewer-alignment-dialog');
-    const workspace = alignment.closest('.sequence-viewer-alignment-workspace'); workspace.classList.add('is-file-drop-active');
-    const activeView = document.body.dataset.activeView; core.navigationShell.showView('sequence-viewer-detail-view');
-    i18n.setLocale('es'); check(getComputedStyle(alignment, '::after').content.includes('Suelte el archivo de secuencia para alinear'), 'DNA drag/drop pseudo-element translates without touching sequence values');
-    i18n.setLocale('en'); check(getComputedStyle(alignment, '::after').content.includes('Drop sequence file to align'), 'DNA drag/drop caption retains its English wording');
-    workspace.classList.remove('is-file-drop-active'); core.navigationShell.showView(activeView);
+    const workspace = alignment.closest('.sequence-viewer-alignment-workspace'); const workspaceHidden = workspace.hidden;
+    const activeView = document.body.dataset.activeView; core.navigationShell.showView('sequence-viewer-detail-view'); workspace.hidden = false;
+    const dropCaption = () => {
+      const transfer = new DataTransfer(); transfer.items.add(new File(['x'], 'read.ab1'));
+      workspace.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: transfer }));
+      return getComputedStyle(document.querySelector('.app-file-drop-ring'), '::after').content;
+    };
+    i18n.setLocale('es'); check(dropCaption().includes('Suelte el archivo de secuencia para alinear'), 'DNA drag/drop caption translates without touching sequence values');
+    i18n.setLocale('en'); check(dropCaption().includes('Drop sequence file to align'), 'DNA drag/drop caption retains its English wording');
+    document.querySelector('.app-file-drop-ring').hidden = true; workspace.classList.remove('is-file-drop-active');
+    workspace.hidden = workspaceHidden; core.navigationShell.showView(activeView);
     window.qaI18nShared = { prepareCapture() { dirty.protocol = true; dirty.assay = true; pluginDirty = true; service.handleCloseRequested(); i18n.setLocale('es'); }, close() { byId('cancel-btn').click(); } };
   } catch (error) { overlay.remove(); throw error; }
 }

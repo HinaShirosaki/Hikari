@@ -122,6 +122,9 @@ function createAgentMcpStdioServer(deps = {}) {
       instructions: buildHikariAgentMcpInstructions()
     }
   );
+  // Without this a failure while parsing a request (once, a stack overflow during
+  // the handshake) left the request unanswered with nothing on stderr.
+  server.onerror = (error) => console.error(`Hikari MCP error: ${error?.stack || error}`);
   let literatureSearchCalls = 0;
   let literatureSearchTurnKey = null;
 

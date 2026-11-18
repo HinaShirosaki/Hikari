@@ -21,7 +21,7 @@ function looksLikeToolDisplayJson(value = '') {
   return /^[a-z][a-z0-9_]*\s*:\s*[{[]/i.test(trimText(value, 120));
 }
 
-function buildLiveProgressSummary(eventPayload = {}) {
+function buildLiveProgressSummary(eventPayload = {}, previousProgress = {}) {
   const streamText = extractLiveStreamText(eventPayload);
   if (streamText) {
     return streamText;
@@ -40,7 +40,12 @@ function buildLiveProgressSummary(eventPayload = {}) {
     // name like `literature_search: {...}`) are activity, never user-facing prose.
     if ((displayKind && displayKind !== 'assistant' && displayKind !== 'message')
       || looksLikeToolDisplayJson(displayText)) {
-      return 'Working on this...';
+      // Codex also emits a display copy of its structured tool progress.
+      const repeatsToolStatus = displayKind === 'tool'
+        && /^tool_call_(started|completed|failed)$/u.test(previousProgress.stage)
+        && displayText === previousProgress.message
+        && !looksLikeToolDisplayJson(displayText);
+      return repeatsToolStatus ? previousProgress.message : 'Working on this...';
     }
     return displayText || 'Working on this...';
   }
@@ -166,34 +171,42 @@ function normalizeLiveResponseSegments(source) {
     if (!text || isInternalCodexPromptText(text) || isGenericToolProgressText(text)) {
       return '';
     }
-    return text;
+    return { text, message_id: trimText(row?.message_id, 160) };
   }).filter(Boolean).slice(-24);
 }
 
-function appendLiveResponseSegment(segments = [], value = '') {
+function appendLiveResponseSegment(segments = [], value = '', messageId = '') {
   const text = trimText(value, 120000);
   const nextSegments = normalizeLiveResponseSegments(segments);
   if (!text || isInternalCodexPromptText(text) || isGenericToolProgressText(text)) {
     return nextSegments;
   }
+  const existingIndex = messageId ? nextSegments.findIndex(row => row.message_id === messageId) : -1;
+  if (existingIndex >= 0) {
+    nextSegments[existingIndex] = { text, message_id: messageId };
+    return nextSegments;
+  }
+  if (!messageId && nextSegments.some((row) => row.text === text)) {
+    return nextSegments;
+  }
   const lastIndex = nextSegments.length - 1;
-  const lastText = lastIndex >= 0 ? nextSegments[lastIndex] : '';
-  if (lastText === text || lastText.startsWith(text)) {
-    return nextSegments;
+  const lastSegment = nextSegments[lastIndex];
+  const lastText = lastSegment?.text || '';
+  if (!messageId || !lastSegment?.message_id) {
+    if (lastText === text || lastText.startsWith(text)) {
+      return nextSegments;
+    }
+    if (lastText && text.startsWith(lastText)) {
+      nextSegments[lastIndex] = { text, message_id: messageId || lastSegment.message_id };
+      return nextSegments;
+    }
   }
-  if (lastText && text.startsWith(lastText)) {
-    nextSegments[lastIndex] = text;
-    return nextSegments.slice(-24);
-  }
-  if (nextSegments.some((row) => row === text)) {
-    return nextSegments;
-  }
-  nextSegments.push(text);
+  nextSegments.push({ text, message_id: messageId });
   return nextSegments.slice(-24);
 }
 
 function joinLiveResponseSegments(segments = []) {
-  return normalizeLiveResponseSegments(segments).join('\n\n');
+  return normalizeLiveResponseSegments(segments).map(row => row.text).join('\n\n');
 }
 
 function extractLiveResponseSegment(eventPayload = {}) {
@@ -272,10 +285,10 @@ export function applyLiveProgressEvent(liveAssistantMessage, eventPayload = {}) 
   );
   const eventResponseSegment = extractLiveResponseSegment(eventPayload);
   const responseSegments = eventResponseSegment
-    ? appendLiveResponseSegment(currentResponseSegments, eventResponseSegment)
+    ? appendLiveResponseSegment(currentResponseSegments, eventResponseSegment, trimText(eventPayload?.meta?.message_id, 160))
     : currentResponseSegments;
   const responseText = joinLiveResponseSegments(responseSegments);
-  const summaryText = responseText || buildLiveProgressSummary(eventPayload);
+  const summaryText = responseText || buildLiveProgressSummary(eventPayload, currentMeta);
   return {
     ...liveAssistantMessage,
     text: summaryText,

@@ -3,11 +3,9 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
-const folders = ['src/plugins/gel', 'plugins/scientific-illustration', 'plugins/qpcr-analysis'];
-assert.equal(new Set(folders.map(folder => fs.readFileSync(path.join(root, folder, 'i18n.js'), 'utf8'))).size, 1, 'First-party plugin runtimes stay identical');
 const parameters = message => [...new Set([...message.matchAll(/\{(\w+)\}/g)].map(match => match[1]))].sort();
 let checked = 0;
-for (const [folder, namespace] of [['src/plugins/gel', 'gel'], ['plugins/scientific-illustration', 'figura']]) {
+for (const [folder, namespace] of [['src/plugins/gel', 'gel']]) {
   const context = vm.createContext({});
   const index = fs.readFileSync(path.join(root, folder, 'index.html'), 'utf8');
   const scripts = [...index.matchAll(/<script\b[^>]*\bsrc="([^"]+)"[^>]*>/g)]

@@ -2,6 +2,9 @@ import { sampleUi } from './localization.js';
 import { makeCopySampleCode } from '../../lib/sample-records.js';
 import { containerToCsv, mergeContainerCsv, parseContainerCsv } from './csv-io.js';
 import { readTypeFieldsFrom } from './type-fields.js';
+import { bindFileDropTarget } from '../../lib/file-drop.js';
+import { notifyUnsupportedDrop } from '../../lib/notify.js';
+import { shellText } from '../../lib/i18n/shell.js';
 
 function importContainerCsv(ctx, section, container, csvText) {
   try {
@@ -255,6 +258,11 @@ export function bindWellSampleEvents(ctx) {
         renderSections();
       });
     });
+  });
+
+  // Markup is rebuilt on every render, so each fresh container gets its own binding.
+  inventorySections.querySelectorAll('.container-inline-detail').forEach((detail) => {
+    bindFileDropTarget({ target: detail, input: detail.querySelector('[data-container-import-input]'), onRejected: notifyUnsupportedDrop, caption: () => shellText('fileDrop.caption.container') });
   });
 
   inventorySections.querySelectorAll('[data-container-export-csv]').forEach((button) => {

@@ -53,6 +53,11 @@ export function clearPageRecordRender(record, {
     return;
   }
   cancelPageRecordRenderTasks(record);
+  // pdf.js defers this until the cancelled render settles.
+  try {
+    record.pdfPage?.cleanup();
+  } catch {}
+  record.pdfPage = null;
   if (record.canvas) {
     record.canvas.width = 0;
     record.canvas.height = 0;
@@ -61,6 +66,7 @@ export function clearPageRecordRender(record, {
   if (clearText && record.textLayer) {
     releaseTextSelectionBinding(record);
     i18nUi.setHtml(record.textLayer, '');
+    record.textLayerInstance = null;
     record.renderedTextScale = 0;
   }
   if (clearLinks && record.linkLayer) {
@@ -163,8 +169,10 @@ export function buildPageRecords({ doc, pageMetrics = [], onCanvasContextLost = 
       linkLayer,
       formLayer,
       overlay,
+      pdfPage: null,
       renderTask: null,
       textLayerBuilder: null,
+      textLayerInstance: null,
       textSelectionCleanup: null,
       renderedScale: 0,
       renderedTextScale: 0,

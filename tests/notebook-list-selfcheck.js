@@ -6,8 +6,6 @@ const { createAgentNotebookLookupRuntime } = require('../src/main/agent/tools/ag
 const { createAgentLookupSupport } = require('../src/main/agent/tools/agent-lookup-support.js');
 const { createAgentSubAppApi } = require('../src/main/agent/runtime/agent-sub-app-api.js');
 const { createAgentRuntimeSupport } = require('../src/main/agent/runtime/agent-runtime-support.js');
-const { loadEsmStyleModule } = require('./support/runtime.js');
-const path = require('node:path');
 const { getDirectMcpToolDefinitions, createDirectMcpToolRouter } = require('../src/main/agent/mcp-contract/direct-tools/index.js');
 const { buildHikariCodexMcpConfigBlock } = require('../src/main/agent/codex-agent/runtime-files.js');
 const contract = require('../docs/agent/mcp-contract/mcp-contract.json');
@@ -184,19 +182,7 @@ test('storage errors and a bounded live index never report a complete inventory'
   assert.ok(result.access.warning_codes.includes('notebook_index_incomplete'));
 });
 
-test('renderer and main snapshots preserve live title metadata and explicit incomplete coverage', async () => {
-  const { buildStateSnapshot } = loadEsmStyleModule(path.resolve(__dirname, '../src/renderer/modules/agent-chat/state-snapshot.js'));
-  const state = { settings: {}, projects: [{ id: 'p1', name: 'Atlas' }], protocols: [], workflows: [],
-    papers: [], inventory: {}, labInventory: { chemicals: [] },
-    notebookEntries: Array.from({ length: 80 }, (_, i) => entry(`n${i}`)) };
-  const snapshot = createAgentRuntimeSupport({ cleanText }).normalizeAgentSnapshot(buildStateSnapshot(state));
-  assert.equal(snapshot.notebook_lookup_bridge.complete, false);
-  assert.equal(snapshot.notebook_lookup_bridge.entries.length, 60);
-  const result = await createAgentNotebookLookupRuntime({ ...createAgentLookupSupport({ cleanText }), cleanText }).executeList({ snapshot });
-  assert.equal(result.status, 'partial');
-  assert.equal(result.access.complete, false);
-  assert.equal(result.items.length, 60);
-  assert.ok(result.items.every(item => item.title.startsWith('Experiment')));
+test('a capped main snapshot reports incomplete notebook coverage', async () => {
   const capped = createAgentRuntimeSupport({ cleanText }).normalizeAgentSnapshot({ notebookEntries: Array.from({ length: 200 }, (_, i) => entry(`n${i}`)) });
   assert.equal(capped.notebook_lookup_bridge.complete, false);
 });

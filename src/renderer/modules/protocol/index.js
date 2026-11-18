@@ -1,4 +1,6 @@
 import './localization.js';
+import { bindFileDropTarget, mergeFilesIntoInput } from '../../lib/file-drop.js';
+import { notifyUnsupportedDrop } from '../../lib/notify.js';
 import { requestLlmText } from '../../services/direct-llm.js';
 import { parseJsonFromText } from '../../lib/json.js';
 import { PLACEHOLDER_TOKEN_REGEX } from './constants.js';
@@ -14,6 +16,7 @@ import { serializeDraftSnapshot, snapshotFormControls } from '../../lib/unsaved-
 import { createProtocolDetailPanels } from './detail-panels.js';
 import { createProtocolEditorActions } from './editor-actions.js';
 import { renderProtocolPlaceholderPresetButtons } from './placeholder-presets.js';
+import { shellText } from '../../lib/i18n/shell.js';
 
 // Protocol list + editor. The right panel is in one mode at a time
 // (localState.protocolDetailMode: 'empty' | 'view' | 'edit'). Polish (one-shot
@@ -269,6 +272,11 @@ export function initProtocolManagement({
   ui.protocolGenerateAttachmentInput?.addEventListener('change', (event) => {
     void generationController.handleAttachmentSelection(event?.target?.files || []);
   });
+  bindFileDropTarget({
+    target: ui.protocolGenerateAttachmentInput?.closest?.('.protocol-generate-input-shell'),
+    caption: () => shellText('fileDrop.caption.attach'),
+    input: ui.protocolGenerateAttachmentInput
+  });
   ui.protocolGenerateSendBtn?.addEventListener('click', () => {
     void generationController.onGenerateProtocol();
   });
@@ -349,6 +357,16 @@ export function initProtocolManagement({
   ui.openProtocolJsonImportBtn?.addEventListener('click', importController.openProtocolJsonImportOverlay);
   ui.protocolJsonImportCloseBtn?.addEventListener('click', importController.closeProtocolJsonImportOverlay);
   ui.importProtocolJsonBtn?.addEventListener('click', importController.onImportProtocolJson);
+  bindFileDropTarget({
+    target: ui.protocolJsonImportFileInput?.closest?.('.protocol-json-import-dialog'),
+    caption: () => shellText('fileDrop.caption.protocolJson'),
+    accept: ui.protocolJsonImportFileInput?.getAttribute?.('accept'),
+    onRejected: notifyUnsupportedDrop,
+    onFiles: (files) => {
+      mergeFilesIntoInput(ui.protocolJsonImportFileInput, files, { append: false });
+      return importController.onImportProtocolJson();
+    }
+  });
   ui.protocolJsonImportOverlay?.addEventListener('click', (event) => {
     if (event.target === ui.protocolJsonImportOverlay) {
       importController.closeProtocolJsonImportOverlay();

@@ -24,6 +24,7 @@ function createCodexJsonEventHandler({
   const seenProgressEvents = new Set();
   const seenDisplayEvents = new Set();
   const activeToolCallsById = new Map();
+  const assistantMessagesById = new Map();
 
   function handleJsonStreamEvent(event = {}) {
     const plainDisplayEvent = extractCodexPlainOutputDisplayEvent(event);
@@ -43,39 +44,39 @@ function createCodexJsonEventHandler({
     if (!extracted) {
       return;
     }
-    let deltaText = cleanText(extracted.deltaText, 120000);
+    const messageId = extracted.messageId;
+    const previousText = messageId ? assistantMessagesById.get(messageId) || '' : streamedText;
     const fullText = cleanText(extracted.fullText, 120000);
-    if (fullText) {
-      if (fullText.startsWith(streamedText)) {
-        deltaText = fullText.slice(streamedText.length);
-      } else if (fullText !== streamedText) {
-        deltaText = fullText;
-      }
-      streamedText = fullText;
-    } else if (deltaText) {
-      streamedText += deltaText;
+    const nextText = fullText || previousText + cleanText(extracted.deltaText, 120000);
+    if (nextText !== previousText) {
+      const deltaText = nextText.startsWith(previousText) ? nextText.slice(previousText.length) : nextText;
+      if (messageId) assistantMessagesById.set(messageId, nextText);
+      streamedText = nextText;
+      emitStreamText(extracted, deltaText);
     }
-    if (streamedText || deltaText) {
-      emitStreamText(extracted, deltaText, fullText);
+    // The live stream already carries each token. Activity keeps complete
+    // messages so a mirrored delta cannot become an extra chat paragraph.
+    if (fullText) {
+      emitCodexCliDisplayEvent(onStream, seenDisplayEvents, {
+        text: fullText,
+        kind: 'assistant',
+        eventType: extracted.eventType
+      });
     }
   }
 
-  function emitStreamText(extracted, deltaText, fullText) {
+  function emitStreamText(extracted, deltaText) {
     try {
       onStream({
         type: 'codex_stream',
         event_type: cleanText(extracted.eventType, 120),
+        message_id: extracted.messageId,
         text_delta: deltaText,
         accumulated_text: streamedText
       });
     } catch {
       // Keep streaming best-effort; the final Codex response still resolves below.
     }
-    emitCodexCliDisplayEvent(onStream, seenDisplayEvents, {
-      text: deltaText || fullText,
-      kind: 'assistant',
-      eventType: extracted.eventType
-    });
   }
 
   function rememberToolCallProgress(progressEvent = {}) {

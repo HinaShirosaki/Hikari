@@ -1,6 +1,7 @@
 import { buildFolderKey } from './model.js';
 import { bindFileDropTarget } from '../../lib/file-drop.js';
 import { paperFailure, paperNotice, paperUi } from './localization.js';
+import { shellText } from '../../lib/i18n/shell.js';
 
 // DOM wiring for the papers library rail: uploads, folder clicks and renames,
 // paper drag-and-drop, and the view-activation observer.
@@ -236,6 +237,7 @@ function createLibraryEvents({
     elements.papersContextDeleteFolderBtn?.addEventListener('click', onDeleteJournalClubFromMenuClick);
     bindFileDropTarget({
       target: elements.papersLibraryRail || elements.journalClubList,
+      caption: () => shellText('fileDrop.caption.papersFolder'),
       accept: elements.paperPdfInput?.getAttribute?.('accept') || 'application/pdf,.pdf',
       multiple: true,
       onFiles: async (files) => {

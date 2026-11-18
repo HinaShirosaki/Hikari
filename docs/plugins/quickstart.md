@@ -195,7 +195,7 @@ When the basics work, the same client reaches further:
   [`cell-seeding`](../../examples/plugins/cell-seeding/) example.
 
 See [plugin-api.md §4–§5](plugin-api.md#4-layout-and-host-ui-verbs) for those
-verbs, and [`plugins/scientific-illustration`](../../plugins/scientific-illustration/)
+verbs, and [Figura](https://github.com/HinaShirosaki/Figura)
 for a plugin that uses all of them.
 
 ## 5. Make the UI failure-safe

@@ -8,11 +8,11 @@ const espree = require(require.resolve('espree', { paths: [path.dirname(require.
 const { sourceMarkup } = require('./markup.cjs');
 const root = path.resolve(__dirname, '../..');
 const areas = { 'home-dashboard': 'home', settings: 'settings', 'biology-notebook': 'notebook', assay: 'plate', 'sequence-viewer': 'dna', 'agent-chat': 'agent', papers: 'papers', workflow: 'workflow', protocol: 'protocol', 'personal-inventory': 'samples', 'lab-common-inventory': 'chemicals', 'tool-box': 'tools' };
-const plugins = { 'plugins/scientific-illustration': 'figura', 'plugins/qpcr-analysis': 'qpcr', 'src/plugins/gel': 'gel' };
+const plugins = { 'src/plugins/gel': 'gel' };
 const filesIn = dir => fs.readdirSync(path.join(root, dir), { recursive: true }).filter(f => /\.(?:js|mjs)$/.test(f) && !/(?:^|\/)vendor\/|(?:^|\/)tests\/|(?:^|\/)locales\//.test(f) && !/generated|(?:^|\/)i18n(?:\.mjs|\.js|\/)/.test(f)).map(f => path.join(dir, f));
 const human = text => typeof text === 'string' && /[A-Za-z]{3}/.test(text) && !/^\s*(?:https?:|data:|[#./])/.test(text) && !/^[A-Z_\d\s/().+%-]{1,14}$/.test(text) && !['Hikari', 'OpenAI', 'Codex', 'Plotly', 'Tabulator', 'GenBank', 'CropperJS'].includes(text);
 // Persisted record names and exported PowerPoint metadata use canonical data.
-const canonicalAssignments = new Set(['plugins/scientific-illustration/library.mjs#next.title', 'src/plugins/gel/workspace/figure/powerpoint.js#pptx.title']);
+const canonicalAssignments = new Set(['src/plugins/gel/workspace/figure/powerpoint.js#pptx.title']);
 const literals = node => node?.type === 'Literal' && typeof node.value === 'string' ? [node.value] : node?.type === 'ConditionalExpression' ? [...literals(node.consequent), ...literals(node.alternate)] : node?.type === 'LogicalExpression' && ['||', '??'].includes(node.operator) ? literals(node.right) : [];
 function walk(node, visit, parents = []) {
   if (!node || typeof node !== 'object') return;
@@ -104,7 +104,7 @@ async function main() {
   }
   // Third-party bundles must keep their original module format. Their own
   // language APIs are separate from Hikari's source-owned presentation layer.
-  for (const folder of ['src/plugins/gel/vendor','plugins/scientific-illustration/vendor']) {
+  for (const folder of ['src/plugins/gel/vendor']) {
     for (const file of fs.readdirSync(path.join(root, folder), { recursive: true }).filter(f => /\.(?:js|mjs)$/.test(f))) {
       if (/i18nUi|createPresentation/.test(fs.readFileSync(path.join(root, folder, file), 'utf8'))) errors.push(folder + '/' + file + ': application translation code reached a third-party bundle');
     }

@@ -709,7 +709,7 @@ test('papers PDF viewer virtualizes page rendering and prunes offscreen canvases
   assert.equal(renderSource.includes('for (const record of state.pageRecords)'), false);
   assert.match(pageRecordsSource, /record\.canvas\.width = 0/);
   assert.match(pageRecordsSource, /record\.canvas\.height = 0/);
-  assert.match(searchSource, /async function ensurePdfSearchTextLayers\(\)/);
+  assert.match(searchSource, /async function ensurePdfSearchTextLayers\(terms = null\)/);
   assert.match(searchSource, /renderPageTextLayerRecord/);
   assert.match(searchSource, /ctx\.pruneRenderedPageRecords\?\.\(\)/);
   assert.equal(renderingSource.includes('isStale() || isLinkActivationEnabled() === false'), false);

@@ -4,6 +4,8 @@ export const installPdfViewerDocumentCleanupController = (ctx) => {
   const { state } = ctx;
 
   function cancelScheduledRender() {
+    clearTimeout(state.zoomSettleTimer);
+    state.zoomSettleTimer = 0;
     const frame = state.renderFrame;
     state.renderFrame = 0;
     if (!frame) {

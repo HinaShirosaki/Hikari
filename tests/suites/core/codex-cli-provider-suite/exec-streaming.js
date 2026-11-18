@@ -8,6 +8,29 @@ module.exports = function registerCodexCliProviderSuiteExecStreaming(context = {
       delete require.cache[require.resolve(providerPath)];
       return require(providerPath);
     };
+
+    test('Codex displays Hikari calls inside an exec batch as tool activity', () => {
+      const { createCodexJsonEventHandler } = require(path.join(__dirname, 'src/main/lib/codex-cli-provider/request-stream.js'));
+      const events = [];
+      const stream = createCodexJsonEventHandler({ streamingEnabled: true, onStream: event => events.push(event) });
+      const input = [
+        'text("tools.mcp__hikari__inventory_lookup()");',
+        '// tools.mcp__hikari__chemical_lookup()',
+        'await tools.mcp__hikari__plugin_canvas({plugin_id:"scientific-illustration",request:{action:"apply", operations:ops}});',
+        'await tools.mcp__hikari__plugin_canvas({"plugin_id":"scientific-illustration","request":{"action":"render"}});',
+        'await tools.mcp__hikari__inventory_lookup(args);'
+      ].join('\n');
+      stream.handleJsonEvent({ type: 'response_item', payload: { type: 'custom_tool_call', name: 'exec', call_id: 'batch', input } });
+      stream.handleJsonEvent({ type: 'response_item', payload: { type: 'custom_tool_call_output', call_id: 'batch', output: [{ type: 'text', text: 'Finished' }] } });
+      stream.handleJsonEvent({ type: 'item.completed', item: { type: 'mcp_tool_call', server: 'hikari', tool: 'plugin_canvas',
+        arguments: { plugin_id: 'scientific-illustration', request: { action: 'inspect' } } } });
+      stream.handleJsonEvent({ type: 'response_item', payload: { type: 'custom_tool_call', name: 'exec', input: 'text(42);' } });
+
+      const labels = events.filter(event => event.type === 'codex_cli_display' && event.display_kind === 'tool').map(event => event.display_text);
+      const batchLabel = 'Editing the Figura canvas, rendering a Figura preview, and searching for samples…';
+      assert.deepEqual(labels, [batchLabel, batchLabel, 'Inspecting the Figura canvas…', 'exec: text(42);']);
+    });
+
     const defaultModelsCache = {
       models: [
         {
@@ -431,7 +454,7 @@ module.exports = function registerCodexCliProviderSuiteExecStreaming(context = {
           assert.equal(displayEvents.some((event) => event.display_text === 'Checking project context.' && event.display_kind === 'thinking'), true);
           assert.equal(displayEvents.some((event) => event.display_text === 'I am checking inventory.' && event.display_kind === 'assistant'), true);
           assert.equal(displayEvents.some((event) => event.display_text === 'I am checking inventory.' && event.display_kind === 'thinking'), false);
-          assert.equal(displayEvents.some((event) => event.display_kind === 'tool' && /inventory[ _]lookup/i.test(event.display_text) && /SUMO1/.test(event.display_text)), true);
+          assert.equal(displayEvents.some((event) => event.display_kind === 'tool' && event.display_text === 'Searching for samples (“SUMO1”)…'), true);
           assert.equal(displayEvents.some((event) => event.display_kind === 'assistant' && event.display_text === 'Final response from Codex.'), true);
           assert.equal(displayEvents.some((event) => /^\s*\{/.test(event.display_text || '')), false);
         } finally {

@@ -25,6 +25,7 @@ export const prepareAndSwapPageRecords = async (ctx, { pdfDocument, activeLoadTo
     pageMetrics: state.pageMetrics,
     onCanvasContextLost: (record) => {
       record.renderedScale = 0;
+      state.renderPassKey = '';
       ctx.scheduleVisiblePageRender?.();
     }
   });
@@ -76,9 +77,6 @@ export const prepareAndSwapPageRecords = async (ctx, { pdfDocument, activeLoadTo
         bitmapHeight: prerenderedStart.bitmapHeight
       });
       startRecord.renderedScale = swapScale;
-      try {
-        prerenderedStart.page?.cleanup?.();
-      } catch {}
     }
   }
 

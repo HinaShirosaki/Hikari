@@ -93,6 +93,19 @@ module.exports = function registerMcpStartup(context = {}) {
       assert.equal((await initializer.initialize()).ok, true);
     } finally { fs.rmSync(workspace, { recursive: true, force: true }); }
   });
+  test('MCP env carries request context, never workspace records', () => {
+    // Two ~460 KB env copies once overflowed the stdio server's stack before the handshake.
+    const { buildCodexMcpContext } = require('../../../../src/main/agent/codex-agent/prompts');
+    const protocols = Array.from({ length: 500 }, (_, i) => ({ id: `p${i}`, steps: [{ text: 'x'.repeat(2000) }] }));
+    const settings = { storagePath: '/data', agent: { disabledMcpToolNames: ['memory'] } };
+    const snapshot = { settings, scheduled_task: { id: 'task-1' }, protocols, notebookEntries: protocols, papers: [{ title: 'y'.repeat(50000) }] };
+    const json = JSON.stringify(buildCodexMcpContext({ traceContext: { requestId: 'turn' }, snapshot }));
+    assert.ok(json.length < 4000, `env context is ${json.length} chars`);
+    const context = JSON.parse(json);
+    assert.deepEqual(Object.keys(context.snapshot).sort(), ['scheduled_task', 'settings']);
+    assert.deepEqual(context.snapshot.settings, settings);
+  });
+
   test('generated MCP command completes a real stdio handshake and tool call', async () => {
     const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
     const { StdioClientTransport } = require('@modelcontextprotocol/sdk/client/stdio.js');

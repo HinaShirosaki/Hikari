@@ -1,3 +1,6 @@
+import { bindFileDropTarget } from '../../../lib/file-drop.js';
+import { notifyUnsupportedDrop } from '../../../lib/notify.js';
+import { shellText } from '../../../lib/i18n/shell.js';
 // Wires the assay page DOM elements to their handlers. Pure wiring, no state.
 export function bindAssayEvents({
   elements,
@@ -54,6 +57,13 @@ export function bindAssayEvents({
   });
   elements.assayImportTemplateBtn?.addEventListener('click', () => elements.assayImportFile?.click());
   elements.assayImportFile?.addEventListener('change', layoutManager.onImportCsv);
+  bindFileDropTarget({
+    target: elements.assayCreateLayout?.querySelector?.('.left-rail-template__main') || elements.assayCreateLayout,
+    caption: () => shellText('fileDrop.caption.plateLayout'),
+    input: elements.assayImportFile,
+    disabled: () => Boolean(elements.assayCreateLayout?.hidden),
+    onRejected: notifyUnsupportedDrop
+  });
   elements.assayResultsAssaySelect?.addEventListener('change', onResultsAssaySelected);
   elements.assayAnalysisKindInput?.addEventListener('change', analysisView.onAnalysisMethodChange);
   elements.assayAnalysisGroupByInput?.addEventListener('change', analysisView.onAnalysisMethodChange);

@@ -143,7 +143,8 @@ async function hydrateToolSnapshot({
       || defaultDataFilePath,
     2400
   );
-  if (!dataFilePath && !fallbackDataFilePath) {
+  // The storage root alone locates every record folder.
+  if (!dataFilePath && !fallbackDataFilePath && !cleanText(sourceSnapshot.settings?.storagePath, 2400)) {
     return sourceSnapshot;
   }
   try {

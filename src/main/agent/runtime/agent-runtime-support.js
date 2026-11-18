@@ -215,7 +215,10 @@ function createAgentRuntimeSupport(deps = {}) {
       : null;
     const normalizedSnapshot = {
       projects: asArray(snapshot.projects).slice(0, 40),
-      project_directory: asArray(snapshot.project_directory),
+      // Paper destinations can name any project, beyond the 40-project cap above.
+      project_directory: asArray(snapshot.project_directory).length
+        ? asArray(snapshot.project_directory)
+        : asArray(snapshot.projects).map((project) => ({ id: cleanText(project?.id, 120), name: cleanText(project?.name, 220) })),
       protocols: asArray(snapshot.protocols).slice(0, 500),
       notebookEntries: asArray(snapshot.notebookEntries).slice(0, 180),
       ...(notebookBridge ? {

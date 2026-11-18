@@ -26,7 +26,8 @@ async function run() {
       draftCalls++;
       assert.equal(tool, 'notebook-draft');
       return draftRuntime.generateNotebookDraft({
-        snapshot: source, project: args.project, protocolCandidates: args.protocol_candidates,
+        // Like runAgentTool: request context plus records loaded from storage (`snapshot` here).
+        snapshot: { ...snapshot, ...source }, project: args.project, protocolCandidates: args.protocol_candidates,
         stepEdits: args.step_edits, pendingValues: args.pending_values, message: context.message
       });
     }

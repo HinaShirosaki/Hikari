@@ -200,11 +200,6 @@
   transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
-.papers-viewer-shell.is-file-drop-active {
-  border-color: var(--theme-accent-line);
-  box-shadow: inset 0 0 0 2px var(--theme-accent-soft);
-}
-
 .papers-viewer-shell,
 .papers-comment-sidebar {
   min-width: 0;
@@ -217,6 +212,7 @@
 }
 
 .papers-viewer-workspace {
+  position: relative;
   display: block;
   height: 100%;
   min-height: 0;
@@ -244,7 +240,8 @@
   overflow: auto;
   overflow-anchor: none;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable both-edges;
+  /* Native bars take layout width; pdf-viewer-overlay-scrollbars.js floats thumbs instead. */
+  scrollbar-width: none;
   padding: var(--space-8) var(--space-18) var(--space-10);
   display: block;
   min-width: 0;
@@ -290,6 +287,44 @@
 .papers-viewer-highlight-layer {
   pointer-events: none;
   z-index: 2;
+}
+
+.papers-viewer-scroll-thumb {
+  position: absolute;
+  z-index: 8;
+  border-radius: 999px;
+  background: var(--papers-scroll-thumb);
+  box-shadow: 0 0 0 1px var(--papers-scroll-thumb-rim);
+  opacity: 0;
+  transition: opacity 200ms ease, background-color 120ms ease;
+}
+
+/* The stage fills the workspace, so thumbs anchor to its edges and only translate. */
+.papers-viewer-scroll-thumb.is-y {
+  top: 0;
+  right: 2px;
+  width: var(--theme-scrollbar-size);
+}
+
+.papers-viewer-scroll-thumb.is-x {
+  left: 0;
+  bottom: 2px;
+  height: var(--theme-scrollbar-size);
+}
+
+.papers-viewer-workspace.is-scrolling .papers-viewer-scroll-thumb,
+.papers-viewer-workspace:hover .papers-viewer-scroll-thumb,
+.papers-viewer-scroll-thumb.is-dragging {
+  opacity: 1;
+}
+
+.papers-viewer-scroll-thumb:hover,
+.papers-viewer-scroll-thumb.is-dragging {
+  background: var(--papers-scroll-thumb-active);
+}
+
+.papers-viewer-page-layer.is-zooming .papers-viewer-text-layer {
+  display: none;
 }
 
 .papers-viewer-highlight {

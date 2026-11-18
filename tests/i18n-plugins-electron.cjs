@@ -15,8 +15,6 @@ async function main() {
   await app.whenReady();
   let checks = 0;
   for (const [folder, ns, htmlPath, dynamic, translated] of [
-    ['plugins/scientific-illustration', 'figura', 'index.html', 'Custom · {p0} × {p1}', 'Personalizado · {p0} × {p1}'],
-    ['plugins/qpcr-analysis', 'qpcr', 'index.html', 'Saving inputs…', 'Guardando entradas…'],
     ['src/plugins/gel', 'gel', 'vendor/gel-view.html', 'Load a gel image before cropping.', 'Carga una imagen de gel antes de recortar.']
   ]) {
     const folderPath = path.join(root, folder);

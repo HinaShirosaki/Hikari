@@ -314,41 +314,11 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(payloadSeen.llm.apiKey, 'sk-local-key');
   assert.equal(Object.hasOwn(payloadSeen.agent, 'deepResearchEnabled'), false);
   assert.equal(payloadSeen.projectId, 'p1');
-  assert.equal(payloadSeen.stateSnapshot.snapshot_mode, 'thin');
   assert.equal(payloadSeen.stateSnapshot.data_file_path, '/tmp/hikari-data.json');
-  assert.equal(payloadSeen.stateSnapshot.protocols.length, 1);
-  assert.equal(payloadSeen.stateSnapshot.protocols[0].name, 'Cell Prep');
-  assert.equal(payloadSeen.stateSnapshot.protocols[0].steps.length, 2);
-  assert.equal(payloadSeen.stateSnapshot.notebookEntries.length, 0);
-  assert.equal(payloadSeen.stateSnapshot.notebook_lookup_bridge.version, 1);
-  assert.equal(payloadSeen.stateSnapshot.notebook_lookup_bridge.complete, true);
-  assert.equal(payloadSeen.stateSnapshot.notebook_lookup_bridge.entries.length, 1);
-  assert.equal(payloadSeen.stateSnapshot.notebook_lookup_bridge.entries[0].id, 'n1');
-  assert.equal(payloadSeen.stateSnapshot.context_counts.protocols, 1);
-  assert.equal(payloadSeen.stateSnapshot.context_counts.notebookEntries, 1);
-  assert.equal(payloadSeen.stateSnapshot.workflows.length, 1);
-  assert.equal(payloadSeen.stateSnapshot.workflows[0].projectId, 'p1');
-  assert.equal(payloadSeen.stateSnapshot.workflows[0].notebookEntryIds[0], 'n1');
-  assert.equal(payloadSeen.stateSnapshot.workflows[0].blocks.length, 2);
-  assert.equal(payloadSeen.stateSnapshot.workflows[0].blocks[0].protocolId, 'pr1');
-  assert.equal(payloadSeen.stateSnapshot.workflows[0].links.length, 1);
-  assert.equal(payloadSeen.stateSnapshot.workflows[0].links[0].toBlockId, 'b2');
-  assert.equal(payloadSeen.stateSnapshot.papers.length, 1);
-  assert.equal(payloadSeen.stateSnapshot.papers[0].availability_status, 'deep_ready');
-  assert.equal(payloadSeen.stateSnapshot.papers[0].deep_read_ready, true);
-  assert.equal(payloadSeen.stateSnapshot.papers[0].knowledge_markdown_relative_path, 'KnowledgeBase/papers.md/atlas-uploaded-paper/paper.md');
-  assert.equal(Array.isArray(payloadSeen.stateSnapshot.papers[0].key_figures), true);
-  assert.equal(payloadSeen.stateSnapshot.papers[0].key_figures.length > 0, true);
-  assert.equal(payloadSeen.stateSnapshot.assays.length, 1);
-  assert.equal(payloadSeen.stateSnapshot.assays[0].project_id, 'p1');
-  assert.equal(payloadSeen.stateSnapshot.gelAnalyses.length, 1);
-  assert.equal(payloadSeen.stateSnapshot.gelAnalyses[0].project_id, 'p1');
-  assert.equal(payloadSeen.stateSnapshot.experimentData.schema_name, 'hikari_experiment_json');
-  assert.equal(payloadSeen.stateSnapshot.experimentData.notebook_runs[0].notebook_state, 'executed');
-  assert.equal(payloadSeen.stateSnapshot.experimentData.notebook_runs[0].executed_at, '');
-  assert.equal(payloadSeen.stateSnapshot.experimentData.notebook_runs[0].agent_draft_status, '');
-  assert.equal(payloadSeen.stateSnapshot.experimentData.assay_runs.length, 1);
-  assert.equal(payloadSeen.stateSnapshot.experimentData.gel_runs.length, 1);
+  // Tools read records from storage; the request carries settings and context only.
+  for (const key of ['protocols', 'notebookEntries', 'notebook_lookup_bridge', 'workflows', 'papers', 'assays', 'gelAnalyses', 'experimentData', 'projects']) {
+    assert.equal(Object.hasOwn(payloadSeen.stateSnapshot, key), false, key);
+  }
   assert.equal(autoSaveCalls.length, 1);
   assert.equal(autoSaveCalls[0].filePath, '');
   assert.equal(state.agentChat.messages.length, 2);

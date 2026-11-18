@@ -31,6 +31,7 @@ function createCodexStreamProgressHandler({
   recordLifecycleEvent = () => {}
 } = {}) {
   let lastStreamText = '';
+  let lastStreamMessageId = '';
   let streamedFinalAnswerText = '';
   let streamedAskUserPayload = null;
   let streamedNotebookDraftPayload = null;
@@ -182,10 +183,12 @@ function createCodexStreamProgressHandler({
         || lastStreamText,
       120000
     );
-    if (!streamText || (!force && streamText === lastStreamText)) {
+    const messageId = cleanText(streamEvent.message_id, 160);
+    if (!streamText || (!force && streamText === lastStreamText && messageId === lastStreamMessageId)) {
       return;
     }
     lastStreamText = streamText;
+    lastStreamMessageId = messageId;
     emitAgentProgress({
       stage: 'codex_agent_stream',
       status: 'streaming',
@@ -194,6 +197,7 @@ function createCodexStreamProgressHandler({
       meta: {
         stream_text: streamText,
         text_delta: cleanText(streamEvent.text_delta || streamEvent.textDelta, 120000),
+        message_id: messageId,
         event_type: cleanText(streamEvent.event_type || streamEvent.eventType, 120)
       }
     });

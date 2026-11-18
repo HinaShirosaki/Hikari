@@ -14,6 +14,7 @@ export {
   getAssayResultImportTarget
 } from './result-import-detector.js';
 import { plateFailure, plateMessage, plateNotice, plateUi, setPlateAttribute } from './localization.js';
+import { shellText } from '../../lib/i18n/shell.js';
 
 export function createAssayResultsManager({
   runtime,
@@ -374,7 +375,8 @@ export function createAssayResultsManager({
   }
 
   bindFileDropTarget({
-    target: elements.assayResultsLayout || assayResultTable,
+    target: elements.assayResultsLayout?.querySelector?.('.left-rail-template__main') || elements.assayResultsLayout || assayResultTable,
+    caption: () => shellText('fileDrop.caption.plateResults'),
     accept: assayResultFileInput?.getAttribute?.('accept') || '',
     disabled: () => Boolean(elements.assayResultsLayout?.hidden),
     onFiles: ([file]) => importResultFile(file),

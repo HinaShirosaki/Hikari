@@ -12,7 +12,9 @@ import { createWorkflowStepState } from './actions/step-state.js';
 import { createWorkflowTemplateEditor } from './actions/template-editor.js';
 import { createWorkflowExecutionBoard } from './actions/execution-board.js';
 import { showTransientNotice } from '../../lib/notify.js';
+import { bindFileDropTarget, dropIntoInput } from '../../lib/file-drop.js';
 import { workflowText } from './localization.js';
+import { shellText } from '../../lib/i18n/shell.js';
 
 export function createWorkflowActions(config = {}) {
   const state = config?.state || {};
@@ -458,6 +460,18 @@ export function createWorkflowActions(config = {}) {
     elements.workflowDeleteRunBtn?.addEventListener('click', onDeleteWorkflow);
     elements.workflowExecutionBoard?.addEventListener('click', onExecutionBoardClick);
     elements.workflowExecutionBoard?.addEventListener('change', onExecutionBoardChange);
+    // Files dropped anywhere on the board attach to the step under the cursor,
+    // or to the open step when dropped between steps.
+    const stepFileInput = (node) => node?.closest?.('.workflow-drawer-details')?.querySelector('[data-workflow-step-files]:not(:disabled)')
+      || elements.workflowExecutionBoard?.querySelector('.workflow-drawer-details[open] [data-workflow-step-files]:not(:disabled)');
+    bindFileDropTarget({
+      target: elements.workflowExecutionBoard,
+      caption: () => shellText('fileDrop.caption.workflowStep'),
+      highlight: () => elements.workflowExecutionBoard?.querySelector('.workflow-drawer'),
+      multiple: true,
+      disabled: () => !stepFileInput(null),
+      onFiles: (files, event) => dropIntoInput(stepFileInput(event.target), files)
+    });
 
     graphController.bindEvents?.();
   }

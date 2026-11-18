@@ -42,7 +42,23 @@ test('agent-chat live progress keeps tool display JSON out of assistant text', (
   assert.equal(withToolOutput.meta.live_progress.response_text, '');
   assert.equal(withToolOutput.meta.live_progress.codex_cli_display_rows.length, 1);
 
-  const withAssistantAnswer = liveProgressModule.applyLiveProgressEvent(withToolOutput, {
+  const toolLabel = 'Searching for samples…';
+  const withToolStatus = liveProgressModule.applyLiveProgressEvent(withToolOutput, {
+    stage: 'tool_call_started',
+    status: 'started',
+    routing_intent: 'codex_agent',
+    tool_name: 'exec',
+    message: toolLabel,
+    meta: { tool_call_text: toolLabel }
+  });
+  const withDuplicateDisplay = liveProgressModule.applyLiveProgressEvent(withToolStatus, {
+    stage: 'codex_cli_display',
+    meta: { codex_display_kind: 'tool', codex_display_text: toolLabel }
+  });
+  assert.equal(withDuplicateDisplay.text, toolLabel);
+  assert.equal(withDuplicateDisplay.meta.live_progress.response_text, '');
+
+  const withAssistantAnswer = liveProgressModule.applyLiveProgressEvent(withDuplicateDisplay, {
     client_request_id: 'agent-request-tool-json',
     stage: 'codex_cli_display',
     status: 'streaming',
@@ -69,6 +85,54 @@ test('agent-chat live progress keeps tool display JSON out of assistant text', (
     .find((row) => row.stage === 'codex_agent_completed');
   assert.equal(waitingRow.text, 'Waiting for your answer');
 });
+test('Codex token streaming updates each chat paragraph once across message and transcript events', () => {
+  const liveProgress = loadEsmStyleModule(path.join(__dirname, 'src/renderer/modules/agent-chat/live-progress-state.js'));
+  const { createCodexJsonEventHandler } = require(path.join(__dirname, 'src/main/lib/codex-cli-provider/request-stream.js'));
+  const { createCodexStreamProgressHandler } = require(path.join(__dirname, 'src/main/agent/codex-agent/stream-events.js'));
+  let message = liveProgress.buildLiveAssistantPlaceholder('stream-regression', 'Prepare an ATAC-seq protocol', () => 'live');
+  const { emitStreamProgress } = createCodexStreamProgressHandler({
+    cleanText: value => String(value || ''),
+    emitAgentProgress: event => { message = liveProgress.applyLiveProgressEvent(message, event); }
+  });
+  const stream = createCodexJsonEventHandler({ streamingEnabled: true, onStream: emitStreamProgress });
+  const paragraphs = [];
+  const samples = [
+    ['commentary', 'I’ll use the Hikari protocol workflow to prepare a standard bulk ATAC-seq protocol for review, with assumptions about the sample and input clearly stated.'],
+    ['commentary', 'I found no saved ATAC-seq protocol. I’m preparing a draft for review.'],
+    ['final_answer', 'The draft is ready.\n\nReview the sample assumptions before saving it.']
+  ];
+  samples.forEach(([phase, text], index) => {
+    const id = `assistant-${index}`;
+    stream.handleJsonEvent({ type: 'item.started', item: { type: 'agent_message', id, phase, text: '' } });
+    let accumulated = '';
+    for (const delta of text.match(/\s+|[^\s]+/gu)) {
+      accumulated += delta;
+      stream.handleJsonEvent({ type: 'agent_message_delta', item_id: id, delta });
+      assert.equal(message.meta.live_progress.response_text, [...paragraphs, accumulated.trim()].join('\n\n'));
+      assert.equal(message.meta.live_progress.response_segments.length, paragraphs.length + 1);
+      // A late transcript copy of an earlier message must not rewind the stream.
+      if (index > 0) {
+        stream.handleJsonEvent({ type: 'response_item', payload: {
+          type: 'message', role: 'assistant', id: 'assistant-0', phase: 'commentary',
+          content: [{ type: 'output_text', text: samples[0][1] }]
+        } });
+        assert.equal(stream.getStreamedText(), accumulated);
+        assert.equal(message.meta.live_progress.response_text, [...paragraphs, accumulated.trim()].join('\n\n'));
+      }
+    }
+    stream.handleJsonEvent({ type: 'item.completed', item: { type: 'agent_message', id, phase, text } });
+    paragraphs.push(text);
+    assert.equal(message.meta.live_progress.response_text, paragraphs.join('\n\n'));
+  });
+  const corrected = 'The protocol draft is ready.\n\nReview the sample assumptions before saving it.';
+  stream.handleJsonEvent({ type: 'item.completed', item: {
+    type: 'agent_message', id: 'assistant-2', phase: 'final_answer', text: corrected
+  } });
+  assert.equal(message.meta.live_progress.response_text, [...paragraphs.slice(0, -1), corrected].join('\n\n'));
+  assert.equal(message.meta.live_progress.response_segments.length, 3);
+  assert.deepEqual(Array.from(message.meta.live_progress.codex_cli_display_rows, row => row.text), [...paragraphs, corrected]);
+});
+
 test('agent-chat clarification cards disappear after one answer or any later user turn', () => {
   const questionRenderer = loadEsmStyleModule(path.join(
     __dirname,
@@ -602,6 +666,29 @@ test('agent-chat renders Codex user questions and returns option answers', async
   assert.equal(document.getElementById('agent-status').textContent, 'Complete.');
   assert.doesNotMatch(history.innerHTML, /Working on this/);
 });
+test('agent-chat shows Hikari tool labels for saved Codex exec rows', () => {
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'rendering.js'));
+  const document = createMockDocument(['agent-chat-history']);
+  const history = document.getElementById('agent-chat-history');
+  renderingModule.renderHistory({
+    historyNode: history,
+    messages: [{ id: 'saved-exec', role: 'assistant', text: 'Preview ready.', meta: {
+      routing_intent: 'codex_agent',
+      codex_cli_display_rows: [
+        { kind: 'tool', text: 'exec: await tools.mcp__hikari__plugin_canvas({plugin_id:"scientific-illustration",request:{action:"render"}});' },
+        { kind: 'tool', text: 'Inventory lookup, Notebook lookup.' },
+        'exec: text(42);'
+      ]
+    } }],
+    state: { settings: { agent: {} } },
+    safeText: shared.safeText
+  });
+  assert.match(history.innerHTML, /agent-thinking-trace-item">Rendering a Figura preview…/u);
+  assert.match(history.innerHTML, /agent-thinking-trace-item">Searching for samples and checking the lab notebook…/u);
+  assert.match(history.innerHTML, /agent-thinking-trace-item">exec: text\(42\);/u);
+  assert.doesNotMatch(history.innerHTML, /mcp__hikari__plugin_canvas/u);
+});
+
 test('agent-chat renders completed science thinking trace details in assistant metadata', () => {
   const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'rendering.js'));
   const document = createMockDocument(['agent-chat-history']);

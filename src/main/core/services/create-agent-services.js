@@ -25,6 +25,7 @@ const { createAgentPlotlyGraphRuntime } = require('../../agent/tools/agent-plotl
 const { createAgentMemoryRuntime } = require('../../agent/context/agent-memory.js');
 const { createNotebookDraftRuntime } = require('../../agent/tools/agent-notebook-draft.js');
 const { createWebSearchRuntime } = require('../../agent/tools/agent-web-search.js');
+const { hydrateToolSnapshot } = require('../../agent/tools/tool-executors/shared.js');
 const { createLiteratureSearchRuntime } = require('../../papers/search/agent-literature-search.js');
 const { createLiteratureSearchWorkflowRuntime } = require('../../papers/workflow/agent-literature-search-workflow.js');
 const { createPurchaseRecommendationRuntime } = require('../../agent/tools/agent-purchase-recommendation.js');
@@ -235,7 +236,11 @@ function createMainAgentServices(deps = {}) {
     buildSkillsPromptPayload: agentSkillRuntime.buildSkillsPromptPayload,
     async runAgentTool(toolName, args, rawSnapshot, options = {}) {
       const normalizedArgs = normalizeToolInvocationArgs(args);
-      const snapshot = agentRuntimeSupport.normalizeAgentSnapshot(rawSnapshot);
+      // Requests carry request context, not workspace records; the chat saves
+      // first, so every tool reads protocols, pages, projects and papers from storage.
+      const snapshot = agentRuntimeSupport.normalizeAgentSnapshot(await hydrateToolSnapshot({
+        snapshot: rawSnapshot, context: options, cleanText, hydrateSnapshotFromBundle, getDefaultDataFilePath
+      }));
       const snapshotDataFilePath = cleanText(
         snapshot?.data_file_path || snapshot?.dataFilePath,
         1600

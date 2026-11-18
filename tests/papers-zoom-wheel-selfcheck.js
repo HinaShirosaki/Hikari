@@ -16,7 +16,7 @@ function makeCtx() {
   const ctx = {
     state: { zoom: 1, fitWidth: true, pdfDocument: {}, zoomWheelFrame: 0, pendingZoomDelta: 0 },
     getWindowRef: () => ({ requestAnimationFrame: (cb) => rafQueue.push(cb) }),
-    renderDocumentPages: async () => {}
+    previewZoom: () => {}
   };
   installPdfViewerPdfNavigationController(ctx);
   return { ctx, flushRaf: () => rafQueue.splice(0).forEach((cb) => cb()) };
@@ -44,17 +44,17 @@ function wheel(overrides) {
   ctx.handleZoomWheel(w.event);
   assert.equal(w.prevented, true, 'ctrl+wheel preventDefaults native page zoom');
   flushRaf();
-  assert.ok(Math.abs(ctx.state.zoom - 1.2) < 1e-9, 'per-frame delta clamped to one ZOOM_STEP (1 -> 1.2)');
+  assert.ok(Math.abs(ctx.state.zoom - Math.exp(0.2)) < 1e-9, 'per-frame delta clamped to one ZOOM_STEP (1 -> e^0.2)');
   assert.equal(ctx.state.fitWidth, false, 'zooming exits fit-width mode');
 }
 
 // --- many pinch events within one frame coalesce into a single zoom ---
 {
   const { ctx, flushRaf } = makeCtx();
-  ctx.handleZoomWheel(wheel({ deltaY: -5 }).event);  // +0.05
-  ctx.handleZoomWheel(wheel({ deltaY: -5 }).event);  // +0.05
+  ctx.handleZoomWheel(wheel({ deltaY: -5 }).event);  // e^+0.05
+  ctx.handleZoomWheel(wheel({ deltaY: -5 }).event);  // e^+0.05
   flushRaf();
-  assert.ok(Math.abs(ctx.state.zoom - 1.1) < 1e-9, 'two pinch ticks coalesce to one 0.10 zoom');
+  assert.ok(Math.abs(ctx.state.zoom - Math.exp(0.1)) < 1e-9, 'two pinch ticks coalesce to one e^0.10 zoom');
 }
 
 // --- with no document open, zoom is a no-op (and does not block native scroll) ---
@@ -66,6 +66,31 @@ function wheel(overrides) {
   flushRaf();
   assert.equal(w.prevented, false, 'no document: ctrl+wheel left alone');
   assert.equal(ctx.state.zoom, 1, 'no document: no zoom');
+}
+
+// --- zoomed past the stage width: a sloped scroll pans both axes (no axis rails) ---
+{
+  const { ctx } = makeCtx();
+  ctx.elements = { stage: { scrollWidth: 2000, clientWidth: 700, scrollLeft: 10, scrollTop: 10 } };
+  const w = wheel({ ctrlKey: false, deltaMode: 0, deltaX: 3, deltaY: 4 });
+  ctx.handleZoomWheel(w.event);
+  assert.equal(w.prevented, true, 'zoomed: viewer pans instead of native railed scroll');
+  assert.deepEqual([ctx.elements.stage.scrollLeft, ctx.elements.stage.scrollTop], [13, 14], 'both axes move');
+  assert.equal(ctx.state.zoom, 1, 'panning does not zoom');
+
+  ctx.handleZoomWheel(wheel({ ctrlKey: false, deltaMode: 0, deltaX: 0.5, deltaY: 0.5 }).event);
+  ctx.handleZoomWheel(wheel({ ctrlKey: false, deltaMode: 0, deltaX: 0.5, deltaY: 0.5 }).event);
+  assert.deepEqual([ctx.elements.stage.scrollLeft, ctx.elements.stage.scrollTop], [14, 15], 'sub-pixel deltas accumulate');
+}
+
+// --- page fits the stage width: native scrolling is left alone ---
+{
+  const { ctx } = makeCtx();
+  ctx.elements = { stage: { scrollWidth: 700, clientWidth: 700, scrollLeft: 0, scrollTop: 0 } };
+  const w = wheel({ ctrlKey: false, deltaMode: 0, deltaX: 3, deltaY: 4 });
+  ctx.handleZoomWheel(w.event);
+  assert.equal(w.prevented, false, 'fit width: native scroll');
+  assert.equal(ctx.elements.stage.scrollTop, 0);
 }
 
 console.log('papers-zoom-wheel-selfcheck: all assertions passed');

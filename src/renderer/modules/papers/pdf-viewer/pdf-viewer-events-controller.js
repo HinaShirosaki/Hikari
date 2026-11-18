@@ -1,4 +1,5 @@
 import { ZOOM_STEP } from './pdf-viewer-constants.js';
+import { attachOverlayScrollbars } from './pdf-viewer-overlay-scrollbars.js';
 
 export const installPdfViewerEventsController = (ctx) => {
   const { elements, state } = ctx;
@@ -105,6 +106,9 @@ export const installPdfViewerEventsController = (ctx) => {
     });
     stage?.addEventListener('scroll', ctx.handleStageScroll, { passive: true });
     stage?.addEventListener('wheel', ctx.handleZoomWheel, { passive: false });
+    if (stage) {
+      attachOverlayScrollbars(stage, pageLayer);
+    }
     pageLayer?.addEventListener('click', ctx.handleOverlayClick);
     pageLayer?.addEventListener('pointerdown', ctx.handleTextSelectionPointerDown);
     pageLayer?.addEventListener('pointermove', ctx.handleHighlightHover, { passive: true });

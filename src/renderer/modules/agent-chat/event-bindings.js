@@ -1,8 +1,10 @@
+import { bindFileDropTarget } from '../../lib/file-drop.js';
 import { trimText } from './shared.js';
 import { applyLiveProgressEvent } from './live-progress-state.js';
 import { extractPlotlyGraphArtifactFromProgressEvent } from './plotly-artifacts.js';
 import { agentFailure, agentUi } from './localization.js';
 import { normalizeScopeKey } from '../app-state/agent-chat-normalizer.js';
+import { shellText } from '../../lib/i18n/shell.js';
 
 export function bindAgentChatEvents({
   dom,
@@ -166,6 +168,11 @@ export function bindAgentChatEvents({
   dom.attachmentInput?.addEventListener('change', (event) => {
     void attachmentsController.handleSelection(event?.target?.files || []);
   });
+  if (dom.attachmentInput) {
+    const shell = dom.conversationShell || dom.input.closest?.('.agent-composer-shell');
+    // Home hosts the chat inside a dialog: the whole dialog is the drop area.
+    bindFileDropTarget({ target: shell?.closest?.('.app-dialog-surface') || shell, input: dom.attachmentInput, caption: () => shellText('fileDrop.caption.attach') });
+  }
 
   dom.attachmentList?.addEventListener('click', (event) => {
     const removeButton = event?.target?.closest?.('[data-agent-remove-attachment]')

@@ -120,7 +120,7 @@ function runCodexAppServerTurn({
       }
       if (!threadId || params.threadId !== threadId) return;
       if (method === 'turn/started') turnId = params.turn.id;
-      if (method === 'item/agentMessage/delta') onEvent?.({ type: 'agent_message_delta', delta: params.delta });
+      if (method === 'item/agentMessage/delta') onEvent?.({ type: 'agent_message_delta', item_id: params.itemId, delta: params.delta });
       if (method === 'item/started' || method === 'item/completed') {
         const item = params.item;
         if (method === 'item/started') items.set(item.id, item);

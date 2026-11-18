@@ -322,6 +322,9 @@ export function createSequenceViewerAlignmentController(config = {}) {
         || elements.alignmentQueryInput?.getAttribute?.('accept')
         || '.ab1,.abi,.gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.txt,.seq',
       multiple: false,
+      // The dialog carries its own translated caption (data-i18n-caption).
+      highlight: () => elements.alignmentWorkspace?.querySelector?.('.sequence-viewer-alignment-dialog'),
+      caption: () => elements.alignmentWorkspace?.querySelector?.('.sequence-viewer-alignment-dialog')?.dataset.caption,
       onFiles: async ([file]) => {
         await loadSequencingAlignmentQuery({
           file,

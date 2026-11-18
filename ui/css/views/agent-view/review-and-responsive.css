@@ -229,6 +229,7 @@
 .agent-progress-flow-text {
   display: inline-block;
   max-width: 100%;
+  overflow-wrap: anywhere;
   color: var(--theme-text);
 }
 

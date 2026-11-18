@@ -16,7 +16,6 @@ const cleanText = (value, limit = 0) => limit > 0 ? String(value || '').trim().s
 const asArray = (value) => Array.isArray(value) ? value : [];
 const renderer = (file) => loadEsmStyleModule(path.join(__dirname, '../src/renderer/modules', file));
 const { normalizeAgentResponse } = renderer('agent-chat/response.js');
-const { buildStateSnapshot } = renderer('agent-chat/state-snapshot.js');
 const { buildAssistantResponseMessage } = renderer('agent-chat/assistant-message-meta.js');
 const { createNotebookDraftAgentAdapter, normalizeNotebookDraft, buildNotebookEntryFromDraft } = renderer('biology-notebook/agent/notebook-drafts.js');
 const { createNotebookHistoryActions } = renderer('agent-chat/history-notebook-actions.js');
@@ -148,10 +147,8 @@ test('larger protocols and late placeholders survive the real notebook preparati
   const protocol = { id: 'protocol', name: 'Long protocol', materials: Array.from({ length: 100 }, (_, i) => `Material ${i}`),
     steps: Array.from({ length: 200 }, (_, i) => ({ text: i === 199 ? 'Final {{ph:p}}' : `Step ${i}`,
       placeholders: i === 199 ? [{ id: 'p', name: 'sample' }] : [] })) };
-  const snapshot = buildStateSnapshot({ projects: [{ id: 'project', name: 'Project' }], protocols: [protocol],
-    notebookEntries: [], settings: {}, agentChat: {}, workflows: [] }, 'project');
-  assert.equal(snapshot.protocols[0].steps.length, 200);
-  assert.equal(snapshot.protocols[0].materials.length, 100);
+  // runAgentTool hands the draft runtime the protocols it loaded from storage.
+  const snapshot = { projects: [{ id: 'project', name: 'Project' }], protocols: [protocol], notebookEntries: [], settings: {}, workflows: [] };
   let fillPrompt = '';
   const deps = { cleanText, requestStructuredJsonPayload: async (request) => {
     if (request.stage === 'notebook_draft_selection') return { ok: false };

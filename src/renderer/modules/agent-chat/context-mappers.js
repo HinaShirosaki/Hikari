@@ -8,50 +8,6 @@ function getMethodStepText(step) {
   return trimText(step?.action || step?.text || step?.instruction || step?.description, 180);
 }
 
-export function mapWorkflow(workflow, protocolsById = new Map(), projectNameById = new Map()) {
-  const blocks = asArray(workflow?.blocks);
-  const stepsPreview = blocks.map((block) => {
-    if (String(block?.type || '').trim().toLowerCase() === 'text') {
-      return trimText(block?.text, 180);
-    }
-    const protocolId = String(block?.protocolId || '').trim();
-    const protocolName = protocolId ? protocolsById.get(protocolId) : '';
-    return trimText(protocolName || protocolId || block?.text, 180);
-  }).filter(Boolean).slice(0, 8);
-
-  const projectId = String(workflow?.projectId || '').trim();
-  return {
-    id: String(workflow?.id || ''),
-    name: trimText(workflow?.name, 180),
-    description: trimText(workflow?.description, 400),
-    projectId,
-    project_name: trimText(projectNameById.get(projectId), 180),
-    notebookEntryIds: asArray(workflow?.notebookEntryIds).map((id) => trimText(id, 120)).filter(Boolean).slice(0, 40),
-    block_count: blocks.length,
-    link_count: asArray(workflow?.links).length,
-    steps_preview: stepsPreview,
-    blocks: blocks.slice(0, 40).map((block, index) => {
-      const type = String(block?.type || '').trim().toLowerCase() === 'text' ? 'text' : (String(block?.protocolId || '').trim() ? 'protocol' : 'text');
-      const protocolId = trimText(block?.protocolId, 120);
-      const protocolName = protocolId ? trimText(protocolsById.get(protocolId), 180) : '';
-      return {
-        id: trimText(block?.id, 120) || `block-${index + 1}`,
-        type,
-        protocolId,
-        protocolName,
-        text: type === 'text' ? trimText(block?.text, 220) : '',
-        assigneeId: trimText(block?.assigneeId, 120)
-      };
-    }),
-    links: asArray(workflow?.links).slice(0, 60).map((link, index) => ({
-      id: trimText(link?.id, 120) || `link-${index + 1}`,
-      fromBlockId: trimText(link?.fromBlockId, 120),
-      toBlockId: trimText(link?.toBlockId, 120)
-    })).filter((link) => link.fromBlockId && link.toBlockId),
-    updated_at: String(workflow?.updatedAt || workflow?.createdAt || '')
-  };
-}
-
 export function mapPaper(paper) {
   const summaryStructured = paper?.summaryStructured && typeof paper.summaryStructured === 'object'
     ? paper.summaryStructured
@@ -116,14 +72,6 @@ export function mapPaper(paper) {
     knowledge_status: trimText(paper?.knowledgeStatus || paper?.knowledge_status, 80),
     knowledge_generation_method: trimText(paper?.knowledgeGenerationMethod || paper?.knowledge_generation_method, 120),
     updated_at: trimText(paper?.updatedAt || paper?.createdAt, 80)
-  };
-}
-
-export function mapProject(project) {
-  return {
-    id: String(project?.id || ''),
-    name: trimText(project?.name, 160),
-    summary: trimText(project?.description || project?.objective, 240)
   };
 }
 

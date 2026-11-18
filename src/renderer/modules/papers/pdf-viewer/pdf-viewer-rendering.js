@@ -6,6 +6,8 @@ import { loadPdfJsModule } from './pdf-viewer-loader.js';
 import { bindPdfTextLayerSelection } from './pdf-viewer-text-selection.js';
 import { setPaperAttribute } from '../localization.js';
 
+const MAX_CANVAS_PIXELS = 4096 * 4096;
+
 async function loadPageMetrics(pdfDocument) {
   const metrics = [];
   let maxBasePageWidth = 0;
@@ -58,12 +60,12 @@ async function loadFillableFieldPresence(pdfDocument) {
   }
 }
 
-function safePageCleanup(page) {
-  if (typeof page?.cleanup === 'function') {
-    try {
-      page.cleanup();
-    } catch {}
-  }
+// The page keeps its operator list and decoded images until clearPageRecordRender
+// releases it, so re-renders (zoom, scroll back) skip re-parsing in the worker.
+async function getRecordPage(pdfDocument, record) {
+  const page = await pdfDocument.getPage(record.pageNumber);
+  record.pdfPage = page;
+  return page;
 }
 
 function getViewportScale(viewport) {
@@ -274,14 +276,18 @@ async function renderPageCanvasToOffscreen({
     return null;
   }
 
-  const page = await pdfDocument.getPage(record.pageNumber);
+  const page = await getRecordPage(pdfDocument, record);
   if (isStale()) {
-    safePageCleanup(page);
     return null;
   }
 
   const viewport = page.getViewport({ scale });
-  const effectiveOutputScale = Math.max(Number(outputScale) || 1, 1);
+  // ponytail: whole-page bitmaps are capped at 4096² px (~67 MB); past ~500% that
+  // softens pages. Render only the visible region in tiles to go sharper.
+  const effectiveOutputScale = Math.min(
+    Math.max(Number(outputScale) || 1, 1),
+    Math.sqrt(MAX_CANVAS_PIXELS / Math.max(viewport.width * viewport.height, 1))
+  );
   const cssWidth = Math.max(Math.ceil(viewport.width), 1);
   const cssHeight = Math.max(Math.ceil(viewport.height), 1);
   const bitmapWidth = Math.ceil(viewport.width * effectiveOutputScale);
@@ -290,7 +296,6 @@ async function renderPageCanvasToOffscreen({
   const ownerDocument = record.canvas.ownerDocument || (typeof document !== 'undefined' ? document : null);
   const offscreen = ownerDocument?.createElement?.('canvas');
   if (!offscreen) {
-    safePageCleanup(page);
     throw new Error('Canvas element factory is unavailable.');
   }
   offscreen.width = bitmapWidth;
@@ -299,7 +304,6 @@ async function renderPageCanvasToOffscreen({
     ? offscreen.getContext('2d', { alpha: false })
     : null;
   if (!offscreenContext) {
-    safePageCleanup(page);
     throw new Error('Canvas context is unavailable.');
   }
 
@@ -320,7 +324,6 @@ async function renderPageCanvasToOffscreen({
   }
 
   if (isStale()) {
-    safePageCleanup(page);
     return null;
   }
 
@@ -359,10 +362,22 @@ function commitOffscreenToVisibleCanvas({ record, offscreen, cssWidth, cssHeight
   }
 }
 
-async function renderPageTextLayer({ page, viewport, record, isStale = () => false } = {}) {
+async function renderPageTextLayer({ page, viewport, record, textContent = null, isStale = () => false } = {}) {
   if (!record?.textLayer || !page) {
     return;
   }
+  const cssWidth = Math.max(Math.ceil(viewport.width), 1);
+  const cssHeight = Math.max(Math.ceil(viewport.height), 1);
+  // A built layer only needs its spans re-measured for a new scale. Rebuilding
+  // refetches text from the worker and drops a live selection.
+  if (record.textLayerInstance && record.textLayer.childElementCount > 0 && typeof record.textSelectionCleanup === 'function') {
+    record.textLayerInstance.update({ viewport });
+    record.textLayer.style.width = `${cssWidth}px`;
+    record.textLayer.style.height = `${cssHeight}px`;
+    record.renderedTextScale = getViewportScale(viewport);
+    return;
+  }
+  record.textLayerInstance = null;
   if (record.textLayerBuilder && typeof record.textLayerBuilder.cancel === 'function') {
     try {
       record.textLayerBuilder.cancel();
@@ -376,18 +391,16 @@ async function renderPageTextLayer({ page, viewport, record, isStale = () => fal
     record.textSelectionCleanup = null;
   }
   i18nUi.setHtml(record.textLayer, '');
-  const cssWidth = Math.max(Math.ceil(viewport.width), 1);
-  const cssHeight = Math.max(Math.ceil(viewport.height), 1);
   record.textLayer.style.width = `${cssWidth}px`;
   record.textLayer.style.height = `${cssHeight}px`;
 
   const pdfjsLib = await loadPdfJsModule();
-  const textContent = await page.getTextContent();
+  const content = textContent || await page.getTextContent();
   if (isStale()) {
     return;
   }
   const textLayerBuilder = new pdfjsLib.TextLayer({
-    textContentSource: textContent,
+    textContentSource: content,
     container: record.textLayer,
     viewport
   });
@@ -396,6 +409,7 @@ async function renderPageTextLayer({ page, viewport, record, isStale = () => fal
   if (record.textLayerBuilder === textLayerBuilder) {
     record.textLayerBuilder = null;
   }
+  record.textLayerInstance = textLayerBuilder;
   record.textSelectionCleanup = bindPdfTextLayerSelection(record.textLayer);
   record.renderedTextScale = getViewportScale(viewport);
 }
@@ -404,6 +418,7 @@ async function renderPageTextLayerRecord({
   pdfDocument,
   record,
   scale,
+  textContent = null,
   isStale = () => false
 } = {}) {
   if (!pdfDocument || !record?.textLayer) {
@@ -412,17 +427,12 @@ async function renderPageTextLayerRecord({
   if (record.renderedTextScale === scale && record.textLayer.childElementCount > 0) {
     return;
   }
-  const page = await pdfDocument.getPage(record.pageNumber);
+  const page = await getRecordPage(pdfDocument, record);
   if (isStale()) {
-    safePageCleanup(page);
     return;
   }
   const viewport = page.getViewport({ scale });
-  try {
-    await renderPageTextLayer({ page, viewport, record, isStale });
-  } finally {
-    safePageCleanup(page);
-  }
+  await renderPageTextLayer({ page, viewport, record, textContent, isStale });
 }
 
 async function renderPageRecord({
@@ -453,37 +463,32 @@ async function renderPageRecord({
       && (record.renderedLinkScale !== scale || record.linkLayer.childElementCount === 0);
     const needsFormLayer = Boolean(record.formLayer) && !record.renderedForms;
     if (needsTextLayer || needsLinkLayer || needsFormLayer) {
-      const page = await pdfDocument.getPage(record.pageNumber);
+      const page = await getRecordPage(pdfDocument, record);
       if (isStale()) {
-        safePageCleanup(page);
         return;
       }
       const viewport = page.getViewport({ scale });
-      try {
-        if (needsTextLayer) {
-          await renderPageTextLayer({ page, viewport, record, isStale });
-        }
-        const annotations = needsLinkLayer || needsFormLayer
-          ? await loadDisplayAnnotations(page)
-          : null;
-        if (needsLinkLayer) {
-          await renderPageLinkLayer({
-            page,
-            viewport,
-            record,
-            annotations,
-            onExternalLink,
-            onDestination,
-            onNamedAction,
-            isLinkActivationEnabled,
-            isStale
-          });
-        }
-        if (needsFormLayer) {
-          await renderPageFormLayer({ pdfDocument, page, viewport, record, annotations, isStale });
-        }
-      } finally {
-        safePageCleanup(page);
+      if (needsTextLayer) {
+        await renderPageTextLayer({ page, viewport, record, isStale });
+      }
+      const annotations = needsLinkLayer || needsFormLayer
+        ? await loadDisplayAnnotations(page)
+        : null;
+      if (needsLinkLayer) {
+        await renderPageLinkLayer({
+          page,
+          viewport,
+          record,
+          annotations,
+          onExternalLink,
+          onDestination,
+          onNamedAction,
+          isLinkActivationEnabled,
+          isStale
+        });
+      }
+      if (needsFormLayer) {
+        await renderPageFormLayer({ pdfDocument, page, viewport, record, annotations, isStale });
       }
     }
     return;
@@ -529,7 +534,6 @@ async function renderPageRecord({
     }
   } finally {
     record.renderedScale = scale;
-    safePageCleanup(page);
   }
 }
 
