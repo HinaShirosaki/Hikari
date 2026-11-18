@@ -127,3 +127,8 @@ export function showTransientNotice(message, { type = 'success', durationMs = 50
   }, Math.max(1000, Number(durationMs) || 5000));
   activeToastTimer?.unref?.();
 }
+
+// Default feedback for a file drop whose type the target does not accept.
+export function notifyUnsupportedDrop() {
+  showTransientNotice("This file type can't be used here.", { type: 'error', i18nKey: 'shell.fileDrop.unsupported' });
+}

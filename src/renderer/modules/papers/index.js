@@ -20,6 +20,7 @@ import { createPapersWorkspaceControls } from './workspace-controls.js';
 import { createPaperAgentChatContextGetter } from './agent-context.js';
 import { createPaperCitationNavigator } from './citation-navigation.js';
 import { paperFailure, paperNotice, paperUi, setPaperAttribute } from './localization.js';
+import { shellText } from '../../lib/i18n/shell.js';
 
 // Papers view: library rail (folders = projects + journal clubs), pdf.js
 // viewer with highlights/comments, and LLM summaries/extractions. PDFs live
@@ -518,7 +519,8 @@ export function initPapersManagement({
   });
 
   bindFileDropTarget({
-    target: elements.paperViewerShell,
+    target: elements.paperViewerShell?.closest?.('.left-rail-template__main') || elements.paperViewerShell,
+    caption: () => shellText('fileDrop.caption.paperOpen'),
     accept: elements.paperPdfInput?.getAttribute?.('accept') || 'application/pdf,.pdf',
     multiple: false,
     onFiles: async (files) => {

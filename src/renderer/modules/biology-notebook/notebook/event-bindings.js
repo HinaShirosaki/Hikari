@@ -1,5 +1,6 @@
 import { showTransientNotice } from '../../../lib/notify.js';
 import { bindFileDropTarget } from '../../../lib/file-drop.js';
+import { shellText } from '../../../lib/i18n/shell.js';
 import { positionContextMenu } from '../../../lib/context-menu.js';
 
 function bindNotesContextMenu(elements, sampleLinkMenu, showNotesEditor) {
@@ -295,6 +296,7 @@ function bindNotebookEvents({
   elements.notebookMarkExecutedBtn?.addEventListener('click', markEntryExecuted);
   bindFileDropTarget({
     target: elements.notebookViewerColumn || elements.notebookProtocolArea || elements.notebookResultFile,
+    caption: () => shellText('fileDrop.caption.notebook'),
     multiple: true,
     disabled: () => Boolean(elements.notebookProtocolArea?.hidden),
     onFiles: (files) => {

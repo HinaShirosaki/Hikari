@@ -1,6 +1,7 @@
 'use strict';
 
 const path = require('node:path');
+const { formatHikariExecActivity, formatHikariToolActivity } = require('../../../shared/hikari-mcp-activity.mjs');
 const { cleanText } = require('./utils');
 const { parseCodexToolArguments } = require('./event-values');
 
@@ -71,7 +72,7 @@ function firstArgValue(args = {}, keys = []) {
   for (const key of keys) {
     const value = source[key];
     if (typeof value === 'string' && value.trim()) {
-      return cleanText(value, 120);
+      return value.trim().slice(0, 120);
     }
     if (typeof value === 'number' || typeof value === 'boolean') {
       return String(value);
@@ -80,35 +81,29 @@ function firstArgValue(args = {}, keys = []) {
   return '';
 }
 
-function quotedDetail(value = '') {
-  return value ? ` “${value}”` : '';
-}
-
-// Bare (unprefixed) Hikari MCP tool name -> friendly label built from one scalar arg, never raw JSON.
-const CODEX_TOOL_LABELS = {
-  inventory_lookup: (a) => `Inventory lookup${quotedDetail(firstArgValue(a, ['query']))}`,
-  chemical_lookup: (a) => `Chemical lookup${quotedDetail(firstArgValue(a, ['query', 'cas', 'supplier']))}`,
-  notebook_lookup: (a) => `Notebook lookup${quotedDetail(firstArgValue(a, ['query', 'entry_id', 'protocol_name', 'project_name', 'action']))}`,
-  protocol_lookup: (a) => `Protocol lookup${quotedDetail(firstArgValue(a, ['query', 'project_name']))}`,
-  protocol_generation: () => 'Generating protocol',
-  notebook_draft: (a) => `Notebook draft${quotedDetail(firstArgValue(a, ['protocol_name', 'protocolName', 'project_name', 'project', 'message']))}`,
-  notebook_append: (a) => `Notebook append${quotedDetail(firstArgValue(a, ['section_title', 'page_title', 'notebook_entry_id']))}`,
-  protocol_edit: (a) => `Protocol edit${quotedDetail(firstArgValue(a, ['target_title', 'target_id']))}`,
-  notebook_generation: (a) => `Notebook generation${quotedDetail(firstArgValue(a, ['selected_protocol', 'project']))}`,
-  literature_search: (a) => `Literature search${quotedDetail(firstArgValue(a, ['query', 'topic', 'message']))}`,
-  paper_download: (a) => `Paper download${quotedDetail(firstArgValue(a, ['paper_title', 'doi', 'action']))}`,
-  paper_analysis: (a) => `Paper analysis${quotedDetail(firstArgValue(a, ['paper_title', 'message']))}`,
-  paper_intake_search_summaries: (a) => `Paper search${quotedDetail(firstArgValue(a, ['query']))}`,
-  paper_intake_search_experiments: (a) => `Experiment search${quotedDetail(firstArgValue(a, ['query', 'technique']))}`,
-  paper_intake_list_project_summaries: (a) => `Project summaries${quotedDetail(firstArgValue(a, ['project_name']))}`,
-  purchase_recommendation: (a) => `Purchase search${quotedDetail(firstArgValue(a, ['query', 'message']))}`,
-  memory: (a) => `Memory ${firstArgValue(a, ['action']) || 'access'}${quotedDetail(firstArgValue(a, ['query', 'key', 'project_name']))}`,
-  container: (a) => `Container ${firstArgValue(a, ['action']) || 'access'}${quotedDetail(firstArgValue(a, ['name', 'id']))}`,
-  assay_table: (a) => `Assay table ${firstArgValue(a, ['action']) || 'access'}${quotedDetail(firstArgValue(a, ['name', 'table_id', 'id']))}`,
-  html_output: (a) => `Display interactive HTML${quotedDetail(firstArgValue(a, ['title']))}`,
-  image_output: (a) => `Display image${quotedDetail(firstArgValue(a, ['title', 'path']))}`,
-  plotly_graph: (a) => `Plot ${firstArgValue(a, ['action']) || 'access'}${quotedDetail(firstArgValue(a, ['name', 'graph_id', 'id']))}`,
-  ask_user: (a) => `Asking you${quotedDetail(firstArgValue(a, ['question']))}`
+const TOOL_DETAIL_KEYS = {
+  inventory_lookup: ['query'],
+  chemical_lookup: ['query', 'cas', 'supplier'],
+  notebook_lookup: ['query', 'entry_id', 'protocol_name', 'project_name', 'action'],
+  protocol_lookup: ['query', 'project_name'],
+  notebook_draft: ['protocol_name', 'protocolName', 'project_name', 'project', 'message'],
+  notebook_append: ['section_title', 'page_title', 'notebook_entry_id'],
+  protocol_edit: ['target_title', 'target_id'],
+  notebook_generation: ['selected_protocol', 'project'],
+  literature_search: ['query', 'topic', 'message'],
+  paper_download: ['paper_title', 'doi'],
+  paper_analysis: ['paper_title', 'message'],
+  paper_intake_search_summaries: ['query'],
+  paper_intake_search_experiments: ['query', 'technique'],
+  paper_intake_list_project_summaries: ['project_name'],
+  purchase_recommendation: ['query', 'message'],
+  memory: ['query', 'key', 'project_name'],
+  container: ['name', 'id'],
+  assay_table: ['name', 'table_id', 'id'],
+  html_output: ['title'],
+  image_output: ['title', 'path'],
+  plotly_graph: ['name', 'graph_id', 'id'],
+  ask_user: ['question']
 };
 
 function summarizeCodexToolCallForProgress({
@@ -124,21 +119,30 @@ function summarizeCodexToolCallForProgress({
   if (name === 'exec_command') {
     return summarizeExecCommandForCodexProgress(args, status);
   }
+  if (name === 'exec' || name === 'functions.exec') {
+    const activity = formatHikariExecActivity(args.code ?? args.input ?? argumentValue);
+    if (activity) return activity;
+  }
   if (name === 'codex-tool') {
     return completed ? 'Tool call completed.' : 'Running tool...';
   }
-  const buildLabel = CODEX_TOOL_LABELS[name];
-  const label = (buildLabel && buildLabel(args)) || name;
   // Only surface plain-text results/detail; never dump the raw JSON args or output shape.
   const result = looksLikeJsonBlob(outputText) ? '' : cleanText(outputText, 2000);
-  const detail = buildLabel || looksLikeJsonBlob(directText) ? '' : cleanText(directText, 2000);
+  const activity = formatHikariToolActivity(name, args);
+  if (activity) {
+    const value = firstArgValue(args, TOOL_DETAIL_KEYS[name]);
+    const context = value ? ` (“${value}”)` : '';
+    if (status === 'failed') return `Couldn’t finish ${activity[0].toLowerCase()}${activity.slice(1)}${context}.`;
+    return `${activity}${context}…${completed && result ? ` ${result}` : ''}`;
+  }
+  const detail = looksLikeJsonBlob(directText) ? '' : cleanText(directText, 2000);
   if (completed && result) {
-    return cleanText(`${label} — ${result}`, 2400);
+    return cleanText(`${name} — ${result}`, 2400);
   }
   if (detail) {
-    return cleanText(`${label}: ${detail}`, 2400);
+    return cleanText(`${name}: ${detail}`, 2400);
   }
-  return completed ? `${label} completed.` : `${label} started.`;
+  return completed ? `${name} completed.` : `${name} started.`;
 }
 
 function completeCodexProgressText(value = '', toolName = '') {
@@ -156,7 +160,7 @@ function completeCodexProgressText(value = '', toolName = '') {
     return text.replace(/^Running\s+(.+)\.\.\.$/u, 'Completed $1.');
   }
   if (text) {
-    return text.endsWith('.') ? text : `${text}.`;
+    return /[.…]$/u.test(text) ? text : `${text}.`;
   }
   const name = cleanText(toolName, 160);
   return name ? `${name} completed.` : 'Tool call completed.';
@@ -175,7 +179,7 @@ if (require.main === module) {
     status: 'started',
     argumentValue: { query: 'SUMO1', limit: 5 }
   });
-  assert.equal(started, 'Inventory lookup “SUMO1” started.', started);
+  assert.equal(started, 'Searching for samples (“SUMO1”)…', started);
   assert.ok(!/[{}[\]"]/u.test(started), 'no JSON punctuation in started summary');
   const completed = summarizeCodexToolCallForProgress({
     toolName: 'inventory_lookup',
@@ -190,7 +194,7 @@ if (require.main === module) {
     argumentValue: { action: 'get', id: 'a1' },
     outputText: '{"rows":[{"a":1}]}'
   });
-  assert.equal(jsonOutput, 'Assay table get “a1” completed.', jsonOutput);
+  assert.equal(jsonOutput, 'Working with assay data (“a1”)…', jsonOutput);
   assert.ok(!jsonOutput.includes('{'), 'raw JSON output must be dropped');
   console.log('event-tool-summary self-check ok');
 }

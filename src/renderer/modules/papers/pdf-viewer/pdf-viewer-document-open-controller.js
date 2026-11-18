@@ -34,7 +34,9 @@ export const installPdfViewerDocumentOpenController = (ctx) => {
       standardFontDataUrl: buildViewerAssetUrl('./vendor/pdfjs/web/standard_fonts/'),
       wasmUrl: buildViewerAssetUrl('./vendor/pdfjs/web/wasm/'),
       iccUrl: buildViewerAssetUrl('./vendor/pdfjs/web/iccs/'),
-      useWorkerFetch: false
+      useWorkerFetch: false,
+      // Lets pdf.js's own scratch canvases (masks, groups, patterns) live on the GPU.
+      enableHWA: true
     });
     state.loadingTask = loadingTask;
     loadingTask.onProgress = ({ loaded = 0, total = 0 } = {}) => {

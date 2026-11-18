@@ -19,6 +19,7 @@ import { createColonyImageCropping } from './colony-counter/image-cropping.js';
 import { createColonyPointerInteractions } from './colony-counter/pointer-interactions.js';
 import { createMaskAndModelCount } from './colony-counter/mask-and-model.js';
 import { createColonyControlState } from './colony-counter/control-state.js';
+import { shellText } from '../../lib/i18n/shell.js';
 
 export function initColonyCounterTool() {
   // Core DOM nodes for image loading, crop controls, canvases, and summary output.
@@ -312,6 +313,7 @@ export function initColonyCounterTool() {
 
   bindFileDropTarget({
     target: colonyCounterShell || colonyCounterForm,
+    caption: () => shellText('fileDrop.caption.colony'),
     accept: colonyImageInput?.getAttribute?.('accept') || 'image/*',
     onFiles: ([file]) => handleColonyImageFile(file, { syncFileInput: true }),
     onRejected: () => {

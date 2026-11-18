@@ -25,8 +25,8 @@ remains the default; untranslated Spanish messages fall back to English.
 
 - Renderer English: each feature's `locales/en.js`, plus shared
   `src/renderer/lib/i18n/{en,shell-en}.js`.
-- Plugin English: `locales/en.js` in `src/plugins/gel`,
-  `plugins/scientific-illustration`, and `plugins/qpcr-analysis`.
+- Plugin English: `locales/en.js` in `src/plugins/gel`. Installable plugins
+  (Figura, qPCR, Flow Cytometry) keep their catalogs in their own repos.
 - Native English: `src/main/lib/locales/en.json`.
 - Spanish preview: renderer/plugin `locales/es.js`, shared `es.js`/`shell-es.js`,
   and native `src/main/lib/locales/es.json`. QA wrappers in

@@ -16,7 +16,20 @@ export const installPdfViewerSearchExecutionController = (ctx) => {
     return `search-${pageNumber}-${index}-${String(term || '').replace(/[^a-z0-9]+/gi, '-').slice(0, 24)}`;
   }
 
-  async function ensurePdfSearchTextLayers() {
+  // Lower-cased text items per page, joined by NUL so no match spans two items:
+  // exactly the text nodes the text layer would hold. Lets search build layers
+  // only for pages that can match.
+  const pageSearchText = new WeakMap();
+  function getSearchTextCache(pdfDocument) {
+    let pages = pageSearchText.get(pdfDocument);
+    if (!pages) {
+      pages = [];
+      pageSearchText.set(pdfDocument, pages);
+    }
+    return pages;
+  }
+
+  async function ensurePdfSearchTextLayers(terms = null) {
     if (!state.pdfDocument || !state.pageRecords.length) {
       return false;
     }
@@ -31,10 +44,25 @@ export const installPdfViewerSearchExecutionController = (ctx) => {
         continue;
       }
       ctx.setStatus(i18nUi.text("Preparing PDF search... page {p0} of {p1}", { p0: record.pageNumber, p1: state.pageCount }));
+      let textContent = null;
+      if (terms) {
+        const cache = getSearchTextCache(state.pdfDocument);
+        if (cache[record.pageNumber] === undefined) {
+          textContent = await (await state.pdfDocument.getPage(record.pageNumber)).getTextContent();
+          cache[record.pageNumber] = textContent.items.map((item) => item.str || '').join('\0').toLowerCase();
+        }
+        if (isStale()) {
+          return false;
+        }
+        if (!terms.some((term) => cache[record.pageNumber].includes(term))) {
+          continue;
+        }
+      }
       await renderPageTextLayerRecord({
         pdfDocument: state.pdfDocument,
         record,
         scale,
+        textContent,
         isStale
       });
     }
@@ -46,7 +74,7 @@ export const installPdfViewerSearchExecutionController = (ctx) => {
     if (!terms.length) {
       return [];
     }
-    const ready = await ensurePdfSearchTextLayers();
+    const ready = await ensurePdfSearchTextLayers(terms);
     if (!ready) {
       return [];
     }

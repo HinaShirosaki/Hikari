@@ -1423,7 +1423,9 @@ module.exports = function registerCodexCliProviderSuiteScheduledTasksAndPaperFin
       assert.equal(requests[0].timeoutMs, 15000);
       assert.match(requests[0].envOverrides.HIKARI_CODEX_REQUEST_CONTEXT, /Project One/);
       const requestContext = JSON.parse(requests[0].envOverrides.HIKARI_CODEX_REQUEST_CONTEXT);
-      assert.equal(requestContext.snapshot.projects[0].description, 'Find better expression conditions.');
+      // Tools read records from storage; the MCP env carries request context only.
+      assert.equal(requestContext.snapshot.projects, undefined);
+      assert.equal(requestContext.project.name, 'Project One');
       assert.deepEqual(requestContext.snapshot.settings.preferredJournals, ['Nature Methods']);
       assert.equal(requestContext.snapshot.scheduled_task.task_type, 'paper_finding');
       assert.equal(requestContext.snapshot.scheduled_task.deny_paper_download, true);

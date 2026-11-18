@@ -79,3 +79,7 @@ __pycache__/
 # The illustrated tutorials live in their own repo (HinaShirosaki/hikari-tutorial).
 # Clone it here to refresh captures: they load this checkout's renderer by relative path.
 /docs/tutorial/
+
+# Installable plugins (Figura, qPCR, Flow Cytometry) live in their own repos; the app
+# packages only the bundled src/plugins/gel.
+/plugins/

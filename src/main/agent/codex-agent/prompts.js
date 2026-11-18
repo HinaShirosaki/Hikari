@@ -189,6 +189,11 @@ function buildCodexAgentParserPayload(codexAgent = {}, {
   };
 }
 
+const REQUEST_CONTEXT_KEYS = Object.freeze([
+  'settings', 'storagePath', 'storage_path', 'activePaper', 'active_paper', 'paper_agent', 'paperAgent',
+  'scheduled_task', 'scheduledTask', 'literature_research', 'data_file_path', 'fallback_data_file_path', 'timestamp'
+]);
+
 function buildCodexMcpContext(input = {}, { cleanText = defaultCleanText } = {}) {
   const snapshot = ensureObject(input.snapshot);
   const activePaper = ensureObject(snapshot.activePaper || snapshot.active_paper);
@@ -224,8 +229,11 @@ function buildCodexMcpContext(input = {}, { cleanText = defaultCleanText } = {})
       }, cleanText)
     }
     : null;
+  // This context becomes two env vars of the stdio MCP server; workspace records
+  // there (~460 KB each) once overflowed its stack before the handshake. Tools load
+  // records from storage instead (runAgentTool), so keep request context only.
   const contextSnapshot = {
-    ...snapshot,
+    ...Object.fromEntries(REQUEST_CONTEXT_KEYS.filter((key) => key in snapshot).map((key) => [key, snapshot[key]])),
     ...(dataFilePath ? { data_file_path: dataFilePath } : {}),
     ...(fallbackDataFilePath ? { fallback_data_file_path: fallbackDataFilePath } : {})
   };

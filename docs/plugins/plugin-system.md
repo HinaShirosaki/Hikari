@@ -37,7 +37,7 @@ different install flow.
 | Scripts | classic or module (§5.4) | classic or module | (remote's own) | classic or module |
 | Has a view | yes (whole pane) | yes | yes | **no** — headless |
 | Host API | may hold permissions | may hold permissions | **never** | may hold permissions |
-| Example | [`hello-world`](../../examples/plugins/hello-world/), [`notebook-results`](../../examples/plugins/notebook-results/) | [`src/plugins/gel`](../../src/plugins/gel/) (bundled), [`plugins/scientific-illustration`](../../plugins/scientific-illustration/) | — | none in the repo; see [service-plugins.md](service-plugins.md) |
+| Example | [`hello-world`](../../examples/plugins/hello-world/), [`notebook-results`](../../examples/plugins/notebook-results/) | [`src/plugins/gel`](../../src/plugins/gel/) (bundled), [Figura](https://github.com/HinaShirosaki/Figura) | — | none in the repo; see [service-plugins.md](service-plugins.md) |
 
 **Which to write:**
 
@@ -867,7 +867,7 @@ through [`test.js`](../../test.js)); copyable-client, Gel folder, and
 `cell-seeding` example checks live in [`tests/`](../../tests/). For manual end-to-end checks, install
 [`examples/plugins/notebook-results/`](../../examples/plugins/notebook-results/)
 for the host API, and open the bundled Gel plugin for a production-sized served
-plugin. [`plugins/scientific-illustration/`](../../plugins/scientific-illustration/)
+plugin. [Figura](https://github.com/HinaShirosaki/Figura)
 exercises the agent, workspace-tool, and context-action verbs;
 `node node_modules/electron/cli.js tests/scientific-illustration-electron.cjs`
 drives it end to end, including the shared toolbar and source actions.

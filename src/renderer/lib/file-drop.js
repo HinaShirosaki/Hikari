@@ -84,17 +84,68 @@ export function mergeFilesIntoInput(input, files, { append = true } = {}) {
   }
 }
 
+// Hands dropped files to a file input as if the user had picked them, so the
+// input's existing change handler does the import.
+export function dropIntoInput(input, files) {
+  if (mergeFilesIntoInput(input, files, { append: false })) {
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+}
+
+// One shared ring drawn over the active target. It is fixed-positioned so the
+// target's child backgrounds, overflow clipping or the window edge can't hide it.
+function placeDropRing(target, show, caption = null) {
+  const doc = target.ownerDocument;
+  const win = doc?.defaultView;
+  if (!doc?.body || !win || typeof target.getBoundingClientRect !== 'function') {
+    return;
+  }
+  let ring = doc.querySelector('.app-file-drop-ring');
+  if (!show) {
+    if (ring) ring.hidden = true;
+    return;
+  }
+  if (!ring) {
+    ring = doc.createElement('div');
+    ring.className = 'app-file-drop-ring';
+    ring.setAttribute('aria-hidden', 'true');
+    doc.body.append(ring);
+  }
+  const rect = target.getBoundingClientRect();
+  const left = Math.max(0, rect.left);
+  const top = Math.max(0, rect.top);
+  const width = Math.min(win.innerWidth, rect.right) - left;
+  const height = Math.min(win.innerHeight, rect.bottom) - top;
+  if (width < 1 || height < 1) {
+    ring.hidden = true;
+    return;
+  }
+  Object.assign(ring.style, { left: `${left}px`, top: `${top}px`, width: `${width}px`, height: `${height}px` });
+  // Resolved on every drag so a language switch is picked up; CSS shows it in
+  // place of the generic label.
+  ring.dataset.caption = (typeof caption === 'function' ? caption() : caption) || '';
+  ring.hidden = false;
+}
+
 // Makes an element accept dropped files. Non-file drags (text, rail rows) are
-// ignored so they keep their own handlers. Returns an unbind function.
+// ignored so they keep their own handlers. Pass `input` instead of `onFiles`
+// to reuse a file input's accept, multiple and change handler. `caption`
+// (text or a function returning it) says what the drop will do; `highlight`
+// returns the element to draw the ring around when that is narrower than the
+// target. Returns an unbind function.
 export function bindFileDropTarget({
   target,
-  accept = '',
-  multiple = false,
+  input = null,
+  accept = input?.getAttribute?.('accept') || '',
+  multiple = Boolean(input?.multiple),
   disabled = null,
-  onFiles,
+  onFiles = input ? (files) => dropIntoInput(input, files) : null,
   onRejected = null,
   onError = null,
-  activeClass = 'is-file-drop-active'
+  activeClass = 'is-file-drop-active',
+  ring = true,
+  caption = null,
+  highlight = null
 } = {}) {
   if (!target?.addEventListener || typeof onFiles !== 'function') {
     return () => {};
@@ -106,16 +157,18 @@ export function bindFileDropTarget({
   target.classList?.add?.('app-file-drop-target');
 
   function isDisabled() {
-    return typeof disabled === 'function' && disabled();
+    return Boolean(input?.disabled) || (typeof disabled === 'function' && disabled());
   }
 
   function activateDropState() {
     target.classList?.add?.(activeClass);
+    if (ring) placeDropRing(highlight?.() || target, true, caption);
   }
 
   function clearDropState() {
     dragDepth = 0;
     target.classList?.remove?.(activeClass);
+    if (ring) placeDropRing(target, false);
   }
 
   function prepareDragEvent(event) {

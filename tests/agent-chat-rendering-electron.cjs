@@ -100,6 +100,29 @@ async function main() {
     runtime.liveAssistantMessage.meta.live_progress.response_text += ' continues without replacing its prefix.'; redraw();`);
   assert.equal(await run('document.querySelector(".agent-stream-live p").firstChild === liveText && getSelection().toString() === "Stable"'), true);
   await run('runtime.liveAssistantMessage = null; getSelection().removeAllRanges(); redraw();');
+  const checkActivityWrapping = async selector => {
+    const metrics = await run(`(() => {
+      const row = document.querySelector(${JSON.stringify(selector)});
+      const range = document.createRange();
+      range.selectNodeContents(row);
+      const bounds = dom.historyNode.getBoundingClientRect();
+      const lines = Array.from(range.getClientRects());
+      return { wrapped: lines.length > 1, fits: lines.every(line => line.right <= bounds.right),
+        historyOverflow: dom.historyNode.scrollWidth > dom.historyNode.clientWidth };
+    })()`);
+    assert.deepEqual(metrics, { wrapped: true, fits: true, historyOverflow: false }, `${selector} wraps long tool arguments`);
+  };
+  await run(`window.execActivity = 'exec: const value = "' + 'unbroken'.repeat(26) + '";';
+    state.agentChat.messages.push({ id: 'exec', role: 'assistant', text: 'Tool finished.',
+      meta: { routing_intent: 'codex_agent', codex_cli_display_rows: [execActivity] } });
+    redraw(); document.querySelector('[data-agent-render-key="sample:exec"] details').open = true;`);
+  await checkActivityWrapping('[data-agent-render-key="sample:exec"] .agent-thinking-trace-item');
+  await run(`state.agentChat.messages.pop(); runtime.liveAssistantMessage = { id: 'live', role: 'assistant',
+    text: 'Working…', meta: { live_progress: { response_text: 'Checking the workspace',
+      activity_rows: [{ status: 'pending', text: execActivity }] } } }; redraw();`);
+  await checkActivityWrapping('.agent-stream-activity');
+  await run('runtime.liveAssistantMessage = null; redraw();');
+
   await run('document.querySelector("[data-agent-copy-message]").click();');
   assert.equal(await run('copied === state.agentChat.messages[1].text'), true);
   await run(`state.settings.storagePath='/workspace/Lab papers';

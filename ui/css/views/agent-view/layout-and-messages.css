@@ -907,6 +907,7 @@ details.agent-thinking-trace:not([open]) > .agent-thinking-trace-list {
 
 .agent-thinking-trace-item {
   margin: 0;
+  overflow-wrap: anywhere;
   line-height: 1.55;
   color: var(--theme-text);
 }
@@ -1031,13 +1032,19 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   anchor-name: --agent-codex-permission;
   display: inline-flex;
   align-items: center;
+  flex: 0 1 auto;
   gap: var(--space-6);
   min-width: 0;
+  height: 2.25rem;
   min-height: 2.25rem;
   padding: 0 var(--space-8);
+  border: 0;
+  border-radius: .5rem;
   background: transparent;
   font-size: var(--text-sm);
   font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .agent-codex-permission-btn:enabled:is(:hover, :has(+ :popover-open)) {

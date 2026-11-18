@@ -140,7 +140,7 @@
 .draft-review-document :is(.agent-review-section, .protocol-view-section) > ol > li {
   padding: var(--space-10) var(--space-14);
   border-radius: .5rem;
-  background: var(--theme-surface-muted);
+  background: var(--theme-fill);
   line-height: 1.65;
 }
 

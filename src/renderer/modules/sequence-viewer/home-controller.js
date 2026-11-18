@@ -10,6 +10,7 @@ import { createHomeNavigation } from './home/navigation.js';
 import { dnaFailure, dnaNotice, dnaUi } from './localization.js';
 import { parseInputRecords } from './parsing.js';
 import { buildRecordFastaText, buildRecordFastqText } from './storage.js';
+import { shellText } from '../../lib/i18n/shell.js';
 
 export function createSequenceViewerHomeController(config = {}) {
   const rootDocument = config?.rootDocument || globalThis?.document || null;
@@ -338,7 +339,8 @@ export function createSequenceViewerHomeController(config = {}) {
     });
 
     bindFileDropTarget({
-      target: elements.homeWorkspace || elements.homeOpenBtn,
+      target: elements.homeWorkspace?.querySelector?.('.left-rail-template__main') || elements.homeWorkspace || elements.homeOpenBtn,
+      caption: () => shellText('fileDrop.caption.sequence'),
       accept: combinedAccept,
       onFiles: ([file]) => openSequenceFileInDetail(file),
       onRejected: () => {

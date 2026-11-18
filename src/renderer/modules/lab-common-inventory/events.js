@@ -1,3 +1,6 @@
+import { bindFileDropTarget } from '../../lib/file-drop.js';
+import { notifyUnsupportedDrop } from '../../lib/notify.js';
+import { shellText } from '../../lib/i18n/shell.js';
 export function bindLabCommonInventoryEvents(ctx) {
   const {
     chemicalOpenAddBtn,
@@ -20,6 +23,7 @@ export function bindLabCommonInventoryEvents(ctx) {
     chemicalImportFile?.click();
   });
   chemicalImportFile?.addEventListener('change', ctx.onChemicalImportFileChange);
+  bindFileDropTarget({ target: chemicalImportFile?.closest?.('.chemical-layout')?.querySelector?.('.left-rail-template__main'), input: chemicalImportFile, onRejected: notifyUnsupportedDrop, caption: () => shellText('fileDrop.caption.chemicals') });
   chemicalDialogCloseBtn.addEventListener('click', ctx.resetChemicalForm);
   chemicalDialogOverlay.addEventListener('click', ctx.onChemicalDialogOverlayClick);
   document.addEventListener('keydown', ctx.onChemicalDialogKeydown);

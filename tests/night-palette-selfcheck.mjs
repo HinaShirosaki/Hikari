@@ -295,6 +295,8 @@ for (const [name, css] of [
  * encodings, and drawings of physical objects.
  */
 const FIXED_ACROSS_THEMES = new Set([
+  // Drawn over the PDF page, which stays white paper in every theme.
+  '--papers-scroll-thumb', '--papers-scroll-thumb-active', '--papers-scroll-thumb-rim',
   // Drawings of physical labware: a Falcon tube is white plastic in any theme.
   '--assay-plate-pure-white', '--assay-plate-highlight', '--assay-plate-highlight-faint',
   '--assay-plate-labware-cap-start', '--assay-plate-labware-cap-end',

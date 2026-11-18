@@ -2,7 +2,6 @@
 
 module.exports = function registerPaperProjectDestinationSuite({ scope, __dirname }) {
   const { assert, fsPromises: fs, path, test, agentPaperDownload, agentLiteratureSearchWorkflow } = scope;
-  const { loadEsmStyleModule } = require(path.join(__dirname, 'tests/support/runtime.js'));
   const { registerResearchToolExecutors } = require(path.join(__dirname, 'src/main/agent/tools/tool-executors/research-executors.js'));
   const { resolvePaperDownloadContext } = require(path.join(__dirname, 'src/main/agent/tools/tool-executors/shared.js'));
   const { createDirectMcpToolRouter } = require(path.join(__dirname, 'src/main/agent/mcp-contract/direct-tools/index.js'));
@@ -37,21 +36,20 @@ module.exports = function registerPaperProjectDestinationSuite({ scope, __dirnam
     assert.equal(resolvePaperDownloadContext({ project_id: project.id, project_name: project.name }, duplicates).linked_name, project.name);
   });
 
-  test('explicit paper destinations resolve from the real chat snapshot, whatever its scope or caps', () => {
-    const { buildStateSnapshot } = loadEsmStyleModule(path.join(__dirname, 'src/renderer/modules/agent-chat/state-snapshot.js'));
+  test('explicit paper destinations resolve from stored projects, beyond the normalized project cap', () => {
     const { createAgentRuntimeSupport } = require(path.join(__dirname, 'src/main/agent/runtime/agent-runtime-support.js'));
     const { normalizeAgentSnapshot } = createAgentRuntimeSupport({ cleanText, asArray: (value) => (Array.isArray(value) ? value : []) });
     const projects = Array.from({ length: 45 }, (_, index) => ({ id: `p${index + 1}`, name: `Project ${index + 1}` }));
-    const state = { projects, notebookEntries: [], protocols: [], workflows: [], settings: {}, inventory: {}, labInventory: {} };
-    const chat = (projectId) => normalizeAgentSnapshot(buildStateSnapshot(state, projectId));
+    // Tools get the snapshot runAgentTool loaded from storage: every project, then normalized.
+    const chat = () => normalizeAgentSnapshot({ projects, settings: {} });
 
-    const selected = { snapshot: chat('p1'), project: projects[0] };
-    assert.equal(selected.snapshot.projects.length, 1, 'chat data stays scoped');
+    const selected = { snapshot: chat(), project: projects[0] };
+    assert.equal(selected.snapshot.projects.length, 40, 'normalization caps the project list');
     assert.equal(resolvePaperDownloadContext({ project_name: 'project 2' }, selected).linked_name, 'Project 2');
     assert.equal(resolvePaperDownloadContext({ project_id: 'p45' }, selected).linked_name, 'Project 45');
     assert.equal(resolvePaperDownloadContext({}, selected).linked_name, 'Project 1');
 
-    const allProjects = { snapshot: chat(''), project: { id: '', name: '' } };
+    const allProjects = { snapshot: chat(), project: { id: '', name: '' } };
     assert.equal(resolvePaperDownloadContext({ project_name: 'Project 45' }, allProjects).linked_name, 'Project 45');
     assert.match(resolvePaperDownloadContext({ project_name: 'Project 46' }, allProjects).error, /not found/);
 

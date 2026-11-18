@@ -1935,22 +1935,6 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   background: var(--theme-control-background);
 }
 
-.sequence-viewer-alignment-workspace.is-file-drop-active .sequence-viewer-alignment-dialog::after {
-  content: attr(data-caption);
-  position: absolute;
-  inset: 10px;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  border: 2px dashed var(--theme-accent);
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--theme-surface-elevated) 88%, var(--theme-accent) 12%);
-  color: var(--theme-text-strong);
-  font-size: var(--text-base);
-  font-weight: 700;
-  pointer-events: none;
-}
-
 .sequence-viewer-alignment-record-wrap {
   display: grid;
   gap: 5px;

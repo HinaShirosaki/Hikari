@@ -1,7 +1,9 @@
 /* Late-load Papers library and viewer refinements. */
 
+/* The PDF sits flush against the open rail, as it does when the rail is folded. */
 #papers-view .papers-layout {
-  gap: var(--space-16);
+  --left-rail-main-gap: 0px;
+  gap: 0;
 }
 
 #papers-view .papers-folder-item {
@@ -37,7 +39,7 @@
 }
 
 #papers-view .papers-viewer-stage {
-  padding: var(--space-12);
+  padding: var(--space-12) 0;
 }
 
 #papers-view .papers-viewer-canvas {

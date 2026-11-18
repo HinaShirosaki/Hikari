@@ -20,6 +20,7 @@ import { paperFailure } from '../localization.js';
 
 const ACTIVE_PAGE_RENDER_BUFFER = 4;
 const RETAINED_PAGE_RENDER_BUFFER = 8;
+const ZOOM_SETTLE_MS = 150;
 
 export const installPdfViewerRenderController = (ctx) => {
   const { elements, state } = ctx;
@@ -155,18 +156,70 @@ export const installPdfViewerRenderController = (ctx) => {
     });
   }
 
-  function applyDocumentScale(scale, { preserveScroll = false, resetScroll = false } = {}) {
+  // The page point under (clientX, clientY), as fractions of that page's box.
+  // Pages stack top to bottom, so the first one ending below the point holds it
+  // (or sits just under it, in the gap).
+  function getFocusAnchor({ clientX, clientY }) {
+    const record = state.pageRecords.find((item) => item.element.getBoundingClientRect().bottom >= clientY)
+      || state.pageRecords.at(-1);
+    const rect = record?.element.getBoundingClientRect();
+    if (!rect?.width || !rect.height) {
+      return null;
+    }
+    return {
+      record,
+      clientX,
+      clientY,
+      xRatio: (clientX - rect.left) / rect.width,
+      yRatio: (clientY - rect.top) / rect.height
+    };
+  }
+
+  function restoreFocusAnchor(anchor) {
+    const { stage } = elements;
+    const rect = anchor.record.element.getBoundingClientRect();
+    stage.scrollLeft += rect.left + (anchor.xRatio * rect.width) - anchor.clientX;
+    stage.scrollTop += rect.top + (anchor.yRatio * rect.height) - anchor.clientY;
+  }
+
+  function applyDocumentScale(scale, { preserveScroll = false, resetScroll = false, focus = null } = {}) {
     if (!pageLayer || !state.pageRecords.length) {
       return;
     }
-    const anchor = preserveScroll ? ctx.getScrollAnchor() : null;
+    const focusAnchor = focus && elements.stage ? getFocusAnchor(focus) : null;
+    const anchor = preserveScroll && !focusAnchor ? ctx.getScrollAnchor() : null;
     state.zoom = clamp(scale, MIN_ZOOM, MAX_ZOOM);
     applyPageSizing({ pageRecords: state.pageRecords, scale });
     if (resetScroll) {
       ctx.setStageScrollTop(0);
+    } else if (focusAnchor) {
+      restoreFocusAnchor(focusAnchor);
     } else if (anchor) {
       ctx.restoreScrollAnchor(anchor);
     }
+  }
+
+  // Zoom gestures fire every frame. Re-rendering canvases + text layers per frame
+  // stalls the main thread, so each frame only resizes pages (the old bitmaps
+  // stretch, like Acrobat) and crisp pages render once the gesture pauses.
+  function previewZoom(focus = null) {
+    if (!state.pdfDocument || !pageLayer) {
+      return;
+    }
+    state.renderToken += 1;
+    cancelAllRenderTasks(state.pageRecords);
+    ctx.cancelScheduledRender?.();
+    // Reflowing ~100 text spans per page dominates a resize; the settle render rebuilds them.
+    pageLayer.classList.add('is-zooming');
+    applyDocumentScale(ctx.getDocumentScale(), { focus });
+    ctx.refreshToolbar();
+    ctx.paintHighlights();
+    ctx.paintPins();
+    ctx.updateCurrentPageFromScroll({ force: true });
+    state.zoomSettleTimer = setTimeout(() => {
+      state.zoomSettleTimer = 0;
+      void renderDocumentPages();
+    }, ZOOM_SETTLE_MS);
   }
 
   async function renderDocumentPageRecords({ preserveScroll = false, resetScroll = false } = {}) {
@@ -180,6 +233,7 @@ export const installPdfViewerRenderController = (ctx) => {
       return;
     }
 
+    pageLayer.classList.remove('is-zooming');
     const activeRenderToken = ++state.renderToken;
     const isStale = () => activeRenderToken !== state.renderToken;
     cancelAllRenderTasks(state.pageRecords);
@@ -192,8 +246,8 @@ export const installPdfViewerRenderController = (ctx) => {
     ctx.updateCurrentPageFromScroll({ force: true });
 
     const outputScale = Math.max(ctx.getWindowRef()?.devicePixelRatio || 1, 1);
-    const renderRanges = getActiveRenderRanges(ACTIVE_PAGE_RENDER_BUFFER);
-    const retainRanges = getActiveRenderRanges(RETAINED_PAGE_RENDER_BUFFER);
+    const { renderRanges, retainRanges } = getPassRanges(scale);
+    state.renderPassKey = getRenderPassKey(scale, renderRanges);
     const pendingNavigationPageNumber = Math.round(Number(state.pendingNavigationPageNumber) || 0);
     pruneRenderedPageRecords(retainRanges);
     const recordsToRender = getPageRecordsInRanges(renderRanges)
@@ -244,8 +298,24 @@ export const installPdfViewerRenderController = (ctx) => {
       if (isRenderingCancelled(error)) {
         return;
       }
+      state.renderPassKey = '';
       ctx.setStatus(paperFailure(error, 'viewer.renderFailed'), true);
     }
+  }
+
+  // Bitmaps grow with scale², so keep fewer neighbour pages when zoomed in.
+  function getPassRanges(scale) {
+    const bufferDivisor = Math.max(scale, 1);
+    return {
+      renderRanges: getActiveRenderRanges(Math.ceil(ACTIVE_PAGE_RENDER_BUFFER / bufferDivisor)),
+      retainRanges: getActiveRenderRanges(Math.ceil(RETAINED_PAGE_RENDER_BUFFER / bufferDivisor))
+    };
+  }
+
+  // Any invalidation bumps renderToken, so an unchanged key means the last pass
+  // is still valid and covers the same pages.
+  function getRenderPassKey(scale, renderRanges) {
+    return [state.renderToken, scale, ...renderRanges.map((range) => `${range.firstPageNumber}-${range.lastPageNumber}`)].join('|');
   }
 
   let latestRender = null;
@@ -262,7 +332,14 @@ export const installPdfViewerRenderController = (ctx) => {
   }
 
   function scheduleVisiblePageRender() {
-    if (!state.pdfDocument || state.renderFrame) {
+    // A pending zoom-settle render covers whatever the scroll exposed.
+    if (!state.pdfDocument || state.renderFrame || state.zoomSettleTimer) {
+      return;
+    }
+    // Panning sideways, or within the same pages, needs no new pass: starting one
+    // cancels the in-flight renders of the very pages on screen.
+    const scale = ctx.getDocumentScale();
+    if (state.renderPassKey && state.renderPassKey === getRenderPassKey(scale, getPassRanges(scale).renderRanges)) {
       return;
     }
     const win = ctx.getWindowRef();
@@ -281,6 +358,7 @@ export const installPdfViewerRenderController = (ctx) => {
     getBufferedPageRange,
     getPageRecordsInRange,
     getPageRecordsInRanges,
+    previewZoom,
     pruneRenderedPageRecords,
     renderDocumentPages,
     scheduleVisiblePageRender

@@ -13,6 +13,7 @@ function extractCodexJsonEventText(event = {}) {
   const source = descriptor.source;
   const { item, message, type, phase, outerType } = descriptor;
   const eventType = phase ? `${type}:${phase}` : type;
+  const messageId = cleanText(source.item_id || source.itemId || item.id || message.id || source.id, 160);
   if (type === 'codex_cli_output') {
     return null;
   }
@@ -43,6 +44,7 @@ function extractCodexJsonEventText(event = {}) {
     return {
       deltaText: directDelta,
       fullText: '',
+      messageId,
       eventType
     };
   }
@@ -52,6 +54,7 @@ function extractCodexJsonEventText(event = {}) {
     return {
       deltaText,
       fullText: '',
+      messageId,
       eventType
     };
   }
@@ -69,10 +72,11 @@ function extractCodexJsonEventText(event = {}) {
       || source.output,
     120000
   );
-  if (fullText && (/message|assistant|agent|output|response/.test(type) || role || phase === 'final_answer' || outerType === 'response_item')) {
+  if (fullText && (/message|assistant|agent|output|response/.test(`${type} ${descriptor.itemType}`) || role || phase === 'final_answer' || outerType === 'response_item')) {
     return {
       deltaText: '',
       fullText,
+      messageId,
       eventType
     };
   }

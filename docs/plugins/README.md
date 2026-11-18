@@ -46,8 +46,8 @@ Read in this order; each page links forward to the next.
 | [`settings-demo`](../../examples/plugins/settings-demo/) | local | Host-rendered plugin preferences, defaults, partial updates, and live change events. |
 | [`buffer-ratio`](../../examples/plugins/buffer-ratio/) | tool (`tool: true`) | The smallest tool: looks up pKa values with `chemicals.list`. |
 | [`cell-seeding`](../../examples/plugins/cell-seeding/) | tool (`tool: true`) | A full tool in **Tools**: hemocytometer count to a plate-seeding plan, remembered plate settings (`storage`), cell-line names (`samples.list`), and the plan saved to a notebook page. |
-| [`plugins/qpcr-analysis`](../../plugins/qpcr-analysis/) | tool (`tool: true`) | An installable analysis tool: ΔΔCt and standard curves, `storage` drafts, notebook appends, TSV `downloads`, and its own tests. |
-| [`plugins/scientific-illustration`](../../plugins/scientific-illustration/) | local (`serve: true`) | A full installable editor: manifest icon, `storage`/`files` persistence, the shared right toolbar, Protocol and PDF context actions, and the agent chat rail and canvas (`agent:chat`, `agent:canvas`). |
+| qPCR Analysis (separate repo) | tool (`tool: true`) | An installable analysis tool: ΔΔCt and standard curves, `storage` drafts, notebook appends, TSV `downloads`, and its own tests. |
+| [Figura](https://github.com/HinaShirosaki/Figura) | local (`serve: true`) | A full installable editor: manifest icon, `storage`/`files` persistence, the shared right toolbar, Protocol and PDF context actions, and the agent chat rail and canvas (`agent:chat`, `agent:canvas`). |
 | [`src/plugins/gel`](../../src/plugins/gel/) | bundled | Hikari's source-owned Gel workspace, on the same served iframe and public API. The production-sized reference for persistence, recovery, responsive UI, and unsaved-change protection. |
 
 The ImageJ and DNA-importer plugins are not committed examples;

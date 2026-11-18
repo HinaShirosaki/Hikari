@@ -18,7 +18,7 @@ module.exports = function registerPermissionPresets({ scope: { assert, path, tes
     const emit = message => child.stdout.write(`${JSON.stringify(message)}\n`);
     const notify = (method, params) => emit({ method, params: { threadId: 'test-thread', ...params } });
     const endTurn = () => {
-      notify('item/agentMessage/delta', { delta: 'Done' });
+      notify('item/agentMessage/delta', { itemId: 'final', delta: 'Done' });
       notify('item/completed', { item: { type: 'agentMessage', phase: 'final_answer', id: 'final', text: 'Done.' } });
       notify('turn/completed', { turn: { id: 'current-turn', status: 'completed' } });
     };
@@ -77,6 +77,7 @@ module.exports = function registerPermissionPresets({ scope: { assert, path, tes
       assert.equal(thread.params.approvalsReviewer, approvalsReviewer);
       assert.equal(result.finalText, 'Done.');
       assert.ok(events.some(event => event.type === 'thread.started' && event.thread_id === 'test-thread'));
+      assert.ok(events.some(event => event.type === 'agent_message_delta' && event.item_id === 'final' && event.delta === 'Done'));
       if (preset === 'read-only') {
         assert.equal(prompts.length, 1);
         assert.match(prompts[0].detail, /touch output\.txt/);

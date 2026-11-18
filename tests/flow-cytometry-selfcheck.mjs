@@ -3,12 +3,20 @@ import { test } from 'node:test';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
+import { existsSync } from 'node:fs';
 import { inspectPluginFolder } from '../src/main/lib/inspect-plugin-folder.js';
-import { makeDemoFcs, parseFcs } from '../plugins/flow-cytometry/fcs.mjs';
-import { isEventFileName, readEventFile } from '../plugins/flow-cytometry/event-file.mjs';
-import { axesForPlot, initializeFolderAxes, setPlotAxis, storePlotAxes } from '../plugins/flow-cytometry/axis-settings.mjs';
-import { histogramAxis } from '../plugins/flow-cytometry/histogram.mjs';
-import {
+
+const pluginUrl = new URL('../plugins/flow-cytometry/', import.meta.url);
+// Flow Cytometry is an installable plugin kept in its own repo; run this where it is checked out.
+if (!existsSync(pluginUrl)) {
+  console.log('SKIP flow cytometry: plugins/flow-cytometry is not checked out');
+  process.exit(0);
+}
+const { makeDemoFcs, parseFcs } = await import('../plugins/flow-cytometry/fcs.mjs');
+const { isEventFileName, readEventFile } = await import('../plugins/flow-cytometry/event-file.mjs');
+const { axesForPlot, initializeFolderAxes, setPlotAxis, storePlotAxes } = await import('../plugins/flow-cytometry/axis-settings.mjs');
+const { histogramAxis } = await import('../plugins/flow-cytometry/histogram.mjs');
+const {
   axisProjection,
   autoRange,
   countGate,
@@ -20,9 +28,7 @@ import {
   gateMembers,
   smoothHistogramBins,
   summarizeChannel
-} from '../plugins/flow-cytometry/analysis.mjs';
-
-const pluginUrl = new URL('../plugins/flow-cytometry/', import.meta.url);
+} = await import('../plugins/flow-cytometry/analysis.mjs');
 
 test('First-party Flow Cytometry code stays within 200–500 lines per file', async () => {
   async function checkSource(folder) {
