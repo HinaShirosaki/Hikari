@@ -779,11 +779,16 @@
   aspect-ratio: 12 / 8;
 }
 
+.well-grid {
+  --well-number-top: 2px;
+  --well-number-size: 0.56rem;
+}
+
 .well-number {
   position: absolute;
-  top: 2px;
+  top: var(--well-number-top);
   left: 3px;
-  font-size: 0.56rem;
+  font-size: var(--well-number-size);
   line-height: 1;
   color: var(--theme-text-muted);
   pointer-events: none;
@@ -834,19 +839,22 @@
   display: block;
 }
 
+.well-box81 {
+  --well-name-top: calc(var(--well-number-top) + var(--well-number-size) + 2px);
+}
+
 .well-box81 .well-sample-label {
-  inset-block-start: 0;
-  inset-inline-start: min(1.5rem, 45%);
-  block-size: calc(22% - 1px);
-  align-content: center;
+  inset-block-start: var(--well-name-top);
+  max-block-size: calc(100% - var(--well-name-top));
 }
 
 .well-box81 .well-sample-values {
   /* Grow toward the marker when several values need space. */
+  --well-detail-space: calc(100% - var(--well-name-top) - var(--text-2xs) - 1px);
   inset-block-end: 0;
-  min-block-size: calc(22% - 1px);
-  max-block-size: calc(78% - 1px);
-  max-block-size: round(down, calc(78% - 1px), 1lh);
+  min-block-size: min(calc(22% - 1px), var(--well-detail-space));
+  max-block-size: var(--well-detail-space);
+  max-block-size: round(down, var(--well-detail-space), 1lh);
   align-content: safe center;
 }
 
