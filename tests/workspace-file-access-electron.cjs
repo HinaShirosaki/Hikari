@@ -102,9 +102,11 @@ async function main() {
     <script type="module">
       import { createFileAccessSettings } from '${url('src/renderer/modules/settings/file-access-controller.js')}';
       import { bindCodexPermissionPicker } from '${url('src/renderer/modules/agent-chat/codex-permission-picker.js')}';
+      import { hydrateAgentChatIcons } from '${url('src/renderer/modules/agent-chat/icons.js')}';
       const safe = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
       const get = id => document.getElementById(id);
       window.settings = createFileAccessSettings({ api: window.hikariApi, element: get('setting-agent-file-access'), escapeHtml: safe });
+      hydrateAgentChatIcons(document);
       bindCodexPermissionPicker({ document, api: window.hikariApi });
       await window.settings.render(); window.ready = true;
     </script></body></html>`);
@@ -137,16 +139,23 @@ async function main() {
   await run(`document.getElementById('settings-fixture').hidden = true; document.getElementById('agent-view').classList.add('is-active')`);
   win.setContentSize(640, 800);
   const openPicker = `document.getElementById('agent-codex-permission-picker').showPopover()`;
-  await run(openPicker);
+  await run(`const trigger = document.getElementById('agent-codex-permission-btn'); trigger.focus(); trigger.click()`);
   assert.equal(await run(`document.querySelectorAll('[data-codex-preset]').length`), 4);
   assert.equal(await run(`document.getElementById('agent-file-changes-btn')`), null);
   await assertVisibleActions();
   await shot(artifacts, 'codex-permissions-640.png');
+  const checkedPreset = `document.querySelector('[data-codex-preset][aria-checked="true"]').dataset.codexPreset`;
+  const focusedPreset = 'document.activeElement.dataset.codexPreset';
+  assert.equal(await run(focusedPreset), 'read-only');
+  await run(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true, cancelable: true }))`);
+  assert.equal(await run(focusedPreset), 'full-access');
+  assert.equal(await run(checkedPreset), 'read-only');
+  assert.equal((await run('window.hikariApi.getAgentCodexPermission()')).preset, 'read-only');
   async function selectPreset(preset, active = preset) {
     await run(`${openPicker}; document.querySelector('[data-codex-preset="${preset}"]').click()`);
     await waitFor(`!document.getElementById('agent-codex-permission-picker').matches(':popover-open')`);
     assert.equal((await run(`window.hikariApi.getAgentCodexPermission()`)).preset, active);
-    assert.equal(await run(`document.querySelector('[data-codex-preset][aria-pressed="true"]').dataset.codexPreset`), active);
+    assert.equal(await run(checkedPreset), active);
   }
   await selectPreset('default');
   await selectPreset('approve-for-me');

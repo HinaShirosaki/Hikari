@@ -32,29 +32,34 @@
                   <div id="agent-attachment-list" class="agent-attachment-list" hidden></div>
                   <div class="agent-composer-toolbar">
                     <div class="agent-composer-toolbar-start">
-                      <button type="button" id="agent-codex-permission-btn" class="agent-codex-permission-btn" popovertarget="agent-codex-permission-picker" title="Codex permissions" data-i18n-title="agent.permission.title" disabled>
+                      <button type="button" id="agent-codex-permission-btn" class="agent-codex-permission-btn" popovertarget="agent-codex-permission-picker" aria-haspopup="menu" title="Codex permissions" data-i18n-title="agent.permission.title" disabled>
                         <svg class="agent-chat-icon agent-codex-permission-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 22s7-3.5 7-10V5l-7-3-7 3v7c0 6.5 7 10 7 10Z"/></svg>
                         <span class="sr-only" data-i18n="agent.permission.title">Codex permissions</span>
                         <span id="agent-codex-permission-current" data-i18n="agent.permission.readOnly">Read Only</span>
                         <svg class="agent-chat-icon agent-codex-permission-chevron" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>
                       </button>
-                      <div id="agent-codex-permission-picker" class="agent-codex-permission-picker" popover="auto" role="group" aria-labelledby="agent-codex-permission-title">
-                        <h3 id="agent-codex-permission-title" data-i18n="agent.permission.title">Codex permissions</h3>
-                        <button type="button" data-codex-preset="read-only" aria-pressed="true">
-                          <span data-i18n="agent.permission.readOnly">Read Only</span>
-                          <small data-i18n="agent.permission.readOnlyHelp">Read files. Ask before editing or using the network.</small>
+                      <div id="agent-codex-permission-picker" class="agent-codex-permission-picker" popover="auto" role="menu" aria-labelledby="agent-codex-permission-title">
+                        <div id="agent-codex-permission-title" class="agent-codex-permission-title" aria-hidden="true" data-i18n="agent.permission.title">Codex permissions</div>
+                        <button type="button" role="menuitemradio" tabindex="-1" data-codex-preset="read-only" aria-checked="true" aria-labelledby="agent-codex-read-only-label" aria-describedby="agent-codex-read-only-help">
+                          <span class="agent-chat-icon" data-agent-chat-icon="book-open" aria-hidden="true"></span>
+                          <span id="agent-codex-read-only-label" data-i18n="agent.permission.readOnly">Read Only</span>
+                          <small id="agent-codex-read-only-help" data-i18n="agent.permission.readOnlyHelp">Ask to edit or use the network</small>
                         </button>
-                        <button type="button" data-codex-preset="default" aria-pressed="false">
-                          <span data-i18n="agent.permission.default">Default</span>
-                          <small data-i18n="agent.permission.defaultHelp">Edit in the workspace. Ask before going beyond it.</small>
+                        <button type="button" role="menuitemradio" tabindex="-1" data-codex-preset="default" aria-checked="false" aria-labelledby="agent-codex-workspace-label" aria-describedby="agent-codex-workspace-help">
+                          <span class="agent-chat-icon" data-agent-chat-icon="folder" aria-hidden="true"></span>
+                          <span id="agent-codex-workspace-label" data-i18n="agent.permission.default">Workspace</span>
+                          <small id="agent-codex-workspace-help" data-i18n="agent.permission.defaultHelp">Workspace edits · ask outside</small>
                         </button>
-                        <button type="button" data-codex-preset="approve-for-me" aria-pressed="false">
-                          <span data-i18n="agent.permission.approveForMe">Approve for me</span>
-                          <small data-i18n="agent.permission.approveForMeHelp">Edit in the workspace. Send eligible approvals to an automatic reviewer.</small>
+                        <button type="button" role="menuitemradio" tabindex="-1" data-codex-preset="approve-for-me" aria-checked="false" aria-labelledby="agent-codex-auto-review-label" aria-describedby="agent-codex-auto-review-help">
+                          <span class="agent-chat-icon" data-agent-chat-icon="shield-check" aria-hidden="true"></span>
+                          <span id="agent-codex-auto-review-label" data-i18n="agent.permission.approveForMe">Auto Review</span>
+                          <small id="agent-codex-auto-review-help" data-i18n="agent.permission.approveForMeHelp">Workspace edits · review if eligible</small>
                         </button>
-                        <button type="button" data-codex-preset="full-access" aria-pressed="false">
-                          <span data-i18n="agent.permission.fullAccess">Full Access</span>
-                          <small data-i18n="agent.permission.fullAccessHelp">Run without the sandbox or approval prompts.</small>
+                        <hr role="separator">
+                        <button type="button" role="menuitemradio" tabindex="-1" data-codex-preset="full-access" aria-checked="false" aria-labelledby="agent-codex-full-access-label" aria-describedby="agent-codex-full-access-help">
+                          <span class="agent-chat-icon" data-agent-chat-icon="unlock" aria-hidden="true"></span>
+                          <span id="agent-codex-full-access-label" data-i18n="agent.permission.fullAccess">Full Access</span>
+                          <small id="agent-codex-full-access-help" data-i18n="agent.permission.fullAccessHelp">No sandbox or approval prompts</small>
                         </button>
                       </div>
                       <button type="button" id="agent-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files" data-i18n-aria-label="agent.composer.attach" data-i18n-title="agent.composer.attach"><span class="agent-chat-icon agent-attach-icon" data-agent-chat-icon="attach" aria-hidden="true"></span></button>

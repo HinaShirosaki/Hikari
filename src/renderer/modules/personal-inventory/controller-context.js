@@ -1,6 +1,7 @@
 import { createPersonalInventoryStateHelpers } from './state.js';
 import { createPersonalInventoryDetailRenderer } from './detail-rendering.js';
 import { createFolderTreeState } from '../../lib/folder-tree.js';
+import { readWellDisplayPreferences } from './well-display.js';
 
 export function createPersonalInventoryContext({
   state,
@@ -35,6 +36,8 @@ export function createPersonalInventoryContext({
     selectedSectionName: '',
     editingWellIndex: null,
     editingSampleId: '',
+    wellDisplay: readWellDisplayPreferences(),
+    pickingWellField: false,
     wellEditorStatus: '',
     isAddContainerFormOpen: false,
     addItemMode: 'container',
