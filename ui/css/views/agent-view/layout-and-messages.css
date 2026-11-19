@@ -1076,7 +1076,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 }
 
 .agent-codex-permission-picker {
-  --permission-picker-width: min(20rem, calc(100vw - 24px));
+  --permission-picker-width: min(18rem, calc(100vw - 24px));
   position: fixed;
   position-anchor: --agent-codex-permission;
   position-try-fallbacks: flip-block;
@@ -1087,7 +1087,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   max-height: min(24rem, 60vh);
   overflow: auto;
   margin: 0;
-  padding: var(--space-6);
+  padding: var(--space-4);
   border: 1px solid var(--hikari-menu-border);
   border-radius: var(--hikari-context-menu-radius);
   background: var(--hikari-menu-surface);
@@ -1095,40 +1095,57 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   box-shadow: var(--hikari-context-menu-shadow);
 }
 
-.agent-codex-permission-picker h3 {
-  margin: var(--space-4) var(--space-10) var(--space-6);
+.agent-codex-permission-title {
+  padding: var(--space-4) var(--space-8);
   color: var(--theme-text-muted);
   font-size: .75rem;
   font-weight: 600;
+  line-height: 1.3;
 }
 
 .agent-codex-permission-picker > button {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 1rem;
+  grid-template-columns: 1rem minmax(0, 1fr) .75rem;
   align-items: center;
   width: 100%;
-  gap: var(--space-2) var(--space-8);
-  padding: var(--space-6) var(--space-10);
+  min-height: 2.625rem;
+  gap: 0 var(--space-8);
+  padding: var(--space-4) var(--space-8);
   border: 0;
   border-radius: var(--hikari-context-item-radius);
   background: transparent;
   color: var(--theme-text-strong);
+  font-size: var(--text-sm);
   font-weight: 600;
-  line-height: 1.3;
+  line-height: 1.25;
   text-align: left;
+  transition: none;
 }
 
-.agent-codex-permission-picker > button:hover {
+.agent-codex-permission-picker > button > .agent-chat-icon {
+  grid-row: 1 / 3;
+  width: 1rem;
+  height: 1rem;
+  color: var(--theme-text-muted);
+}
+
+.agent-codex-permission-picker[data-pointer-input] > button:hover {
   background: var(--hikari-menu-hover);
 }
 
-.agent-codex-permission-picker > button[aria-pressed="true"] {
+.agent-codex-permission-picker[data-pointer-input] > button:focus-visible {
+  outline: none;
+}
+
+.agent-codex-permission-picker:not([data-pointer-input]) > button:focus-visible,
+.agent-codex-permission-picker:not([data-pointer-input], :has(> button:focus-visible)) > button[aria-checked="true"],
+.agent-codex-permission-picker[data-pointer-input]:not(:has(> button:hover)) > button[aria-checked="true"] {
   background: var(--theme-accent-wash);
 }
 
-.agent-codex-permission-picker > button[aria-pressed="true"]::after {
+.agent-codex-permission-picker > button[aria-checked="true"]::after {
   content: "";
-  grid-area: 1 / 2;
+  grid-area: 1 / 3 / 3;
   justify-self: center;
   width: .625rem;
   height: .375rem;
@@ -1138,10 +1155,21 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 }
 
 .agent-codex-permission-picker small {
-  grid-column: 1 / -1;
+  grid-area: 2 / 2;
   color: var(--theme-text-muted);
   font-size: .75rem;
   font-weight: 400;
-  line-height: 1.35;
-  text-wrap: pretty;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.agent-codex-permission-picker hr {
+  margin: var(--space-4) var(--space-8);
+  border: 0;
+  border-top: 1px solid var(--hikari-menu-separator);
+}
+
+.agent-codex-permission-picker > button[data-codex-preset="full-access"],
+.agent-codex-permission-picker > button[data-codex-preset="full-access"] > .agent-chat-icon {
+  color: var(--theme-danger-ink);
 }

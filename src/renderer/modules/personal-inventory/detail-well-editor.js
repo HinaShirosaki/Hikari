@@ -1,5 +1,6 @@
 import { sampleAttributes, sampleMessage, sampleStatusMarkup } from './localization.js';
 import { renderTypeFieldsMarkup } from './type-fields.js';
+import { getDisplayedWellSample } from './well-display.js';
 
 export function createWellEditorRenderer({
   safeText,
@@ -25,6 +26,7 @@ export function createWellEditorRenderer({
     const well = getWellDataForType(container, container.wells[index], index);
     const linkedSamples = getLinkedSamples(section, container.id, index);
     const activeSample = linkedSamples.find((item) => item.id === uiState.editingSampleId) || null;
+    const displayedSample = getDisplayedWellSample(uiState.wellDisplay, section, container.id, index, linkedSamples);
     const statusMarkup = uiState.wellEditorStatus ? `<p class="small-note well-editor-status">${sampleStatusMarkup(uiState.wellEditorStatus)}</p>` : '';
     const sampleSelector = linkedSamples.length > 1
       ? `
@@ -34,6 +36,16 @@ export function createWellEditorRenderer({
             ${linkedSamples.map((item) => `
               <option value="${safeText(item.id)}"${activeSample && item.id === activeSample.id ? ' selected' : ''}>
                 ${safeText(item.code || item.name || item.id)}
+              </option>
+            `).join('')}
+          </select>
+        </label>
+        <label>
+          ${sampleMessage('well.displaySample')}
+          <select data-well-display-sample="${index}">
+            ${linkedSamples.map((item) => `
+              <option value="${safeText(item.id)}"${item === displayedSample ? ' selected' : ''}>
+                ${safeText([item.name, item.code].filter(Boolean).join(' · ') || item.id)}
               </option>
             `).join('')}
           </select>
@@ -143,7 +155,18 @@ export function createWellEditorRenderer({
         </label>
       `;
 
-    return `<div class="well-inline-editor well-side-editor">${sampleSection}${statusMarkup}</div>`;
+    return `
+      <div class="well-inline-editor well-side-editor" data-well-display-editor>
+        <div class="well-field-picker-actions" data-well-field-actions hidden>
+          <p class="small-note">${sampleMessage('well.chooseFields')}</p>
+          <div class="well-field-picker-buttons">
+            <button type="button" class="ghost-btn" data-well-clear-field>${sampleMessage('well.clearFields')}</button>
+            <button type="button" class="primary-btn" data-well-field-done>${sampleMessage('well.done')}</button>
+          </div>
+        </div>
+        ${sampleSection}${statusMarkup}
+      </div>
+    `;
   }
 
   return {

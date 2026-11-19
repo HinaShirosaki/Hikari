@@ -427,9 +427,19 @@
 .container-detail-toolbar {
   display: flex;
   gap: var(--space-8);
-  flex-shrink: 0;
+  align-items: flex-start;
   justify-content: flex-end;
   flex-wrap: wrap;
+}
+
+.well-field-trigger {
+  min-height: 36px;
+  white-space: nowrap;
+}
+
+.well-field-trigger[aria-pressed="true"] {
+  background: var(--theme-accent-soft);
+  border-color: var(--theme-accent);
 }
 
 #sample-registry-view button[data-hover-caption] {
@@ -622,10 +632,6 @@
   border-color: var(--theme-text-muted);
 }
 
-.well-plate96 .well-number {
-  display: none;
-}
-
 .well-plate96 .well-sample-dot {
   width: 64%;
   height: 64%;
@@ -773,11 +779,16 @@
   aspect-ratio: 12 / 8;
 }
 
+.well-grid {
+  --well-number-top: 2px;
+  --well-number-size: 0.56rem;
+}
+
 .well-number {
   position: absolute;
-  top: 2px;
+  top: var(--well-number-top);
   left: 3px;
-  font-size: 0.56rem;
+  font-size: var(--well-number-size);
   line-height: 1;
   color: var(--theme-text-muted);
   pointer-events: none;
@@ -799,6 +810,73 @@
 .well-sample-dot.has-sample {
   background: var(--well-sample-fill, var(--assay-plate-sample-fallback));
   border-color: var(--assay-plate-highlight);
+}
+
+.well-sample-label,
+.well-sample-values {
+  position: absolute;
+  inset-inline: 2px;
+  overflow: hidden;
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  line-height: 1;
+  -webkit-text-stroke: 2px var(--theme-surface);
+  paint-order: stroke fill;
+}
+
+.well-sample-label,
+.well-sample-values > span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.well-sample-values {
+  font-weight: 500;
+}
+
+.well-sample-values > span {
+  display: block;
+}
+
+.well-box81 {
+  --well-name-top: calc(var(--well-number-top) + var(--well-number-size) + 2px);
+}
+
+.well-box81 .well-sample-label {
+  inset-block-start: var(--well-name-top);
+  max-block-size: calc(100% - var(--well-name-top));
+}
+
+.well-box81 .well-sample-values {
+  /* Grow toward the marker when several values need space. */
+  --well-detail-space: calc(100% - var(--well-name-top) - var(--text-2xs) - 1px);
+  inset-block-end: 0;
+  min-block-size: min(calc(22% - 1px), var(--well-detail-space));
+  max-block-size: var(--well-detail-space);
+  max-block-size: round(down, var(--well-detail-space), 1lh);
+  align-content: safe center;
+}
+
+.well-box81 .well-sample-values:has(+ .well-sample-count) {
+  inset-inline-end: min(17px, 28%);
+}
+
+.well-plate96 .well-sample-label {
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+}
+
+.well-plate96 .well-sample-label:has(+ .well-sample-values:not([hidden])) {
+  inset-block-start: 0;
+  transform: none;
+}
+
+.well-plate96 .well-sample-values {
+  inset-block-start: var(--text-2xs);
+  max-block-size: calc(100% - var(--text-2xs) - 1px);
+  max-block-size: round(down, calc(100% - var(--text-2xs) - 1px), 1lh);
+  font-size: 0.625rem;
 }
 
 .well-sample-count {
@@ -883,6 +961,71 @@
    an input; the control row takes the slack and a paired row lines up. */
 .well-inline-editor label {
   grid-template-rows: auto 1fr;
+}
+
+.well-field-picker-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-8);
+}
+
+.well-field-picker-buttons {
+  display: flex;
+  gap: var(--space-8);
+}
+
+.well-inline-editor label:has(> [data-well-field-choice]) {
+  cursor: pointer;
+}
+
+.well-inline-editor [data-well-field-choice] {
+  position: relative;
+  display: inline-flex;
+  justify-self: start;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.well-inline-editor [data-well-field-choice]::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--theme-text-muted);
+  border-radius: 4px;
+  background: var(--theme-control-background);
+}
+
+.well-inline-editor label:hover > [data-well-field-choice]::before {
+  border-color: var(--theme-accent);
+}
+
+.well-inline-editor [data-well-field-choice][aria-checked="true"]::before {
+  border-color: var(--theme-accent);
+  background: var(--theme-accent);
+}
+
+.well-inline-editor [data-well-field-choice][aria-checked="true"]::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: 5px;
+  inset-block-start: 50%;
+  width: 5px;
+  height: 8px;
+  border: solid var(--theme-text-on-accent);
+  border-width: 0 1.5px 1.5px 0;
+  transform: translateY(-60%) rotate(45deg);
+}
+
+.well-inline-editor [data-well-field-choice]:focus-visible {
+  outline: none;
+}
+
+.well-inline-editor [data-well-field-choice]:focus-visible::before {
+  outline: 2px solid var(--theme-focus);
+  outline-offset: 2px;
 }
 
 @container sample-editor (max-width: 20rem) {

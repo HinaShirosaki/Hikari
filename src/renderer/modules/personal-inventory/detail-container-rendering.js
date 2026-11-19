@@ -1,6 +1,7 @@
 import "./localization.js";
 import { getContainerLayout } from './constants.js';
 import { sampleAttributes, sampleContainerTypeMessage, sampleMessage } from './localization.js';
+import { getWellDisplayText } from './well-display.js';
 
 export function createContainerDetailRenderer({
   safeText,
@@ -93,13 +94,18 @@ export function createContainerDetailRenderer({
       const sampleDotFill = buildSampleDotFill(linkedSamples.map((item) => item.type));
       const hasSamples = linkedSamples.length > 0;
       const sampleCount = linkedSamples.length;
+      const display = getWellDisplayText(uiState.wellDisplay, section, container.id, index, linkedSamples, getSampleTypeLabel);
       const gridEdgeClasses = layout.className === 'box81'
         ? `${(index + 1) % layout.cols === 0 ? ' well-last-column' : ''}${index >= (layout.rows - 1) * layout.cols ? ' well-last-row' : ''}`
         : '';
       return `
         <button type="button" class="well well-${safeText(layout.className)}${gridEdgeClasses}${uiState.editingWellIndex === index ? ' well-selected' : ''}${uiState.cloningSampleId ? ' well-clone-target' : ''}" data-well-index="${index}" data-section="${safeText(section)}" data-container-id="${safeText(container.id)}" ${titleAttribute}>
-          <span class="well-number">${safeText(well.name)}</span>
-          <span class="well-sample-dot${hasSamples ? ' has-sample' : ''}"${sampleDotFill ? ` style="--well-sample-fill:${sampleDotFill};"` : ''}></span>
+          <span class="well-number${layout.className === 'plate96' ? ' sr-only' : ''}">${safeText(well.name)}</span>
+          <span class="well-sample-dot${hasSamples ? ' has-sample' : ''}"${sampleDotFill ? ` style="--well-sample-fill:${sampleDotFill};"` : ''} aria-hidden="true"></span>
+          ${hasSamples ? `
+            <span class="well-sample-label" title="${safeText(display.name)}">${safeText(display.name)}</span>
+            <span class="well-sample-values" title="${safeText(display.details.join('\n'))}"${display.details.length ? '' : ' hidden'}>${display.details.map(value => `<span>${safeText(value)}</span>`).join('')}</span>
+          ` : ''}
           ${sampleCount > 1 ? `<span class="well-sample-count">${safeText(String(sampleCount))}</span>` : ''}
         </button>
       `;
@@ -111,7 +117,6 @@ export function createContainerDetailRenderer({
     const activeSample = activeWellSamples.find((item) => item.id === uiState.editingSampleId) || activeWellSamples[0] || null;
     const isFillingWells = activeSample && uiState.cloningSampleId === activeSample.id;
     const fillWellsKey = isFillingWells ? 'container.stopFilling' : 'container.startFilling';
-
     return `
       <div class="container-inline-detail">
         <div class="container-detail-sticky">
@@ -121,6 +126,9 @@ export function createContainerDetailRenderer({
               ${layout.className === 'plate96' ? `<p class="small-note">${sampleMessage('container.plateHint')}</p>` : ''}
             </div>
             <div class="container-detail-toolbar">
+              <button type="button" class="ghost-btn well-field-trigger" data-well-field-trigger aria-pressed="${Boolean(uiState.pickingWellField)}">
+                ${sampleMessage('well.showFields')}
+              </button>
               ${activeSample
                 ? `
                   <button type="button" class="ghost-btn inventory-fill-wells-btn${isFillingWells ? ' is-active' : ''}" data-well-sample-clone="${safeText(activeSample.id)}" ${sampleAttributes({ 'aria-label': fillWellsKey, 'data-hover-caption': fillWellsKey })} aria-pressed="${isFillingWells ? 'true' : 'false'}">

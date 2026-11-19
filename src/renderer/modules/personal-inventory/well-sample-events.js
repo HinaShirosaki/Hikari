@@ -5,6 +5,8 @@ import { readTypeFieldsFrom } from './type-fields.js';
 import { bindFileDropTarget } from '../../lib/file-drop.js';
 import { notifyUnsupportedDrop } from '../../lib/notify.js';
 import { shellText } from '../../lib/i18n/shell.js';
+import { getWellDisplayText, saveWellDisplayPreferences, wellDisplayKey } from './well-display.js';
+import { bindWellFieldPicker } from './well-field-picker.js';
 
 function importContainerCsv(ctx, section, container, csvText) {
   try {
@@ -49,6 +51,46 @@ export function bindWellSampleEvents(ctx) {
   const isChemicalSampleType = (...args) => ctx.isChemicalSampleType(...args);
   const normalizeStructureData = (...args) => ctx.normalizeStructureData(...args);
   const getPendingStructureKey = (...args) => ctx.getPendingStructureKey(...args);
+
+  function refreshWellDisplay(well) {
+    const { section, containerId, wellIndex } = well.dataset;
+    const index = Number(wellIndex);
+    const samples = helpers.getLinkedSamples(section, containerId, index);
+    const { name, details } = getWellDisplayText(uiState.wellDisplay, section, containerId, index, samples, helpers.getSampleTypeLabel);
+    const label = well.querySelector('.well-sample-label');
+    const values = well.querySelector('.well-sample-values');
+    label.textContent = name;
+    label.title = name;
+    values.replaceChildren(...details.map(value => {
+      const line = well.ownerDocument.createElement('span');
+      line.textContent = value;
+      return line;
+    }));
+    values.title = details.join('\n');
+    values.hidden = !details.length;
+  }
+
+  bindWellFieldPicker(inventorySections, uiState, () => {
+    inventorySections.querySelectorAll('.well:has(.well-sample-label)').forEach(refreshWellDisplay);
+  });
+
+  const displaySample = inventorySections.querySelector('[data-well-display-sample]');
+  displaySample?.addEventListener('change', () => {
+    const { section, containerId } = uiState.selectedContainer;
+    const index = Number(displaySample.dataset.wellDisplaySample);
+    const samples = helpers.getLinkedSamples(section, containerId, index);
+    if (!samples.some(sample => sample.id === displaySample.value)) return;
+    const key = wellDisplayKey(section, containerId, index);
+    if (displaySample.value === samples[0].id) {
+      uiState.wellDisplay.samples.delete(key);
+    } else {
+      uiState.wellDisplay.samples.set(key, displaySample.value);
+    }
+    saveWellDisplayPreferences(uiState.wellDisplay);
+    const well = inventorySections.querySelector(`[data-well-index="${index}"]:has(.well-sample-label)`);
+    if (well) refreshWellDisplay(well);
+  });
+
   // Persisted across renders on ctx so the drag-to-clone gesture survives the re-bind that happens after every renderSections().
   const dragClone = ctx._dragClone || (ctx._dragClone = { active: false, visited: new Set(), count: 0, suppressClick: false });
 
